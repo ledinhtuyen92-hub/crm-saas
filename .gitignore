@@ -1,0 +1,15 @@
+# Python & Django
+__pycache__/
+*.py[cod]
+venv/
+env/
+.env
+
+# Node & React (dành cho thư mục frontend sau này)
+node_modules/
+build/
+dist/
+
+# Hệ thống & Trình soạn thảo
+.DS_Store
+.vscode/
