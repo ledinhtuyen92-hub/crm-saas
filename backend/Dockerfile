@@ -11,16 +11,14 @@ RUN apt-get update \
         build-essential \
         libpq-dev \
     && pip install --upgrade pip \
-    && pip install \
-        django \
-        djangorestframework \
-        psycopg2-binary \
-        redis \
     && apt-get purge -y --auto-remove build-essential \
     && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
 COPY . .
 
 EXPOSE 8000
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["sh", "-c", "if [ ! -f manage.py ]; then echo 'ERROR: manage.py not found'; exit 1; fi && python manage.py runserver 0.0.0.0:8000"]

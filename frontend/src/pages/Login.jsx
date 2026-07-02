@@ -3,10 +3,11 @@ import {
   LockOutlined,
   MailOutlined,
   SafetyCertificateOutlined,
+  UserOutlined,
 } from '@ant-design/icons'
 import { Button, Col, Form, Input, Row, Space, Typography, message, theme } from 'antd'
 import { Link, useNavigate } from 'react-router-dom'
-import api from '../utils/api'
+import { useAuth } from '../contexts/AuthContext'
 import authTechnology from '../assets/auth-technology.png'
 
 const { Paragraph, Text, Title } = Typography
@@ -14,26 +15,41 @@ const { Paragraph, Text, Title } = Typography
 function Login() {
   const navigate = useNavigate()
   const { token } = theme.useToken()
+  const { login, isSuperAdmin } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
 
   const handleSubmit = async (values) => {
     try {
-      const { data } = await api.post('/users/login/', values)
-      if (data.access) localStorage.setItem('accessToken', data.access)
-      if (data.refresh) localStorage.setItem('refreshToken', data.refresh)
-      messageApi.success('Đăng nhập thành công')
-      navigate('/dashboard')
+      const loggedUser = await login(
+        values.workspace_id?.trim() || '',
+        values.username,
+        values.password,
+      )
+      messageApi.success('Đăng nhập thành công!')
+
+      // Redirect dựa theo role
+      if (loggedUser?.is_superuser) {
+        navigate('/admin/companies')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (error) {
-      const detail =
-        error.response?.data?.detail ||
-        'Không thể đăng nhập. Vui lòng kiểm tra lại thông tin tài khoản.'
-      messageApi.error(detail)
+      const data = error.response?.data
+      if (data && typeof data === 'object') {
+        // Hiển thị lỗi theo từng field
+        const msgs = Object.values(data).flat().join(' ')
+        messageApi.error(msgs)
+      } else {
+        messageApi.error('Không thể đăng nhập. Vui lòng kiểm tra lại thông tin.')
+      }
     }
   }
 
   return (
     <Row style={{ minHeight: '100vh', background: token.colorBgContainer }}>
       {contextHolder}
+
+      {/* ── Left panel — hero image ─────────────────────────────── */}
       <Col xs={0} lg={12} xl={13}>
         <section
           style={{
@@ -75,10 +91,43 @@ function Login() {
             >
               Số hóa quy trình - Tối ưu hiệu suất - Đột phá doanh thu
             </Paragraph>
+
+            {/* Feature bullets */}
+            <div style={{ marginTop: 28 }}>
+              {[
+                'Phân quyền linh hoạt theo vai trò & chức danh',
+                'Quản lý đa công ty trên một nền tảng',
+                'Bảo mật dữ liệu tuyệt đối theo tổ chức',
+              ].map((item) => (
+                <div
+                  key={item}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    marginBottom: 10,
+                    color: 'rgba(255,255,255,0.85)',
+                    fontSize: 14,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      background: '#38bdf8',
+                      flexShrink: 0,
+                    }}
+                  />
+                  {item}
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       </Col>
 
+      {/* ── Right panel — login form ────────────────────────────── */}
       <Col xs={24} lg={12} xl={11}>
         <main
           style={{
@@ -98,55 +147,59 @@ function Login() {
               <Text type="secondary">Đăng nhập để tiếp tục quản lý doanh nghiệp của bạn.</Text>
             </div>
 
-            <Form layout="vertical" requiredMark={false} onFinish={handleSubmit}>
+            <Form
+              id="login-form"
+              layout="vertical"
+              requiredMark={false}
+              onFinish={handleSubmit}
+            >
+              {/* Workspace ID — không bắt buộc cho superadmin */}
               <Form.Item
                 name="workspace_id"
-                label="Mã công ty"
-                rules={[{ required: true, message: 'Vui lòng nhập mã công ty' }]}
+                label="Mã công ty (Workspace ID)"
+                tooltip="Để trống nếu bạn là Quản trị viên hệ thống"
               >
                 <Input
+                  id="input-workspace-id"
                   size="large"
-                  prefix={<SafetyCertificateOutlined />}
-                  placeholder="Ví dụ: ANPHAT"
+                  prefix={<SafetyCertificateOutlined style={{ color: token.colorTextSecondary }} />}
+                  placeholder="Ví dụ: ANPHAT (để trống nếu là System Admin)"
                   autoComplete="organization"
+                  style={{ textTransform: 'uppercase' }}
                 />
               </Form.Item>
+
               <Form.Item
-                name="email"
-                label="Email"
-                rules={[
-                  { required: true, message: 'Vui lòng nhập email' },
-                  { type: 'email', message: 'Email chưa đúng định dạng' },
-                ]}
+                name="username"
+                label="Tên đăng nhập"
+                rules={[{ required: true, message: 'Vui lòng nhập tên đăng nhập' }]}
               >
                 <Input
+                  id="input-username"
                   size="large"
-                  prefix={<MailOutlined />}
-                  placeholder="admin@congty.vn"
-                  autoComplete="email"
+                  prefix={<UserOutlined style={{ color: token.colorTextSecondary }} />}
+                  placeholder="Tên đăng nhập"
+                  autoComplete="username"
                 />
               </Form.Item>
+
               <Form.Item
                 name="password"
                 label="Mật khẩu"
                 rules={[{ required: true, message: 'Vui lòng nhập mật khẩu' }]}
               >
                 <Input.Password
+                  id="input-password"
                   size="large"
-                  prefix={<LockOutlined />}
+                  prefix={<LockOutlined style={{ color: token.colorTextSecondary }} />}
                   placeholder="Nhập mật khẩu"
                   autoComplete="current-password"
                 />
               </Form.Item>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '-4px 0 24px' }}>
-                <Link to="/forgot-password" style={{ color: token.colorPrimary }}>
-                  Quên mật khẩu?
-                </Link>
-              </div>
-
               <Form.Item style={{ marginBottom: 22 }}>
                 <Button
+                  id="btn-login"
                   type="primary"
                   htmlType="submit"
                   size="large"
