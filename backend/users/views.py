@@ -5,12 +5,13 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import Company, Permission, Role
+from .models import Company, CompanySettings, Permission, Role
 from .permissions import IsCompanyAdmin, IsSuperAdmin
 from .serializers import (
     ChangePasswordSerializer,
     CompanyRegistrationSerializer,
     CompanySerializer,
+    CompanySettingsSerializer,
     PermissionSerializer,
     RoleSerializer,
     UserSerializer,
@@ -205,3 +206,56 @@ class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Permission.objects.all().order_by("module", "code")
     serializer_class = PermissionSerializer
     permission_classes = [IsCompanyAdmin]
+
+
+# ─────────────────────────────────────────────
+# CompanySettings API
+# ─────────────────────────────────────────────
+
+class CompanySettingsView(generics.RetrieveUpdateAPIView):
+    """
+    GET  /api/users/company-settings/  — Lấy cài đặt hiện tại của công ty.
+    PATCH /api/users/company-settings/ — Cập nhật cài đặt.
+    Chỉ Company Admin mới có quyền.
+    """
+
+    serializer_class = CompanySettingsSerializer
+    permission_classes = [IsCompanyAdmin]
+    http_method_names = ["get", "patch"]
+
+    def get_object(self):
+        settings_obj, _ = CompanySettings.objects.get_or_create(
+            company=self.request.user.company
+        )
+        return settings_obj
+
+
+# ─────────────────────────────────────────────
+# User quota check endpoint
+# ─────────────────────────────────────────────
+
+class UserViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
+    """CRUD nhân viên trong công ty — chỉ Company Admin mới tạo/sửa/xóa."""
+
+    queryset = User.objects.select_related("company", "role").prefetch_related("role__permissions")
+    serializer_class = UserSerializer
+    permission_classes = [IsCompanyAdmin]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs
+
+    def perform_create(self, serializer):
+        company = self.get_company()
+        if company is None:
+            raise serializers.ValidationError(
+                {"company": "Superadmin hệ thống phải được gán công ty để tạo nhân viên."}
+            )
+        # Kiểm tra giới hạn số nhân viên
+        current_count = User.objects.filter(company=company, is_active=True).count()
+        if company.user_limit and current_count >= company.user_limit:
+            raise serializers.ValidationError(
+                f"Đã đạt giới hạn số nhân viên ({company.user_limit}). "
+                f"Vui lòng nâng cấp gói dịch vụ."
+            )
+        serializer.save(company=company)

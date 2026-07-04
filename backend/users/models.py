@@ -14,7 +14,20 @@ class Company(models.Model):
     )
     tax_code = models.CharField(max_length=50, unique=True, verbose_name="Mã số thuế")
     address = models.TextField(blank=True, verbose_name="Địa chỉ")
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Số điện thoại công ty")
+    logo = models.ImageField(
+        upload_to="company_logos/",
+        blank=True,
+        null=True,
+        verbose_name="Logo công ty",
+    )
     is_active = models.BooleanField(default=True, verbose_name="Đang hoạt động")
+    user_limit = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Giới hạn nhân viên",
+        help_text="Số tài khoản nhân viên tối đa. Để trống = không giới hạn.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -93,6 +106,12 @@ class User(AbstractUser):
         verbose_name="Chức danh",
         help_text="Chức danh hiển thị (vd: Giám đốc kinh doanh, Kế toán trưởng...)",
     )
+    avatar = models.ImageField(
+        upload_to="avatars/",
+        blank=True,
+        null=True,
+        verbose_name="Ảnh đại diện",
+    )
     company = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,
@@ -132,6 +151,14 @@ class User(AbstractUser):
             return set()
         return set(self.role.permissions.values_list("code", flat=True))
 
+    def has_perm_code(self, code: str) -> bool:
+        """Kiểm tra nhanh một permission code."""
+        if self.is_superuser or self.is_company_admin:
+            return True
+        if not self.role:
+            return False
+        return self.role.permissions.filter(code=code).exists()
+
     def clean(self):
         super().clean()
         if self.role_id and self.company_id != self.role.company_id:
@@ -139,3 +166,45 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.full_name or self.username
+
+
+class CompanySettings(models.Model):
+    """Cấu hình nghiệp vụ của công ty — 1:1 với Company."""
+
+    ROUTING_MANUAL = "manual"
+    ROUTING_ROUND_ROBIN = "round_robin"
+    ROUTING_CHOICES = [
+        (ROUTING_MANUAL, "Thủ công (Trưởng phòng gán)"),
+        (ROUTING_ROUND_ROBIN, "Tự động Round-robin"),
+    ]
+
+    company = models.OneToOneField(
+        Company,
+        on_delete=models.CASCADE,
+        related_name="settings",
+        verbose_name="Công ty",
+    )
+    order_prefix = models.CharField(
+        max_length=10,
+        default="DH",
+        verbose_name="Tiền tố mã đơn hàng",
+        help_text="VD: 'DH' → Mã đơn: DH-20240101-001",
+    )
+    lead_routing = models.CharField(
+        max_length=20,
+        choices=ROUTING_CHOICES,
+        default=ROUTING_MANUAL,
+        verbose_name="Phương thức phân bổ Lead",
+    )
+    timezone = models.CharField(
+        max_length=50,
+        default="Asia/Ho_Chi_Minh",
+        verbose_name="Múi giờ",
+    )
+
+    class Meta:
+        verbose_name = "Cấu hình công ty"
+        verbose_name_plural = "Cấu hình công ty"
+
+    def __str__(self):
+        return f"Settings — {self.company.name}"

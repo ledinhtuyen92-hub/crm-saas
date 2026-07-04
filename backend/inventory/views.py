@@ -1,69 +1,121 @@
-from rest_framework import viewsets
-from rest_framework.pagination import PageNumberPagination
+from rest_framework import permissions, viewsets
 
-from .models import (
-    Inventory,
-    InventoryTransaction,
-    Product,
-    ProductCategory,
-    Warehouse,
-)
+from users.views import TenantQuerySetMixin
+
+from .models import InventoryTransaction, Product, ProductCategory, StockLevel, Warehouse
 from .serializers import (
-    InventorySerializer,
     InventoryTransactionSerializer,
     ProductCategorySerializer,
     ProductSerializer,
+    StockLevelSerializer,
     WarehouseSerializer,
 )
 
 
-class DefaultPageNumberPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = "page_size"
-    max_page_size = 100
+class ProductCategoryViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
+    """CRUD loại sản phẩm — cô lập theo company."""
 
-
-class ProductCategoryViewSet(viewsets.ModelViewSet):
+    queryset = ProductCategory.objects.select_related("company").order_by("name")
     serializer_class = ProductCategorySerializer
-    pagination_class = DefaultPageNumberPagination
-
-    def get_queryset(self):
-        return ProductCategory.objects.order_by("name", "id")
+    permission_classes = [permissions.IsAuthenticated]
 
 
-class ProductViewSet(viewsets.ModelViewSet):
+class ProductViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
+    """CRUD sản phẩm — cô lập theo company."""
+
+    queryset = Product.objects.select_related("company", "category").order_by("name")
     serializer_class = ProductSerializer
-    pagination_class = DefaultPageNumberPagination
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Product.objects.select_related("category").order_by("name", "id")
+        qs = super().get_queryset()
+        # Mặc định chỉ trả về sản phẩm đang hoạt động (trừ khi có ?include_inactive=true)
+        if self.request.query_params.get("include_inactive") != "true":
+            qs = qs.filter(is_active=True)
+        # Tìm kiếm theo tên hoặc mã SKU
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(name__icontains=search) | qs.filter(sku__icontains=search)
+        # Filter theo category
+        category_id = self.request.query_params.get("category_id")
+        if category_id:
+            qs = qs.filter(category_id=category_id)
+        return qs
 
 
-class WarehouseViewSet(viewsets.ModelViewSet):
+class WarehouseViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
+    """CRUD kho hàng — cô lập theo company."""
+
+    queryset = Warehouse.objects.select_related("company").order_by("name")
     serializer_class = WarehouseSerializer
-    pagination_class = DefaultPageNumberPagination
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class StockLevelViewSet(viewsets.ReadOnlyModelViewSet):
+    """Xem tồn kho — filter qua product.company."""
+
+    queryset = StockLevel.objects.select_related(
+        "product__company", "warehouse"
+    ).order_by("product__name", "warehouse__name")
+    serializer_class = StockLevelSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Warehouse.objects.order_by("name", "id")
+        user = self.request.user
+        if user.is_superuser and user.company_id is None:
+            return super().get_queryset()
+        qs = self.queryset.filter(product__company=user.company)
+        # Filter cảnh báo tồn kho thấp
+        if self.request.query_params.get("low_stock") == "true":
+            # Lọc thủ công vì is_low_stock là property
+            low_stock_ids = [s.id for s in qs if s.is_low_stock]
+            qs = qs.filter(id__in=low_stock_ids)
+        warehouse_id = self.request.query_params.get("warehouse_id")
+        if warehouse_id:
+            qs = qs.filter(warehouse_id=warehouse_id)
+        return qs
 
 
-class InventoryViewSet(viewsets.ModelViewSet):
-    serializer_class = InventorySerializer
-    pagination_class = DefaultPageNumberPagination
+class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
+    """
+    CRUD phiếu kho — cô lập theo company.
+    Backend chặn cứng: type=export chỉ hợp lệ khi đơn hàng đã 'approved'.
+    """
 
-    def get_queryset(self):
-        return (
-            Inventory.objects.select_related("product", "warehouse")
-            .order_by("product__name", "warehouse__name", "id")
-        )
-
-
-class InventoryTransactionViewSet(viewsets.ModelViewSet):
+    queryset = InventoryTransaction.objects.select_related(
+        "company", "product", "warehouse", "reference_order", "created_by"
+    ).order_by("-created_at")
     serializer_class = InventoryTransactionSerializer
-    pagination_class = DefaultPageNumberPagination
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return (
-            InventoryTransaction.objects.select_related("product", "warehouse")
-            .order_by("-created_at", "-id")
+        qs = super().get_queryset()
+        # Filter theo loại phiếu nếu có
+        txn_type = self.request.query_params.get("type")
+        if txn_type:
+            qs = qs.filter(type=txn_type)
+        return qs
+
+    def perform_create(self, serializer):
+        from core.numbering import generate_transaction_code
+        from orders.models import Order
+
+        company = self.request.user.company
+        txn_type = serializer.validated_data.get("type")
+        reference_order = serializer.validated_data.get("reference_order")
+
+        # ─── SECURITY GATE: chặn cứng xuất kho khi đơn chưa duyệt ───
+        if txn_type == "export" and reference_order:
+            if reference_order.status != Order.STATUS_APPROVED:
+                from rest_framework import serializers as drf_serializers
+                raise drf_serializers.ValidationError(
+                    {"reference_order": "Đơn hàng chưa ở trạng thái 'Đã chấp thuận', không thể xuất kho."}
+                )
+
+        # Sinh mã phiếu tự động
+        transaction_code = generate_transaction_code(company, txn_type)
+        serializer.save(
+            company=company,
+            created_by=self.request.user,
+            transaction_code=transaction_code,
         )

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,7 +26,7 @@ SECRET_KEY = 'django-insecure-qv&bi1etd=g#jse2hnl8*-&n-phvu!3ygze83n15j=3181!(@6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -37,15 +38,19 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Third-party
     'corsheaders',
-
     'rest_framework',
+    'channels',
+    # Local apps
     'users',
     'crm',
     'sales',
     'orders',
     'inventory',
     'production',
+    'notifications',
+    'dashboard',
 ]
 
 MIDDLEWARE = [
@@ -77,9 +82,10 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'core.wsgi.application'
+ASGI_APPLICATION = 'core.asgi.application'
 
 
-# Database
+# ── Database ─────────────────────────────────────────────────────────
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
@@ -94,7 +100,7 @@ DATABASES = {
 }
 
 
-# Password validation
+# ── Password validation ───────────────────────────────────────────────
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -113,22 +119,24 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
+# ── Internationalization ──────────────────────────────────────────────
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+LANGUAGE_CODE = 'vi'
+TIME_ZONE = 'Asia/Ho_Chi_Minh'
 USE_I18N = True
-
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
+# ── Static & Media files ──────────────────────────────────────────────
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -136,12 +144,17 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
+
+# ── CORS ─────────────────────────────────────────────────────────────
 # Cho phép Frontend ở cổng 5173 được phép lấy dữ liệu
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
+CORS_ALLOW_CREDENTIALS = True
 
-# ── Django REST Framework ────────────────────────────────────────────
+
+# ── Django REST Framework ─────────────────────────────────────────────
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -149,11 +162,12 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
 }
 
-# ── Simple JWT ───────────────────────────────────────────────────────
-from datetime import timedelta
 
+# ── Simple JWT ────────────────────────────────────────────────────────
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
@@ -161,4 +175,15 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': False,
     'UPDATE_LAST_LOGIN': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+
+# ── Django Channels (WebSocket / Real-time) ───────────────────────────
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("redis", 6379)],
+        },
+    },
 }

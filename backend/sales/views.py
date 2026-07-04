@@ -1,42 +1,55 @@
-from rest_framework import viewsets
-from rest_framework.pagination import PageNumberPagination
+from rest_framework import permissions, viewsets
 
-from .models import Lead, Quotation, QuotationItem
-from .serializers import LeadSerializer, QuotationItemSerializer, QuotationSerializer
+from users.views import TenantQuerySetMixin
 
-
-class DefaultPageNumberPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = "page_size"
-    max_page_size = 100
+from .models import Quotation, QuotationItem
+from .serializers import QuotationItemSerializer, QuotationSerializer
 
 
-class LeadViewSet(viewsets.ModelViewSet):
-    serializer_class = LeadSerializer
-    pagination_class = DefaultPageNumberPagination
+class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
+    """CRUD báo giá — cô lập theo company."""
 
-    def get_queryset(self):
-        return (
-            Lead.objects.select_related("customer", "assigned_to")
-            .order_by("-created_at", "-id")
-        )
-
-
-class QuotationViewSet(viewsets.ModelViewSet):
+    queryset = Quotation.objects.select_related(
+        "company", "customer", "created_by"
+    ).prefetch_related("items").order_by("-created_at")
     serializer_class = QuotationSerializer
-    pagination_class = DefaultPageNumberPagination
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return (
-            Quotation.objects.select_related("customer", "lead")
-            .prefetch_related("items")
-            .order_by("-created_at", "-id")
+        qs = super().get_queryset()
+        user = self.request.user
+        # Nhân viên Sale chỉ xem báo giá do mình tạo (trừ khi có quyền orders.view_all)
+        if not user.is_company_admin and not user.is_superuser:
+            if not user.has_perm_code("sales.view"):
+                qs = qs.filter(created_by=user)
+        # Filter theo trạng thái nếu có
+        status = self.request.query_params.get("status")
+        if status:
+            qs = qs.filter(status=status)
+        return qs
+
+    def perform_create(self, serializer):
+        from core.numbering import generate_quotation_number
+        company = self.request.user.company
+        quotation_number = generate_quotation_number(company)
+        serializer.save(
+            company=company,
+            created_by=self.request.user,
+            quotation_number=quotation_number,
         )
 
 
 class QuotationItemViewSet(viewsets.ModelViewSet):
+    """CRUD dòng sản phẩm trong báo giá — filter qua quotation.company."""
+
+    queryset = QuotationItem.objects.select_related(
+        "quotation__company", "product"
+    ).order_by("quotation", "id")
     serializer_class = QuotationItemSerializer
-    pagination_class = DefaultPageNumberPagination
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return QuotationItem.objects.select_related("quotation").order_by("id")
+        user = self.request.user
+        if user.is_superuser and user.company_id is None:
+            return super().get_queryset()
+        return self.queryset.filter(quotation__company=user.company)

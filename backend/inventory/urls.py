@@ -3,9 +3,9 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     InventoryTransactionViewSet,
-    InventoryViewSet,
     ProductCategoryViewSet,
     ProductViewSet,
+    StockLevelViewSet,
     WarehouseViewSet,
 )
 
@@ -13,9 +13,9 @@ router = DefaultRouter()
 router.register("product-categories", ProductCategoryViewSet, basename="product-category")
 router.register("products", ProductViewSet, basename="product")
 router.register("warehouses", WarehouseViewSet, basename="warehouse")
-router.register("inventories", InventoryViewSet, basename="inventory")
+router.register("stock-levels", StockLevelViewSet, basename="stock-level")
 router.register(
-    "inventory-transactions",
+    "transactions",
     InventoryTransactionViewSet,
     basename="inventory-transaction",
 )

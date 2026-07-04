@@ -1,34 +1,53 @@
-from rest_framework import viewsets
-from rest_framework.pagination import PageNumberPagination
+from rest_framework import permissions, viewsets
+
+from users.views import TenantQuerySetMixin
 
 from .models import ProductionOrder, ProductionStep
 from .serializers import ProductionOrderSerializer, ProductionStepSerializer
 
 
-class DefaultPageNumberPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = "page_size"
-    max_page_size = 100
+class ProductionOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
+    """Lệnh sản xuất — cô lập theo company."""
 
-
-class ProductionOrderViewSet(viewsets.ModelViewSet):
+    queryset = ProductionOrder.objects.select_related(
+        "company", "order__customer"
+    ).prefetch_related("steps").order_by("-created_at")
     serializer_class = ProductionOrderSerializer
-    pagination_class = DefaultPageNumberPagination
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return (
-            ProductionOrder.objects.select_related("order")
-            .prefetch_related("steps")
-            .order_by("-created_at", "-id")
-        )
+        qs = super().get_queryset()
+        # Filter theo trạng thái nếu có
+        prod_status = self.request.query_params.get("status")
+        if prod_status:
+            qs = qs.filter(status=prod_status)
+        return qs
+
+    def perform_create(self, serializer):
+        company = self.request.user.company
+        serializer.save(company=company)
 
 
 class ProductionStepViewSet(viewsets.ModelViewSet):
+    """Công đoạn sản xuất — filter qua production_order.company."""
+
+    queryset = ProductionStep.objects.select_related(
+        "production_order__company", "assigned_to"
+    ).order_by("production_order", "sequence")
     serializer_class = ProductionStepSerializer
-    pagination_class = DefaultPageNumberPagination
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return (
-            ProductionStep.objects.select_related("production_order", "assigned_to")
-            .order_by("production_order_id", "id")
-        )
+        user = self.request.user
+        if user.is_superuser and user.company_id is None:
+            return super().get_queryset()
+        qs = self.queryset.filter(production_order__company=user.company)
+        # Filter theo production_order nếu có
+        production_order_id = self.request.query_params.get("production_order_id")
+        if production_order_id:
+            qs = qs.filter(production_order_id=production_order_id)
+        # Nhân viên chỉ xem công đoạn được phân công cho mình
+        if not user.is_company_admin and not user.is_superuser:
+            if not user.has_perm_code("production.view"):
+                qs = qs.filter(assigned_to=user)
+        return qs

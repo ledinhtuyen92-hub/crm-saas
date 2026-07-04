@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from rest_framework import serializers
 
-from .models import Company, Permission, Role
+from .models import Company, CompanySettings, Permission, Role
 
 User = get_user_model()
 
@@ -236,8 +236,6 @@ class CompanyRegistrationSerializer(serializers.Serializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        from .models import Permission
-
         workspace_id = validated_data.get("workspace_id") or None
         company = Company.objects.create(
             name=validated_data["company_name"],
@@ -245,6 +243,9 @@ class CompanyRegistrationSerializer(serializers.Serializer):
             tax_code=validated_data["tax_code"],
             address=validated_data["address"],
         )
+
+        # Tạo cài đặt mặc định cho công ty
+        CompanySettings.objects.create(company=company)
 
         # Tạo vai trò "Giám đốc" mặc định với toàn bộ quyền
         director_role = Role.objects.create(
@@ -280,6 +281,16 @@ class CompanyRegistrationSerializer(serializers.Serializer):
             },
             "user": UserSerializer(instance, context=self.context).data,
         }
+
+
+# ─────────────────────────────────────────────
+# CompanySettings
+# ─────────────────────────────────────────────
+
+class CompanySettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompanySettings
+        fields = ["id", "order_prefix", "lead_routing", "timezone"]
 
 
 # ─────────────────────────────────────────────

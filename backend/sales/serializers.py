@@ -1,21 +1,6 @@
 from rest_framework import serializers
 
-from .models import Lead, Quotation, QuotationItem
-
-
-class LeadSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Lead
-        fields = [
-            "id",
-            "customer",
-            "status",
-            "value",
-            "expected_close_date",
-            "assigned_to",
-            "created_at",
-        ]
-        read_only_fields = ["id", "created_at"]
+from .models import Quotation, QuotationItem
 
 
 class QuotationItemSerializer(serializers.ModelSerializer):
@@ -24,28 +9,46 @@ class QuotationItemSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "quotation",
-            "product_id",
+            "product",
+            "product_name",
+            "unit_price",
             "width",
             "height",
             "quantity",
-            "unit_price",
+            "discount_percent",
+            "line_total",
+            "note",
         ]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "line_total"]
 
 
 class QuotationSerializer(serializers.ModelSerializer):
     items = QuotationItemSerializer(many=True, read_only=True)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
+    created_by_name = serializers.CharField(source="created_by.full_name", read_only=True)
 
     class Meta:
         model = Quotation
         fields = [
             "id",
-            "customer",
-            "lead",
+            "company",
             "quotation_number",
+            "customer",
+            "customer_name",
+            "created_by",
+            "created_by_name",
             "status",
+            "status_display",
+            "installation_date",
+            "notes",
+            "discount_total",
             "total_amount",
             "items",
             "created_at",
+            "updated_at",
         ]
-        read_only_fields = ["id", "items", "created_at"]
+        read_only_fields = [
+            "id", "company", "items", "status_display",
+            "customer_name", "created_by_name", "created_at", "updated_at",
+        ]

@@ -1,0 +1,30 @@
+Chạy docker: 
+- Bật docker desktop
+- Chạy khởi tạo backend : docker-compose up -d
+- Chạy giao diện fontend: cd frontend
+                          npm run dev
+- Tắt khi không dùng: docker-compose down
+- Xem báo lỗi: docker-compose logs -f
+
+Chạy lệnh git:
+- Gom các thay đổi : git add .
+- Đẩy lên github: git push
++ lỗi phát sinh "fatal The current branch main has no upstream branch...: git push -u origin main
++ Lỗi cần khai báo thông tin: git config --global user.email "email-dang-ky-github-cua-ban@gmail.com"
+và : git config --global user.name "Ten Cua Ban"
++ Chạy lệnh commit: git commit -m "Cập nhật tài liệu AI_CONTEXT và cấu hình dự án"
++ Chạy tiếp lệnh đẩy: git push
+
+- Gõ sai code, xáo sạch và quay lại gần nhất: git restore .
+- Xem lại code một phiên bản trong quá khứ: 
++ Xem lịch sử: git log --oneline
++ Coppy mã ID và gõ: git checkout <mã-ID>
++ Nếu bản code hỏng đữ lở đẩy lên github thì ép github nhận bản cũ này: git push -f
+
+Đồng bộ dữ liệu tren docker
+- Gõ lệnh xuất dữ liệu: docker exec -it crm_web python manage.py dumpdata > sync_data.json
+Sau đó bạn gõ 3 lệnh quen thuộc: git add ., git commit -m "Đồng bộ data", và git push.
+
+Kéo dữ liệu từ máy khác về : 
+Bạn gõ git pull để kéo code và file sync_data.json về. Sau đó, "bơm" dữ liệu vào Docker:
+docker exec -it crm_web python manage.py loaddata sync_data.json
