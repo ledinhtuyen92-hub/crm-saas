@@ -1,6 +1,27 @@
 from rest_framework.permissions import BasePermission
 
 
+class IsActiveUserAndCompany(BasePermission):
+    """
+    Đảm bảo user đang hoạt động và công ty của user cũng đang hoạt động (nếu có).
+    Nếu công ty bị khoá, chặn tất cả request API.
+    """
+    message = "Tài khoản của bạn hoặc công ty đã bị khoá/vô hiệu hóa."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+            
+        if not user.is_active:
+            return False
+            
+        if user.company and not user.company.is_active:
+            return False
+            
+        return True
+
+
 class IsSuperAdmin(BasePermission):
     """Chỉ cho phép System Administrator (is_superuser=True)."""
 

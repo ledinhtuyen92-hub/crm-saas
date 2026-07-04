@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import {
   AppstoreOutlined,
   BankOutlined,
@@ -6,7 +7,7 @@ import {
   MailOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { Button, Col, Form, Input, Row, Space, Typography, message, theme } from 'antd'
+import { Button, Col, Form, Input, Row, Space, Typography, message, theme, Alert, Spin } from 'antd'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../utils/api'
 import authTechnology from '../assets/auth-technology.png'
@@ -17,16 +18,22 @@ function RegisterCompany() {
   const navigate = useNavigate()
   const { token } = theme.useToken()
   const [messageApi, contextHolder] = message.useMessage()
+  const [isRegistrationEnabled, setIsRegistrationEnabled] = useState(true)
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true)
+
+  useEffect(() => {
+    api.get('/users/public-settings/')
+      .then(res => setIsRegistrationEnabled(res.data.enable_public_registration))
+      .catch(err => console.error(err))
+      .finally(() => setIsLoadingSettings(false))
+  }, [])
 
   const handleSubmit = async (allValues) => {
     // Loại bỏ confirm_password trước khi gửi API
     // eslint-disable-next-line no-unused-vars
     const { confirm_password, ...values } = allValues
     try {
-      await api.post('/users/register-company/', {
-        ...values,
-        username: values.email.split('@')[0],
-      })
+      await api.post('/users/register-company/', values)
       messageApi.success('Đăng ký công ty thành công. Bạn có thể đăng nhập ngay.')
       navigate('/login')
     } catch (error) {
@@ -103,7 +110,20 @@ function RegisterCompany() {
               <Text type="secondary">Thiết lập không gian làm việc của bạn chỉ trong vài phút.</Text>
             </div>
 
-            <Form layout="vertical" requiredMark={false} onFinish={handleSubmit}>
+            {isLoadingSettings ? (
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <Spin size="large" />
+              </div>
+            ) : !isRegistrationEnabled ? (
+              <Alert
+                message="Đăng ký tạm dừng"
+                description="Hệ thống đang tạm dừng cho phép đăng ký doanh nghiệp mới từ bên ngoài. Vui lòng liên hệ Quản trị viên hệ thống để được hỗ trợ cấp tài khoản."
+                type="warning"
+                showIcon
+                style={{ marginBottom: 24 }}
+              />
+            ) : (
+              <Form layout="vertical" requiredMark={false} onFinish={handleSubmit}>
               <Form.Item
                 name="company_name"
                 label="Tên công ty"
@@ -125,6 +145,29 @@ function RegisterCompany() {
               >
                 <Input size="large" prefix={<UserOutlined />} placeholder="Nguyễn Văn An" />
               </Form.Item>
+              <Row gutter={16}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="workspace_id"
+                    label="Mã Workspace ID"
+                    rules={[
+                      { required: true, message: 'Vui lòng nhập mã Workspace' },
+                      { pattern: /^[A-Z0-9]+$/, message: 'Chỉ chứa chữ in hoa và số, viết liền không dấu' }
+                    ]}
+                  >
+                    <Input size="large" prefix={<AppstoreOutlined />} placeholder="Ví dụ: VINAMILK" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="username"
+                    label="Tên đăng nhập"
+                    rules={[{ required: true, message: 'Vui lòng nhập tên đăng nhập' }]}
+                  >
+                    <Input size="large" prefix={<UserOutlined />} placeholder="admin" />
+                  </Form.Item>
+                </Col>
+              </Row>
               <Form.Item
                 name="email"
                 label="Email"
@@ -195,8 +238,9 @@ function RegisterCompany() {
                 </Button>
               </Form.Item>
             </Form>
+            )}
 
-            <div style={{ textAlign: 'center' }}>
+            <div style={{ textAlign: 'center', marginTop: isRegistrationEnabled ? 0 : 24 }}>
               <Text type="secondary">Đã có tài khoản? </Text>
               <Link to="/login" style={{ color: token.colorPrimary, fontWeight: 600 }}>
                 Đăng nhập ngay

@@ -1,4 +1,6 @@
+import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import api from '../utils/api'
 import {
   Avatar,
   Badge,
@@ -9,6 +11,11 @@ import {
   Switch,
   Typography,
   theme,
+  Modal,
+  Form,
+  Input,
+  Button,
+  message,
 } from 'antd'
 import {
   AppstoreOutlined,
@@ -50,6 +57,11 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           key: '/admin/companies',
           icon: <BankOutlined />,
           label: <Link to="/admin/companies">Quản lý Khách hàng SaaS</Link>,
+        },
+        {
+          key: '/admin/users',
+          icon: <TeamOutlined />,
+          label: <Link to="/admin/users">Quản lý Tài khoản</Link>,
         },
         {
           key: '/admin/settings',
@@ -112,6 +124,31 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           : []),
       ]
 
+  // ── Modal Đổi mật khẩu ───────────────────────────────────────────
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false)
+  const [passwordForm] = Form.useForm()
+
+  const handlePasswordSubmit = async (values) => {
+    try {
+      await api.post('users/change-password/', {
+        old_password: values.old_password,
+        new_password: values.new_password,
+      })
+      message.success('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.')
+      setPasswordModalOpen(false)
+      passwordForm.resetFields()
+      logout()
+    } catch (err) {
+      const errData = err.response?.data
+      if (errData && typeof errData === 'object') {
+        const msg = Object.values(errData).flat().join(' ')
+        message.error(msg || 'Mật khẩu cũ không đúng hoặc có lỗi xảy ra.')
+      } else {
+        message.error('Có lỗi xảy ra khi đổi mật khẩu.')
+      }
+    }
+  }
+
   // ── Avatar dropdown menu ─────────────────────────────────────────
   const userMenuItems = [
     {
@@ -119,6 +156,11 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
       icon: <UserOutlined />,
       label: 'Hồ sơ cá nhân',
       disabled: true,
+    },
+    {
+      key: 'change-password',
+      icon: <KeyOutlined />,
+      label: 'Đổi mật khẩu',
     },
     { type: 'divider' },
     {
@@ -131,6 +173,10 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
 
   const onUserMenuClick = ({ key }) => {
     if (key === 'logout') logout()
+    if (key === 'change-password') {
+      setPasswordModalOpen(true)
+      passwordForm.resetFields()
+    }
   }
 
   // ── Tên hiển thị ─────────────────────────────────────────────────
@@ -385,6 +431,62 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           {children}
         </Content>
       </Layout>
+
+      {/* Modal Đổi Mật Khẩu */}
+      <Modal
+        title={<span><KeyOutlined /> Đổi mật khẩu cá nhân</span>}
+        open={passwordModalOpen}
+        onCancel={() => setPasswordModalOpen(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Form
+          form={passwordForm}
+          layout="vertical"
+          onFinish={handlePasswordSubmit}
+          style={{ marginTop: 24 }}
+        >
+          <Form.Item
+            name="old_password"
+            label="Mật khẩu cũ"
+            rules={[{ required: true, message: 'Vui lòng nhập mật khẩu cũ' }]}
+          >
+            <Input.Password size="large" />
+          </Form.Item>
+          <Form.Item
+            name="new_password"
+            label="Mật khẩu mới"
+            rules={[
+              { required: true, message: 'Vui lòng nhập mật khẩu mới' },
+              { min: 6, message: 'Mật khẩu mới phải có ít nhất 6 ký tự' }
+            ]}
+          >
+            <Input.Password size="large" />
+          </Form.Item>
+          <Form.Item
+            name="confirm_password"
+            label="Nhập lại mật khẩu mới"
+            dependencies={['new_password']}
+            rules={[
+              { required: true, message: 'Vui lòng xác nhận mật khẩu mới' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('new_password') === value) {
+                    return Promise.resolve()
+                  }
+                  return Promise.reject(new Error('Hai mật khẩu không khớp!'))
+                },
+              }),
+            ]}
+          >
+            <Input.Password size="large" />
+          </Form.Item>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+            <Button onClick={() => setPasswordModalOpen(false)}>Hủy</Button>
+            <Button type="primary" htmlType="submit">Xác nhận đổi</Button>
+          </div>
+        </Form>
+      </Modal>
     </Layout>
   )
 }

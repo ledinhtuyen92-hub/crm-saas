@@ -1,75 +1,414 @@
-# [MASTER SYSTEM PROMPT & PROJECT CONTEXT]
+# CRM SaaS — Tài liệu Kiến trúc & Phát triển Hệ thống
 
-## 1. MỤC TIÊU DỰ ÁN (PROJECT OVERVIEW)
-- **Vai trò của AI:** Đóng vai trò là một Software Architect và Senior Fullstack Developer.
-- **Sản phẩm:** Nền tảng Universal CRM SaaS B2B toàn diện, phục vụ quản lý quy trình kinh doanh, bán hàng và vận hành cho đa dạng các lĩnh vực doanh nghiệp.
-- **Tiêu chuẩn:** Code cấp độ doanh nghiệp (Enterprise-grade), kiến trúc cơ sở dữ liệu linh hoạt, bảo mật cao, tối ưu UI/UX, hỗ trợ tính năng Real-time và dễ dàng mở rộng.
+> **Dành cho AI đọc tiếp**: Đây là tài liệu đầy đủ và chính xác về hệ thống CRM SaaS đã được phát triển. Hãy đọc kỹ toàn bộ file này trước khi bắt đầu bất kỳ tác vụ phát triển nào. Code thực tế tại `d:\LẬP TRÌNH\crm_saas`.
 
-## 2. CÔNG NGHỆ SỬ DỤNG (TECH STACK)
-- **Frontend:** ReactJS (Vite), Ant Design (antd v5), Axios, Recharts, React Router DOM, **WebSocket API** (nhận thông báo realtime).
-- **Backend:** Python, Django, Django REST Framework (DRF), SimpleJWT (Auth), **Django Channels** (xử lý WebSocket).
-- **Database & DevOps:** PostgreSQL, **Redis** (Message Broker cho Channels), Docker, Docker Compose.
+---
 
-## 3. KIẾN TRÚC LÕI & PHÂN QUYỀN (MULTI-TENANT & RBAC)
-Hệ thống tuân thủ nghiêm ngặt mô hình Đa hệ sinh thái (Multi-tenant), cách ly dữ liệu tuyệt đối giữa các công ty (Workspace).
+## 1. Tổng Quan Hệ thống
 
-### 3.1. Cấp độ Hệ thống (System Level)
-- **System Administrator:** Quyền cao nhất toàn hệ thống. Có module riêng ("Hệ thống: Công ty") để xem thống kê tổng.
-- **Quản lý Tài khoản & Giới hạn (Licensing/Quota):** - Có quyền Thêm, Sửa (chỉnh sửa thông tin), Xóa, và Đổi mật khẩu cho các tài khoản Công ty (Workspace).
-  - Cấp quyền và thiết lập **Giới hạn số lượng tài khoản nhân viên** tối đa mà mỗi Công ty được phép tạo (VD: Gói 10 users, 50 users, hoặc Không giới hạn).
+**CRM SaaS** là phần mềm quản lý quan hệ khách hàng theo mô hình **Multi-tenant SaaS**. Mỗi công ty khách hàng ("tenant") có workspace riêng biệt, dữ liệu cô lập hoàn toàn.
 
-### 3.2. Cấp độ Công ty (Workspace Level)
-- **Tài khoản Công ty (Company Admin/Giám đốc):** Quản trị viên của một Workspace độc lập (Đăng nhập qua `Workspace ID`, `Email`, `Password`).
-- **Quyền hạn:** Toàn quyền sử dụng các module. Có quyền tạo tài khoản nhân viên (trong giới hạn Quota), thiết lập chức danh (Role), và định nghĩa các tham số chung (Tiền tố mã đơn hàng, Tag khách hàng).
+### Stack Kỹ thuật
 
-### 3.3. Cấp độ Vai trò Nhân sự (Dynamic Roles)
-- Các chức danh: `Trưởng phòng Kinh doanh`, `Trưởng phòng Marketing`, `Nhân viên Kinh doanh (Sale)`, `Kế toán`, `Nhân viên Vận hành`.
-- **Quy tắc Backend cốt lõi:** 1. Mọi QuerySet truy xuất dữ liệu bắt buộc phải filter theo `request.user.company`.
-  2. Quyền hạn (Xem/Thêm/Sửa/Xóa) nội suy động dựa trên Role. Nhân viên chỉ thao tác trên dữ liệu/module được phân công.
+| Tầng | Công nghệ |
+|------|-----------|
+| **Backend** | Django 5.2 + Django REST Framework |
+| **Frontend** | React (Vite) + Ant Design UI + Recharts |
+| **Database** | PostgreSQL 15 |
+| **Realtime** | Django Channels + Redis |
+| **Auth** | JWT (SimpleJWT) |
+| **Container** | Docker + Docker Compose |
 
-## 4. CHI TIẾT CÁC MODULE NGHIỆP VỤ (KEY MODULES)
+### Cách chạy hệ thống
 
-### 4.1. Module Dashboard (Bảng điều khiển)
-- **System Admin:** Thống kê tổng số lượng tài khoản Công ty, tài nguyên hệ thống, request.
-- **Company Admin / Quản lý:** Tổng nhân viên, Tổng doanh thu, Tổng đơn hàng. Biểu đồ doanh thu/đơn hàng của *từng nhân viên Sale* (lấy từ đơn hàng đã "Chấp thuận").
-- **Nhân viên Sale:** Chỉ xem số lượng đơn, doanh số và biểu đồ của *chính mình*.
+```bash
+# 1. Khởi động Backend + DB + Redis (bật Docker Desktop trước)
+docker-compose up -d
 
-### 4.2. Module Khách hàng (CRM & Leads)
-- **Quản lý dữ liệu:** Nhập qua Form hoặc Import Excel. 
-- **Phân bổ Lead (Routing):** Khi có khách mới, hệ thống hỗ trợ 2 phương án:
-  1. *Tự động (Round-robin):* Chia đều cho các Sale đang hoạt động.
-  2. *Thủ công (Manual):* Trưởng phòng Sale chủ động gán cho một nhân viên cụ thể.
-- **Nghiệp vụ Sale:**
-  - *Phân loại (Tags):* Sale gán tag (Khách mới, Tiềm năng...). Tag do Quản lý tạo sẵn.
-  - *Lịch sử chăm sóc:* Form nhập tình trạng sau mỗi lần liên hệ, lưu thành timeline có Timestamp.
-  - *Chuyển đổi nhanh:* Nút "Tạo đơn hàng" trong Profile, tự động đẩy dữ liệu sang module Đơn hàng.
+# 2. Khởi động Frontend (terminal riêng)
+cd frontend && npm run dev
 
-### 4.3. Module Sản phẩm & Dịch vụ (Products)
-- **Quyền hạn:** Nút "Tạo sản phẩm" chỉ hiện với Role được cấp phép.
-- **Trường thông tin:** `STT` (tự động thông minh), `Mã SP`, `Tên SP`, `Kích thước`, `Giá bán`, `Ghi chú`, `Loại sản phẩm` (Dropdown có nút tạo mới), `Hình ảnh`.
+# 3. Tắt
+docker-compose down
 
-### 4.4. Module Đơn hàng & Báo giá (Orders & Quotes)
-- **Trường thông tin:** `Mã đơn hàng` (`[Tiền tố]_[STT]`), `Thông tin khách` (tìm qua SĐT), `Ngày lắp đặt`, `Danh sách SP/Vật tư` (popup tìm kiếm từ Module Sản phẩm, nhập số lượng, chiết khấu -> tự tính Thành tiền).
-- **Workflow & PDF:** - Lưu đơn -> Sinh mẫu PDF tự động.
-  - Đơn mới ở trạng thái **"Chờ duyệt"**. Quản lý/Kế toán **"Chấp thuận"** -> Tự động đẩy thông tin qua Kho vận.
+# Xem log backend
+docker-compose logs -f web
 
-### 4.5. Module Kho vận (Inventory)
-- **Nhập hàng (Inbound):** Chọn SP, nhập số lượng, giá nhập. Cộng dồn tồn kho, sinh `Mã nhập hàng`.
-- **Xuất hàng (Outbound):** Khi Đơn hàng "Chấp thuận", tự động sinh `Mã xuất hàng`, trừ tồn kho. Có cảnh báo nếu xuất vượt tồn kho thực tế.
+# Tạo superuser hệ thống
+docker exec -it crm_web python manage.py createsuperuser
 
-### 4.6. Module Báo cáo (Reports)
-- **Quản lý:** Lọc, xem thống kê list đơn hàng toàn hệ thống, so sánh hiệu suất nhân viên.
-- **Sale:** Xem và lọc dữ liệu cá nhân.
+# Chạy migration sau khi thay đổi model
+docker exec crm_web python manage.py makemigrations
+docker exec crm_web python manage.py migrate
 
-### 4.7. Module Thông báo (Real-time Notifications)
-- **Giao diện:** Biểu tượng Chuông ở thanh Header (cạnh Avatar), kèm Badge đếm số lượng chưa đọc. Click vào thông báo sẽ Navigate đến đúng trang chi tiết.
-- **Luồng sự kiện (Events):**
-  - *Hệ thống:* Cập nhật từ System Admin.
-  - *CRM:* Báo cho Sale ngay khi được phân công Khách hàng mới (tự động/thủ công).
-  - *Đơn hàng:* Báo cho Quản lý/Kế toán ngay khi có đơn hàng mới cần "Duyệt".
+# Restart backend để load code mới
+docker-compose restart web
+```
 
-## 5. QUY TẮC LẬP TRÌNH BẤT DI BẤT DỊCH (STRICT RULES)
-1. **BẢO TOÀN MÃ NGUỒN TỐI THƯỢNG:** Hãy tuyệt đối giữ các tính năng chúng ta đã phát triển, bao gồm cả tách file mới nhất. Đặc biệt chú ý KHÔNG làm hỏng hay ghi đè logic hiện tại đối với các file có chức năng `edit` và `create` (ví dụ: `edit.php`, `create.js`, các form component `edit/create`).
-2. **Code hoàn chỉnh 100%:** Trả về mã nguồn đầy đủ, chạy được ngay. Tuyệt đối KHÔNG sử dụng placeholder (ví dụ: `// do something here`).
-3. **Chất lượng UI/UX (Enterprise):** Luôn sử dụng Ant Design. Bố cục tràn viền, thoáng, bo góc tinh tế, Dark/Light theme đồng nhất. Tuân thủ nguyên tắc DRY.
-4. **Bảo mật luồng duyệt (Approval Flow):** Backend chặn cứng API xuất kho nếu trạng thái đơn hàng chưa "Chấp thuận". Frontend không được tự ý gọi hàm trừ kho.
+---
+
+## 2. Kiến trúc Backend (Django)
+
+### 2.1 Cấu trúc thư mục Backend
+
+```
+backend/
+├── core/                  # Django project root
+│   ├── settings.py        # DB, JWT, CORS, REST_FRAMEWORK, Middleware
+│   ├── urls.py            # Root URL dispatcher
+│   └── numbering.py       # Hàm generate mã đơn hàng tự động
+├── users/                 # App quản lý người dùng & công ty (TRUNG TÂM)
+├── crm/                   # App quản lý khách hàng & Leads
+├── sales/                 # App báo giá (Quotation)
+├── orders/                # App đơn hàng (Order)
+├── inventory/             # App kho bãi & sản phẩm
+├── production/            # App quản lý sản xuất
+├── dashboard/             # App thống kê & biểu đồ Dashboard
+└── notifications/         # App thông báo (WebSocket)
+```
+
+### 2.2 App `users` — Trung tâm của hệ thống
+
+**File**: `users/models.py`
+
+#### `Company` (Công ty / Tenant)
+- `name`, `workspace_id` (slug unique, tự tạo từ tax_code), `tax_code` (unique)
+- `address`, `phone`, `logo`
+- `is_active` — Khóa/mở khoá công ty
+- `user_limit` — Giới hạn số nhân viên (null = không giới hạn)
+- `created_at`
+
+#### `Permission` (Quyền)
+- `code` (unique) — VD: `crm.view_all`, `orders.approve`, `inventory.view`
+- `name`, `module` — Tên hiển thị và module chứa quyền
+
+#### `Role` (Vai trò — thuộc về 1 company)
+- `company` FK, `name`, `description`
+- `permissions` M2M(Permission) — Danh sách quyền được gán
+
+#### `User` (extends AbstractUser)
+- `email` (unique), `full_name`, `phone`, `job_title`, `avatar`
+- `company` FK — null nếu là SuperAdmin hệ thống
+- `role` FK(Role)
+- `is_company_admin: BooleanField` — True = Giám đốc/Owner của công ty
+
+**Phân cấp quyền (quan trọng)**:
+```
+is_superuser=True     → System Admin (không có company) — quản trị toàn hệ thống
+is_company_admin=True → Company Admin (Giám đốc) — toàn quyền trong workspace
+role.permissions      → Nhân viên thường — bị giới hạn bởi Role
+```
+
+**Phương thức quan trọng trên User:**
+```python
+user.has_perm_code("crm.view_all")  # Kiểm tra nhanh 1 permission
+user.get_permission_codes()          # Trả về set tất cả permission codes
+```
+
+#### `SubscriptionPlan` (Gói đăng ký)
+- `code` (unique), `name`, `user_limit`, `is_default`, `created_at`
+- **Gói mặc định** (is_default=True, không xoá được): `starter (5 users)`, `business (20 users)`, `enterprise (99999)`
+- Admin hệ thống tạo thêm **gói tuỳ chỉnh** từ giao diện `/admin/settings`
+
+#### `SystemSettings` (Cấu hình hệ thống — Singleton, pk=1)
+- `require_strong_password` — Yêu cầu mật khẩu mạnh
+- `enable_public_registration` — Bật/tắt trang đăng ký công ty mới
+- `default_plan`, `default_user_limit` — Gói & giới hạn mặc định khi đăng ký
+- `tenant_isolation_mode` — `"strict"` (mặc định) hoặc `"relaxed"`
+- `jwt_expiration_hours` — Thời gian hết hạn phiên JWT (thực sự áp dụng)
+- `max_file_upload_mb` — Giới hạn file upload (thực sự áp dụng qua Middleware)
+
+#### `CompanySettings` (Cấu hình công ty — 1:1 với Company)
+- `order_prefix` — Tiền tố mã đơn hàng (VD: "DH" → DH-20240101-001)
+- `lead_routing` — `"manual"` hoặc `"round_robin"`
+- `timezone`
+
+### 2.3 TenantQuerySetMixin — Cô lập dữ liệu (QUAN TRỌNG)
+
+**File**: `users/views.py`
+
+```python
+class TenantQuerySetMixin:
+    """
+    Mọi ViewSet xử lý dữ liệu của công ty PHẢI kế thừa mixin này.
+    Tự động filter queryset theo company của user đang đăng nhập.
+    
+    Modes:
+    - "strict": Mọi user chỉ thấy data của company mình
+    - "relaxed": Superuser thấy tất cả data (dùng khi hỗ trợ kỹ thuật)
+    """
+```
+
+### 2.4 Middleware đang hoạt động
+
+```python
+# users/middleware.py
+class FileUploadLimitMiddleware:
+    # Chặn request vượt quá SystemSettings.max_file_upload_mb * 1024 * 1024 bytes
+```
+
+### 2.5 Authentication
+
+- `POST /api/users/token/` — Đăng nhập, nhận access + refresh token
+- `POST /api/users/token/refresh/` — Làm mới token
+- **CustomTokenObtainPairSerializer** trong `users/serializers.py`:
+  - Kiểm tra `is_active` của user
+  - Kiểm tra `is_active` của company
+  - Áp dụng `jwt_expiration_hours` từ SystemSettings vào thời gian hết hạn token
+
+---
+
+## 3. App `crm` — Quản lý Khách hàng
+
+**Files**: `crm/models.py`, `crm/serializers.py`, `crm/views.py`
+
+### Model `Customer`
+```
+company (FK), name, phone, email, address, city
+source: [facebook, zalo, referral, walk_in, website, other]
+  → Nguồn khách marketing — do Sale TỰ CHỌN khi tạo, không tự động
+status: [new, potential, active, lost, inactive]
+tags (M2M CustomerTag)
+assigned_to (FK User, related_name="assigned_customers") — Nhân viên phụ trách
+created_by (FK User, related_name="created_customers") — Người tạo record
+notes
+```
+
+### API Actions
+```
+GET/POST   /api/crm/customers/                     # CRUD
+POST       /api/crm/customers/{id}/assign/         # Phân công thủ công {assigned_to: user_id}
+POST       /api/crm/customers/round-robin-assign/  # Phân bổ tự động (chỉ CompanyAdmin)
+GET/POST   /api/crm/contacts/                      # Đầu mối liên hệ phụ
+GET/POST   /api/crm/interactions/                  # Lịch sử chăm sóc
+```
+
+### Lưu ý Serializer `CustomerSerializer`
+- `assigned_to` (read): Trả về nested object `{id, full_name, username}`
+- `assigned_to_id` (write-only): Nhận integer ID khi ghi
+- `created_by` (read): Trả về nested object `{id, full_name, username}`
+- `source_display`: Tên đầy đủ của source (VD: "Facebook", "Giới thiệu")
+
+---
+
+## 4. App `orders` — Đơn hàng
+
+### Model `Order`
+```
+company (FK), customer (FK), quotation (FK nullable)
+order_number (auto-generated từ core/numbering.py)
+created_by, approved_by (FK User)
+status: [pending, approved, rejected, in_production, completed, cancelled]
+total_amount (DecimalField)
+```
+
+### API Actions
+```
+POST /api/orders/{id}/approve/  # Duyệt (cần quyền orders.approve hoặc is_company_admin)
+POST /api/orders/{id}/reject/   # Từ chối
+```
+
+---
+
+## 5. App `dashboard` — Thống kê
+
+**File**: `backend/dashboard/views.py`
+
+```
+GET /api/dashboard/summary/
+    → customers: {total, new_today, by_status_*}
+    → quotations: {total, draft, sent, accepted, rejected, win_rate(%)}
+    → orders: {total, pending, approved, completed, revenue_this_month,
+               revenue_today, total_revenue_all_time}
+    → inventory: {low_stock_count}
+    → employees: {total_active}
+
+GET /api/dashboard/revenue-chart/?period=6
+    → [{month: "2026-01", revenue: 50000000, count: 3}, ...]
+
+GET /api/dashboard/orders-by-status/
+    → [{status: "pending", label: "Chờ duyệt", count: 5}, ...]
+
+GET /api/dashboard/top-sellers/?limit=N
+    → [{user_id, full_name, total_revenue, order_count}, ...]  # Sắp giảm dần
+
+GET /api/dashboard/top-customers/?limit=N
+    → [{customer_id, name, phone, total_revenue, order_count}, ...]
+```
+
+---
+
+## 6. Cấu trúc Frontend (React + Vite)
+
+```
+frontend/src/
+├── App.jsx                 # Router chính, tất cả routes
+├── contexts/AuthContext.jsx # Auth state: JWT, user info, permissions
+├── components/
+│   ├── MainLayout.jsx      # Layout chính (sidebar + header) cho user thường
+│   └── ProtectedRoute.jsx  # HOC: ProtectedRoute, SuperAdminRoute, CompanyAdminRoute
+├── utils/api.js            # Axios instance (baseURL: http://localhost:8000/api/)
+└── pages/
+    ├── Login.jsx           # Đăng nhập: workspace_id + username + password
+    ├── RegisterCompany.jsx # Đăng ký công ty mới
+    ├── Dashboard.jsx       # Dashboard Giám đốc (dữ liệu real-time)
+    ├── CustomerList.jsx    # Quản lý khách hàng & Leads
+    ├── QuotationList.jsx   # Báo giá
+    ├── OrderList.jsx       # Đơn hàng
+    ├── Inventory.jsx       # Kho bãi & sản phẩm
+    ├── ProductionList.jsx  # Sản xuất
+    ├── admin/
+    │   ├── AdminDashboard.jsx         # Dashboard System Admin
+    │   ├── AdminSettings.jsx          # Cấu hình hệ thống + Gói đăng ký
+    │   ├── CompanyManagement.jsx      # CRUD công ty khách hàng SaaS
+    │   ├── SystemUserManagement.jsx   # CRUD tài khoản toàn hệ thống
+    │   └── SubscriptionPlanManager.jsx # CRUD gói đăng ký tuỳ chỉnh
+    └── settings/
+        ├── UserManagement.jsx  # Quản lý nhân viên (CompanyAdmin)
+        └── RoleManagement.jsx  # Quản lý vai trò & phân quyền
+```
+
+### Routes
+
+| Route | Component | Quyền |
+|-------|-----------|-------|
+| `/login` | Login.jsx | Public |
+| `/register` | RegisterCompany.jsx | Public (nếu bật) |
+| `/dashboard` | Dashboard.jsx | Đăng nhập (non-SuperAdmin) |
+| `/customers` | CustomerList.jsx | Đăng nhập |
+| `/quotations` | QuotationList.jsx | Đăng nhập |
+| `/orders` | OrderList.jsx | Đăng nhập |
+| `/inventory` | Inventory.jsx | Đăng nhập |
+| `/settings/users` | UserManagement.jsx | CompanyAdmin |
+| `/settings/roles` | RoleManagement.jsx | CompanyAdmin |
+| `/admin/dashboard` | AdminDashboard.jsx | **SuperAdmin only** |
+| `/admin/companies` | CompanyManagement.jsx | **SuperAdmin only** |
+| `/admin/users` | SystemUserManagement.jsx | **SuperAdmin only** |
+| `/admin/settings` | AdminSettings.jsx | **SuperAdmin only** |
+
+---
+
+## 7. Các Tính năng Đã Hoàn thiện
+
+### System Admin (SuperAdmin)
+
+| Tính năng | Trạng thái | Ghi chú |
+|-----------|-----------|---------|
+| Dashboard thống kê hệ thống | ✅ | Số công ty, tài khoản, tăng trưởng tháng |
+| Quản lý công ty (CRUD) | ✅ | Tạo kèm tài khoản Giám đốc, khoá/mở, xoá |
+| Đổi gói đăng ký công ty | ✅ | Danh sách gói dynamic từ API |
+| Quản lý tài khoản hệ thống | ✅ | Khoá/mở, đặt lại mật khẩu |
+| Cấu hình hệ thống | ✅ | Tất cả settings thực sự áp dụng backend |
+| Khoá trang đăng ký mới | ✅ | UI bị khoá + thông báo |
+| Gói đăng ký tuỳ chỉnh (CRUD) | ✅ | Gói mặc định không xoá được |
+
+### Company Admin (Giám đốc)
+
+| Tính năng | Trạng thái | Ghi chú |
+|-----------|-----------|---------|
+| Dashboard real-time | ✅ | 5 KPI, 2 biểu đồ, bảng xếp hạng Sale, 10 đơn mới nhất |
+| Quản lý nhân viên (CRUD) | ✅ | Giới hạn theo user_limit |
+| Quản lý vai trò & quyền | ✅ | CRUD vai trò, gán quyền |
+| Phân công khách thủ công | ✅ | Chọn Sale cho từng khách |
+| Phân bổ khách tự động | ✅ | Round-robin đều cho các Sale |
+
+### Khách hàng (CRM)
+
+| Tính năng | Trạng thái | Ghi chú |
+|-----------|-----------|---------|
+| Danh sách với cột Địa chỉ | ✅ | |
+| Cột Nguồn: icon + kênh + người tạo | ✅ | |
+| Cột Phụ trách: tên đầy đủ hoặc "Chưa có" | ✅ | |
+| Thêm/Sửa/Xoá khách | ✅ | |
+| Drawer chi tiết: lịch sử chăm sóc, đầu mối | ✅ | |
+| Lọc theo trạng thái, tìm kiếm | ✅ | |
+
+---
+
+## 8. Quy ước & Patterns Quan trọng
+
+### Xử lý Pagination ở Frontend (BẮT BUỘC)
+```javascript
+// Backend bật PageNumberPagination với PAGE_SIZE=20
+// Response có thể là array hoặc {count, next, previous, results: [...]}
+const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
+```
+
+### Pattern Nested Serializer (cho User objects)
+```python
+# Khi muốn trả về {id, full_name, username} thay vì integer ID:
+class SomeUserSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    full_name = serializers.CharField()
+    username = serializers.CharField()
+
+class MySerializer(serializers.ModelSerializer):
+    some_user = SomeUserSerializer(read_only=True)       # ĐỌC: nested object
+    some_user_id = serializers.PrimaryKeyRelatedField(   # GHI: nhận ID
+        queryset=User.objects.all(),
+        source="some_user",
+        write_only=True,
+    )
+```
+
+### Pattern TenantQuerySetMixin
+```python
+class MyViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
+    queryset = MyModel.objects.select_related("company")
+    # get_company() → trả về company của user hiện tại
+```
+
+### Thêm ViewSet mới vào URLs
+```python
+# users/urls.py (hoặc app tương ứng)
+router.register("my-endpoint", MyViewSet, basename="my-endpoint")
+```
+
+---
+
+## 9. Các Module Cần Phát triển Tiếp
+
+| Module | Ưu tiên | Mô tả |
+|--------|---------|-------|
+| Import Excel khách hàng | Cao | Endpoint riêng, đặt `created_by=request.user` |
+| Báo cáo & Xuất Excel/PDF | Cao | Doanh thu, hiệu suất Sale, tồn kho |
+| Email notification | Trung bình | Khi có đơn mới, khi được phân công khách |
+| Facebook Lead Ads integration | Trung bình | Webhook nhận lead, tạo Customer tự động |
+| Thông báo realtime (WebSocket) | Trung bình | Django Channels + Redis đã cấu hình sẵn |
+| Mobile responsive | Thấp | UI đang tối ưu cho desktop |
+| Đa ngôn ngữ (i18n) | Thấp | |
+| Two-factor authentication | Thấp | |
+
+---
+
+## 10. Thông tin Kỹ thuật Bổ sung
+
+### Database
+- **Engine**: PostgreSQL 15 (qua Docker, container `crm_db`)
+- **Kết nối**: host=`db`, port=5432, user=`postgres`, pass=`123`, db=`crm_db`
+
+### Docker Containers
+- `crm_db` — PostgreSQL database
+- `crm_redis` — Redis (cho Channels)
+- `crm_web` — Django app server (port 8000)
+
+### CORS
+```python
+CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+CORS_ALLOW_CREDENTIALS = True
+```
+
+### Default Admin Account
+- Tạo bằng: `docker exec -it crm_web python manage.py createsuperuser`
+- Tài khoản này có `is_superuser=True`, KHÔNG có `company`
+
+### Sync dữ liệu giữa các máy
+```bash
+# Xuất dữ liệu
+docker exec -it crm_web python manage.py dumpdata > sync_data.json
+git add . && git commit -m "sync" && git push
+
+# Nhập dữ liệu vào máy khác
+git pull
+docker exec -it crm_web python manage.py loaddata sync_data.json
+```

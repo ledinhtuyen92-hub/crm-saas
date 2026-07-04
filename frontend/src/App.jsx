@@ -19,6 +19,7 @@ import RegisterCompany from './pages/RegisterCompany'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminSettings from './pages/admin/AdminSettings'
 import CompanyManagement from './pages/admin/CompanyManagement'
+import SystemUserManagement from './pages/admin/SystemUserManagement'
 import RoleManagement from './pages/settings/RoleManagement'
 import UserManagement from './pages/settings/UserManagement'
 
@@ -103,6 +104,14 @@ function App() {
                 element={
                   <SuperAdminRoute>
                     <CompanyManagement />
+                  </SuperAdminRoute>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <SuperAdminRoute>
+                    <SystemUserManagement />
                   </SuperAdminRoute>
                 }
               />

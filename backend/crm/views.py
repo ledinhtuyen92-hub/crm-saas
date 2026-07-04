@@ -96,6 +96,8 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         customer.assigned_to = sale_user
         customer.save(update_fields=["assigned_to", "updated_at"])
 
+        # Reload từ DB để có đủ select_related
+        customer = Customer.objects.select_related("assigned_to", "company", "created_by").get(pk=customer.pk)
         return Response(CustomerSerializer(customer, context={"request": request}).data)
 
     @action(detail=False, methods=["post"], url_path="round-robin-assign")

@@ -6,6 +6,31 @@ from .models import Company, CompanySettings, Permission, Role
 
 User = get_user_model()
 
+import re
+from .models import SystemSettings
+
+def validate_strong_password(password):
+    if not password:
+        return password
+        
+    settings = SystemSettings.load()
+    if settings.require_strong_password:
+        is_valid = True
+        if len(password) < 8:
+            is_valid = False
+        elif not re.search(r'[A-Z]', password):
+            is_valid = False
+        elif not re.search(r'[a-z]', password):
+            is_valid = False
+        elif not re.search(r'\d', password):
+            is_valid = False
+        elif not re.search(r'[^A-Za-z0-9]', password):
+            is_valid = False
+            
+        if not is_valid:
+            raise serializers.ValidationError("Mật khẩu phải dài ít nhất 8 ký tự, bao gồm chữ in hoa, chữ thường, số và ký tự đặc biệt theo yêu cầu của hệ thống.")
+    return password
+
 
 # ─────────────────────────────────────────────
 # Permission
@@ -76,6 +101,8 @@ class UserSerializer(serializers.ModelSerializer):
     role_name = serializers.CharField(source="role.name", read_only=True)
     permissions = serializers.SerializerMethodField()
 
+    company_id = serializers.IntegerField(write_only=True, required=False)
+
     class Meta:
         model = User
         fields = [
@@ -96,8 +123,9 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
             "department_id",
             "created_at",
+            "company_id",
         ]
-        read_only_fields = ["created_at", "permissions", "is_superuser"]
+        read_only_fields = ["created_at", "permissions", "is_superuser", "company"]
 
     def get_permissions(self, obj):
         """Trả về danh sách permission code của user."""
@@ -105,18 +133,29 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         request = self.context["request"]
-        # Với superuser đang gán company cho user khác, bỏ qua validation company
         acting_user = request.user
-        company = acting_user.company
+        
+        # Lấy company từ payload nếu là superuser, nếu không thì lấy company của người tạo
+        company_id = attrs.pop("company_id", None)
+        if acting_user.is_superuser and company_id:
+            try:
+                company = Company.objects.get(id=company_id)
+            except Company.DoesNotExist:
+                raise serializers.ValidationError({"company_id": "Công ty không tồn tại."})
+        else:
+            company = acting_user.company
+
+        if company is None and not acting_user.is_superuser:
+            raise serializers.ValidationError("Tài khoản của bạn chưa được gán công ty.")
+
+        # Gán company vào attrs để create/update sử dụng
+        if company:
+            attrs["company"] = company
 
         role = attrs.get("role", getattr(self.instance, "role", None))
-        if company is None and not acting_user.is_superuser:
-            raise serializers.ValidationError(
-                "Tài khoản của bạn chưa được gán công ty."
-            )
         if role and company and role.company_id != company.id:
             raise serializers.ValidationError(
-                {"role": "Vai trò không thuộc công ty của người dùng hiện tại."}
+                {"role": "Vai trò không thuộc công ty của nhân viên."}
             )
         return attrs
 
@@ -124,6 +163,7 @@ class UserSerializer(serializers.ModelSerializer):
         password = validated_data.pop("password", None)
         if not password:
             raise serializers.ValidationError({"password": "Mật khẩu là bắt buộc."})
+        validate_strong_password(password)
         user = User(**validated_data)
         user.set_password(password)
         user.save()
@@ -133,6 +173,7 @@ class UserSerializer(serializers.ModelSerializer):
         password = validated_data.pop("password", None)
         instance = super().update(instance, validated_data)
         if password:
+            validate_strong_password(password)
             instance.set_password(password)
             instance.save(update_fields=["password"])
         return instance
@@ -145,6 +186,12 @@ class UserSerializer(serializers.ModelSerializer):
 class CompanySerializer(serializers.ModelSerializer):
     user_count = serializers.SerializerMethodField()
     owner_email = serializers.SerializerMethodField()
+
+    # Các trường dùng để tạo tài khoản Giám đốc ban đầu khi SuperAdmin thêm công ty
+    admin_username = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    admin_password = serializers.CharField(write_only=True, required=False, allow_blank=True, min_length=6)
+    admin_email = serializers.EmailField(write_only=True, required=False, allow_blank=True)
+    admin_fullname = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = Company
@@ -161,6 +208,10 @@ class CompanySerializer(serializers.ModelSerializer):
             "created_at",
             "user_count",
             "owner_email",
+            "admin_username",
+            "admin_password",
+            "admin_email",
+            "admin_fullname",
         ]
         read_only_fields = ["created_at"]
 
@@ -171,7 +222,19 @@ class CompanySerializer(serializers.ModelSerializer):
         owner = obj.users.filter(is_company_admin=True).first()
         return owner.email if owner else None
 
+    def validate_admin_username(self, value):
+        if value and User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError(f"Tên đăng nhập '{value}' đã tồn tại trên hệ thống.")
+        return value
+
+    def validate_admin_email(self, value):
+        if value and User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(f"Email '{value}' đã được sử dụng.")
+        return value
+
     def validate_workspace_id(self, value):
+        if not value:
+            return value
         value = value.strip().upper().replace(" ", "")
         qs = Company.objects.filter(workspace_id__iexact=value)
         if self.instance:
@@ -179,6 +242,41 @@ class CompanySerializer(serializers.ModelSerializer):
         if qs.exists():
             raise serializers.ValidationError("Workspace ID này đã được sử dụng.")
         return value
+
+    @transaction.atomic
+    def create(self, validated_data):
+        admin_username = validated_data.pop("admin_username", None)
+        admin_password = validated_data.pop("admin_password", None)
+        admin_email = validated_data.pop("admin_email", None)
+        admin_fullname = validated_data.pop("admin_fullname", None)
+
+        company = super().create(validated_data)
+
+        # Khởi tạo cài đặt mặc định cho công ty
+        CompanySettings.objects.create(company=company)
+
+        # Tự động tạo tài khoản Giám đốc nếu có nhập thông tin admin
+        if admin_username and admin_password:
+            director_role, _ = Role.objects.get_or_create(
+                company=company,
+                name="Giám đốc",
+                defaults={"description": "Vai trò quản trị cao nhất của công ty."}
+            )
+            # Giám đốc mặc định có toàn bộ quyền
+            director_role.permissions.set(Permission.objects.all())
+
+            User.objects.create_user(
+                username=admin_username,
+                password=admin_password,
+                email=admin_email or f"{admin_username}@saas.local",
+                full_name=admin_fullname or "Giám đốc",
+                company=company,
+                role=director_role,
+                is_company_admin=True,
+                job_title="Giám đốc",
+            )
+
+        return company
 
     def validate_tax_code(self, value):
         value = value.strip()
@@ -223,6 +321,11 @@ class CompanyRegistrationSerializer(serializers.Serializer):
         if not value:
             return value
         value = value.strip().upper().replace(" ", "")
+        
+        import re
+        if not re.match(r'^[A-Z0-9]+$', value):
+            raise serializers.ValidationError("Mã Workspace chỉ được chứa chữ cái in hoa và số, viết liền không dấu.")
+            
         if Company.objects.filter(workspace_id__iexact=value).exists():
             raise serializers.ValidationError("Workspace ID này đã được sử dụng.")
         return value
@@ -237,15 +340,21 @@ class CompanyRegistrationSerializer(serializers.Serializer):
             raise serializers.ValidationError("Email đã tồn tại.")
         return value
 
+    def validate_password(self, value):
+        return validate_strong_password(value)
+
     @transaction.atomic
     def create(self, validated_data):
+        from .models import SystemSettings
+        settings = SystemSettings.load()
+        
         workspace_id = validated_data.get("workspace_id") or None
         company = Company.objects.create(
             name=validated_data["company_name"],
             workspace_id=workspace_id or "",  # models.save() sẽ auto-generate nếu rỗng
             tax_code=validated_data["tax_code"],
             address=validated_data["address"],
-            user_limit=5,  # Mặc định gói Khởi nghiệp 5 user khi tự đăng ký
+            user_limit=settings.default_user_limit,
         )
 
         # Tạo cài đặt mặc định cho công ty
@@ -311,6 +420,9 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError("Mật khẩu cũ không đúng.")
         return value
 
+    def validate_new_password(self, value):
+        return validate_strong_password(value)
+
 
 # ─────────────────────────────────────────────
 # User Quota Serializer
@@ -321,4 +433,37 @@ class UserQuotaSerializer(serializers.Serializer):
     active_users = serializers.IntegerField()
     remaining_users = serializers.IntegerField(allow_null=True)
     can_add_user = serializers.BooleanField()
+
+
+# ─────────────────────────────────────────────
+# Subscription Plan
+# ─────────────────────────────────────────────
+
+from .models import SubscriptionPlan
+
+class SubscriptionPlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPlan
+        fields = ["id", "code", "name", "user_limit", "is_default", "created_at"]
+        read_only_fields = ["id", "is_default", "created_at"]
+
+
+# ─────────────────────────────────────────────
+# System Settings
+# ─────────────────────────────────────────────
+
+from .models import SystemSettings
+
+class SystemSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SystemSettings
+        fields = [
+            "require_strong_password",
+            "enable_public_registration",
+            "default_plan",
+            "default_user_limit",
+            "tenant_isolation_mode",
+            "jwt_expiration_hours",
+            "max_file_upload_mb"
+        ]
 

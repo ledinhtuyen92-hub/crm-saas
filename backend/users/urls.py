@@ -10,7 +10,10 @@ from .views import (
     CurrentUserView,
     CustomTokenObtainPairView,
     PermissionViewSet,
+    PublicSettingsView,
     RoleViewSet,
+    SystemSettingsView,
+    SubscriptionPlanViewSet,
     UserQuotaView,
     UserViewSet,
 )
@@ -20,16 +23,21 @@ router.register("companies", CompanyViewSet, basename="company")
 router.register("roles", RoleViewSet, basename="role")
 router.register("users", UserViewSet, basename="user")
 router.register("permissions", PermissionViewSet, basename="permission")
+router.register("subscription-plans", SubscriptionPlanViewSet, basename="subscription-plan")
 
 urlpatterns = [
     # Auth
     path("login/", CustomTokenObtainPairView.as_view(), name="token-obtain-pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+    
+    # Public Settings
+    path("public-settings/", PublicSettingsView.as_view(), name="public-settings"),
 
     # Profile & Settings
     path("me/", CurrentUserView.as_view(), name="current-user"),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
     path("company-settings/", CompanySettingsView.as_view(), name="company-settings"),
+    path("system-settings/", SystemSettingsView.as_view(), name="system-settings"),
     path("quota/", UserQuotaView.as_view(), name="user-quota"),
 
     # Registration

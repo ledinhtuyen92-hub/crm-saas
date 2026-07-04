@@ -39,6 +39,7 @@ def summary(request):
     from sales.models import Quotation
     from orders.models import Order
     from inventory.models import StockLevel
+    from users.models import User
 
     user = request.user
     today = date.today()
@@ -93,6 +94,10 @@ def summary(request):
             "total_amount",
             filter=Q(status="approved", created_at__date=today),
         ),
+        total_revenue_all_time=Sum(
+            "total_amount",
+            filter=Q(status="approved"),
+        ),
     )
 
     # ── Tồn kho thấp ────────────────────────────────────────────
@@ -104,17 +109,33 @@ def summary(request):
         ).select_related("product")
         low_stock_count = sum(1 for s in stock_qs if s.is_low_stock)
 
+    # ── Nhân viên ───────────────────────────────────────────────
+    employee_count = User.objects.filter(cf, is_active=True).count()
+
+    # ── Tính Win Rate ───────────────────────────────────────────
+    total_quotes = (quotation_stats.get("sent") or 0) + (quotation_stats.get("accepted") or 0) + (quotation_stats.get("rejected") or 0)
+    win_rate = 0
+    if total_quotes > 0:
+        win_rate = ((quotation_stats.get("accepted") or 0) / total_quotes) * 100
+
     return Response({
         "customers": customer_stats,
-        "quotations": quotation_stats,
+        "quotations": {
+            **quotation_stats,
+            "win_rate": float(round(win_rate, 1)),
+        },
         "orders": {
             **order_stats,
             "revenue_this_month": float(order_stats.get("revenue_this_month") or 0),
             "revenue_today": float(order_stats.get("revenue_today") or 0),
+            "total_revenue_all_time": float(order_stats.get("total_revenue_all_time") or 0),
         },
         "inventory": {
             "low_stock_count": low_stock_count,
         },
+        "employees": {
+            "total_active": employee_count
+        }
     })
 
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   CheckCircleOutlined,
   DatabaseOutlined,
@@ -24,6 +24,8 @@ import {
   message,
   theme,
 } from 'antd'
+import api from '../../utils/api'
+import SubscriptionPlanManager from './SubscriptionPlanManager'
 
 const { Title, Text } = Typography
 
@@ -33,13 +35,60 @@ export default function AdminSettings() {
   const [loading, setLoading] = useState(false)
 
   const [form] = Form.useForm()
+  const currentPlan = Form.useWatch('default_plan', form)
+
+  const [plans, setPlans] = useState([])
+
+  const handlePlanChange = (value) => {
+    const selectedPlan = plans.find(p => p.code === value)
+    if (selectedPlan) {
+      form.setFieldsValue({ default_user_limit: selectedPlan.user_limit })
+    }
+  }
+
+  const handlePlansChange = (newPlans) => {
+    setPlans(newPlans)
+  }
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get('users/system-settings/')
+        form.setFieldsValue({
+          require_strong_password: res.data.require_strong_password,
+          enable_public_registration: res.data.enable_public_registration,
+          default_plan: res.data.default_plan,
+          default_user_limit: res.data.default_user_limit,
+          tenant_isolation_mode: res.data.tenant_isolation_mode,
+          jwt_expiration_hours: res.data.jwt_expiration_hours,
+          max_file_upload_mb: res.data.max_file_upload_mb,
+        })
+      } catch (err) {
+        console.error("Failed to fetch system settings:", err)
+      }
+    }
+    fetchSettings()
+  }, [form])
 
   const handleSave = async (values) => {
     setLoading(true)
-    setTimeout(() => {
+    try {
+      await api.patch('users/system-settings/', {
+        require_strong_password: values.require_strong_password,
+        enable_public_registration: values.enable_public_registration,
+        default_plan: values.default_plan,
+        default_user_limit: values.default_user_limit,
+        tenant_isolation_mode: values.tenant_isolation_mode,
+        jwt_expiration_hours: values.jwt_expiration_hours,
+        max_file_upload_mb: values.max_file_upload_mb,
+      })
+      messageApi.success('Đã lưu cấu hình hệ thống SaaS thành công!')
+    } catch (err) {
+      console.error(err)
+      messageApi.error('Lưu cấu hình thất bại!')
+    } finally {
       setLoading(false)
-      messageApi.success('Đã lưu cấu hình hệ thống SaaS & Gói hạn mức thành công!')
-    }, 600)
+    }
   }
 
   const cardStyle = {
@@ -117,8 +166,6 @@ export default function AdminSettings() {
         initialValues={{
           default_user_limit: 5,
           default_plan: 'starter',
-          enable_self_register: true,
-          require_strong_password: true,
           jwt_expiration_hours: 24,
           tenant_isolation_mode: 'strict',
           max_file_upload_mb: 25,
@@ -142,11 +189,12 @@ export default function AdminSettings() {
                     label="Gói mặc định khi tự đăng ký mới"
                     tooltip="Gói được gán tự động khi khách hàng đăng ký qua trang /register"
                   >
-                    <Select size="large">
-                      <Select.Option value="starter">Gói Khởi nghiệp (Starter - 5 user)</Select.Option>
-                      <Select.Option value="standard">Gói Tiêu chuẩn (Standard - 15 user)</Select.Option>
-                      <Select.Option value="pro">Gói Chuyên nghiệp (Pro - 50 user)</Select.Option>
-                      <Select.Option value="enterprise">Gói Doanh nghiệp (Enterprise - 100 user)</Select.Option>
+                    <Select size="large" onChange={handlePlanChange}>
+                      {plans.map(p => (
+                        <Select.Option key={p.code} value={p.code}>
+                          {p.name} ({p.user_limit === 99999 ? 'Không giới hạn' : `${p.user_limit} user`})
+                        </Select.Option>
+                      ))}
                     </Select>
                   </Form.Item>
                 </Col>
@@ -156,18 +204,29 @@ export default function AdminSettings() {
                     label="Số tài khoản mặc định (Trial Seat Limit)"
                     rules={[{ required: true, message: 'Vui lòng nhập số user' }]}
                   >
-                    <InputNumber size="large" min={1} max={1000} style={{ width: '100%' }} addonAfter="tài khoản" />
+                    <InputNumber 
+                      size="large" 
+                      min={1} 
+                      max={999999} 
+                      style={{ width: '100%' }} 
+                      addonAfter="tài khoản" 
+                      disabled={true} // Vô hiệu hóa, limit phụ thuộc vào gói đã chọn
+                    />
                   </Form.Item>
                 </Col>
               </Row>
 
               <Form.Item
-                name="enable_self_register"
+                name="enable_public_registration"
                 label="Cho phép các doanh nghiệp mới tự đăng ký (Public Registration)"
                 valuePropName="checked"
               >
                 <Switch checkedChildren="Mở tự đăng ký" unCheckedChildren="Khóa (Chỉ Admin tạo)" />
               </Form.Item>
+              
+              <Divider />
+              
+              <SubscriptionPlanManager onPlansChange={handlePlansChange} />
 
               <Divider />
 
@@ -233,7 +292,7 @@ export default function AdminSettings() {
 
               <Form.Item
                 name="require_strong_password"
-                label="Yêu cầu mật khẩu mạnh cho tài khoản nhân viên"
+                label="Yêu cầu mật khẩu mạnh cho toàn hệ thống"
                 valuePropName="checked"
               >
                 <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />

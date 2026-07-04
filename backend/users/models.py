@@ -208,3 +208,75 @@ class CompanySettings(models.Model):
 
     def __str__(self):
         return f"Settings — {self.company.name}"
+
+
+class SubscriptionPlan(models.Model):
+    code = models.CharField(max_length=50, unique=True, verbose_name="Mã gói")
+    name = models.CharField(max_length=150, verbose_name="Tên gói")
+    user_limit = models.IntegerField(verbose_name="Giới hạn người dùng", help_text="Nhập 99999 cho Không giới hạn")
+    is_default = models.BooleanField(default=False, verbose_name="Gói hệ thống (không xoá được)")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Gói đăng ký"
+        verbose_name_plural = "Gói đăng ký"
+        ordering = ["user_limit"]
+
+    def __str__(self):
+        return f"{self.name} ({self.user_limit} users)"
+
+
+class SystemSettings(models.Model):
+    """Cấu hình toàn hệ thống (Singleton)"""
+
+    require_strong_password = models.BooleanField(
+        default=False,
+        verbose_name="Yêu cầu mật khẩu mạnh",
+        help_text="Bắt buộc toàn hệ thống dùng mật khẩu mạnh (chữ hoa, chữ thường, số, ký tự đặc biệt).",
+    )
+    enable_public_registration = models.BooleanField(
+        default=True,
+        verbose_name="Cho phép đăng ký mới",
+        help_text="Bật/tắt tính năng đăng ký doanh nghiệp mới trên hệ thống.",
+    )
+    default_plan = models.CharField(
+        max_length=50,
+        default="starter",
+        verbose_name="Gói mặc định",
+    )
+    default_user_limit = models.IntegerField(
+        default=5,
+        verbose_name="Số tài khoản mặc định",
+    )
+    tenant_isolation_mode = models.CharField(
+        max_length=50,
+        default="strict",
+        verbose_name="Chế độ cô lập dữ liệu",
+    )
+    jwt_expiration_hours = models.IntegerField(
+        default=24,
+        verbose_name="Thời gian hết hạn JWT",
+    )
+    max_file_upload_mb = models.IntegerField(
+        default=25,
+        verbose_name="Dung lượng tải file tối đa",
+    )
+
+    class Meta:
+        verbose_name = "Cấu hình Hệ thống"
+        verbose_name_plural = "Cấu hình Hệ thống"
+
+    @classmethod
+    def load(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass
+
+    def __str__(self):
+        return "System Settings"

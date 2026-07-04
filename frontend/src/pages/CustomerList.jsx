@@ -52,9 +52,18 @@ const SOURCE_MAP = {
   facebook: 'Facebook',
   zalo: 'Zalo',
   referral: 'Giới thiệu',
-  walk_in: 'Khách trực tiếp',
+  walk_in: 'Khách tự đến',
   website: 'Website',
   other: 'Khác',
+}
+
+const SOURCE_ICON = {
+  facebook: '📱',
+  zalo: '💬',
+  referral: '🤝',
+  walk_in: '🚪',
+  website: '🌐',
+  other: '✏️',
 }
 
 const INTERACTION_TYPES = {
@@ -337,9 +346,33 @@ function CustomerList() {
     },
     {
       title: 'Nguồn',
-      dataIndex: 'source',
       key: 'source',
-      render: (val) => SOURCE_MAP[val] || val || '—',
+      render: (_, record) => {
+        const sourceLabel = SOURCE_MAP[record.source] || record.source || '—'
+        const sourceIcon = SOURCE_ICON[record.source] || '✏️'
+        const creator = record.created_by?.full_name || record.created_by?.username
+        return (
+          <Space direction="vertical" size={0}>
+            <Text>
+              <span style={{ marginRight: 5 }}>{sourceIcon}</span>
+              {sourceLabel}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              {creator ? `👤 ${creator}` : 'Sale nhập tay'}
+            </Text>
+          </Space>
+        )
+      },
+    },
+    {
+      title: 'Địa chỉ',
+      key: 'address',
+      render: (_, record) => {
+        const parts = [record.address, record.city].filter(Boolean)
+        return parts.length > 0
+          ? <Text style={{ fontSize: 13 }}>{parts.join(', ')}</Text>
+          : <Text type="secondary">Chưa có</Text>
+      },
     },
     {
       title: 'Trạng thái',
@@ -355,7 +388,7 @@ function CustomerList() {
       key: 'assigned_to',
       render: (_, record) => {
         if (!record.assigned_to) {
-          return <Tag color="warning">Chưa phân công</Tag>
+          return <Text type="secondary" style={{ fontStyle: 'italic' }}>Chưa có nhân viên phụ trách</Text>
         }
         return (
           <Space size={6}>
@@ -421,7 +454,7 @@ function CustomerList() {
                 icon={<ReloadOutlined />}
                 onClick={handleRoundRobinAssign}
               >
-                Phân bổ Round-robin
+                Phân bổ khách tự động
               </Button>
             </Tooltip>
           )}
@@ -544,9 +577,14 @@ function CustomerList() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="source" label="Nguồn khách hàng" initialValue="other">
-                <Select>
+                <Select placeholder="Chọn nguồn khách hàng">
                   {Object.entries(SOURCE_MAP).map(([key, label]) => (
-                    <Option key={key} value={key}>{label}</Option>
+                    <Option key={key} value={key}>
+                      <Space size={6}>
+                        <span>{SOURCE_ICON[key]}</span>
+                        <span>{label}</span>
+                      </Space>
+                    </Option>
                   ))}
                 </Select>
               </Form.Item>

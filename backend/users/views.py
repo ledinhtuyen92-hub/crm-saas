@@ -16,6 +16,7 @@ from .serializers import (
     RoleSerializer,
     UserQuotaSerializer,
     UserSerializer,
+    SystemSettingsSerializer,
 )
 
 User = get_user_model()
@@ -71,6 +72,22 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data["user"] = UserSerializer(user, context=self.context).data
         return data
 
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        
+        # Lấy expiration time từ cấu hình hệ thống thay vì fix cứng trong settings.py
+        from .models import SystemSettings
+        from datetime import timedelta
+        import datetime
+        
+        settings = SystemSettings.load()
+        # Tính lại ngày hết hạn dựa vào jwt_expiration_hours
+        exp_time = datetime.datetime.utcnow() + timedelta(hours=settings.jwt_expiration_hours)
+        token['exp'] = int(exp_time.timestamp())
+        
+        return token
+
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -120,9 +137,16 @@ class TenantQuerySetMixin:
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
-        # Superuser không gán công ty thì xem tất cả
-        if user.is_superuser and user.company_id is None:
-            return queryset
+        
+        from .models import SystemSettings
+        settings = SystemSettings.load()
+        
+        # Ở chế độ Relaxed, Superadmin luôn xem được tất cả dữ liệu (không bị khoá vào công ty của mình)
+        # Ở chế độ Strict, Superadmin nếu bị gán vào 1 công ty thì chỉ xem được dữ liệu công ty đó
+        if user.is_superuser:
+            if settings.tenant_isolation_mode == 'relaxed' or user.company_id is None:
+                return queryset
+                
         return queryset.filter(company=self.get_company())
 
     def perform_create(self, serializer):
@@ -158,6 +182,19 @@ class CompanyRegistrationView(generics.CreateAPIView):
 
     serializer_class = CompanyRegistrationSerializer
     permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        from .models import SystemSettings
+        settings = SystemSettings.load()
+        if not settings.enable_public_registration:
+            from rest_framework import status
+            from rest_framework.response import Response
+            return Response(
+                {"detail": "Tính năng đăng ký hiện đang tạm khóa bởi Quản trị viên."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().post(request, *args, **kwargs)
+
 
 
 # ─────────────────────────────────────────────
@@ -212,6 +249,27 @@ class UserViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             )
         super().perform_destroy(instance)
 
+    from rest_framework.decorators import action
+    from rest_framework.response import Response
+    from rest_framework import status
+
+    @action(detail=True, methods=["post"])
+    def reset_password(self, request, pk=None):
+        user = self.get_object()
+        new_password = request.data.get("new_password")
+        if not new_password:
+            return Response({"new_password": "Vui lòng nhập mật khẩu mới."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from .serializers import validate_strong_password
+        try:
+            validate_strong_password(new_password)
+        except serializers.ValidationError as e:
+            return Response({"new_password": e.detail}, status=status.HTTP_400_BAD_REQUEST)
+            
+        user.set_password(new_password)
+        user.save(update_fields=["password"])
+        return Response({"detail": f"Đã đặt lại mật khẩu thành công cho {user.username}."})
+
 
 # ─────────────────────────────────────────────
 # Permission ViewSet (Read-only)
@@ -245,6 +303,62 @@ class CompanySettingsView(generics.RetrieveUpdateAPIView):
             company=self.request.user.company
         )
         return settings_obj
+
+
+# ─────────────────────────────────────────────
+# System Settings API (Superadmin only)
+# ─────────────────────────────────────────────
+
+class SystemSettingsView(generics.RetrieveUpdateAPIView):
+    """
+    GET  /api/users/system-settings/  — Lấy cấu hình toàn hệ thống.
+    PATCH /api/users/system-settings/ — Cập nhật cấu hình toàn hệ thống.
+    """
+    serializer_class = SystemSettingsSerializer
+    permission_classes = [IsSuperAdmin]
+
+    def get_object(self):
+        from .models import SystemSettings
+        return SystemSettings.load()
+
+# ─────────────────────────────────────────────
+# Subscription Plan API
+# ─────────────────────────────────────────────
+
+from .models import SubscriptionPlan
+from .serializers import SubscriptionPlanSerializer
+
+class SubscriptionPlanViewSet(viewsets.ModelViewSet):
+    """
+    CRUD cho Gói đăng ký.
+    - Superadmin: Toàn quyền.
+    - User thường (kể cả chưa auth, hoặc auth): Chỉ được GET để xem danh sách gói.
+    """
+    queryset = SubscriptionPlan.objects.all()
+    serializer_class = SubscriptionPlanSerializer
+    
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.AllowAny()]
+        return [IsSuperAdmin()]
+
+
+# ─────────────────────────────────────────────
+# Public Settings API (AllowAny)
+# ─────────────────────────────────────────────
+
+class PublicSettingsView(APIView):
+    """
+    GET /api/users/public-settings/ — Lấy cấu hình public (ví dụ: enable_public_registration).
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from .models import SystemSettings
+        settings = SystemSettings.load()
+        return Response({
+            "enable_public_registration": settings.enable_public_registration
+        })
 
 
 # ─────────────────────────────────────────────

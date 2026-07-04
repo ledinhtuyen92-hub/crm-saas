@@ -2,6 +2,7 @@ import {
   BankOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  DeleteOutlined,
   EditOutlined,
   PlusOutlined,
   StopOutlined,
@@ -15,6 +16,7 @@ import {
   Form,
   Input,
   Modal,
+  Popconfirm,
   Progress,
   Row,
   Select,
@@ -38,9 +40,12 @@ export default function CompanyManagement() {
   const [messageApi, contextHolder] = message.useMessage()
 
   const [companies, setCompanies] = useState([])
+  const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCompany, setEditingCompany] = useState(null)
+  const [deletingCompany, setDeletingCompany] = useState(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [form] = Form.useForm()
 
   // ── Fetch danh sách công ty ─────────────────────────────────────
@@ -57,9 +62,19 @@ export default function CompanyManagement() {
     }
   }, [messageApi])
 
+  const fetchPlans = useCallback(async () => {
+    try {
+      const { data } = await api.get('users/subscription-plans/')
+      setPlans(Array.isArray(data) ? data : data?.results ?? [])
+    } catch {
+      messageApi.error('Không thể tải danh sách gói đăng ký.')
+    }
+  }, [messageApi])
+
   useEffect(() => {
     fetchCompanies()
-  }, [fetchCompanies])
+    fetchPlans()
+  }, [fetchCompanies, fetchPlans])
 
   // ── Mở modal tạo mới / chỉnh sửa ───────────────────────────────
   const openModal = (company = null) => {
@@ -72,8 +87,9 @@ export default function CompanyManagement() {
             tax_code: company.tax_code,
             address: company.address,
             user_limit: company.user_limit ?? 15,
+            is_active: company.is_active,
           }
-        : { name: '', workspace_id: '', tax_code: '', address: '', user_limit: 15 },
+        : { name: '', workspace_id: '', tax_code: '', address: '', user_limit: 15, admin_username: '', admin_password: '', admin_fullname: '', admin_email: '' },
     )
     setModalOpen(true)
   }
@@ -114,6 +130,25 @@ export default function CompanyManagement() {
       fetchCompanies()
     } catch {
       messageApi.error('Không thể cập nhật trạng thái.')
+    }
+  }
+
+  // ── Xoá công ty ──────────────────────────────────────────────────
+  const handleDelete = async () => {
+    if (!deletingCompany) return
+    if (deleteConfirmText !== deletingCompany.workspace_id) {
+      messageApi.error('Mã Workspace ID không khớp. Vui lòng nhập lại.')
+      return
+    }
+
+    try {
+      await api.delete(`users/companies/${deletingCompany.id}/`)
+      messageApi.success(`Đã xoá công ty "${deletingCompany.name}" thành công.`)
+      setDeletingCompany(null)
+      setDeleteConfirmText('')
+      fetchCompanies()
+    } catch {
+      messageApi.error('Không thể xoá công ty này.')
     }
   }
 
@@ -228,6 +263,14 @@ export default function CompanyManagement() {
               danger={record.is_active}
               icon={record.is_active ? <StopOutlined /> : <CheckCircleOutlined />}
               onClick={() => toggleActive(record)}
+            />
+          </Tooltip>
+          <Tooltip title="Xoá vĩnh viễn">
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => setDeletingCompany(record)}
             />
           </Tooltip>
         </Space>
@@ -396,11 +439,11 @@ export default function CompanyManagement() {
                 rules={[{ required: true, message: 'Vui lòng chọn hạn mức' }]}
               >
                 <Select size="large" placeholder="Chọn gói hạn mức">
-                  <Select.Option value={5}>Gói Starter (5 user)</Select.Option>
-                  <Select.Option value={15}>Gói Standard (15 user)</Select.Option>
-                  <Select.Option value={30}>Gói Business (30 user)</Select.Option>
-                  <Select.Option value={50}>Gói Professional (50 user)</Select.Option>
-                  <Select.Option value={100}>Gói Enterprise (100 user)</Select.Option>
+                  {plans.map(p => (
+                    <Select.Option key={p.code} value={p.user_limit}>
+                      {p.name} ({p.user_limit === 99999 ? 'Không giới hạn' : `${p.user_limit} user`})
+                    </Select.Option>
+                  ))}
                   <Select.Option value={0}>Không giới hạn (0 / VIP)</Select.Option>
                 </Select>
               </Form.Item>
@@ -411,6 +454,53 @@ export default function CompanyManagement() {
               </Form.Item>
             </Col>
           </Row>
+
+          {!editingCompany && (
+            <>
+              <div style={{ marginTop: 8, marginBottom: 16, fontWeight: 600, color: '#1649c9', borderBottom: '1px solid #f0f0f0', paddingBottom: 8 }}>
+                👤 Khởi tạo Tài khoản Giám đốc ban đầu
+              </div>
+              <Row gutter={12}>
+                <Col span={12}>
+                  <Form.Item
+                    name="admin_username"
+                    label="Tên đăng nhập"
+                    rules={[{ required: true, message: 'Vui lòng nhập tên đăng nhập' }]}
+                  >
+                    <Input size="large" placeholder="giamdoc_anphat" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="admin_password"
+                    label="Mật khẩu"
+                    rules={[{ required: true, message: 'Vui lòng nhập mật khẩu', min: 6 }]}
+                  >
+                    <Input.Password size="large" placeholder="Ít nhất 6 ký tự" />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={12}>
+                <Col span={12}>
+                  <Form.Item
+                    name="admin_fullname"
+                    label="Họ và tên Giám đốc"
+                  >
+                    <Input size="large" placeholder="Nguyễn Văn A" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="admin_email"
+                    label="Email liên hệ"
+                    rules={[{ type: 'email', message: 'Email không hợp lệ' }]}
+                  >
+                    <Input size="large" placeholder="admin@congty.com" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </>
+          )}
 
           {editingCompany && (
             <Form.Item name="is_active" label="Trạng thái" valuePropName="checked">
@@ -428,6 +518,37 @@ export default function CompanyManagement() {
             </Button>
           </div>
         </Form>
+      </Modal>
+
+      <Modal
+        title={
+          <div style={{ color: '#cf1322', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <DeleteOutlined /> Cảnh báo: Xoá vĩnh viễn công ty
+          </div>
+        }
+        open={!!deletingCompany}
+        onCancel={() => {
+          setDeletingCompany(null)
+          setDeleteConfirmText('')
+        }}
+        onOk={handleDelete}
+        okText="Xoá vĩnh viễn"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true, disabled: deleteConfirmText !== deletingCompany?.workspace_id }}
+        destroyOnClose
+      >
+        <div style={{ marginBottom: 16 }}>
+          Hành động này sẽ <b>xoá toàn bộ dữ liệu</b> của công ty <b>{deletingCompany?.name}</b> và không thể hoàn tác.
+        </div>
+        <div style={{ marginBottom: 8 }}>
+          Để xác nhận, vui lòng nhập mã Workspace ID <Tag color="red" style={{ fontFamily: 'monospace', fontSize: 14 }}>{deletingCompany?.workspace_id}</Tag> vào ô bên dưới:
+        </div>
+        <Input
+          placeholder="Nhập mã Workspace ID để xác nhận"
+          value={deleteConfirmText}
+          onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+          style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
+        />
       </Modal>
     </div>
   )

@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from users.models import User
 from .models import Customer, CustomerContact, CustomerInteraction, CustomerTag
 
 
@@ -40,6 +41,13 @@ class CustomerInteractionSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at", "type_display", "result_display", "created_by_name"]
 
 
+class AssignedUserSerializer(serializers.Serializer):
+    """Serializer nhỏ để trả về thông tin nhân viên được phân công."""
+    id = serializers.IntegerField()
+    full_name = serializers.CharField()
+    username = serializers.CharField()
+
+
 class CustomerSerializer(serializers.ModelSerializer):
     contacts = CustomerContactSerializer(many=True, read_only=True)
     interactions = CustomerInteractionSerializer(many=True, read_only=True)
@@ -51,7 +59,19 @@ class CustomerSerializer(serializers.ModelSerializer):
         required=False,
         source="tags",
     )
+    # Đọc: trả về object {id, full_name, username}
+    assigned_to = AssignedUserSerializer(read_only=True)
+    # Ghi: nhận ID nhân viên
+    assigned_to_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        source="assigned_to",
+        write_only=True,
+        required=False,
+        allow_null=True,
+    )
     assigned_to_name = serializers.CharField(source="assigned_to.full_name", read_only=True)
+    created_by = AssignedUserSerializer(read_only=True)
+    created_by_name = serializers.CharField(source="created_by.full_name", read_only=True, allow_null=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     source_display = serializers.CharField(source="get_source_display", read_only=True)
 
@@ -72,7 +92,10 @@ class CustomerSerializer(serializers.ModelSerializer):
             "tags",
             "tag_ids",
             "assigned_to",
+            "assigned_to_id",
             "assigned_to_name",
+            "created_by",
+            "created_by_name",
             "notes",
             "contacts",
             "interactions",
@@ -81,6 +104,7 @@ class CustomerSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id", "company", "contacts", "interactions", "tags",
-            "assigned_to_name", "status_display", "source_display",
+            "assigned_to", "assigned_to_name", "created_by", "created_by_name",
+            "status_display", "source_display",
             "created_at", "updated_at",
         ]
