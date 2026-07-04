@@ -52,6 +52,7 @@ class TenantIsolationTests(APITestCase):
             full_name="User A",
             company=self.company_a,
             role=self.role_a,
+            is_company_admin=True,
         )
         User.objects.create_user(
             username="user_b",
@@ -69,8 +70,10 @@ class TenantIsolationTests(APITestCase):
 
         self.assertEqual(role_response.status_code, status.HTTP_200_OK)
         self.assertEqual(user_response.status_code, status.HTTP_200_OK)
-        self.assertEqual([item["id"] for item in role_response.data], [self.role_a.id])
-        self.assertEqual([item["id"] for item in user_response.data], [self.user_a.id])
+        role_data = role_response.data["results"] if isinstance(role_response.data, dict) and "results" in role_response.data else role_response.data
+        user_data = user_response.data["results"] if isinstance(user_response.data, dict) and "results" in user_response.data else user_response.data
+        self.assertEqual([item["id"] for item in role_data], [self.role_a.id])
+        self.assertEqual([item["id"] for item in user_data], [self.user_a.id])
 
     def test_user_cannot_assign_role_from_another_company(self):
         response = self.client.patch(

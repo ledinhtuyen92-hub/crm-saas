@@ -97,6 +97,6 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = [
-            "id", "company", "type_display", "product_name", "product_sku",
+            "id", "company", "transaction_code", "type_display", "product_name", "product_sku",
             "warehouse_name", "created_by_name", "created_at",
         ]

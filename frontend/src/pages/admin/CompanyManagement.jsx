@@ -15,7 +15,9 @@ import {
   Form,
   Input,
   Modal,
+  Progress,
   Row,
+  Select,
   Space,
   Statistic,
   Switch,
@@ -26,7 +28,7 @@ import {
   message,
   theme,
 } from 'antd'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import api from '../../utils/api'
 
 const { Title, Text } = Typography
@@ -42,21 +44,22 @@ export default function CompanyManagement() {
   const [form] = Form.useForm()
 
   // ── Fetch danh sách công ty ─────────────────────────────────────
-  const fetchCompanies = async () => {
+  const fetchCompanies = useCallback(async () => {
+    await Promise.resolve()
     setLoading(true)
     try {
       const { data } = await api.get('users/companies/')
-      setCompanies(data)
+      setCompanies(Array.isArray(data) ? data : data?.results ?? [])
     } catch {
       messageApi.error('Không thể tải danh sách công ty.')
     } finally {
       setLoading(false)
     }
-  }
+  }, [messageApi])
 
   useEffect(() => {
     fetchCompanies()
-  }, [])
+  }, [fetchCompanies])
 
   // ── Mở modal tạo mới / chỉnh sửa ───────────────────────────────
   const openModal = (company = null) => {
@@ -68,8 +71,9 @@ export default function CompanyManagement() {
             workspace_id: company.workspace_id,
             tax_code: company.tax_code,
             address: company.address,
+            user_limit: company.user_limit ?? 15,
           }
-        : { name: '', workspace_id: '', tax_code: '', address: '' },
+        : { name: '', workspace_id: '', tax_code: '', address: '', user_limit: 15 },
     )
     setModalOpen(true)
   }
@@ -150,13 +154,44 @@ export default function CompanyManagement() {
       render: (email) => email || <Text type="secondary">—</Text>,
     },
     {
-      title: 'Nhân viên',
-      dataIndex: 'user_count',
-      key: 'user_count',
-      align: 'center',
-      render: (count) => (
-        <Badge count={count} showZero style={{ backgroundColor: token.colorPrimary }} />
-      ),
+      title: 'Gói / Hạn mức NS',
+      key: 'user_limit_status',
+      align: 'left',
+      render: (_, record) => {
+        const count = record.user_count || 0
+        const limit = record.user_limit || 0
+        const percent = limit > 0 ? Math.min(Math.round((count / limit) * 100), 100) : 0
+        return (
+          <div style={{ minWidth: 150 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text style={{ fontSize: 13, fontWeight: 600 }}>
+                <TeamOutlined style={{ marginRight: 6, color: '#2563eb' }} />
+                {count} / {limit > 0 ? `${limit} user` : '∞ VIP'}
+              </Text>
+              {limit > 0 && (
+                <Tag
+                  color={percent >= 100 ? 'error' : percent > 80 ? 'warning' : 'processing'}
+                  style={{ margin: 0, fontSize: 11 }}
+                >
+                  {percent >= 100 ? 'Đã đầy' : `${percent}%`}
+                </Tag>
+              )}
+            </div>
+            {limit > 0 ? (
+              <Progress
+                percent={percent}
+                status={percent >= 100 ? 'exception' : 'normal'}
+                size="small"
+                showInfo={false}
+              />
+            ) : (
+              <Tag color="purple" style={{ margin: 0 }}>
+                Không giới hạn
+              </Tag>
+            )}
+          </div>
+        )
+      },
     },
     {
       title: 'Trạng thái',
@@ -351,6 +386,31 @@ export default function CompanyManagement() {
           <Form.Item name="address" label="Địa chỉ">
             <Input.TextArea rows={2} placeholder="Địa chỉ trụ sở..." />
           </Form.Item>
+
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item
+                name="user_limit"
+                label="Gói / Giới hạn nhân viên"
+                tooltip="Số lượng tài khoản tối đa công ty được phép tạo."
+                rules={[{ required: true, message: 'Vui lòng chọn hạn mức' }]}
+              >
+                <Select size="large" placeholder="Chọn gói hạn mức">
+                  <Select.Option value={5}>Gói Starter (5 user)</Select.Option>
+                  <Select.Option value={15}>Gói Standard (15 user)</Select.Option>
+                  <Select.Option value={30}>Gói Business (30 user)</Select.Option>
+                  <Select.Option value={50}>Gói Professional (50 user)</Select.Option>
+                  <Select.Option value={100}>Gói Enterprise (100 user)</Select.Option>
+                  <Select.Option value={0}>Không giới hạn (0 / VIP)</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="phone" label="Số điện thoại">
+                <Input size="large" placeholder="02438889999" />
+              </Form.Item>
+            </Col>
+          </Row>
 
           {editingCompany && (
             <Form.Item name="is_active" label="Trạng thái" valuePropName="checked">

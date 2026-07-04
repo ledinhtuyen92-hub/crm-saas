@@ -10,11 +10,27 @@ import { CompanyAdminRoute, ProtectedRoute, SuperAdminRoute } from './components
 // Pages
 import CustomerList from './pages/CustomerList'
 import Dashboard from './pages/Dashboard'
+import Inventory from './pages/Inventory'
 import Login from './pages/Login'
+import OrderList from './pages/OrderList'
+import ProductionList from './pages/ProductionList'
+import QuotationList from './pages/QuotationList'
 import RegisterCompany from './pages/RegisterCompany'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminSettings from './pages/admin/AdminSettings'
 import CompanyManagement from './pages/admin/CompanyManagement'
 import RoleManagement from './pages/settings/RoleManagement'
 import UserManagement from './pages/settings/UserManagement'
+
+function ApplicationLayout({ isDarkMode, toggleTheme }) {
+  return (
+    <ProtectedRoute>
+      <MainLayout isDarkMode={isDarkMode} toggleTheme={toggleTheme}>
+        <Outlet />
+      </MainLayout>
+    </ProtectedRoute>
+  )
+}
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(false)
@@ -23,13 +39,6 @@ function App() {
     setIsDarkMode((currentMode) => !currentMode)
   }
 
-  const ApplicationLayout = () => (
-    <ProtectedRoute>
-      <MainLayout isDarkMode={isDarkMode} toggleTheme={toggleTheme}>
-        <Outlet />
-      </MainLayout>
-    </ProtectedRoute>
-  )
 
   return (
     <ConfigProvider
@@ -50,13 +59,17 @@ function App() {
             <Route path="/register" element={<RegisterCompany />} />
 
             {/* ── Protected routes (requires login) ──────────────── */}
-            <Route element={<ApplicationLayout />}>
+            <Route element={<ApplicationLayout isDarkMode={isDarkMode} toggleTheme={toggleTheme} />}>
               {/* Default redirect */}
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
               {/* Main app routes */}
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/customers" element={<CustomerList />} />
+              <Route path="/quotations" element={<QuotationList />} />
+              <Route path="/orders" element={<OrderList />} />
+              <Route path="/inventory" element={<Inventory />} />
+              <Route path="/production" element={<ProductionList />} />
 
               {/* Company Admin routes */}
               <Route
@@ -78,10 +91,26 @@ function App() {
 
               {/* System Admin routes */}
               <Route
+                path="/admin/dashboard"
+                element={
+                  <SuperAdminRoute>
+                    <AdminDashboard />
+                  </SuperAdminRoute>
+                }
+              />
+              <Route
                 path="/admin/companies"
                 element={
                   <SuperAdminRoute>
                     <CompanyManagement />
+                  </SuperAdminRoute>
+                }
+              />
+              <Route
+                path="/admin/settings"
+                element={
+                  <SuperAdminRoute>
+                    <AdminSettings />
                   </SuperAdminRoute>
                 }
               />

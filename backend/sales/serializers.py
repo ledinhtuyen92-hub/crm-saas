@@ -49,6 +49,6 @@ class QuotationSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = [
-            "id", "company", "items", "status_display",
+            "id", "company", "quotation_number", "items", "status_display",
             "customer_name", "created_by_name", "created_at", "updated_at",
         ]

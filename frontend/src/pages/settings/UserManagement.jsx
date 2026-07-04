@@ -28,7 +28,7 @@ import {
   message,
   theme,
 } from 'antd'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../utils/api'
 
@@ -60,26 +60,28 @@ export default function UserManagement() {
   const [editingUser, setEditingUser] = useState(null)
   const [form] = Form.useForm()
 
-  // ── Fetch ─────────────────────────────────────────────────────────
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    await Promise.resolve()
     setLoading(true)
     try {
       const [usersRes, rolesRes] = await Promise.all([
         api.get('users/users/'),
         api.get('users/roles/'),
       ])
-      setUsers(usersRes.data)
-      setRoles(rolesRes.data)
+      const usersData = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data?.results ?? []
+      const rolesData = Array.isArray(rolesRes.data) ? rolesRes.data : rolesRes.data?.results ?? []
+      setUsers(usersData)
+      setRoles(rolesData)
     } catch {
       messageApi.error('Không thể tải dữ liệu nhân viên.')
     } finally {
       setLoading(false)
     }
-  }
+  }, [messageApi])
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [fetchData])
 
   // ── Modal ─────────────────────────────────────────────────────────
   const openModal = (user = null) => {

@@ -1,7 +1,6 @@
 import {
   AppstoreOutlined,
   LockOutlined,
-  MailOutlined,
   SafetyCertificateOutlined,
   UserOutlined,
 } from '@ant-design/icons'
@@ -15,7 +14,7 @@ const { Paragraph, Text, Title } = Typography
 function Login() {
   const navigate = useNavigate()
   const { token } = theme.useToken()
-  const { login, isSuperAdmin } = useAuth()
+  const { login } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
 
   const handleSubmit = async (values) => {
@@ -29,7 +28,7 @@ function Login() {
 
       // Redirect dựa theo role
       if (loggedUser?.is_superuser) {
-        navigate('/admin/companies')
+        navigate('/admin/dashboard')
       } else {
         navigate('/dashboard')
       }

@@ -5,6 +5,7 @@ Chạy docker:
                           npm run dev
 - Tắt khi không dùng: docker-compose down
 - Xem báo lỗi: docker-compose logs -f
+- Tạo tk admin: docker exec -it crm_web python manage.py createsuperuser
 
 Chạy lệnh git:
 - Gom các thay đổi : git add .

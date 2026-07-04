@@ -23,7 +23,7 @@ import {
   message,
   theme,
 } from 'antd'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../../utils/api'
 
 const { Title, Text } = Typography
@@ -62,25 +62,28 @@ export default function RoleManagement() {
   }
 
   // ── Fetch ─────────────────────────────────────────────────────────
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    await Promise.resolve()
     setLoading(true)
     try {
       const [rolesRes, permsRes] = await Promise.all([
         api.get('users/roles/'),
         api.get('users/permissions/'),
       ])
-      setRoles(rolesRes.data)
-      setAllPermissions(permsRes.data)
+      const rolesData = Array.isArray(rolesRes.data) ? rolesRes.data : rolesRes.data?.results ?? []
+      const permsData = Array.isArray(permsRes.data) ? permsRes.data : permsRes.data?.results ?? []
+      setRoles(rolesData)
+      setAllPermissions(permsData)
     } catch {
       messageApi.error('Không thể tải dữ liệu.')
     } finally {
       setLoading(false)
     }
-  }
+  }, [messageApi])
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [fetchData])
 
   // ── Modal ─────────────────────────────────────────────────────────
   const openModal = (role = null) => {

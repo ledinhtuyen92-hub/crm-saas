@@ -1,3 +1,4 @@
+import { Navigate } from 'react-router-dom'
 import {
   BankOutlined,
   DollarCircleOutlined,
@@ -19,6 +20,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { useAuth } from '../contexts/AuthContext'
 
 const { Text, Title } = Typography
 
@@ -165,6 +167,11 @@ const statisticCards = [
 
 function Dashboard() {
   const { token } = theme.useToken()
+  const { isSuperAdmin } = useAuth()
+
+  if (isSuperAdmin) {
+    return <Navigate to="/admin/dashboard" replace />
+  }
 
   const cardStyle = {
     height: '100%',

@@ -18,7 +18,10 @@ function RegisterCompany() {
   const { token } = theme.useToken()
   const [messageApi, contextHolder] = message.useMessage()
 
-  const handleSubmit = async ({ confirm_password: _confirmPassword, ...values }) => {
+  const handleSubmit = async (allValues) => {
+    // Loại bỏ confirm_password trước khi gửi API
+    // eslint-disable-next-line no-unused-vars
+    const { confirm_password, ...values } = allValues
     try {
       await api.post('/users/register-company/', {
         ...values,

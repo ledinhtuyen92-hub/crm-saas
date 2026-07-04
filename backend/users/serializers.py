@@ -154,6 +154,9 @@ class CompanySerializer(serializers.ModelSerializer):
             "workspace_id",
             "tax_code",
             "address",
+            "phone",
+            "logo",
+            "user_limit",
             "is_active",
             "created_at",
             "user_count",
@@ -242,6 +245,7 @@ class CompanyRegistrationSerializer(serializers.Serializer):
             workspace_id=workspace_id or "",  # models.save() sẽ auto-generate nếu rỗng
             tax_code=validated_data["tax_code"],
             address=validated_data["address"],
+            user_limit=5,  # Mặc định gói Khởi nghiệp 5 user khi tự đăng ký
         )
 
         # Tạo cài đặt mặc định cho công ty
@@ -306,3 +310,15 @@ class ChangePasswordSerializer(serializers.Serializer):
         if not user.check_password(value):
             raise serializers.ValidationError("Mật khẩu cũ không đúng.")
         return value
+
+
+# ─────────────────────────────────────────────
+# User Quota Serializer
+# ─────────────────────────────────────────────
+
+class UserQuotaSerializer(serializers.Serializer):
+    user_limit = serializers.IntegerField(allow_null=True)
+    active_users = serializers.IntegerField()
+    remaining_users = serializers.IntegerField(allow_null=True)
+    can_add_user = serializers.BooleanField()
+

@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import {
   Avatar,
   Badge,
@@ -35,77 +35,82 @@ const { Text, Title } = Typography
 
 function MainLayout({ children, isDarkMode, toggleTheme }) {
   const location = useLocation()
-  const navigate = useNavigate()
   const { token } = theme.useToken()
   const { user, logout, isSuperAdmin, isCompanyAdmin } = useAuth()
 
   // ── Menu items (tuỳ theo quyền) ────────────────────────────────
-  const menuItems = [
-    {
-      key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: <Link to="/dashboard">Dashboard</Link>,
-    },
-    {
-      key: '/',
-      icon: <TeamOutlined />,
-      label: <Link to="/">Khách hàng</Link>,
-    },
-    {
-      key: 'sales',
-      icon: <ShoppingCartOutlined />,
-      label: 'Bán hàng',
-    },
-    {
-      key: 'orders',
-      icon: <FileDoneOutlined />,
-      label: 'Đơn hàng',
-    },
-    {
-      key: 'warehouse',
-      icon: <DatabaseOutlined />,
-      label: 'Kho bãi',
-    },
-    {
-      key: 'production',
-      icon: <ToolOutlined />,
-      label: 'Sản xuất',
-    },
-
-    // ── Admin section — chỉ hiển thị khi có quyền ────────────────
-    ...(isCompanyAdmin
-      ? [
-          { type: 'divider' },
-          {
-            key: 'settings-group',
-            icon: <SettingOutlined />,
-            label: 'Quản lý công ty',
-            children: [
+  const menuItems = isSuperAdmin
+    ? [
+        {
+          key: '/admin/dashboard',
+          icon: <DashboardOutlined />,
+          label: <Link to="/admin/dashboard">Dashboard Hệ thống</Link>,
+        },
+        {
+          key: '/admin/companies',
+          icon: <BankOutlined />,
+          label: <Link to="/admin/companies">Quản lý Khách hàng SaaS</Link>,
+        },
+        {
+          key: '/admin/settings',
+          icon: <SettingOutlined />,
+          label: <Link to="/admin/settings">Cấu hình Gói & Hạn mức</Link>,
+        },
+      ]
+    : [
+        {
+          key: '/dashboard',
+          icon: <DashboardOutlined />,
+          label: <Link to="/dashboard">Dashboard</Link>,
+        },
+        {
+          key: '/customers',
+          icon: <TeamOutlined />,
+          label: <Link to="/customers">Khách hàng</Link>,
+        },
+        {
+          key: '/quotations',
+          icon: <ShoppingCartOutlined />,
+          label: <Link to="/quotations">Bán hàng (Báo giá)</Link>,
+        },
+        {
+          key: '/orders',
+          icon: <FileDoneOutlined />,
+          label: <Link to="/orders">Đơn hàng</Link>,
+        },
+        {
+          key: '/inventory',
+          icon: <DatabaseOutlined />,
+          label: <Link to="/inventory">Kho bãi & SP</Link>,
+        },
+        {
+          key: '/production',
+          icon: <ToolOutlined />,
+          label: <Link to="/production">Sản xuất</Link>,
+        },
+        ...(isCompanyAdmin
+          ? [
+              { type: 'divider' },
               {
-                key: '/settings/users',
-                icon: <UsergroupAddOutlined />,
-                label: <Link to="/settings/users">Nhân viên</Link>,
+                key: 'settings-group',
+                icon: <SettingOutlined />,
+                label: 'Quản lý công ty',
+                children: [
+                  {
+                    key: '/settings/users',
+                    icon: <UsergroupAddOutlined />,
+                    label: <Link to="/settings/users">Nhân viên</Link>,
+                  },
+                  {
+                    key: '/settings/roles',
+                    icon: <KeyOutlined />,
+                    label: <Link to="/settings/roles">Vai trò & Quyền</Link>,
+                  },
+                ],
               },
-              {
-                key: '/settings/roles',
-                icon: <KeyOutlined />,
-                label: <Link to="/settings/roles">Vai trò & Quyền</Link>,
-              },
-            ],
-          },
-        ]
-      : []),
-
-    ...(isSuperAdmin
-      ? [
-          {
-            key: '/admin/companies',
-            icon: <BankOutlined />,
-            label: <Link to="/admin/companies">Hệ thống: Công ty</Link>,
-          },
-        ]
-      : []),
-  ]
+            ]
+          : []),
+      ]
 
   // ── Avatar dropdown menu ─────────────────────────────────────────
   const userMenuItems = [
@@ -198,8 +203,37 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           </Title>
         </div>
 
-        {/* ── Company Badge ───────────────────────────────────────── */}
-        {user?.company_name && (
+        {/* ── Company or SuperAdmin Badge ─────────────────────────── */}
+        {isSuperAdmin ? (
+          <div
+            style={{
+              padding: '12px 16px',
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            <div
+              style={{
+                background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%)',
+                border: '1px solid rgba(249, 115, 22, 0.35)',
+                borderRadius: 8,
+                padding: '8px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
+              <SettingOutlined style={{ color: '#fdba74', fontSize: 16 }} />
+              <div>
+                <Text style={{ color: '#fdba74', fontSize: 11, fontWeight: 800, display: 'block', letterSpacing: 0.5 }}>
+                  SYSTEM ADMIN
+                </Text>
+                <Text style={{ color: '#e5e7eb', fontSize: 11 }}>
+                  SaaS Platform Console
+                </Text>
+              </div>
+            </div>
+          </div>
+        ) : user?.company_name ? (
           <div
             style={{
               padding: '10px 16px',
@@ -222,7 +256,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
               </Text>
             </div>
           </div>
-        )}
+        ) : null}
 
         <Menu
           mode="inline"

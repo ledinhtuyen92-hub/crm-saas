@@ -5,11 +5,13 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     ChangePasswordView,
     CompanyRegistrationView,
+    CompanySettingsView,
     CompanyViewSet,
     CurrentUserView,
     CustomTokenObtainPairView,
     PermissionViewSet,
     RoleViewSet,
+    UserQuotaView,
     UserViewSet,
 )
 
@@ -24,9 +26,11 @@ urlpatterns = [
     path("login/", CustomTokenObtainPairView.as_view(), name="token-obtain-pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
 
-    # Profile
+    # Profile & Settings
     path("me/", CurrentUserView.as_view(), name="current-user"),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
+    path("company-settings/", CompanySettingsView.as_view(), name="company-settings"),
+    path("quota/", UserQuotaView.as_view(), name="user-quota"),
 
     # Registration
     path("register-company/", CompanyRegistrationView.as_view(), name="register-company"),
@@ -34,3 +38,4 @@ urlpatterns = [
     # Router (companies, roles, users, permissions)
     path("", include(router.urls)),
 ]
+

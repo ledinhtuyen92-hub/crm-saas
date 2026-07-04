@@ -99,10 +99,14 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from core.numbering import generate_transaction_code
         from orders.models import Order
+        from .models import StockLevel
 
         company = self.request.user.company
         txn_type = serializer.validated_data.get("type")
         reference_order = serializer.validated_data.get("reference_order")
+        product = serializer.validated_data.get("product")
+        warehouse = serializer.validated_data.get("warehouse")
+        quantity = serializer.validated_data.get("quantity", 0)
 
         # ─── SECURITY GATE: chặn cứng xuất kho khi đơn chưa duyệt ───
         if txn_type == "export" and reference_order:
@@ -119,3 +123,20 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             created_by=self.request.user,
             transaction_code=transaction_code,
         )
+
+        # ─── Cập nhật tồn kho (StockLevel) ───
+        if warehouse and product:
+            stock, _ = StockLevel.objects.select_for_update().get_or_create(
+                product=product,
+                warehouse=warehouse,
+                defaults={"quantity": 0},
+            )
+            if txn_type == "import":
+                stock.quantity += quantity
+                stock.save(update_fields=["quantity"])
+            elif txn_type == "adjust":
+                stock.quantity = quantity
+                stock.save(update_fields=["quantity"])
+            elif txn_type == "export" and not reference_order:
+                stock.quantity = max(0, stock.quantity - quantity)
+                stock.save(update_fields=["quantity"])

@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
  * Nếu chưa đăng nhập: redirect về /login.
  */
 export function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, isSuperAdmin, loading } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -27,6 +27,10 @@ export function ProtectedRoute({ children }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  if (isSuperAdmin && !location.pathname.startsWith('/admin')) {
+    return <Navigate to="/admin/dashboard" replace />
   }
 
   return children
@@ -64,7 +68,7 @@ export function SuperAdminRoute({ children }) {
  * Nhân viên thường sẽ bị redirect về /dashboard.
  */
 export function CompanyAdminRoute({ children }) {
-  const { isAuthenticated, isCompanyAdmin, loading } = useAuth()
+  const { isAuthenticated, isCompanyAdmin, isSuperAdmin, loading } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -79,6 +83,10 @@ export function CompanyAdminRoute({ children }) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
+  if (isSuperAdmin && !location.pathname.startsWith('/admin')) {
+    return <Navigate to="/admin/dashboard" replace />
+  }
+
   if (!isCompanyAdmin) {
     return <Navigate to="/dashboard" replace />
   }
@@ -91,6 +99,7 @@ export function CompanyAdminRoute({ children }) {
  * @param {string} permissionCode - vd: 'crm.view', 'sales.create'
  * @returns {boolean}
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePermission(permissionCode) {
   const { hasPermission } = useAuth()
   return hasPermission(permissionCode)

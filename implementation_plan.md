@@ -376,3 +376,7 @@ Khi chạy `python manage.py seed_permissions`, hệ thống sẽ tạo các per
 4. Tạo **management command** `seed_permissions` để seed dữ liệu permission
 5. Chạy `makemigrations` + `migrate`
 6. Kiểm tra: `python manage.py check` không có lỗi
+
+B1:Kế hoạch & Thiết kế Cơ sở dữ liệu (Database Schema / Models)
+B2:Backend API & Hệ thống Quota 
+B3:Phát triển Frontend UI (Frontend UI Development & Backend Integration)

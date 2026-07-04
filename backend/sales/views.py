@@ -1,4 +1,6 @@
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from users.views import TenantQuerySetMixin
 
@@ -37,6 +39,49 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             created_by=self.request.user,
             quotation_number=quotation_number,
         )
+
+    @action(detail=True, methods=["post"], url_path="create-order")
+    def create_order(self, request, pk=None):
+        from django.db import transaction
+        from core.numbering import generate_order_number
+        from orders.models import Order, OrderItem
+        from orders.serializers import OrderSerializer
+
+        quotation = self.get_object()
+        if quotation.status != Quotation.STATUS_ACCEPTED:
+            return Response(
+                {"detail": "Chỉ có thể tạo đơn hàng từ báo giá đã được chấp nhận."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            order_number = generate_order_number(quotation.company)
+            order = Order.objects.create(
+                company=quotation.company,
+                order_number=order_number,
+                customer=quotation.customer,
+                quotation=quotation,
+                created_by=request.user,
+                installation_date=quotation.installation_date,
+                notes=quotation.notes,
+                discount_total=quotation.discount_total,
+                total_amount=quotation.total_amount,
+                status=Order.STATUS_PENDING,
+            )
+            for item in quotation.items.all():
+                OrderItem.objects.create(
+                    order=order,
+                    product=item.product,
+                    product_name=item.product_name,
+                    unit_price=item.unit_price,
+                    width=item.width,
+                    height=item.height,
+                    quantity=item.quantity,
+                    discount_percent=item.discount_percent,
+                )
+
+        serializer = OrderSerializer(order)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class QuotationItemViewSet(viewsets.ModelViewSet):
