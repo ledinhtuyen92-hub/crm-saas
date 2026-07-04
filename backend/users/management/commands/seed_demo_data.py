@@ -76,25 +76,50 @@ class Command(BaseCommand):
 
             # Tạo thêm user Giám đốc với mật khẩu 123456
             director_user, _ = User.objects.get_or_create(
-                username="director",
+                email="director@anphatgroup.vn",
                 defaults={
-                    "email": "director@anphatgroup.vn",
+                    "username": "director",
                     "full_name": "Lê Giám Đốc",
                     "company": company,
                     "role": role_director,
                     "is_company_admin": True,
                 },
             )
+            director_user.company = company
+            director_user.role = role_director
+            director_user.is_company_admin = True
             director_user.set_password("123456")
             director_user.save()
 
             self.stdout.write(f"👤 User Admin: admin (password: admin) | director (password: 123456)")
 
+            # Tạo thêm user nhân viên Sale
+            sale_data = [
+                ("sale01", "Nguyễn Văn Sale 1", "sale01@anphatgroup.vn"),
+                ("sale02", "Trần Thị Sale 2", "sale02@anphatgroup.vn"),
+                ("sale03", "Phạm Văn Sale 3", "sale03@anphatgroup.vn"),
+            ]
+            sale_users = []
+            for uname, fname, uemail in sale_data:
+                u, _ = User.objects.get_or_create(
+                    email=uemail,
+                    defaults={
+                        "username": uname,
+                        "full_name": fname,
+                        "company": company,
+                        "role": role_staff,
+                        "is_company_admin": False,
+                    },
+                )
+                u.set_password("123456")
+                u.save()
+                sale_users.append(u)
+
             # Tạo thêm user nhân viên kỹ thuật
             tech_user, _ = User.objects.get_or_create(
-                username="kythuat01",
+                email="tech@anphatgroup.vn",
                 defaults={
-                    "email": "tech@anphatgroup.vn",
+                    "username": "kythuat01",
                     "full_name": "Trần Văn Kỹ Thuật",
                     "company": company,
                     "role": role_staff,
@@ -104,30 +129,40 @@ class Command(BaseCommand):
             tech_user.save()
 
             # 4. Tạo Khách hàng
-            cust_vingroup, _ = Customer.objects.get_or_create(
-                company=company,
-                phone="0988888888",
-                defaults={
-                    "name": "Tập đoàn Bất động sản Vingroup",
-                    "email": "vinhomes@vingroup.vn",
-                    "address": "KĐT Vinhomes Riverside, Long Biên, Hà Nội",
-                    "status": Customer.STATUS_ACTIVE,
-                    "assigned_to": admin_user,
-                    "notes": "Khách hàng VIP - Dự án biệt thự cao cấp",
-                },
-            )
-            cust_coteccons, _ = Customer.objects.get_or_create(
-                company=company,
-                phone="0911223344",
-                defaults={
-                    "name": "Công ty Cổ phần Xây dựng Coteccons",
-                    "email": "info@coteccons.vn",
-                    "address": "Tòa nhà Coteccons, Nam Từ Liêm, Hà Nội",
-                    "status": Customer.STATUS_ACTIVE,
-                    "assigned_to": tech_user,
-                },
-            )
-            self.stdout.write(f"🤝 Khách hàng: {cust_vingroup.name}, {cust_coteccons.name}")
+            # 4. Tạo danh sách Khách hàng phong phú
+            import random
+            customers_data = [
+                ("Tập đoàn BĐS Vingroup", "0988888888", "vinhomes@vingroup.vn", "KĐT Vinhomes Riverside, Long Biên, HN", "facebook", "active"),
+                ("Công ty Xây dựng Coteccons", "0911223344", "info@coteccons.vn", "Nam Từ Liêm, Hà Nội", "referral", "active"),
+                ("Biệt thự Sun Grand City", "0901234567", "sales@sungrand.vn", "Ciputra, Tây Hồ, Hà Nội", "zalo", "potential"),
+                ("Chung cư The Habitat", "0912345678", "pm@habitat.vn", "Bình Dương", "website", "active"),
+                ("Dự án Sapphire Tower", "0923456789", "info@sapphire.vn", "Đống Đa, Hà Nội", "facebook", "new"),
+                ("CTCP Nội thất An Gia", "0934567890", "order@angiafurni.vn", "Hoàng Mai, Hà Nội", "referral", "potential"),
+                ("Khu nghỉ dưỡng Flamingo", "0945678901", "purchase@flamingo.vn", "Đại Lải, Vĩnh Phúc", "walk_in", "active"),
+                ("Nhà hàng Crystal Jade", "0956789012", "admin@crystaljade.vn", "Hoàn Kiếm, Hà Nội", "zalo", "new"),
+                ("Công ty CP Đông Á Land", "0967890123", "info@dongaland.vn", "Long Biên, Hà Nội", "facebook", "potential"),
+                ("Chị Lan (cá nhân)", "0978901234", "lan.nguyen@gmail.com", "Cầu Giấy, Hà Nội", "referral", "active"),
+            ]
+            all_customers = []
+            for i, (cname, cphone, cemail, caddr, csource, cstatus) in enumerate(customers_data):
+                assigned = sale_users[i % len(sale_users)] if sale_users else tech_user
+                cust, _ = Customer.objects.get_or_create(
+                    company=company,
+                    phone=cphone,
+                    defaults={
+                        "name": cname,
+                        "email": cemail,
+                        "address": caddr,
+                        "source": csource,
+                        "status": cstatus,
+                        "assigned_to": assigned,
+                        "created_by": assigned,
+                    },
+                )
+                all_customers.append(cust)
+            cust_vingroup = all_customers[0]
+            cust_coteccons = all_customers[1]
+            self.stdout.write(f"🤝 Đã tạo {len(all_customers)} khách hàng mẫu")
 
             # 5. Tạo Kho hàng & Danh mục Sản phẩm
             warehouse, _ = Warehouse.objects.get_or_create(
