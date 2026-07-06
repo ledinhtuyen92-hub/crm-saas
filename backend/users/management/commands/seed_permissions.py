@@ -18,6 +18,8 @@ PERMISSIONS = [
     {"code": "crm.export", "name": "Xuất danh sách khách hàng", "module": "crm"},
     {"code": "crm.view_all", "name": "Xem tất cả khách hàng (không giới hạn bởi phân công)", "module": "crm"},
     {"code": "crm.manage_tags", "name": "Quản lý Tags khách hàng", "module": "crm"},
+    {"code": "crm.auto_assign_self", "name": "Tự động phụ trách khách hàng do mình tạo", "module": "crm"},
+    {"code": "crm.upload_interaction_files", "name": "Tải file lên Lịch sử chăm sóc (Hình ảnh, PDF...)", "module": "crm"},
 
     # ── Sales (Báo giá) ───────────────────────────────────────────
     {"code": "sales.view", "name": "Xem danh sách báo giá", "module": "sales"},

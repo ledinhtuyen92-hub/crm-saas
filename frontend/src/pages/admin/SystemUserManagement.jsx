@@ -58,6 +58,8 @@ export default function SystemUserManagement() {
   const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false)
   const [resettingUser, setResettingUser] = useState(null)
   const [newPassword, setNewPassword] = useState('')
+  const [deletingUser, setDeletingUser] = useState(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   // Filters
   const [selectedCompanyId, setSelectedCompanyId] = useState(null)
@@ -172,10 +174,22 @@ export default function SystemUserManagement() {
     }
   }
 
-  const handleDelete = async (user) => {
+  const handleDelete = async () => {
+    if (!deletingUser) return
+    if (deleteConfirmText !== deletingUser.username) {
+      messageApi.error('Tên đăng nhập không khớp. Vui lòng nhập lại.')
+      return
+    }
+
+    if (deletingUser.is_superuser) {
+      messageApi.error('Không thể xoá tài khoản Quản trị hệ thống (Superadmin)!')
+      return
+    }
     try {
-      await api.delete(`users/users/${user.id}/`)
-      messageApi.success(`Đã xoá tài khoản ${user.username} thành công.`)
+      await api.delete(`users/users/${deletingUser.id}/`)
+      messageApi.success(`Đã xoá tài khoản ${deletingUser.username} thành công.`)
+      setDeletingUser(null)
+      setDeleteConfirmText('')
       fetchData()
     } catch {
       messageApi.error('Không thể xoá tài khoản này.')
@@ -183,6 +197,10 @@ export default function SystemUserManagement() {
   }
 
   const toggleActive = async (user) => {
+    if (user.is_superuser) {
+      messageApi.error('Không thể khoá/mở tài khoản Quản trị hệ thống (Superadmin)!')
+      return
+    }
     try {
       await api.patch(`users/users/${user.id}/`, { is_active: !user.is_active })
       messageApi.success(user.is_active ? 'Đã khóa tài khoản.' : 'Đã kích hoạt tài khoản.')
@@ -287,31 +305,34 @@ export default function SystemUserManagement() {
               onClick={() => openModal(record)}
             />
           </Tooltip>
-          <Tooltip title={record.is_active ? 'Khóa tài khoản' : 'Mở khóa'}>
-            <Button
-              type="text"
-              danger={record.is_active}
-              icon={record.is_active ? <StopOutlined /> : <CheckCircleOutlined />}
-              onClick={() => toggleActive(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Xoá tài khoản">
-            <Popconfirm
-              title="Bạn có chắc chắn xoá?"
-              onConfirm={() => handleDelete(record)}
-              okText="Xoá"
-              cancelText="Huỷ"
-              okButtonProps={{ danger: true }}
-            >
-              <Button type="text" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Tooltip>
+          {/* Ẩn nút Khoá & Xoá với tài khoản Superadmin hệ thống */}
+          {!record.is_superuser && (
+            <Tooltip title={record.is_active ? 'Khóa tài khoản' : 'Mở khóa'}>
+              <Button
+                type="text"
+                danger={record.is_active}
+                icon={record.is_active ? <StopOutlined /> : <CheckCircleOutlined />}
+                onClick={() => toggleActive(record)}
+              />
+            </Tooltip>
+          )}
+          {!record.is_superuser && (
+            <Tooltip title="Xoá tài khoản">
+              <Button type="text" danger icon={<DeleteOutlined />} onClick={() => setDeletingUser(record)} />
+            </Tooltip>
+          )}
+          {record.is_superuser && (
+            <Tooltip title="Tài khoản này được bảo vệ — không thể khoá hoặc xoá">
+              <Tag color="gold" style={{ margin: 0 }}>🛡️ Bảo vệ</Tag>
+            </Tooltip>
+          )}
         </Space>
       ),
     },
   ]
 
   const filteredUsers = users.filter((u) => {
+    if (selectedCompanyId && u.company !== selectedCompanyId) return false
     if (!searchText) return true
     const searchLower = searchText.toLowerCase()
     return (
@@ -349,6 +370,8 @@ export default function SystemUserManagement() {
             onChange={(e) => setSearchText(e.target.value)}
           />
           <Select
+            showSearch
+            optionFilterProp="label"
             placeholder="Lọc theo Công ty"
             allowClear
             style={{ width: 250 }}
@@ -473,6 +496,37 @@ export default function SystemUserManagement() {
           placeholder="Nhập mật khẩu mới (ít nhất 6 ký tự)"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
+        />
+      </Modal>
+
+      {/* ── Modal Xác Nhận Xoá ───────────────────────────────────── */}
+      <Modal
+        title={
+          <Space>
+            <DeleteOutlined style={{ color: token.colorError }} />
+            <span style={{ color: token.colorError }}>Xóa tài khoản vĩnh viễn</span>
+          </Space>
+        }
+        open={!!deletingUser}
+        onCancel={() => {
+          setDeletingUser(null)
+          setDeleteConfirmText('')
+        }}
+        onOk={handleDelete}
+        okText="Xóa vĩnh viễn"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true, disabled: deleteConfirmText !== deletingUser?.username }}
+      >
+        <div style={{ marginBottom: 16 }}>
+          Hành động này <strong>không thể hoàn tác</strong>. Dữ liệu liên quan có thể bị mất.
+          <br />
+          Vui lòng nhập tên đăng nhập <Text strong type="danger">{deletingUser?.username}</Text> để xác nhận:
+        </div>
+        <Input
+          placeholder={`Nhập ${deletingUser?.username}`}
+          value={deleteConfirmText}
+          onChange={(e) => setDeleteConfirmText(e.target.value)}
+          onPressEnter={handleDelete}
         />
       </Modal>
     </div>

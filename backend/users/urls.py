@@ -12,6 +12,7 @@ from .views import (
     PermissionViewSet,
     PublicSettingsView,
     RoleViewSet,
+    DepartmentViewSet,
     SystemSettingsView,
     SubscriptionPlanViewSet,
     UserQuotaView,
@@ -20,6 +21,7 @@ from .views import (
 
 router = DefaultRouter()
 router.register("companies", CompanyViewSet, basename="company")
+router.register("departments", DepartmentViewSet, basename="department")
 router.register("roles", RoleViewSet, basename="role")
 router.register("users", UserViewSet, basename="user")
 router.register("permissions", PermissionViewSet, basename="permission")

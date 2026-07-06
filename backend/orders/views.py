@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from users.views import TenantQuerySetMixin
+from users.permissions import ActionBasedPermission
 
 from .models import Order, OrderItem
 from .serializers import OrderItemSerializer, OrderSerializer
@@ -19,14 +20,32 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         "company", "customer", "quotation", "created_by", "approved_by"
     ).prefetch_related("items").order_by("-created_at")
     serializer_class = OrderSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    
+    action_permissions = {
+        "list": "orders.view",
+        "retrieve": "orders.view",
+        "create": "orders.create",
+        "update": "orders.edit",
+        "partial_update": "orders.edit",
+        "destroy": "orders.delete",
+        "approve": "orders.approve",
+        "reject": "orders.approve",
+    }
 
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
-        # Nhân viên Sale chỉ xem đơn do mình tạo (trừ khi có quyền orders.view_all)
-        if not user.is_company_admin and not user.is_superuser:
-            if not user.has_perm_code("orders.view_all"):
+        # Phân quyền xem dữ liệu
+        if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("orders.view_all"):
+            managed_deps = user.managed_departments.all()
+            if managed_deps.exists():
+                from django.db.models import Q
+                qs = qs.filter(
+                    Q(created_by=user) | 
+                    Q(created_by__department__in=managed_deps)
+                )
+            else:
                 qs = qs.filter(created_by=user)
         # Filter theo trạng thái
         order_status = self.request.query_params.get("status")
@@ -104,7 +123,16 @@ class OrderItemViewSet(viewsets.ModelViewSet):
         "order__company", "product"
     ).order_by("order", "id")
     serializer_class = OrderItemSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    
+    action_permissions = {
+        "list": "orders.view",
+        "retrieve": "orders.view",
+        "create": "orders.edit", # Creating item requires edit order permission
+        "update": "orders.edit",
+        "partial_update": "orders.edit",
+        "destroy": "orders.edit",
+    }
 
     def get_queryset(self):
         user = self.request.user

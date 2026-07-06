@@ -1,6 +1,7 @@
 from rest_framework import permissions, viewsets
 
 from users.views import TenantQuerySetMixin
+from users.permissions import ActionBasedPermission
 
 from .models import ProductionOrder, ProductionStep
 from .serializers import ProductionOrderSerializer, ProductionStepSerializer
@@ -13,7 +14,16 @@ class ProductionOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         "company", "order__customer"
     ).prefetch_related("steps").order_by("-created_at")
     serializer_class = ProductionOrderSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    
+    action_permissions = {
+        "list": "production.view",
+        "retrieve": "production.view",
+        "create": "production.create",
+        "update": "production.edit",
+        "partial_update": "production.edit",
+        "destroy": "production.delete",
+    }
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -35,7 +45,16 @@ class ProductionStepViewSet(viewsets.ModelViewSet):
         "production_order__company", "assigned_to"
     ).order_by("production_order", "sequence")
     serializer_class = ProductionStepSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    
+    action_permissions = {
+        "list": "production.view",
+        "retrieve": "production.view",
+        "create": "production.edit", # step creation requires edit prod order permission
+        "update": "production.edit",
+        "partial_update": "production.edit",
+        "destroy": "production.edit",
+    }
 
     def get_queryset(self):
         user = self.request.user

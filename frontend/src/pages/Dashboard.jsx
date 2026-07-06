@@ -113,12 +113,14 @@ function Dashboard() {
   const fetchDashboardData = async () => {
     setLoading(true)
     try {
+      const fetchSafe = (url, fallback) => api.get(url).catch(() => ({ data: fallback }))
+
       const [summaryRes, revenueRes, statusRes, sellersRes, ordersRes] = await Promise.all([
-        api.get('dashboard/summary/'),
-        api.get('dashboard/revenue-chart/?period=6'),
-        api.get('dashboard/orders-by-status/'),
-        api.get('dashboard/top-sellers/?limit=100'),
-        api.get('orders/orders/') // Paginated, take top 5
+        fetchSafe('dashboard/summary/', {}),
+        fetchSafe('dashboard/revenue-chart/?period=6', []),
+        fetchSafe('dashboard/orders-by-status/', []),
+        fetchSafe('dashboard/top-sellers/?limit=100', []),
+        fetchSafe('orders/orders/', { results: [] })
       ])
 
       setSummary(summaryRes.data)

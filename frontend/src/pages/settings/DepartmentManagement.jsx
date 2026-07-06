@@ -1,0 +1,333 @@
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  TeamOutlined,
+} from '@ant-design/icons'
+import {
+  Button,
+  Card,
+  Col,
+  Divider,
+  Form,
+  Input,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+  message,
+  theme,
+} from 'antd'
+import { useCallback, useEffect, useState } from 'react'
+import api from '../../utils/api'
+
+const { Title, Text } = Typography
+
+export default function DepartmentManagement() {
+  const { token } = theme.useToken()
+  const [messageApi, contextHolder] = message.useMessage()
+
+  const [departments, setDepartments] = useState([])
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingDepartment, setEditingDepartment] = useState(null)
+  
+  // State xoá
+  const [deletingDepartment, setDeletingDepartment] = useState(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+
+  const [form] = Form.useForm()
+
+  const fetchData = useCallback(async () => {
+    await Promise.resolve()
+    setLoading(true)
+    try {
+      const [depsRes, usersRes] = await Promise.all([
+        api.get('users/departments/'),
+        api.get('users/users/'),
+      ])
+      const depsData = Array.isArray(depsRes.data) ? depsRes.data : depsRes.data?.results ?? []
+      const usersData = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data?.results ?? []
+      setDepartments(depsData)
+      setUsers(usersData)
+    } catch {
+      messageApi.error('Không thể tải dữ liệu phòng ban.')
+    } finally {
+      setLoading(false)
+    }
+  }, [messageApi])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  // ── Modal Tạo / Sửa ───────────────────────────────────────────────
+  const openModal = (department = null) => {
+    setEditingDepartment(department)
+    form.setFieldsValue({
+      name: department?.name ?? '',
+      description: department?.description ?? '',
+      manager: department?.manager ?? null,
+    })
+    setModalOpen(true)
+  }
+
+  const handleSubmit = async (values) => {
+    try {
+      if (editingDepartment) {
+        await api.patch(`users/departments/${editingDepartment.id}/`, values)
+        messageApi.success('Cập nhật phòng ban thành công.')
+      } else {
+        await api.post('users/departments/', values)
+        messageApi.success('Tạo phòng ban thành công.')
+      }
+      setModalOpen(false)
+      fetchData()
+    } catch (err) {
+      const errors = err.response?.data
+      if (errors && typeof errors === 'object') {
+        messageApi.error(Object.values(errors).flat().join(' '))
+      } else {
+        messageApi.error('Có lỗi xảy ra.')
+      }
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (deleteConfirmText !== deletingDepartment.name) {
+      messageApi.error('Tên phòng ban không khớp, vui lòng nhập lại.')
+      return
+    }
+    try {
+      await api.delete(`users/departments/${deletingDepartment.id}/`)
+      messageApi.success('Đã xóa phòng ban.')
+      setDeletingDepartment(null)
+      setDeleteConfirmText('')
+      fetchData()
+    } catch {
+      messageApi.error('Không thể xóa phòng ban này.')
+    }
+  }
+
+  // ── Columns ───────────────────────────────────────────────────────
+  const columns = [
+    {
+      title: 'Tên phòng ban',
+      dataIndex: 'name',
+      key: 'name',
+      render: (name, record) => (
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 15, color: token.colorText }}>{name}</div>
+          {record.description && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {record.description}
+            </Text>
+          )}
+        </div>
+      ),
+    },
+    {
+      title: 'Trưởng phòng',
+      dataIndex: 'manager_name',
+      key: 'manager_name',
+      render: (managerName) => (
+        <Text strong style={{ color: managerName ? token.colorPrimary : token.colorTextDisabled }}>
+          {managerName || 'Chưa phân công'}
+        </Text>
+      ),
+    },
+    {
+      title: 'Nhân sự',
+      key: 'user_count',
+      align: 'center',
+      render: (_, record) => (
+        <Tag color="purple" icon={<TeamOutlined />}>
+          {record.user_count ?? 0} người
+        </Tag>
+      ),
+    },
+    {
+      title: 'Thao tác',
+      key: 'actions',
+      align: 'center',
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="Chỉnh sửa">
+            <Button type="text" icon={<EditOutlined />} onClick={() => openModal(record)} />
+          </Tooltip>
+          <Tooltip title="Xóa">
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => {
+                setDeletingDepartment(record)
+                setDeleteConfirmText('')
+              }}
+            />
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ]
+
+  return (
+    <div id="department-management-page">
+      {contextHolder}
+
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: 28,
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
+      >
+        <div>
+          <Title level={2} style={{ margin: 0 }}>
+            Quản lý Phòng ban
+          </Title>
+          <Text type="secondary">
+            Thiết lập phòng ban và quản lý nhân sự theo từng bộ phận
+          </Text>
+        </div>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          size="large"
+          onClick={() => openModal()}
+          style={{ background: '#1649c9' }}
+        >
+          Thêm phòng ban
+        </Button>
+      </div>
+
+      <Card style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(15,23,42,0.08)' }}>
+        <Table
+          id="department-table"
+          columns={columns}
+          dataSource={departments}
+          rowKey="id"
+          loading={loading}
+          pagination={{ pageSize: 10 }}
+        />
+      </Card>
+
+      {/* ── Modal Tạo / Sửa ────────────────────────────────────── */}
+      <Modal
+        title={editingDepartment ? `Sửa phòng ban: ${editingDepartment.name}` : 'Thêm phòng ban mới'}
+        open={modalOpen}
+        onCancel={() => setModalOpen(false)}
+        footer={null}
+        destroyOnClose
+        width={500}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          requiredMark={false}
+          style={{ marginTop: 16 }}
+        >
+          <Form.Item
+            name="name"
+            label="Tên phòng ban"
+            rules={[{ required: true, message: 'Vui lòng nhập tên phòng ban' }]}
+          >
+            <Input size="large" placeholder="VD: Phòng Kinh doanh 1, Phòng Marketing..." />
+          </Form.Item>
+          
+          <Form.Item name="description" label="Mô tả">
+            <Input.TextArea rows={3} placeholder="Mô tả chức năng nhiệm vụ..." />
+          </Form.Item>
+
+          <Form.Item
+            name="manager"
+            label="Trưởng phòng (Quản lý)"
+            help="Trưởng phòng có thể xem dữ liệu của toàn bộ nhân viên thuộc phòng ban này."
+          >
+            <Select
+              size="large"
+              placeholder="Chọn trưởng phòng..."
+              allowClear
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+              options={users.map((u) => ({
+                value: u.id,
+                label: `${u.full_name} (${u.username})`,
+              }))}
+            />
+          </Form.Item>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 24 }}>
+            <Button onClick={() => setModalOpen(false)}>Hủy</Button>
+            <Button type="primary" htmlType="submit" style={{ background: '#1649c9' }}>
+              {editingDepartment ? 'Lưu thay đổi' : 'Tạo phòng ban'}
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* ── Modal Xoá ──────────────────────────────────────────── */}
+      <Modal
+        title={
+          <Space style={{ color: token.colorError }}>
+            <DeleteOutlined />
+            <span>Xác nhận xoá phòng ban</span>
+          </Space>
+        }
+        open={!!deletingDepartment}
+        onCancel={() => {
+          setDeletingDepartment(null)
+          setDeleteConfirmText('')
+        }}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setDeletingDepartment(null)
+              setDeleteConfirmText('')
+            }}
+          >
+            Huỷ
+          </Button>,
+          <Button
+            key="delete"
+            danger
+            type="primary"
+            disabled={deleteConfirmText !== deletingDepartment?.name}
+            onClick={confirmDelete}
+          >
+            Xoá vĩnh viễn
+          </Button>,
+        ]}
+      >
+        <div style={{ marginTop: 16 }}>
+          <Text>
+            Bạn đang chuẩn bị xoá phòng ban <Text strong>{deletingDepartment?.name}</Text>. 
+            Hành động này sẽ xoá phòng ban khỏi hệ thống (nhân viên thuộc phòng này sẽ bị gỡ phòng ban).
+          </Text>
+          <Divider />
+          <Text>
+            Vui lòng nhập lại chính xác tên phòng ban <b>{deletingDepartment?.name}</b> để xác nhận.
+          </Text>
+          <Input
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            placeholder="Nhập tên phòng ban..."
+            style={{ marginTop: 8 }}
+          />
+        </div>
+      </Modal>
+    </div>
+  )
+}

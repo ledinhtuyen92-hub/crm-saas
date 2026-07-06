@@ -1,6 +1,7 @@
 from rest_framework import permissions, viewsets
 
 from users.views import TenantQuerySetMixin
+from users.permissions import ActionBasedPermission
 
 from .models import InventoryTransaction, Product, ProductCategory, StockLevel, Warehouse
 from .serializers import (
@@ -17,7 +18,16 @@ class ProductCategoryViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
     queryset = ProductCategory.objects.select_related("company").order_by("name")
     serializer_class = ProductCategorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    
+    action_permissions = {
+        "list": "inventory.manage_categories",
+        "retrieve": "inventory.manage_categories",
+        "create": "inventory.manage_categories",
+        "update": "inventory.manage_categories",
+        "partial_update": "inventory.manage_categories",
+        "destroy": "inventory.manage_categories",
+    }
 
 
 class ProductViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
@@ -25,7 +35,16 @@ class ProductViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
     queryset = Product.objects.select_related("company", "category").order_by("name")
     serializer_class = ProductSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    
+    action_permissions = {
+        "list": "inventory.view",
+        "retrieve": "inventory.view",
+        "create": "inventory.create_product",
+        "update": "inventory.edit_product",
+        "partial_update": "inventory.edit_product",
+        "destroy": "inventory.delete_product",
+    }
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -48,7 +67,16 @@ class WarehouseViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
     queryset = Warehouse.objects.select_related("company").order_by("name")
     serializer_class = WarehouseSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    
+    action_permissions = {
+        "list": "inventory.manage_warehouse",
+        "retrieve": "inventory.manage_warehouse",
+        "create": "inventory.manage_warehouse",
+        "update": "inventory.manage_warehouse",
+        "partial_update": "inventory.manage_warehouse",
+        "destroy": "inventory.manage_warehouse",
+    }
 
 
 class StockLevelViewSet(viewsets.ReadOnlyModelViewSet):
@@ -58,7 +86,12 @@ class StockLevelViewSet(viewsets.ReadOnlyModelViewSet):
         "product__company", "warehouse"
     ).order_by("product__name", "warehouse__name")
     serializer_class = StockLevelSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    
+    action_permissions = {
+        "list": "inventory.view",
+        "retrieve": "inventory.view",
+    }
 
     def get_queryset(self):
         user = self.request.user
@@ -86,7 +119,16 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         "company", "product", "warehouse", "reference_order", "created_by"
     ).order_by("-created_at")
     serializer_class = InventoryTransactionSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    
+    action_permissions = {
+        "list": "inventory.view",
+        "retrieve": "inventory.view",
+        "create": "inventory.import", # We'll need a way to distinguish adjust/export, but import is default creation. Wait, we can let logic inside perform_create handle finer-grained permission if needed, but for now inventory.import covers transactions generally.
+        "update": "inventory.adjust", # Actually transaction cannot be updated usually, but let's map it
+        "partial_update": "inventory.adjust",
+        "destroy": "inventory.adjust",
+    }
 
     def get_queryset(self):
         qs = super().get_queryset()

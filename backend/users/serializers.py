@@ -43,6 +43,49 @@ class PermissionSerializer(serializers.ModelSerializer):
 
 
 # ─────────────────────────────────────────────
+# Department (Phòng ban)
+# ─────────────────────────────────────────────
+
+from .models import Department
+
+class DepartmentSerializer(serializers.ModelSerializer):
+    company = serializers.PrimaryKeyRelatedField(read_only=True)
+    manager_name = serializers.CharField(source="manager.full_name", read_only=True)
+    user_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Department
+        fields = [
+            "id",
+            "company",
+            "name",
+            "description",
+            "manager",
+            "manager_name",
+            "created_at",
+            "user_count",
+        ]
+        read_only_fields = ["created_at"]
+
+    def get_user_count(self, obj):
+        return obj.users.count()
+
+    def validate_name(self, value):
+        request = self.context["request"]
+        company = request.user.company
+        if company is None:
+            raise serializers.ValidationError(
+                "Tài khoản chưa được gán công ty."
+            )
+        queryset = Department.objects.filter(company=company, name__iexact=value.strip())
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("Tên phòng ban đã tồn tại.")
+        return value.strip()
+
+
+# ─────────────────────────────────────────────
 # Role (Vai trò / Chức danh)
 # ─────────────────────────────────────────────
 
@@ -70,6 +113,7 @@ class RoleSerializer(serializers.ModelSerializer):
             "permissions",
             "permission_details",
             "user_count",
+            "is_auto_assign_target",
         ]
 
     def get_user_count(self, obj):
@@ -99,6 +143,7 @@ class UserSerializer(serializers.ModelSerializer):
     company = serializers.PrimaryKeyRelatedField(read_only=True)
     company_name = serializers.CharField(source="company.name", read_only=True)
     role_name = serializers.CharField(source="role.name", read_only=True)
+    department_name = serializers.CharField(source="department.name", read_only=True)
     permissions = serializers.SerializerMethodField()
 
     company_id = serializers.IntegerField(write_only=True, required=False)
@@ -121,7 +166,8 @@ class UserSerializer(serializers.ModelSerializer):
             "is_superuser",
             "is_company_admin",
             "is_active",
-            "department_id",
+            "department",
+            "department_name",
             "created_at",
             "company_id",
         ]
@@ -157,6 +203,13 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"role": "Vai trò không thuộc công ty của nhân viên."}
             )
+
+        department = attrs.get("department", getattr(self.instance, "department", None))
+        if department and company and department.company_id != company.id:
+            raise serializers.ValidationError(
+                {"department": "Phòng ban không thuộc công ty của nhân viên."}
+            )
+
         return attrs
 
     def create(self, validated_data):

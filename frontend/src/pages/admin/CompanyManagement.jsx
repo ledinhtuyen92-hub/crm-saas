@@ -7,6 +7,7 @@ import {
   PlusOutlined,
   StopOutlined,
   TeamOutlined,
+  UserAddOutlined,
 } from '@ant-design/icons'
 import {
   Badge,
@@ -46,6 +47,7 @@ export default function CompanyManagement() {
   const [editingCompany, setEditingCompany] = useState(null)
   const [deletingCompany, setDeletingCompany] = useState(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [searchText, setSearchText] = useState('')
   const [form] = Form.useForm()
 
   // ── Fetch danh sách công ty ─────────────────────────────────────
@@ -149,6 +151,28 @@ export default function CompanyManagement() {
       fetchCompanies()
     } catch {
       messageApi.error('Không thể xoá công ty này.')
+    }
+  }
+
+  // ── Tạo lại admin ────────────────────────────────────────────────
+  const handleRecreateAdmin = async (company) => {
+    try {
+      const res = await api.post(`users/companies/${company.id}/recreate_admin/`)
+      Modal.success({
+        title: 'Tạo lại tài khoản Giám đốc thành công',
+        content: (
+          <div>
+            <p>{res.data.detail}</p>
+            <p>Tài khoản: <Text copyable strong>{res.data.username}</Text></p>
+            <p>Mật khẩu: <Text copyable strong>{res.data.password}</Text></p>
+            <p style={{color: 'red', marginTop: 10, fontSize: 12}}>Vui lòng lưu lại thông tin này trước khi đóng!</p>
+          </div>
+        )
+      })
+      fetchCompanies()
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Không thể tạo lại tài khoản Giám đốc'
+      messageApi.error(msg)
     }
   }
 
@@ -257,6 +281,16 @@ export default function CompanyManagement() {
               onClick={() => openModal(record)}
             />
           </Tooltip>
+          <Tooltip title="Tạo lại tài khoản Giám đốc">
+            <Popconfirm
+              title="Bạn có muốn tạo lại tài khoản Giám đốc cho công ty này không?"
+              onConfirm={() => handleRecreateAdmin(record)}
+              okText="Đồng ý"
+              cancelText="Hủy"
+            >
+              <Button type="text" icon={<UserAddOutlined />} />
+            </Popconfirm>
+          </Tooltip>
           <Tooltip title={record.is_active ? 'Khóa công ty' : 'Kích hoạt'}>
             <Button
               type="text"
@@ -277,6 +311,16 @@ export default function CompanyManagement() {
       ),
     },
   ]
+
+  const filteredCompanies = companies.filter((c) => {
+    if (!searchText) return true
+    const searchLower = searchText.toLowerCase()
+    return (
+      (c.name || '').toLowerCase().includes(searchLower) ||
+      (c.workspace_id || '').toLowerCase().includes(searchLower) ||
+      (c.tax_code || '').toLowerCase().includes(searchLower)
+    )
+  })
 
   return (
     <div id="company-management-page">
@@ -362,10 +406,18 @@ export default function CompanyManagement() {
           boxShadow: '0 2px 12px rgba(15,23,42,0.08)',
         }}
       >
+        <div style={{ marginBottom: 16 }}>
+          <Input.Search
+            placeholder="Tìm kiếm công ty theo tên, MST, mã workspace..."
+            allowClear
+            style={{ width: 350 }}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+        </div>
         <Table
           id="company-table"
           columns={columns}
-          dataSource={companies}
+          dataSource={filteredCompanies}
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10, showTotal: (total) => `${total} công ty` }}

@@ -16,6 +16,8 @@ import {
   Input,
   Button,
   message,
+  Popover,
+  List,
 } from 'antd'
 import {
   AppstoreOutlined,
@@ -29,6 +31,7 @@ import {
   MoonOutlined,
   SettingOutlined,
   ShoppingCartOutlined,
+  SmileOutlined,
   SunOutlined,
   TeamOutlined,
   ToolOutlined,
@@ -43,7 +46,7 @@ const { Text, Title } = Typography
 function MainLayout({ children, isDarkMode, toggleTheme }) {
   const location = useLocation()
   const { token } = theme.useToken()
-  const { user, logout, isSuperAdmin, isCompanyAdmin } = useAuth()
+  const { user, logout, isSuperAdmin, isCompanyAdmin, hasPermission } = useAuth()
 
   // ── Menu items (tuỳ theo quyền) ────────────────────────────────
   const menuItems = isSuperAdmin
@@ -70,11 +73,15 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
         },
       ]
     : [
-        {
-          key: '/dashboard',
-          icon: <DashboardOutlined />,
-          label: <Link to="/dashboard">Dashboard</Link>,
-        },
+        ...(hasPermission('dashboard.view') 
+          ? [
+              {
+                key: '/dashboard',
+                icon: <DashboardOutlined />,
+                label: <Link to="/dashboard">Dashboard</Link>,
+              },
+            ]
+          : []),
         {
           key: '/customers',
           icon: <TeamOutlined />,
@@ -114,6 +121,11 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                     label: <Link to="/settings/users">Nhân viên</Link>,
                   },
                   {
+                    key: '/settings/departments',
+                    icon: <TeamOutlined />,
+                    label: <Link to="/settings/departments">Phòng ban</Link>,
+                  },
+                  {
                     key: '/settings/roles',
                     icon: <KeyOutlined />,
                     label: <Link to="/settings/roles">Vai trò & Quyền</Link>,
@@ -130,14 +142,9 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
 
   const handlePasswordSubmit = async (values) => {
     try {
-      await api.post('users/change-password/', {
-        old_password: values.old_password,
-        new_password: values.new_password,
-      })
-      message.success('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.')
+      await api.patch('/users/me/change-password/', values)
+      message.success('Đổi mật khẩu thành công!')
       setPasswordModalOpen(false)
-      passwordForm.resetFields()
-      logout()
     } catch (err) {
       const errData = err.response?.data
       if (errData && typeof errData === 'object') {
@@ -147,6 +154,48 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
         message.error('Có lỗi xảy ra khi đổi mật khẩu.')
       }
     }
+  }
+
+  // ── Thông báo ──────────────────────────────────────────────────
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [notifications, setNotifications] = useState([])
+  const [notifVisible, setNotifVisible] = useState(false)
+
+  React.useEffect(() => {
+    if (user) {
+      api.get('/notifications/unread-count/').then(res => {
+        setUnreadCount(res.data.unread_count || 0)
+      }).catch(() => {})
+    }
+  }, [user])
+
+  const handleNotifVisibleChange = (newVisible) => {
+    setNotifVisible(newVisible)
+    if (newVisible) {
+      api.get('/notifications/').then(res => {
+        const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
+        setNotifications(data)
+      }).catch(() => {})
+    }
+  }
+
+  const handleMarkAsRead = async (item) => {
+    if (!item.is_read) {
+      try {
+        await api.patch(`/notifications/${item.id}/read/`)
+        setUnreadCount(prev => Math.max(0, prev - 1))
+        setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, is_read: true } : n))
+      } catch {}
+    }
+  }
+
+  const handleMarkAllRead = async () => {
+    try {
+      await api.post('/notifications/mark-all-read/')
+      setUnreadCount(0)
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+      message.success('Đã đánh dấu tất cả là đã đọc.')
+    } catch {}
   }
 
   // ── Avatar dropdown menu ─────────────────────────────────────────
@@ -195,6 +244,16 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
     : user?.is_company_admin
       ? 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)'
       : 'linear-gradient(135deg, #059669 0%, #0891b2 100%)'
+
+  // ── Lời chào tùy chỉnh ───────────────────────────────────────────
+  let greetingMessage = 'Chào mừng bạn quay lại hệ thống. Chúc bạn một ngày làm việc hiệu quả!'
+  if (user?.is_superuser) {
+    greetingMessage = 'Hệ thống đang hoạt động ổn định. Chúc bạn một ngày làm việc hiệu quả!'
+  } else if (user?.is_company_admin) {
+    greetingMessage = 'Chào mừng Giám đốc. Cùng xem qua tình hình kinh doanh hôm nay nhé!'
+  } else if (hasPermission('crm.view') || hasPermission('crm.create')) {
+    greetingMessage = 'Chào mừng bạn quay lại. Hôm nay có lịch hẹn khách hàng nào không?'
+  }
 
   return (
     <Layout style={{ minHeight: '100vh', background: token.colorBgLayout }}>
@@ -343,21 +402,70 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           <div
             style={{
               display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              gap: 5,
+              alignItems: 'center',
+              gap: 16,
               minWidth: 0,
             }}
           >
-            <Title
-              level={3}
-              style={{ margin: 0, color: token.colorText, fontSize: 22, lineHeight: 1.2 }}
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 14,
+                background: isDarkMode 
+                  ? 'linear-gradient(135deg, #1e3a8a 0%, #312e81 100%)' 
+                  : 'linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: isDarkMode 
+                  ? '0 4px 14px rgba(0,0,0,0.5)' 
+                  : '0 4px 14px rgba(59, 130, 246, 0.15)',
+              }}
             >
-              Customer Relationship Management
-            </Title>
-            <Text type="secondary" style={{ lineHeight: 1.3 }}>
-              Quản lý vận hành và chăm sóc khách hàng
-            </Text>
+              <SmileOutlined style={{ fontSize: 24, color: isDarkMode ? '#60a5fa' : '#2563eb', animation: 'wave 2.5s infinite', transformOrigin: '70% 70%' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Title
+                level={3}
+                style={{
+                  margin: 0,
+                  fontSize: 22,
+                  fontWeight: 800,
+                }}
+              >
+                <span
+                  style={{
+                    backgroundImage: isDarkMode 
+                      ? 'linear-gradient(90deg, #60a5fa, #c084fc)' 
+                      : 'linear-gradient(90deg, #2563eb, #9333ea)',
+                    WebkitBackgroundClip: 'text',
+                    backgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    color: 'transparent',
+                  }}
+                >
+                  Xin chào, {user?.full_name || user?.username}!
+                </span>
+              </Title>
+              <Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>
+                {greetingMessage}
+              </Text>
+            </div>
+            <style>
+              {`
+                @keyframes wave {
+                  0% { transform: rotate(0deg); }
+                  10% { transform: rotate(14deg); }
+                  20% { transform: rotate(-8deg); }
+                  30% { transform: rotate(14deg); }
+                  40% { transform: rotate(-4deg); }
+                  50% { transform: rotate(10deg); }
+                  60% { transform: rotate(0deg); }
+                  100% { transform: rotate(0deg); }
+                }
+              `}
+            </style>
           </div>
 
           <Space size={20} align="center">
@@ -368,15 +476,78 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
               onChange={toggleTheme}
             />
 
-            <Badge dot offset={[-2, 4]}>
-              <BellOutlined
-                style={{
-                  color: token.colorTextSecondary,
-                  cursor: 'pointer',
-                  fontSize: 20,
-                }}
-              />
-            </Badge>
+            <Popover
+              content={
+                <div style={{ width: 300, maxHeight: 400, overflowY: 'auto' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <Text strong>Thông báo</Text>
+                    {notifications.length > 0 && (
+                      <Button type="link" size="small" onClick={handleMarkAllRead} style={{ padding: 0 }}>
+                        Đánh dấu tất cả đã đọc
+                      </Button>
+                    )}
+                  </div>
+                  {notifications.length === 0 ? (
+                    <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: '20px 0' }}>
+                      Không có thông báo nào.
+                    </Text>
+                  ) : (
+                    <List
+                      itemLayout="horizontal"
+                      dataSource={notifications}
+                      renderItem={(item) => (
+                        <List.Item
+                          style={{
+                            cursor: 'pointer',
+                            background: item.is_read ? 'transparent' : '#f0f5ff',
+                            padding: '8px 12px',
+                            borderBottom: '1px solid #f0f0f0',
+                            borderRadius: 4,
+                            marginBottom: 4,
+                          }}
+                          onClick={() => handleMarkAsRead(item)}
+                        >
+                          <List.Item.Meta
+                            title={
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <Text strong={!item.is_read} style={{ fontSize: 13, color: item.is_read ? '#595959' : '#1890ff' }}>
+                                  {item.title}
+                                </Text>
+                                {!item.is_read && <Badge status="processing" />}
+                              </div>
+                            }
+                            description={
+                              <div>
+                                <Text style={{ fontSize: 12, color: item.is_read ? '#8c8c8c' : '#595959', display: 'block', marginTop: 4 }}>
+                                  {item.message}
+                                </Text>
+                                <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
+                                  {new Date(item.created_at).toLocaleString('vi-VN')}
+                                </Text>
+                              </div>
+                            }
+                          />
+                        </List.Item>
+                      )}
+                    />
+                  )}
+                </div>
+              }
+              trigger="click"
+              placement="bottomRight"
+              open={notifVisible}
+              onOpenChange={handleNotifVisibleChange}
+            >
+              <Badge count={unreadCount} offset={[-2, 4]} size="small">
+                <BellOutlined
+                  style={{
+                    color: token.colorTextSecondary,
+                    cursor: 'pointer',
+                    fontSize: 20,
+                  }}
+                />
+              </Badge>
+            </Popover>
 
             {/* ── User Avatar Dropdown ──────────────────────────── */}
             <Dropdown

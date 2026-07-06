@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from users.views import TenantQuerySetMixin
+from users.permissions import ActionBasedPermission
 
 from .models import Quotation, QuotationItem
 from .serializers import QuotationItemSerializer, QuotationSerializer
@@ -15,14 +16,31 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         "company", "customer", "created_by"
     ).prefetch_related("items").order_by("-created_at")
     serializer_class = QuotationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    
+    action_permissions = {
+        "list": "sales.view",
+        "retrieve": "sales.view",
+        "create": "sales.create",
+        "update": "sales.edit",
+        "partial_update": "sales.edit",
+        "destroy": "sales.delete",
+        "create_order": "sales.view", # To create order, user must at least view it
+    }
 
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
-        # Nhân viên Sale chỉ xem báo giá do mình tạo (trừ khi có quyền orders.view_all)
-        if not user.is_company_admin and not user.is_superuser:
-            if not user.has_perm_code("sales.view"):
+        # Phân quyền xem dữ liệu
+        if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("sales.view"):
+            managed_deps = user.managed_departments.all()
+            if managed_deps.exists():
+                from django.db.models import Q
+                qs = qs.filter(
+                    Q(created_by=user) | 
+                    Q(created_by__department__in=managed_deps)
+                )
+            else:
                 qs = qs.filter(created_by=user)
         # Filter theo trạng thái nếu có
         status = self.request.query_params.get("status")
@@ -91,7 +109,16 @@ class QuotationItemViewSet(viewsets.ModelViewSet):
         "quotation__company", "product"
     ).order_by("quotation", "id")
     serializer_class = QuotationItemSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    
+    action_permissions = {
+        "list": "sales.view",
+        "retrieve": "sales.view",
+        "create": "sales.edit", # Creating item requires edit quotation permission
+        "update": "sales.edit",
+        "partial_update": "sales.edit",
+        "destroy": "sales.edit",
+    }
 
     def get_queryset(self):
         user = self.request.user

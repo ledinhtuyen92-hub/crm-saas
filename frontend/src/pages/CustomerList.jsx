@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Col,
+  DatePicker,
   Drawer,
   Form,
   Input,
@@ -21,6 +22,7 @@ import {
   Tooltip,
   Typography,
   message,
+  Upload,
 } from 'antd'
 import {
   HistoryOutlined,
@@ -32,9 +34,19 @@ import {
   UserAddOutlined,
   UserOutlined,
   UserSwitchOutlined,
+  TagsOutlined,
+  ExportOutlined,
+  ImportOutlined,
+  UploadOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  PaperClipOutlined,
 } from '@ant-design/icons'
 import api from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
+import dayjs from 'dayjs'
+
+import TagManagementModal from '../components/TagManagementModal'
 
 const { Title, Text, Paragraph } = Typography
 const { Option } = Select
@@ -92,6 +104,7 @@ function CustomerList() {
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [assignedToFilter, setAssignedToFilter] = useState('')
 
   // Modal Add / Edit Customer
   const [isModalVisible, setIsModalVisible] = useState(false)
@@ -116,11 +129,23 @@ function CustomerList() {
   const [interactionModalVisible, setInteractionModalVisible] = useState(false)
   const [interactionForm] = Form.useForm()
   const [submittingInteraction, setSubmittingInteraction] = useState(false)
+  const [interactionFiles, setInteractionFiles] = useState([])
 
   // Modal Add Contact
   const [contactModalVisible, setContactModalVisible] = useState(false)
   const [contactForm] = Form.useForm()
   const [submittingContact, setSubmittingContact] = useState(false)
+
+  // Tags Management
+  const [tagModalVisible, setTagModalVisible] = useState(false)
+
+  // Import
+  const [importModalVisible, setImportModalVisible] = useState(false)
+  const [importFile, setImportFile] = useState(null)
+  const [importing, setImporting] = useState(false)
+
+  // Tags
+  const [allTags, setAllTags] = useState([])
 
   const fetchCustomers = useCallback(async () => {
     await Promise.resolve()
@@ -130,6 +155,7 @@ function CustomerList() {
       const params = {}
       if (searchQuery) params.search = searchQuery
       if (statusFilter) params.status = statusFilter
+      if (assignedToFilter) params.assigned_to = assignedToFilter
 
       const response = await api.get('/crm/customers/', { params })
       const data = Array.isArray(response.data)
@@ -141,7 +167,7 @@ function CustomerList() {
     } finally {
       setLoading(false)
     }
-  }, [searchQuery, statusFilter])
+  }, [searchQuery, statusFilter, assignedToFilter])
 
   const fetchSalesUsers = useCallback(async () => {
     if (!isCompanyAdmin && !hasPermission('crm.assign')) return
@@ -155,13 +181,24 @@ function CustomerList() {
     }
   }, [isCompanyAdmin, hasPermission])
 
+  const fetchAllTags = useCallback(async () => {
+    try {
+      const res = await api.get('/crm/tags/')
+      const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
+      setAllTags(data)
+    } catch {
+      // ignore
+    }
+  }, [])
+
   useEffect(() => {
     fetchCustomers()
   }, [fetchCustomers])
 
   useEffect(() => {
     fetchSalesUsers()
-  }, [fetchSalesUsers])
+    fetchAllTags()
+  }, [fetchSalesUsers, fetchAllTags])
 
   // ── Handlers: Add / Edit Customer ──────────────────────────────────
   const handleOpenAddModal = () => {
@@ -183,6 +220,8 @@ function CustomerList() {
       source: record.source || 'other',
       status: record.status || 'new',
       notes: record.notes,
+      tag_ids: record.tags?.map(t => t.id) || [],
+      birthday: record.birthday ? dayjs(record.birthday) : null,
     })
     setIsModalVisible(true)
   }
@@ -190,11 +229,15 @@ function CustomerList() {
   const handleSaveCustomer = async (values) => {
     setSubmitting(true)
     try {
+      const payload = {
+        ...values,
+        birthday: values.birthday ? values.birthday.format('YYYY-MM-DD') : null,
+      }
       if (editingCustomer) {
-        await api.patch(`/crm/customers/${editingCustomer.id}/`, values)
+        await api.patch(`/crm/customers/${editingCustomer.id}/`, payload)
         message.success('Cập nhật khách hàng thành công!')
       } else {
-        await api.post('/crm/customers/', values)
+        await api.post('/crm/customers/', payload)
         message.success('Thêm khách hàng thành công!')
       }
       setIsModalVisible(false)
@@ -246,6 +289,61 @@ function CustomerList() {
     }
   }
 
+  const handleExportCsv = async () => {
+    try {
+      const response = await api.get('/crm/customers/export-csv/', {
+        responseType: 'blob', // Quan trọng để lấy file
+      })
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'customers.csv')
+      document.body.appendChild(link)
+      link.click()
+      link.parentNode.removeChild(link)
+    } catch {
+      message.error('Có lỗi xảy ra khi xuất file CSV.')
+    }
+  }
+
+  const handleImportCsv = async () => {
+    if (!importFile) {
+      message.warning('Vui lòng chọn file CSV để nhập.')
+      return
+    }
+    setImporting(true)
+    const formData = new FormData()
+    formData.append('file', importFile)
+
+    try {
+      const res = await api.post('/crm/customers/import-csv/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      message.success(res.data.detail || 'Nhập dữ liệu thành công!')
+      setImportModalVisible(false)
+      setImportFile(null)
+      fetchCustomers()
+    } catch (err) {
+      message.error(err.response?.data?.detail || 'Có lỗi xảy ra khi nhập file CSV.')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleDownloadTemplate = () => {
+    const csvContent = '\ufeffHọ và tên,Số điện thoại,Email,Địa chỉ,Tỉnh/Thành phố,Tags\nNguyễn Văn A,0901234567,nguyenvana@gmail.com,123 Lê Lợi,TP.HCM,VIP, Khách sỉ\nCông ty TNHH B,0987654321,,,,Khách mới'
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'mau_nhap_khach_hang.csv')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   const handleRoundRobinAssign = async () => {
     try {
       const res = await api.post('/crm/customers/round-robin-assign/')
@@ -278,13 +376,30 @@ function CustomerList() {
   const handleAddInteraction = async (values) => {
     setSubmittingInteraction(true)
     try {
-      await api.post('/crm/interactions/', {
+      const resInteraction = await api.post('/crm/interactions/', {
         ...values,
         customer: currentCustomer.id,
       })
+      
+      const interactionId = resInteraction.data.id;
+      
+      if (interactionFiles && interactionFiles.length > 0) {
+        const formData = new FormData();
+        interactionFiles.forEach(file => {
+          formData.append('files', file.originFileObj || file);
+        });
+        
+        await api.post(`/crm/interactions/${interactionId}/upload-files/`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      }
+      
       message.success('Đã ghi nhận lịch sử chăm sóc!')
       setInteractionModalVisible(false)
       interactionForm.resetFields()
+      setInteractionFiles([])
       // reload interactions
       const res = await api.get('/crm/interactions/', { params: { customer_id: currentCustomer.id } })
       setInteractions(Array.isArray(res.data) ? res.data : res.data?.results ?? [])
@@ -384,6 +499,23 @@ function CustomerList() {
       },
     },
     {
+      title: 'Tags',
+      key: 'tags',
+      render: (_, record) => (
+        <Space size={[0, 4]} wrap style={{ maxWidth: 150 }}>
+          {record.tags && record.tags.length > 0 ? (
+            record.tags.map((tag) => (
+              <Tag color={tag.color} key={tag.id}>
+                {tag.name}
+              </Tag>
+            ))
+          ) : (
+            <Text type="secondary" style={{ fontSize: 12 }}>Chưa có</Text>
+          )}
+        </Space>
+      ),
+    },
+    {
       title: 'Phụ trách (Sale)',
       key: 'assigned_to',
       render: (_, record) => {
@@ -458,7 +590,35 @@ function CustomerList() {
               </Button>
             </Tooltip>
           )}
-          {(isCompanyAdmin || hasPermission('crm.add')) && (
+
+          {(isCompanyAdmin || hasPermission('crm.import')) && (
+            <Button
+              icon={<ImportOutlined />}
+              onClick={() => setImportModalVisible(true)}
+            >
+              Nhập CSV
+            </Button>
+          )}
+
+          {(isCompanyAdmin || hasPermission('crm.export')) && (
+            <Button
+              icon={<ExportOutlined />}
+              onClick={handleExportCsv}
+            >
+              Xuất CSV
+            </Button>
+          )}
+
+          {(isCompanyAdmin || hasPermission('crm.manage_tags')) && (
+            <Button
+              icon={<TagsOutlined />}
+              onClick={() => setTagModalVisible(true)}
+            >
+              Quản lý Tags
+            </Button>
+          )}
+
+          {(isCompanyAdmin || hasPermission('crm.create')) && (
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -478,16 +638,16 @@ function CustomerList() {
       {/* Filter Bar */}
       <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: 16 }}>
         <Row gutter={16} align="middle">
-          <Col xs={24} sm={12} md={10}>
+          <Col xs={24} sm={12} md={8} style={{ marginBottom: 8 }}>
             <Input
-              placeholder="Tìm theo tên hoặc số điện thoại..."
+              placeholder="Tìm theo tên hoặc SĐT..."
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               allowClear
             />
           </Col>
-          <Col xs={24} sm={12} md={8}>
+          <Col xs={24} sm={12} md={6} style={{ marginBottom: 8 }}>
             <Select
               placeholder="Lọc theo trạng thái"
               style={{ width: '100%' }}
@@ -503,7 +663,27 @@ function CustomerList() {
               ))}
             </Select>
           </Col>
-          <Col xs={24} sm={24} md={6} style={{ textAlign: 'right' }}>
+          {(isCompanyAdmin || hasPermission('crm.assign') || hasPermission('crm.view_all')) && (
+            <Col xs={24} sm={12} md={6} style={{ marginBottom: 8 }}>
+              <Select
+                placeholder="Lọc theo Sale phụ trách"
+                style={{ width: '100%' }}
+                value={assignedToFilter}
+                onChange={(val) => setAssignedToFilter(val)}
+                allowClear
+                showSearch
+                optionFilterProp="children"
+              >
+                <Option value="">Tất cả nhân viên</Option>
+                {salesUsers.map((u) => (
+                  <Option key={u.id} value={u.id}>
+                    {u.full_name || u.username}
+                  </Option>
+                ))}
+              </Select>
+            </Col>
+          )}
+          <Col xs={24} sm={12} md={(isCompanyAdmin || hasPermission('crm.assign') || hasPermission('crm.view_all')) ? 4 : 10} style={{ textAlign: 'right', marginBottom: 8 }}>
             <Button onClick={fetchCustomers} icon={<ReloadOutlined />}>
               Làm mới
             </Button>
@@ -570,9 +750,18 @@ function CustomerList() {
             </Col>
           </Row>
 
-          <Form.Item name="address" label="Địa chỉ">
-            <Input placeholder="Số nhà, đường, phường/xã..." />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="address" label="Địa chỉ">
+                <Input placeholder="Số nhà, đường, phường/xã..." />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="birthday" label="Ngày sinh">
+                <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} placeholder="Chọn ngày sinh" />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Row gutter={16}>
             <Col span={12}>
@@ -601,6 +790,21 @@ function CustomerList() {
               </Form.Item>
             </Col>
           </Row>
+
+          <Form.Item name="tag_ids" label="Gắn Tags">
+            <Select
+              mode="multiple"
+              placeholder="Chọn tag..."
+              allowClear
+              optionLabelProp="label"
+            >
+              {allTags.map((tag) => (
+                <Option key={tag.id} value={tag.id} label={tag.name}>
+                  <Tag color={tag.color}>{tag.name}</Tag>
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
 
           <Form.Item name="notes" label="Ghi chú thêm">
             <TextArea rows={3} placeholder="Ghi chú về nhu cầu, đặc điểm khách hàng..." />
@@ -679,6 +883,7 @@ function CustomerList() {
                         onClick={() => {
                           interactionForm.resetFields()
                           interactionForm.setFieldsValue({ type: 'call', result: 'interested' })
+                          setInteractionFiles([])
                           setInteractionModalVisible(true)
                         }}
                       >
@@ -706,9 +911,22 @@ function CustomerList() {
                                   {INTERACTION_RESULTS[item.result]?.label || item.result}
                                 </Tag>
                               </div>
-                              <Paragraph style={{ margin: 0, whiteSpace: 'pre-line' }}>
+                              <Paragraph style={{ margin: 0, whiteSpace: 'pre-line', marginBottom: item.attachments?.length > 0 ? 8 : 0 }}>
                                 {item.content}
                               </Paragraph>
+                              
+                              {item.attachments && item.attachments.length > 0 && (
+                                <div style={{ marginBottom: 8 }}>
+                                  <Space direction="vertical" size={2}>
+                                    {item.attachments.map(att => (
+                                      <a key={att.id} href={att.file} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>
+                                        <PaperClipOutlined /> {att.file_name}
+                                      </a>
+                                    ))}
+                                  </Space>
+                                </div>
+                              )}
+                              
                               <Text type="secondary" style={{ fontSize: 11 }}>
                                 Thực hiện bởi: {item.created_by?.full_name || item.created_by?.username || 'Admin'}
                               </Text>
@@ -785,8 +1003,20 @@ function CustomerList() {
                         </Form.Item>
                       </Col>
                       <Col span={12}>
+                        <Form.Item label="Ngày sinh">
+                          <Input value={currentCustomer.birthday ? dayjs(currentCustomer.birthday).format('DD/MM/YYYY') : '—'} readOnly />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      <Col span={12}>
                         <Form.Item label="Nguồn">
                           <Input value={SOURCE_MAP[currentCustomer.source] || currentCustomer.source || '—'} readOnly />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item label="Ngày tạo">
+                          <Input value={new Date(currentCustomer.created_at).toLocaleString('vi-VN')} readOnly />
                         </Form.Item>
                       </Col>
                     </Row>
@@ -805,7 +1035,10 @@ function CustomerList() {
       <Modal
         title="Ghi nhận Lịch sử chăm sóc"
         open={interactionModalVisible}
-        onCancel={() => setInteractionModalVisible(false)}
+        onCancel={() => {
+          setInteractionModalVisible(false)
+          setInteractionFiles([])
+        }}
         onOk={() => interactionForm.submit()}
         confirmLoading={submittingInteraction}
         okText="Lưu lại"
@@ -835,6 +1068,21 @@ function CustomerList() {
           <Form.Item name="content" label="Nội dung trao đổi / chi tiết" rules={[{ required: true, message: 'Vui lòng nhập nội dung!' }]}>
             <TextArea rows={4} placeholder="VD: Khách hàng hỏi giá chi tiết sản phẩm X, yêu cầu gửi báo giá qua email..." />
           </Form.Item>
+          
+          {hasPermission('crm.upload_interaction_files') && (
+            <Form.Item label="File đính kèm (Tùy chọn)">
+              <Upload
+                multiple
+                beforeUpload={() => false}
+                fileList={interactionFiles}
+                onChange={(info) => {
+                  setInteractionFiles(info.fileList)
+                }}
+              >
+                <Button icon={<UploadOutlined />}>Chọn file đính kèm</Button>
+              </Upload>
+            </Form.Item>
+          )}
         </Form>
       </Modal>
 
@@ -869,6 +1117,52 @@ function CustomerList() {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Modal Import CSV */}
+      <Modal
+        title="Nhập khách hàng từ CSV"
+        open={importModalVisible}
+        onCancel={() => setImportModalVisible(false)}
+        onOk={handleImportCsv}
+        confirmLoading={importing}
+        okText="Bắt đầu nhập"
+        cancelText="Hủy"
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Text>
+            Vui lòng chuẩn bị file CSV theo cấu trúc 6 cột: 
+            <strong> Tên, SĐT, Email, Địa chỉ, Tỉnh/Thành phố, Tags.</strong>
+            <br />
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              * Chỉ bắt buộc điền <strong>Tên</strong> và <strong>Số điện thoại</strong>. Các cột khác có thể để trống.
+            </Text>
+            <br />
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              * Cột Tags có thể chứa nhiều tag cách nhau bởi dấu phẩy (VD: Khách sỉ, VIP). Nếu tag chưa có, hệ thống sẽ tự tạo mới.
+            </Text>
+          </Text>
+          <div style={{ marginTop: 12 }}>
+            <Button size="small" type="dashed" onClick={handleDownloadTemplate}>
+              Tải file mẫu CSV
+            </Button>
+          </div>
+        </div>
+        <Input 
+          type="file" 
+          accept=".csv" 
+          onChange={(e) => setImportFile(e.target.files[0])} 
+        />
+        {importFile && (
+          <div style={{ marginTop: 8 }}>
+            <Text type="success">Đã chọn file: {importFile.name}</Text>
+          </div>
+        )}
+      </Modal>
+
+      <TagManagementModal 
+        open={tagModalVisible} 
+        onCancel={() => setTagModalVisible(false)} 
+      />
     </section>
   )
 }

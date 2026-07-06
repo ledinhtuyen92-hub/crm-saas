@@ -65,6 +65,40 @@ class Permission(models.Model):
         return f"{self.name} ({self.code})"
 
 
+class Department(models.Model):
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name="departments",
+        verbose_name="Công ty",
+    )
+    name = models.CharField(max_length=150, verbose_name="Tên phòng ban")
+    description = models.TextField(blank=True, verbose_name="Mô tả")
+    manager = models.ForeignKey(
+        "User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="managed_departments",
+        verbose_name="Trưởng phòng",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Phòng ban"
+        verbose_name_plural = "Phòng ban"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "name"],
+                name="unique_department_name_per_company",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.name} — {self.company.name}"
+
+
 class Role(models.Model):
     company = models.ForeignKey(
         Company,
@@ -79,6 +113,11 @@ class Role(models.Model):
         blank=True,
         related_name="roles",
         verbose_name="Danh sách quyền",
+    )
+    is_auto_assign_target = models.BooleanField(
+        default=False,
+        verbose_name="Nhận khách tự động",
+        help_text="Vai trò này được nhận khách từ chức năng phân bổ tự động",
     )
 
     class Meta:
@@ -133,7 +172,14 @@ class User(AbstractUser):
         verbose_name="Là Admin công ty",
         help_text="Tài khoản quản trị cao nhất của công ty (Owner/Giám đốc). Có toàn quyền trong công ty.",
     )
-    department_id = models.IntegerField(null=True, blank=True, verbose_name="Phòng ban")
+    department = models.ForeignKey(
+        "Department",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="users",
+        verbose_name="Phòng ban",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     REQUIRED_FIELDS = ["email", "full_name"]

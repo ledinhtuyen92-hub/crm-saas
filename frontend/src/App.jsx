@@ -5,7 +5,12 @@ import 'antd/dist/reset.css'
 
 import { AuthProvider } from './contexts/AuthContext'
 import MainLayout from './components/MainLayout'
-import { CompanyAdminRoute, ProtectedRoute, SuperAdminRoute } from './components/ProtectedRoute'
+import {
+  CompanyAdminRoute,
+  ProtectedRoute,
+  SuperAdminRoute,
+  PermissionRoute,
+} from './components/ProtectedRoute'
 
 // Pages
 import CustomerList from './pages/CustomerList'
@@ -22,6 +27,7 @@ import CompanyManagement from './pages/admin/CompanyManagement'
 import SystemUserManagement from './pages/admin/SystemUserManagement'
 import RoleManagement from './pages/settings/RoleManagement'
 import UserManagement from './pages/settings/UserManagement'
+import DepartmentManagement from './pages/settings/DepartmentManagement'
 
 function ApplicationLayout({ isDarkMode, toggleTheme }) {
   return (
@@ -65,7 +71,11 @@ function App() {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
               {/* Main app routes */}
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard" element={
+                <PermissionRoute permissionCode="dashboard.view">
+                  <Dashboard />
+                </PermissionRoute>
+              } />
               <Route path="/customers" element={<CustomerList />} />
               <Route path="/quotations" element={<QuotationList />} />
               <Route path="/orders" element={<OrderList />} />
@@ -86,6 +96,14 @@ function App() {
                 element={
                   <CompanyAdminRoute>
                     <RoleManagement />
+                  </CompanyAdminRoute>
+                }
+              />
+              <Route
+                path="/settings/departments"
+                element={
+                  <CompanyAdminRoute>
+                    <DepartmentManagement />
                   </CompanyAdminRoute>
                 }
               />

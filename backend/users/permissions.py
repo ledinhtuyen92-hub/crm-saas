@@ -57,27 +57,39 @@ class IsCompanyAdminOrReadOnly(BasePermission):
         return request.user.is_superuser or request.user.is_company_admin
 
 
-class HasModulePermission(BasePermission):
+class ActionBasedPermission(BasePermission):
     """
-    Kiểm tra xem user có permission code yêu cầu trong role.permissions không.
-    Sử dụng bằng cách gán `required_permission` vào view:
-
-        class MyView(APIView):
-            permission_classes = [IsAuthenticated, HasModulePermission]
-            required_permission = 'crm.view'
+    Kiểm tra quyền dựa trên action của ViewSet.
+    View cần định nghĩa `action_permissions` dictionary:
+    {
+        'list': 'crm.view',
+        'retrieve': 'crm.view',
+        'create': 'crm.create',
+        'update': 'crm.edit',
+        'partial_update': 'crm.edit',
+        'destroy': 'crm.delete',
+        'assign': 'crm.assign', # custom actions
+    }
     """
 
-    message = "Bạn không có quyền truy cập module này."
+    message = "Bạn không có quyền thực hiện hành động này."
 
     def has_permission(self, request, view):
         if not (request.user and request.user.is_authenticated):
             return False
+            
         # Superuser và company admin luôn có tất cả quyền
         if request.user.is_superuser or request.user.is_company_admin:
             return True
-        required = getattr(view, "required_permission", None)
-        if not required:
+            
+        action_permissions = getattr(view, "action_permissions", {})
+        required_perm = action_permissions.get(view.action)
+        
+        if not required_perm:
+            # Nếu action không được định nghĩa trong map, mặc định cho qua (dựa vào IsAuthenticated)
             return True
+            
         if not request.user.role:
             return False
-        return request.user.role.permissions.filter(code=required).exists()
+            
+        return request.user.role.permissions.filter(code=required_perm).exists()

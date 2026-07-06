@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from users.models import User
-from .models import Customer, CustomerContact, CustomerInteraction, CustomerTag
+from .models import Customer, CustomerContact, CustomerInteraction, CustomerTag, InteractionAttachment
 
 
 class CustomerTagSerializer(serializers.ModelSerializer):
@@ -18,10 +18,18 @@ class CustomerContactSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
 
+class InteractionAttachmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InteractionAttachment
+        fields = ["id", "interaction", "file", "file_name", "file_size", "uploaded_at"]
+        read_only_fields = ["id", "uploaded_at", "interaction"]
+
+
 class CustomerInteractionSerializer(serializers.ModelSerializer):
     type_display = serializers.CharField(source="get_type_display", read_only=True)
     result_display = serializers.CharField(source="get_result_display", read_only=True)
     created_by_name = serializers.CharField(source="created_by.full_name", read_only=True)
+    attachments = InteractionAttachmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = CustomerInteraction
@@ -36,9 +44,10 @@ class CustomerInteractionSerializer(serializers.ModelSerializer):
             "result",
             "result_display",
             "next_follow_up",
+            "attachments",
             "created_at",
         ]
-        read_only_fields = ["id", "created_at", "type_display", "result_display", "created_by_name"]
+        read_only_fields = ["id", "created_by", "created_at", "type_display", "result_display", "created_by_name", "attachments"]
 
 
 class AssignedUserSerializer(serializers.Serializer):
@@ -85,6 +94,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             "email",
             "address",
             "city",
+            "birthday",
             "source",
             "source_display",
             "status",

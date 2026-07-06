@@ -48,8 +48,14 @@ def summary(request):
 
     # ── Khách hàng ────────────────────────────────────────────────
     customer_qs = Customer.objects.filter(cf)
-    if not user.is_company_admin and not user.is_superuser:
-        if not user.has_perm_code("crm.view_all"):
+    if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("crm.view_all"):
+        managed_deps = user.managed_departments.all()
+        if managed_deps.exists():
+            customer_qs = customer_qs.filter(
+                Q(assigned_to=user) | 
+                Q(assigned_to__department__in=managed_deps)
+            )
+        else:
             customer_qs = customer_qs.filter(assigned_to=user)
 
     customer_stats = customer_qs.aggregate(
@@ -63,7 +69,14 @@ def summary(request):
     # ── Báo giá ────────────────────────────────────────────────
     quotation_qs = Quotation.objects.filter(cf)
     if not user.is_company_admin and not user.is_superuser:
-        quotation_qs = quotation_qs.filter(created_by=user)
+        managed_deps = user.managed_departments.all()
+        if managed_deps.exists():
+            quotation_qs = quotation_qs.filter(
+                Q(created_by=user) | 
+                Q(created_by__department__in=managed_deps)
+            )
+        else:
+            quotation_qs = quotation_qs.filter(created_by=user)
 
     quotation_stats = quotation_qs.aggregate(
         total=Count("id"),
@@ -75,8 +88,14 @@ def summary(request):
 
     # ── Đơn hàng ────────────────────────────────────────────────
     order_qs = Order.objects.filter(cf)
-    if not user.is_company_admin and not user.is_superuser:
-        if not user.has_perm_code("orders.view_all"):
+    if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("orders.view_all"):
+        managed_deps = user.managed_departments.all()
+        if managed_deps.exists():
+            order_qs = order_qs.filter(
+                Q(created_by=user) | 
+                Q(created_by__department__in=managed_deps)
+            )
+        else:
             order_qs = order_qs.filter(created_by=user)
 
     order_stats = order_qs.aggregate(
@@ -110,7 +129,18 @@ def summary(request):
         low_stock_count = sum(1 for s in stock_qs if s.is_low_stock)
 
     # ── Nhân viên ───────────────────────────────────────────────
-    employee_count = User.objects.filter(cf, is_active=True).count()
+    employee_qs = User.objects.filter(cf, is_active=True)
+    if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("settings.users"):
+        managed_deps = user.managed_departments.all()
+        if managed_deps.exists():
+            employee_qs = employee_qs.filter(department__in=managed_deps)
+        else:
+            if user.department:
+                employee_qs = employee_qs.filter(department=user.department)
+            else:
+                employee_qs = employee_qs.filter(id=user.id)
+            
+    employee_count = employee_qs.count()
 
     # ── Tính Win Rate ───────────────────────────────────────────
     total_quotes = (quotation_stats.get("sent") or 0) + (quotation_stats.get("accepted") or 0) + (quotation_stats.get("rejected") or 0)
@@ -160,8 +190,14 @@ def revenue_chart(request):
         status="approved",
         created_at__date__gte=start_date,
     )
-    if not user.is_company_admin and not user.is_superuser:
-        if not user.has_perm_code("orders.view_all"):
+    if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("orders.view_all"):
+        managed_deps = user.managed_departments.all()
+        if managed_deps.exists():
+            order_qs = order_qs.filter(
+                Q(created_by=user) | 
+                Q(created_by__department__in=managed_deps)
+            )
+        else:
             order_qs = order_qs.filter(created_by=user)
 
     monthly = (
@@ -192,8 +228,14 @@ def orders_by_status(request):
     cf = _company_filter(user)
 
     order_qs = Order.objects.filter(cf)
-    if not user.is_company_admin and not user.is_superuser:
-        if not user.has_perm_code("orders.view_all"):
+    if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("orders.view_all"):
+        managed_deps = user.managed_departments.all()
+        if managed_deps.exists():
+            order_qs = order_qs.filter(
+                Q(created_by=user) | 
+                Q(created_by__department__in=managed_deps)
+            )
+        else:
             order_qs = order_qs.filter(created_by=user)
 
     STATUS_LABELS = {
@@ -232,9 +274,19 @@ def top_customers(request):
     limit = min(int(request.query_params.get("limit", 5)), 20)
     cf = _company_filter(user)
 
+    order_qs = Order.objects.filter(cf, status="approved")
+    if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("orders.view_all"):
+        managed_deps = user.managed_departments.all()
+        if managed_deps.exists():
+            order_qs = order_qs.filter(
+                Q(created_by=user) | 
+                Q(created_by__department__in=managed_deps)
+            )
+        else:
+            order_qs = order_qs.filter(created_by=user)
+
     top = (
-        Order.objects
-        .filter(cf, status="approved")
+        order_qs
         .values("customer_id", "customer__name", "customer__phone")
         .annotate(
             total_revenue=Sum("total_amount"),
@@ -258,23 +310,34 @@ def top_customers(request):
 @api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
 def top_sellers(request):
-    """Top nhân viên Sale theo doanh thu. Chỉ Company Admin xem được."""
+    """Top nhân viên Sale theo doanh thu. Company Admin, Manager (theo phòng ban) hoặc người có reports.view_all."""
     from orders.models import Order
+    from users.models import User
 
     user = request.user
-    if not user.is_company_admin and not user.is_superuser:
-        if not user.has_perm_code("reports.view_all"):
+    limit = min(int(request.query_params.get("limit", 5)), 20)
+    cf = _company_filter(user)
+
+    # Lấy danh sách ID của nhân viên mà user có quyền xem
+    allowed_user_ids = None
+    if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("reports.view_all"):
+        managed_deps = user.managed_departments.all()
+        if managed_deps.exists():
+            allowed_user_ids = User.objects.filter(department__in=managed_deps).values_list("id", flat=True)
+            # Manager vẫn thấy được mình
+            allowed_user_ids = list(allowed_user_ids) + [user.id]
+        else:
             return Response(
                 {"detail": "Bạn không có quyền xem thống kê nhân viên."},
                 status=403,
             )
 
-    limit = min(int(request.query_params.get("limit", 5)), 20)
-    cf = _company_filter(user)
+    order_qs = Order.objects.filter(cf, status="approved")
+    if allowed_user_ids is not None:
+        order_qs = order_qs.filter(created_by_id__in=allowed_user_ids)
 
     top = (
-        Order.objects
-        .filter(cf, status="approved")
+        order_qs
         .values("created_by_id", "created_by__full_name")
         .annotate(
             total_revenue=Sum("total_amount"),

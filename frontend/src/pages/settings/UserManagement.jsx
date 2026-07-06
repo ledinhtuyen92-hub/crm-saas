@@ -55,23 +55,32 @@ export default function UserManagement() {
 
   const [users, setUsers] = useState([])
   const [roles, setRoles] = useState([])
+  const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
+  
+  // State xoá nhân viên
+  const [deletingUser, setDeletingUser] = useState(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+
   const [form] = Form.useForm()
 
   const fetchData = useCallback(async () => {
     await Promise.resolve()
     setLoading(true)
     try {
-      const [usersRes, rolesRes] = await Promise.all([
+      const [usersRes, rolesRes, depsRes] = await Promise.all([
         api.get('users/users/'),
         api.get('users/roles/'),
+        api.get('users/departments/'),
       ])
       const usersData = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data?.results ?? []
       const rolesData = Array.isArray(rolesRes.data) ? rolesRes.data : rolesRes.data?.results ?? []
+      const depsData = Array.isArray(depsRes.data) ? depsRes.data : depsRes.data?.results ?? []
       setUsers(usersData)
       setRoles(rolesData)
+      setDepartments(depsData)
     } catch {
       messageApi.error('Không thể tải dữ liệu nhân viên.')
     } finally {
@@ -95,6 +104,7 @@ export default function UserManagement() {
             phone: user.phone,
             job_title: user.job_title,
             role: user.role,
+            department: user.department,
             is_active: user.is_active,
             is_company_admin: user.is_company_admin,
             password: '',
@@ -106,6 +116,7 @@ export default function UserManagement() {
             phone: '',
             job_title: '',
             role: undefined,
+            department: undefined,
             is_active: true,
             is_company_admin: false,
             password: '',
@@ -149,23 +160,21 @@ export default function UserManagement() {
     }
   }
 
-  const handleDelete = (user) => {
-    Modal.confirm({
-      title: `Xóa tài khoản "${user.full_name}"?`,
-      content: 'Hành động không thể hoàn tác. Mọi dữ liệu liên quan sẽ bị ảnh hưởng.',
-      okText: 'Xóa',
-      okType: 'danger',
-      cancelText: 'Hủy',
-      onOk: async () => {
-        try {
-          await api.delete(`users/users/${user.id}/`)
-          messageApi.success('Đã xóa tài khoản.')
-          fetchData()
-        } catch {
-          messageApi.error('Không thể xóa tài khoản này.')
-        }
-      },
-    })
+  const handleDelete = async () => {
+    if (!deletingUser) return
+    if (deleteConfirmText !== deletingUser.username) {
+      messageApi.error('Tên đăng nhập không khớp. Vui lòng nhập lại.')
+      return
+    }
+    try {
+      await api.delete(`users/users/${deletingUser.id}/`)
+      messageApi.success(`Đã xóa tài khoản ${deletingUser.username}.`)
+      setDeletingUser(null)
+      setDeleteConfirmText('')
+      fetchData()
+    } catch {
+      messageApi.error('Không thể xóa tài khoản này.')
+    }
   }
 
   // ── Columns ───────────────────────────────────────────────────────
@@ -214,19 +223,28 @@ export default function UserManagement() {
       ),
     },
     {
-      title: 'Chức danh',
+      title: 'Vị trí / Vai trò',
       key: 'role',
       render: (_, record) => (
         <div>
-          {record.role_name ? (
-            <Tag color="purple" style={{ fontWeight: 600 }}>
-              {record.role_name}
-            </Tag>
-          ) : (
-            <Text type="secondary">Chưa gán vai trò</Text>
-          )}
+          <Space direction="vertical" size={2}>
+            {record.department_name ? (
+              <Tag color="geekblue" style={{ fontWeight: 600 }}>
+                {record.department_name}
+              </Tag>
+            ) : (
+              <Text type="secondary" style={{ fontSize: 12 }}>Chưa gán phòng</Text>
+            )}
+            {record.role_name ? (
+              <Tag color="purple" style={{ fontWeight: 600 }}>
+                {record.role_name}
+              </Tag>
+            ) : (
+              <Text type="secondary" style={{ fontSize: 12 }}>Chưa gán quyền</Text>
+            )}
+          </Space>
           {record.job_title && (
-            <div style={{ fontSize: 12, color: token.colorTextSecondary, marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: token.colorTextSecondary, marginTop: 4 }}>
               {record.job_title}
             </div>
           )}
@@ -281,15 +299,16 @@ export default function UserManagement() {
                 onClick={() => toggleActive(record)}
               />
             </Tooltip>
-            <Tooltip title={isSelf ? 'Không thể xóa chính mình' : 'Xóa'}>
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                disabled={isSelf}
-                onClick={() => handleDelete(record)}
-              />
-            </Tooltip>
+            {!isSelf && (
+              <Tooltip title="Xóa">
+                <Button
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => setDeletingUser(record)}
+                />
+              </Tooltip>
+            )}
           </Space>
         )
       },
@@ -405,11 +424,23 @@ export default function UserManagement() {
               </Form.Item>
             </Col>
           </Row>
+          <Row gutter={12}>
+            <Col span={24}>
+              <Form.Item name="job_title" label="Chức danh">
+                <Input size="large" placeholder="Vd: Giám đốc Kinh doanh" />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Row gutter={12}>
             <Col span={12}>
-              <Form.Item name="job_title" label="Chức danh">
-                <Input size="large" placeholder="Vd: Giám đốc Kinh doanh" />
+              <Form.Item name="department" label="Phòng ban">
+                <Select
+                  size="large"
+                  placeholder="Chọn phòng ban..."
+                  options={departments.map((d) => ({ value: d.id, label: d.name }))}
+                  allowClear
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -465,6 +496,37 @@ export default function UserManagement() {
             </Button>
           </div>
         </Form>
+      </Modal>
+
+      {/* ── Modal Xác Nhận Xóa ───────────────────────────────────── */}
+      <Modal
+        title={
+          <Space>
+            <DeleteOutlined style={{ color: token.colorError }} />
+            <span style={{ color: token.colorError }}>Xóa tài khoản vĩnh viễn</span>
+          </Space>
+        }
+        open={!!deletingUser}
+        onCancel={() => {
+          setDeletingUser(null)
+          setDeleteConfirmText('')
+        }}
+        onOk={handleDelete}
+        okText="Xóa vĩnh viễn"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true, disabled: deleteConfirmText !== deletingUser?.username }}
+      >
+        <div style={{ marginBottom: 16 }}>
+          Hành động này <strong>không thể hoàn tác</strong>. Dữ liệu liên quan có thể bị mất.
+          <br />
+          Vui lòng nhập tên đăng nhập <Text strong type="danger">{deletingUser?.username}</Text> để xác nhận:
+        </div>
+        <Input
+          placeholder={`Nhập ${deletingUser?.username}`}
+          value={deleteConfirmText}
+          onChange={(e) => setDeleteConfirmText(e.target.value)}
+          onPressEnter={handleDelete}
+        />
       </Modal>
     </div>
   )

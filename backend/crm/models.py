@@ -74,6 +74,7 @@ class Customer(models.Model):
     email = models.EmailField(blank=True, verbose_name="Email")
     address = models.TextField(blank=True, verbose_name="Địa chỉ")
     city = models.CharField(max_length=100, blank=True, verbose_name="Tỉnh/Thành phố")
+    birthday = models.DateField(null=True, blank=True, verbose_name="Ngày sinh")
     source = models.CharField(
         max_length=20,
         choices=SOURCE_CHOICES,
@@ -217,3 +218,25 @@ class CustomerInteraction(models.Model):
 
     def __str__(self):
         return f"{self.customer.name} — {self.get_type_display()} ({self.created_at.strftime('%d/%m/%Y')})"
+
+
+class InteractionAttachment(models.Model):
+    """File đính kèm cho mỗi lần tương tác (hình ảnh, PDF, Excel...)."""
+    interaction = models.ForeignKey(
+        CustomerInteraction,
+        on_delete=models.CASCADE,
+        related_name="attachments",
+        verbose_name="Lịch sử chăm sóc",
+    )
+    file = models.FileField(upload_to="interactions/%Y/%m/", verbose_name="File đính kèm")
+    file_name = models.CharField(max_length=255, verbose_name="Tên file gốc")
+    file_size = models.IntegerField(default=0, verbose_name="Dung lượng (bytes)")
+    uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="Thời gian tải lên")
+
+    class Meta:
+        verbose_name = "File đính kèm tương tác"
+        verbose_name_plural = "File đính kèm tương tác"
+        ordering = ["-uploaded_at"]
+
+    def __str__(self):
+        return f"{self.file_name} ({self.interaction.id})"

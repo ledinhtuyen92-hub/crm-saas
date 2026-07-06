@@ -104,3 +104,29 @@ export function usePermission(permissionCode) {
   const { hasPermission } = useAuth()
   return hasPermission(permissionCode)
 }
+
+/**
+ * PermissionRoute — Chỉ cho phép nếu user có quyền tương ứng.
+ */
+export function PermissionRoute({ permissionCode, fallback = '/customers', children }) {
+  const { isAuthenticated, hasPermission, loading } = useAuth()
+  const location = useLocation()
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <Spin size="large" />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  if (!hasPermission(permissionCode)) {
+    return <Navigate to={fallback} replace />
+  }
+
+  return children
+}
