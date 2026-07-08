@@ -19,6 +19,7 @@ from .serializers import (
     UserQuotaSerializer,
     UserSerializer,
     SystemSettingsSerializer,
+    MyCompanySerializer,
 )
 
 User = get_user_model()
@@ -266,6 +267,7 @@ class DepartmentViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     queryset = Department.objects.select_related("company", "manager").prefetch_related("users")
     serializer_class = DepartmentSerializer
     permission_classes = [IsCompanyAdmin]
+    pagination_class = None
 
     def perform_create(self, serializer):
         company = self.get_company()
@@ -286,6 +288,7 @@ class RoleViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     queryset = Role.objects.select_related("company").prefetch_related("permissions", "users")
     serializer_class = RoleSerializer
     permission_classes = [IsCompanyAdmin]
+    pagination_class = None
 
 
 # ─────────────────────────────────────────────
@@ -341,7 +344,53 @@ class UserViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             raise serializers.ValidationError(
                 "Không thể xóa tài khoản Quản trị hệ thống (Superadmin)!"
             )
-        super().perform_destroy(instance)
+        
+        from django.db import transaction
+        
+        # Tìm tài khoản admin công ty (hoặc chính người đang thực hiện thao tác xóa) để chuyển giao dữ liệu
+        company_admin = None
+        if self.request.user and (self.request.user.is_company_admin or self.request.user.is_superuser) and self.request.user.id != instance.id:
+            company_admin = self.request.user
+        elif instance.company:
+            company_admin = User.objects.filter(company=instance.company, is_company_admin=True, is_active=True).exclude(id=instance.id).first()
+            if not company_admin:
+                company_admin = User.objects.filter(company=instance.company, is_superuser=True).exclude(id=instance.id).first()
+        if not company_admin:
+            company_admin = User.objects.filter(is_superuser=True).exclude(id=instance.id).first()
+
+        with transaction.atomic():
+            if company_admin:
+                from crm.models import Customer, CustomerInteraction
+                from sales.models import Quotation
+                from orders.models import Order
+                from production.models import ProductionStep
+                from inventory.models import InventoryTransaction
+                from notifications.models import Notification
+                from users.models import Department
+                from django.contrib.admin.models import LogEntry
+
+                # 1. CRM
+                Customer.objects.filter(assigned_to=instance).update(assigned_to=None)
+                Customer.objects.filter(created_by=instance).update(created_by=company_admin)
+                CustomerInteraction.objects.filter(created_by=instance).update(created_by=company_admin)
+
+                # 2. Sales & Orders
+                Quotation.objects.filter(created_by=instance).update(created_by=company_admin)
+                Order.objects.filter(created_by=instance).update(created_by=company_admin)
+                Order.objects.filter(approved_by=instance).update(approved_by=company_admin)
+
+                # 3. Production & Inventory
+                ProductionStep.objects.filter(assigned_to=instance).update(assigned_to=company_admin)
+                InventoryTransaction.objects.filter(created_by=instance).update(created_by=company_admin)
+
+                # 4. Users / HR
+                Department.objects.filter(manager=instance).update(manager=company_admin)
+                
+                # 5. Notifications & Logs
+                Notification.objects.filter(sender=instance).update(sender=company_admin)
+                LogEntry.objects.filter(user=instance).delete()
+
+            super().perform_destroy(instance)
 
     def perform_update(self, serializer):
         instance = self.get_object()
@@ -390,6 +439,36 @@ class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Permission.objects.all().order_by("module", "code")
     serializer_class = PermissionSerializer
     permission_classes = [IsCompanyAdmin]
+    pagination_class = None
+
+
+# ─────────────────────────────────────────────
+# MyCompany API
+# ─────────────────────────────────────────────
+
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
+class MyCompanyView(generics.RetrieveUpdateAPIView):
+    """
+    GET  /api/users/my-company/  — Lấy thông tin tài khoản công ty hiện tại (Tên, MST, Địa chỉ, Hotline, Logo).
+    PATCH /api/users/my-company/ — Cập nhật thông tin và upload logo công ty.
+    Chỉ Company Admin mới có quyền cập nhật, user trong công ty có thể xem.
+    """
+    serializer_class = MyCompanySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    http_method_names = ["get", "patch", "put"]
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.IsAuthenticated()]
+        return [IsCompanyAdmin()]
+
+    def get_object(self):
+        if not self.request.user.company:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Tài khoản chưa được gán công ty nào.")
+        return self.request.user.company
 
 
 # ─────────────────────────────────────────────
@@ -466,7 +545,8 @@ class PublicSettingsView(APIView):
         from .models import SystemSettings
         settings = SystemSettings.load()
         return Response({
-            "enable_public_registration": settings.enable_public_registration
+            "enable_public_registration": settings.enable_public_registration,
+            "maintenance_mode": settings.maintenance_mode,
         })
 
 

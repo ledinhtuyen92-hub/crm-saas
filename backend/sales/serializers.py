@@ -1,6 +1,89 @@
 from rest_framework import serializers
 
-from .models import Quotation, QuotationItem
+from .models import Quotation, QuotationItem, QuotationTemplate
+
+
+def get_company_info_dict(serializer_instance, obj):
+    request = serializer_instance.context.get("request")
+    company = None
+    if hasattr(obj, "company") and obj.company:
+        company = obj.company
+    elif request and hasattr(request, "user") and hasattr(request.user, "company"):
+        company = request.user.company
+
+    if not company:
+        return None
+
+    logo_url = None
+    if company.logo:
+        try:
+            logo_url = request.build_absolute_uri(company.logo.url) if request else company.logo.url
+        except Exception:
+            logo_url = company.logo.url
+
+    stamp_url = None
+    if getattr(company, "stamp_image", None):
+        try:
+            stamp_url = request.build_absolute_uri(company.stamp_image.url) if request else company.stamp_image.url
+        except Exception:
+            stamp_url = company.stamp_image.url
+
+    signature_url = None
+    if getattr(company, "director_signature", None):
+        try:
+            signature_url = request.build_absolute_uri(company.director_signature.url) if request else company.director_signature.url
+        except Exception:
+            signature_url = company.director_signature.url
+
+    return {
+        "name": company.name,
+        "tax_code": company.tax_code,
+        "phone": company.phone,
+        "address": company.address,
+        "logo": logo_url,
+        "stamp": stamp_url,
+        "stamp_image": stamp_url,
+        "signature": signature_url,
+        "director_signature": signature_url,
+        "director_name": getattr(company, "director_name", "") or "",
+        "director_title": getattr(company, "director_title", "") or "Giám đốc",
+    }
+
+
+class QuotationTemplateSerializer(serializers.ModelSerializer):
+    company_info = serializers.SerializerMethodField()
+    company_default_terms = serializers.SerializerMethodField()
+
+    class Meta:
+        model = QuotationTemplate
+        fields = [
+            "id",
+            "name",
+            "code",
+            "description",
+            "header_content",
+            "footer_content",
+            "layout_style",
+            "layout_config",
+            "is_default",
+            "is_active",
+            "created_at",
+            "updated_at",
+            "company_info",
+            "company_default_terms",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at", "company_info", "company_default_terms"]
+
+    def get_company_info(self, obj):
+        return get_company_info_dict(self, obj)
+
+    def get_company_default_terms(self, obj):
+        request = self.context.get("request")
+        if request and hasattr(request, "user") and hasattr(request.user, "company"):
+            company = request.user.company
+            if company and hasattr(company, "settings") and company.settings:
+                return company.settings.default_quotation_terms
+        return ""
 
 
 class QuotationItemSerializer(serializers.ModelSerializer):
@@ -14,6 +97,13 @@ class QuotationItemSerializer(serializers.ModelSerializer):
             "unit_price",
             "width",
             "height",
+            "length",
+            "thickness",
+            "area",
+            "spec",
+            "warranty",
+            "product_image",
+            "custom_data",
             "quantity",
             "discount_percent",
             "line_total",
@@ -26,7 +116,12 @@ class QuotationSerializer(serializers.ModelSerializer):
     items = QuotationItemSerializer(many=True, read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     customer_name = serializers.CharField(source="customer.name", read_only=True)
+    customer_phone = serializers.CharField(source="customer.phone", read_only=True)
+    customer_address = serializers.CharField(source="customer.address", read_only=True)
+    customer_email = serializers.CharField(source="customer.email", read_only=True)
+    customer_city = serializers.CharField(source="customer.city", read_only=True)
     created_by_name = serializers.CharField(source="created_by.full_name", read_only=True)
+    company_info = serializers.SerializerMethodField()
 
     class Meta:
         model = Quotation
@@ -34,21 +129,37 @@ class QuotationSerializer(serializers.ModelSerializer):
             "id",
             "company",
             "quotation_number",
+            "template",
             "customer",
             "customer_name",
+            "customer_phone",
+            "customer_address",
+            "customer_email",
+            "customer_city",
             "created_by",
             "created_by_name",
             "status",
             "status_display",
             "installation_date",
             "notes",
+            "shipping_fee",
+            "installation_fee",
+            "delivery_time",
+            "payment_terms",
+            "validity_days",
+            "custom_data",
             "discount_total",
             "total_amount",
             "items",
             "created_at",
             "updated_at",
+            "company_info",
         ]
         read_only_fields = [
             "id", "company", "quotation_number", "items", "status_display",
-            "customer_name", "created_by_name", "created_at", "updated_at",
+            "customer_name", "customer_phone", "customer_address", "customer_email", "customer_city",
+            "created_by_name", "created_at", "updated_at", "company_info",
         ]
+
+    def get_company_info(self, obj):
+        return get_company_info_dict(self, obj)

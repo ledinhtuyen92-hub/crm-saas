@@ -50,7 +50,7 @@ function getInitials(name) {
 
 export default function UserManagement() {
   const { token } = theme.useToken()
-  const { user: currentUser } = useAuth()
+  const { user: currentUser, checkMaintenance } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
 
   const [users, setUsers] = useState([])
@@ -63,6 +63,10 @@ export default function UserManagement() {
   // State xoá nhân viên
   const [deletingUser, setDeletingUser] = useState(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
+
+  // State tìm kiếm & lọc
+  const [searchText, setSearchText] = useState('')
+  const [selectedDepId, setSelectedDepId] = useState(undefined)
 
   const [form] = Form.useForm()
 
@@ -94,6 +98,7 @@ export default function UserManagement() {
 
   // ── Modal ─────────────────────────────────────────────────────────
   const openModal = (user = null) => {
+    if (checkMaintenance()) return
     setEditingUser(user)
     form.setFieldsValue(
       user
@@ -151,6 +156,7 @@ export default function UserManagement() {
   }
 
   const toggleActive = async (user) => {
+    if (checkMaintenance()) return
     try {
       await api.patch(`users/users/${user.id}/`, { is_active: !user.is_active })
       messageApi.success(user.is_active ? 'Đã khóa tài khoản.' : 'Đã kích hoạt tài khoản.')
@@ -168,7 +174,7 @@ export default function UserManagement() {
     }
     try {
       await api.delete(`users/users/${deletingUser.id}/`)
-      messageApi.success(`Đã xóa tài khoản ${deletingUser.username}.`)
+      messageApi.success(`Đã xóa tài khoản ${deletingUser.username} và tự động chuyển giao dữ liệu cho Admin công ty.`)
       setDeletingUser(null)
       setDeleteConfirmText('')
       fetchData()
@@ -305,7 +311,7 @@ export default function UserManagement() {
                   type="text"
                   danger
                   icon={<DeleteOutlined />}
-                  onClick={() => setDeletingUser(record)}
+                  onClick={() => { if (!checkMaintenance()) setDeletingUser(record) }}
                 />
               </Tooltip>
             )}
@@ -314,6 +320,19 @@ export default function UserManagement() {
       },
     },
   ]
+
+  const filteredUsers = users.filter((u) => {
+    if (selectedDepId && u.department !== selectedDepId) return false
+    if (!searchText) return true
+    const searchLower = searchText.toLowerCase()
+    return (
+      (u.username || '').toLowerCase().includes(searchLower) ||
+      (u.full_name || '').toLowerCase().includes(searchLower) ||
+      (u.email || '').toLowerCase().includes(searchLower) ||
+      (u.phone || '').toLowerCase().includes(searchLower) ||
+      (u.job_title || '').toLowerCase().includes(searchLower)
+    )
+  })
 
   return (
     <div id="user-management-page">
@@ -350,10 +369,28 @@ export default function UserManagement() {
       </div>
 
       <Card style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(15,23,42,0.08)' }}>
+        <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+          <Input.Search
+            placeholder="Tìm kiếm theo tên, tài khoản, email, SĐT..."
+            allowClear
+            style={{ width: 320 }}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+          <Select
+            showSearch
+            optionFilterProp="label"
+            placeholder="Lọc theo Phòng ban"
+            allowClear
+            style={{ width: 250 }}
+            value={selectedDepId}
+            onChange={setSelectedDepId}
+            options={departments.map((d) => ({ value: d.id, label: d.name }))}
+          />
+        </div>
         <Table
           id="user-table"
           columns={columns}
-          dataSource={users}
+          dataSource={filteredUsers}
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10, showTotal: (total) => `${total} nhân viên` }}
@@ -517,8 +554,10 @@ export default function UserManagement() {
         okButtonProps={{ danger: true, disabled: deleteConfirmText !== deletingUser?.username }}
       >
         <div style={{ marginBottom: 16 }}>
-          Hành động này <strong>không thể hoàn tác</strong>. Dữ liệu liên quan có thể bị mất.
-          <br />
+          Hành động này <strong>không thể hoàn tác</strong>.
+          <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', padding: '8px 12px', borderRadius: 6, margin: '10px 0', color: '#d46b08', fontSize: 13 }}>
+            ℹ️ <strong>Lưu ý:</strong> Toàn bộ dữ liệu (Đơn hàng, Báo giá, Lịch sử chăm sóc, v.v.) sẽ được <strong>tự động chuyển giao cho Admin công ty</strong>. Riêng Khách hàng do nhân viên này phụ trách sẽ được chuyển thành <strong>"Chưa có nhân viên phụ trách"</strong> để thuận tiện phân bổ lại.
+          </div>
           Vui lòng nhập tên đăng nhập <Text strong type="danger">{deletingUser?.username}</Text> để xác nhận:
         </div>
         <Input

@@ -41,7 +41,9 @@ import {
   EditOutlined,
   DeleteOutlined,
   PaperClipOutlined,
+  FileAddOutlined,
 } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 import api from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
 import dayjs from 'dayjs'
@@ -95,7 +97,8 @@ const INTERACTION_RESULTS = {
 }
 
 function CustomerList() {
-  const { isCompanyAdmin, hasPermission } = useAuth()
+  const { isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
+  const navigate = useNavigate()
   const [customers, setCustomers] = useState([])
   const [salesUsers, setSalesUsers] = useState([])
   const [loading, setLoading] = useState(false)
@@ -202,6 +205,7 @@ function CustomerList() {
 
   // ── Handlers: Add / Edit Customer ──────────────────────────────────
   const handleOpenAddModal = () => {
+    if (checkMaintenance()) return
     setEditingCustomer(null)
     form.resetFields()
     form.setFieldsValue({ status: 'new', source: 'other' })
@@ -210,6 +214,7 @@ function CustomerList() {
 
   const handleOpenEditModal = (record, e) => {
     e?.stopPropagation()
+    if (checkMaintenance()) return
     setEditingCustomer(record)
     form.setFieldsValue({
       name: record.name,
@@ -224,6 +229,11 @@ function CustomerList() {
       birthday: record.birthday ? dayjs(record.birthday) : null,
     })
     setIsModalVisible(true)
+  }
+
+  const handleCreateQuotationFromCustomer = (record, e) => {
+    e?.stopPropagation()
+    navigate('/quotations', { state: { createForCustomer: record.id } })
   }
 
   const handleSaveCustomer = async (values) => {
@@ -252,6 +262,7 @@ function CustomerList() {
 
   const handleDeleteCustomer = async (id, e) => {
     e?.stopPropagation()
+    if (checkMaintenance()) return
     try {
       await api.delete(`/crm/customers/${id}/`)
       message.success('Đã xóa khách hàng.')
@@ -264,6 +275,7 @@ function CustomerList() {
   // ── Handlers: Assign Sale ──────────────────────────────────────────
   const handleOpenAssignModal = (record, e) => {
     e?.stopPropagation()
+    if (checkMaintenance()) return
     setAssignTargetCustomer(record)
     setSelectedSaleId(record.assigned_to ? record.assigned_to.id : null)
     setAssignModalVisible(true)
@@ -344,14 +356,23 @@ function CustomerList() {
     document.body.removeChild(link)
   }
 
-  const handleRoundRobinAssign = async () => {
-    try {
-      const res = await api.post('/crm/customers/round-robin-assign/')
-      message.success(res.data.detail || 'Đã phân bổ tự động.')
-      fetchCustomers()
-    } catch (err) {
-      message.error(err.response?.data?.detail || 'Không thể thực hiện Round-robin.')
-    }
+  const handleRoundRobinAssign = () => {
+    if (checkMaintenance()) return
+    Modal.confirm({
+      title: 'Xác nhận phân bổ khách hàng tự động?',
+      content: 'Hệ thống sẽ tự động chia đều toàn bộ Khách hàng & Leads chưa có người phụ trách cho các nhân viên Sale đang đủ điều kiện (Round-robin). Bạn có chắc chắn muốn thực hiện?',
+      okText: 'Đồng ý phân bổ',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          const res = await api.post('/crm/customers/round-robin-assign/')
+          message.success(res.data.detail || 'Đã phân bổ tự động.')
+          fetchCustomers()
+        } catch (err) {
+          message.error(err.response?.data?.detail || 'Không thể thực hiện Round-robin.')
+        }
+      },
+    })
   }
 
   // ── Handlers: Drawer Details & Timeline ────────────────────────────
@@ -536,6 +557,14 @@ function CustomerList() {
       align: 'right',
       render: (_, record) => (
         <Space size="small">
+          <Tooltip title="Tạo báo giá">
+            <Button
+              size="small"
+              icon={<FileAddOutlined />}
+              style={{ borderColor: '#4f46e5', color: '#4f46e5' }}
+              onClick={(e) => handleCreateQuotationFromCustomer(record, e)}
+            />
+          </Tooltip>
           {(isCompanyAdmin || hasPermission('crm.assign')) && (
             <Tooltip title="Phân công Sale">
               <Button
@@ -580,7 +609,7 @@ function CustomerList() {
         </div>
 
         <Space>
-          {isCompanyAdmin && (
+          {(isCompanyAdmin || hasPermission('crm.auto_assign')) && (
             <Tooltip title="Tự động chia đều khách hàng chưa phân công cho Sale">
               <Button
                 icon={<ReloadOutlined />}
@@ -594,7 +623,7 @@ function CustomerList() {
           {(isCompanyAdmin || hasPermission('crm.import')) && (
             <Button
               icon={<ImportOutlined />}
-              onClick={() => setImportModalVisible(true)}
+              onClick={() => { if (!checkMaintenance()) setImportModalVisible(true) }}
             >
               Nhập CSV
             </Button>
@@ -612,7 +641,7 @@ function CustomerList() {
           {(isCompanyAdmin || hasPermission('crm.manage_tags')) && (
             <Button
               icon={<TagsOutlined />}
-              onClick={() => setTagModalVisible(true)}
+              onClick={() => { if (!checkMaintenance()) setTagModalVisible(true) }}
             >
               Quản lý Tags
             </Button>
@@ -663,7 +692,7 @@ function CustomerList() {
               ))}
             </Select>
           </Col>
-          {(isCompanyAdmin || hasPermission('crm.assign') || hasPermission('crm.view_all')) && (
+          {(isCompanyAdmin || hasPermission('crm.assign') || hasPermission('crm.auto_assign') || hasPermission('crm.view_all')) && (
             <Col xs={24} sm={12} md={6} style={{ marginBottom: 8 }}>
               <Select
                 placeholder="Lọc theo Sale phụ trách"
@@ -683,7 +712,7 @@ function CustomerList() {
               </Select>
             </Col>
           )}
-          <Col xs={24} sm={12} md={(isCompanyAdmin || hasPermission('crm.assign') || hasPermission('crm.view_all')) ? 4 : 10} style={{ textAlign: 'right', marginBottom: 8 }}>
+          <Col xs={24} sm={12} md={(isCompanyAdmin || hasPermission('crm.assign') || hasPermission('crm.auto_assign') || hasPermission('crm.view_all')) ? 4 : 10} style={{ textAlign: 'right', marginBottom: 8 }}>
             <Button onClick={fetchCustomers} icon={<ReloadOutlined />}>
               Làm mới
             </Button>
@@ -861,6 +890,17 @@ function CustomerList() {
         width={700}
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
+        extra={
+          currentCustomer && (
+            <Button
+              type="primary"
+              icon={<FileAddOutlined />}
+              onClick={() => handleCreateQuotationFromCustomer(currentCustomer)}
+            >
+              Tạo báo giá
+            </Button>
+          )
+        }
       >
         {currentCustomer && (
           <Tabs
@@ -881,10 +921,12 @@ function CustomerList() {
                         size="small"
                         icon={<PlusOutlined />}
                         onClick={() => {
-                          interactionForm.resetFields()
-                          interactionForm.setFieldsValue({ type: 'call', result: 'interested' })
-                          setInteractionFiles([])
-                          setInteractionModalVisible(true)
+                          if (!checkMaintenance()) {
+                            interactionForm.resetFields()
+                            interactionForm.setFieldsValue({ type: 'call', result: 'interested' })
+                            setInteractionFiles([])
+                            setInteractionModalVisible(true)
+                          }
                         }}
                       >
                         Ghi nhận tương tác
@@ -953,8 +995,10 @@ function CustomerList() {
                         size="small"
                         icon={<PlusOutlined />}
                         onClick={() => {
-                          contactForm.resetFields()
-                          setContactModalVisible(true)
+                          if (!checkMaintenance()) {
+                            contactForm.resetFields()
+                            setContactModalVisible(true)
+                          }
                         }}
                       >
                         Thêm đầu mối

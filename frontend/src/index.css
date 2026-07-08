@@ -34,3 +34,87 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* ── Print Styles for Quotations & Multi-page Tables ────────────── */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  /* Hide Ant Design drawer headers, masks, toasts/messages, notifications, close buttons */
+  .ant-message,
+  .ant-notification,
+  .ant-tooltip,
+  .ant-popover,
+  .ant-drawer-mask,
+  .ant-drawer-header,
+  .ant-drawer-close,
+  .no-print {
+    display: none !important;
+  }
+
+  /* 3. Strip fixed heights, positioning, shadows, and scrollbars from Drawer wrappers */
+  body,
+  html {
+    background: #ffffff !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .ant-drawer {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    z-index: auto !important;
+  }
+
+  .ant-drawer-content-wrapper,
+  .ant-drawer-content,
+  .ant-drawer-body,
+  .ant-drawer-wrapper-body {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* 4. Ensure Quotation Content flows naturally across pages */
+  .printable-quotation-content {
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  table {
+    page-break-inside: auto !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  .signature-block {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-top: 36px !important;
+  }
+}

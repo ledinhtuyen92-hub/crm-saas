@@ -13,7 +13,7 @@ from inventory.models import (
 from orders.models import Order, OrderItem
 from production.models import ProductionOrder, ProductionStep
 from sales.models import Quotation, QuotationItem
-from users.models import Company, Permission, Role, User
+from users.models import Company, Permission, Role, SubscriptionPlan, User
 from core.numbering import generate_quotation_number, generate_order_number
 
 
@@ -24,7 +24,25 @@ class Command(BaseCommand):
         self.stdout.write(self.style.NOTICE("⏳ Đang khởi tạo dữ liệu mẫu cho hệ thống..."))
 
         with transaction.atomic():
-            # 1. Khởi tạo hoặc lấy Company Demo
+            # 0. Khởi tạo Gói dịch vụ SaaS (SubscriptionPlan)
+            plans_data = [
+                ("starter",      "Gói Starter",      5,     True),
+                ("standard",     "Gói Standard",     15,    True),
+                ("business",     "Gói Business",     30,    True),
+                ("professional", "Gói Professional", 50,    True),
+                ("enterprise",   "Gói Enterprise",   100,   True),
+                ("vip",          "Gói VIP Unlimited", 99999, True),
+            ]
+            plans = {}
+            for code, name, limit, is_default in plans_data:
+                plan, _ = SubscriptionPlan.objects.get_or_create(
+                    code=code,
+                    defaults={"name": name, "user_limit": limit, "is_default": is_default},
+                )
+                plans[code] = plan
+            self.stdout.write(f"📦 Đã tạo {len(plans)} gói dịch vụ SaaS")
+
+            # 1. Khởi tạo hoặc lấy Company Demo (An Phát — công ty chính)
             company, _ = Company.objects.get_or_create(
                 tax_code="0101246810",
                 defaults={
@@ -36,6 +54,53 @@ class Command(BaseCommand):
                 },
             )
             self.stdout.write(f"🏢 Công ty: {company.name}")
+
+            # 1b. Tạo thêm các công ty demo khác để trang SaaS Admin có dữ liệu đầy đủ
+            extra_companies_data = [
+                {
+                    "name": "Công ty TNHH Nội Thất Đại Thành",
+                    "workspace_id": "DAITHANH",
+                    "tax_code": "0102345678",
+                    "address": "Quận 7, TP. Hồ Chí Minh",
+                    "phone": "02873001234",
+                    "user_limit": 5,
+                    "is_active": True,
+                },
+                {
+                    "name": "Tập đoàn Xây Dựng Hoà Bình",
+                    "workspace_id": "HOABINH",
+                    "tax_code": "0301234567",
+                    "address": "Quận Bình Thạnh, TP. Hồ Chí Minh",
+                    "phone": "02835678901",
+                    "user_limit": 50,
+                    "is_active": True,
+                },
+                {
+                    "name": "CTCP Thép Việt Đức",
+                    "workspace_id": "VIETDUC",
+                    "tax_code": "0401234567",
+                    "address": "KCN Phú Nghĩa, Chương Mỹ, Hà Nội",
+                    "phone": "02433456789",
+                    "user_limit": 30,
+                    "is_active": True,
+                },
+                {
+                    "name": "Công ty Cơ Điện Lạnh REE",
+                    "workspace_id": "REECORP",
+                    "tax_code": "0501234567",
+                    "address": "Quận 4, TP. Hồ Chí Minh",
+                    "phone": "02839456789",
+                    "user_limit": 100,
+                    "is_active": False,
+                },
+            ]
+            for cdata in extra_companies_data:
+                Company.objects.get_or_create(
+                    tax_code=cdata["tax_code"],
+                    defaults={k: v for k, v in cdata.items() if k != "tax_code"},
+                )
+            self.stdout.write(f"🏙️ Đã tạo {len(extra_companies_data)} công ty demo bổ sung")
+
 
             # 2. Khởi tạo Vai trò Giám đốc & Gán toàn bộ quyền
             role_director, _ = Role.objects.get_or_create(

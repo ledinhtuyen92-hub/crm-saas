@@ -24,11 +24,13 @@ import {
 } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../utils/api'
+import { useAuth } from '../../contexts/AuthContext'
 
 const { Title, Text } = Typography
 
 export default function DepartmentManagement() {
   const { token } = theme.useToken()
+  const { checkMaintenance } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
 
   const [departments, setDepartments] = useState([])
@@ -68,6 +70,7 @@ export default function DepartmentManagement() {
 
   // ── Modal Tạo / Sửa ───────────────────────────────────────────────
   const openModal = (department = null) => {
+    if (checkMaintenance()) return
     setEditingDepartment(department)
     form.setFieldsValue({
       name: department?.name ?? '',
@@ -166,8 +169,10 @@ export default function DepartmentManagement() {
               danger
               icon={<DeleteOutlined />}
               onClick={() => {
-                setDeletingDepartment(record)
-                setDeleteConfirmText('')
+                if (!checkMaintenance()) {
+                  setDeletingDepartment(record)
+                  setDeleteConfirmText('')
+                }
               }}
             />
           </Tooltip>

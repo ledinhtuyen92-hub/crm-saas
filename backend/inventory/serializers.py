@@ -13,6 +13,7 @@ class ProductCategorySerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
     unit_display = serializers.CharField(source="get_unit_display", read_only=True)
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -29,11 +30,21 @@ class ProductSerializer(serializers.ModelSerializer):
             "price",
             "cost_price",
             "image",
+            "image_url",
             "is_active",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "company", "category_name", "unit_display", "created_at", "updated_at"]
+        read_only_fields = ["id", "company", "category_name", "unit_display", "image_url", "created_at", "updated_at"]
+
+    def get_image_url(self, obj):
+        request = self.context.get("request")
+        if obj.image:
+            try:
+                return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+            except Exception:
+                return obj.image.url
+        return None
 
 
 class WarehouseSerializer(serializers.ModelSerializer):

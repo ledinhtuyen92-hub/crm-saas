@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { message } from 'antd'
 import api from '../utils/api'
 
 const AuthContext = createContext(null)
@@ -7,10 +8,23 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true) // kiểm tra token lúc khởi động
+  const [maintenanceMode, setMaintenanceMode] = useState(false)
   const navigate = useNavigate()
+
+  const fetchPublicSettings = useCallback(() => {
+    api
+      .get('users/public-settings/')
+      .then(({ data }) => {
+        if (data && typeof data.maintenance_mode === 'boolean') {
+          setMaintenanceMode(data.maintenance_mode)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // ── Khi khởi động app: tải lại thông tin user từ token đã lưu ─────
   useEffect(() => {
+    fetchPublicSettings()
     const token = localStorage.getItem('accessToken')
     if (!token) {
       setLoading(false)
@@ -24,7 +38,7 @@ export function AuthProvider({ children }) {
         setUser(null)
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [fetchPublicSettings])
 
   // ── Đăng nhập ──────────────────────────────────────────────────────
   const login = useCallback(async (workspace_id, username, password) => {
@@ -36,8 +50,9 @@ export function AuthProvider({ children }) {
     localStorage.setItem('accessToken', data.access)
     localStorage.setItem('refreshToken', data.refresh)
     setUser(data.user)
+    fetchPublicSettings()
     return data.user
-  }, [])
+  }, [fetchPublicSettings])
 
   // ── Đăng xuất ──────────────────────────────────────────────────────
   const logout = useCallback(() => {
@@ -60,6 +75,15 @@ export function AuthProvider({ children }) {
   const isCompanyAdmin = user?.is_company_admin === true || user?.is_superuser === true
   const isAuthenticated = !!user
 
+  // ── Kiểm tra chế độ bảo trì trước khi mở form/nhập liệu ─────────────
+  const checkMaintenance = useCallback(() => {
+    if (maintenanceMode && !user?.is_superuser) {
+      message.warning('⚠️ Hệ thống đang trong chế độ bảo trì dữ liệu. Các chức năng thêm, sửa, xóa dữ liệu tạm thời bị khóa!')
+      return true // Bị chặn
+    }
+    return false // Không bị chặn
+  }, [maintenanceMode, user])
+
   const value = useMemo(
     () => ({
       user,
@@ -67,6 +91,8 @@ export function AuthProvider({ children }) {
       isAuthenticated,
       isSuperAdmin,
       isCompanyAdmin,
+      maintenanceMode,
+      checkMaintenance,
       login,
       logout,
       hasPermission,
@@ -74,8 +100,9 @@ export function AuthProvider({ children }) {
         const { data } = await api.get('users/me/')
         setUser(data)
       },
+      refreshSettings: fetchPublicSettings,
     }),
-    [user, loading, isAuthenticated, isSuperAdmin, isCompanyAdmin, login, logout, hasPermission],
+    [user, loading, isAuthenticated, isSuperAdmin, isCompanyAdmin, maintenanceMode, checkMaintenance, login, logout, hasPermission, fetchPublicSettings],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -26,11 +26,13 @@ import {
 } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../../utils/api'
+import { useAuth } from '../../contexts/AuthContext'
 
 const { Title, Text } = Typography
 
 export default function RoleManagement() {
   const { token } = theme.useToken()
+  const { checkMaintenance } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
 
   const [roles, setRoles] = useState([])
@@ -88,6 +90,7 @@ export default function RoleManagement() {
 
   // ── Modal ─────────────────────────────────────────────────────────
   const openModal = (role = null) => {
+    if (checkMaintenance()) return
     setEditingRole(role)
     form.setFieldsValue({
       name: role?.name ?? '',
@@ -120,6 +123,7 @@ export default function RoleManagement() {
   }
 
   const handleDelete = (role) => {
+    if (checkMaintenance()) return
     Modal.confirm({
       title: `Xóa vai trò "${role.name}"?`,
       content: 'Các nhân viên đang giữ vai trò này sẽ mất vai trò. Hành động không thể hoàn tác.',

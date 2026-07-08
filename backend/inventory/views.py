@@ -38,8 +38,8 @@ class ProductViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
     
     action_permissions = {
-        "list": "inventory.view",
-        "retrieve": "inventory.view",
+        "list": ["inventory.view", "sales.view", "sales.create", "orders.view", "orders.create", "crm.view"],
+        "retrieve": ["inventory.view", "sales.view", "sales.create", "orders.view", "orders.create", "crm.view"],
         "create": "inventory.create_product",
         "update": "inventory.edit_product",
         "partial_update": "inventory.edit_product",

@@ -63,6 +63,43 @@ class Quotation(models.Model):
         default=0,
         verbose_name="Tổng tiền",
     )
+    template = models.ForeignKey(
+        "sales.QuotationTemplate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="applied_quotations",
+        verbose_name="Mẫu báo giá sử dụng",
+    )
+    shipping_fee = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0,
+        verbose_name="Chi phí vận chuyển",
+    )
+    installation_fee = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0,
+        verbose_name="Chi phí lắp đặt",
+    )
+    delivery_time = models.TextField(
+        blank=True,
+        verbose_name="Thời gian giao hàng dự kiến",
+    )
+    payment_terms = models.TextField(
+        blank=True,
+        verbose_name="Điều khoản thanh toán",
+    )
+    validity_days = models.PositiveIntegerField(
+        default=30,
+        verbose_name="Hiệu lực báo giá (ngày)",
+    )
+    custom_data = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Dữ liệu mở rộng theo mẫu",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -141,6 +178,44 @@ class QuotationItem(models.Model):
         verbose_name="Thành tiền",
     )
     note = models.CharField(max_length=255, blank=True, verbose_name="Ghi chú dòng")
+    length = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Chiều dài (m)",
+    )
+    area = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Diện tích (m²)",
+    )
+    spec = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Quy cách / Mô tả",
+    )
+    warranty = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Thời gian bảo hành",
+    )
+    thickness = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Chiều dày / Dày (mm/cm/m)",
+    )
+    product_image = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name="Hình ảnh sản phẩm (snapshot URL)",
+    )
+    custom_data = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Dữ liệu mở rộng dòng",
+    )
 
     class Meta:
         verbose_name = "Dòng báo giá"
@@ -162,3 +237,37 @@ class QuotationItem(models.Model):
 
     def __str__(self):
         return f"{self.quotation.quotation_number} — {self.product_name} x{self.quantity}"
+
+
+class QuotationTemplate(models.Model):
+    """Mẫu báo giá — được quản lý bởi Superadmin, Admin công ty chọn để áp dụng cho công ty của mình."""
+
+    name = models.CharField(max_length=100, verbose_name="Tên mẫu báo giá")
+    code = models.SlugField(max_length=50, unique=True, verbose_name="Mã mẫu")
+    description = models.TextField(blank=True, verbose_name="Mô tả")
+    header_content = models.TextField(blank=True, verbose_name="Nội dung Header / Tiêu đề")
+    footer_content = models.TextField(blank=True, verbose_name="Điều khoản & Footer")
+    layout_style = models.CharField(max_length=50, default="modern_blue", verbose_name="Phong cách giao diện")
+    layout_config = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Cấu hình Block Layout (Kéo thả)",
+    )
+    is_default = models.BooleanField(default=False, verbose_name="Mẫu mặc định hệ thống")
+    is_active = models.BooleanField(default=True, verbose_name="Hoạt động")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Ngày cập nhật")
+
+    class Meta:
+        verbose_name = "Mẫu báo giá"
+        verbose_name_plural = "Mẫu báo giá"
+        ordering = ["-is_default", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            # Đảm bảo chỉ có 1 mẫu mặc định trong toàn hệ thống
+            QuotationTemplate.objects.filter(is_default=True).exclude(pk=self.pk).update(is_default=False)
+        super().save(*args, **kwargs)

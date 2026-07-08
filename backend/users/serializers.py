@@ -233,6 +233,20 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 # ─────────────────────────────────────────────
+# MyCompany (dành cho Company Admin)
+# ─────────────────────────────────────────────
+
+class MyCompanySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Company
+        fields = [
+            "id", "name", "workspace_id", "tax_code", "address", "phone", "logo",
+            "stamp_image", "director_signature", "director_name", "director_title",
+        ]
+        read_only_fields = ["id", "workspace_id"]
+
+
+# ─────────────────────────────────────────────
 # Company (dành cho System Admin)
 # ─────────────────────────────────────────────
 
@@ -256,6 +270,10 @@ class CompanySerializer(serializers.ModelSerializer):
             "address",
             "phone",
             "logo",
+            "stamp_image",
+            "director_signature",
+            "director_name",
+            "director_title",
             "user_limit",
             "is_active",
             "created_at",
@@ -454,9 +472,24 @@ class CompanyRegistrationSerializer(serializers.Serializer):
 # ─────────────────────────────────────────────
 
 class CompanySettingsSerializer(serializers.ModelSerializer):
+    quotation_template_detail = serializers.SerializerMethodField()
+
     class Meta:
         model = CompanySettings
-        fields = ["id", "order_prefix", "lead_routing", "timezone"]
+        fields = ["id", "order_prefix", "lead_routing", "timezone", "quotation_template", "default_quotation_terms", "quotation_template_detail"]
+
+    def get_quotation_template_detail(self, obj):
+        if obj.quotation_template:
+            from sales.serializers import QuotationTemplateSerializer
+            return QuotationTemplateSerializer(obj.quotation_template).data
+        return None
+
+    def update(self, instance, validated_data):
+        res = super().update(instance, validated_data)
+        if "quotation_template" in validated_data:
+            instance.company.quotation_template = validated_data["quotation_template"]
+            instance.company.save(update_fields=["quotation_template"])
+        return res
 
 
 # ─────────────────────────────────────────────
@@ -517,6 +550,7 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
             "default_user_limit",
             "tenant_isolation_mode",
             "jwt_expiration_hours",
-            "max_file_upload_mb"
+            "max_file_upload_mb",
+            "maintenance_mode",
         ]
 

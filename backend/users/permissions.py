@@ -22,6 +22,28 @@ class IsActiveUserAndCompany(BasePermission):
         return True
 
 
+class CheckDataMaintenanceMode(BasePermission):
+    """
+    Khi chế độ bảo trì dữ liệu (maintenance_mode) được bật,
+    khóa toàn bộ các thao tác thêm/sửa/xóa dữ liệu (POST, PUT, PATCH, DELETE)
+    đối với tất cả tài khoản không phải là Quản trị viên hệ thống (Superuser).
+    """
+    message = "⚠️ Hệ thống đang bảo trì dữ liệu. Các chức năng thêm/sửa/xóa dữ liệu tạm thời bị khóa!"
+
+    def has_permission(self, request, view):
+        if request.method in ("GET", "HEAD", "OPTIONS"):
+            return True
+        if request.user and request.user.is_authenticated and request.user.is_superuser:
+            return True
+        
+        from .models import SystemSettings
+        settings = SystemSettings.load()
+        if settings.maintenance_mode:
+            return False
+            
+        return True
+
+
 class IsSuperAdmin(BasePermission):
     """Chỉ cho phép System Administrator (is_superuser=True)."""
 
@@ -92,4 +114,6 @@ class ActionBasedPermission(BasePermission):
         if not request.user.role:
             return False
             
+        if isinstance(required_perm, (list, tuple)):
+            return request.user.role.permissions.filter(code__in=required_perm).exists()
         return request.user.role.permissions.filter(code=required_perm).exists()

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import api from '../utils/api'
 import {
+  Alert,
   Avatar,
   Badge,
   Dropdown,
@@ -26,6 +27,7 @@ import {
   DashboardOutlined,
   DatabaseOutlined,
   FileDoneOutlined,
+  FileTextOutlined,
   KeyOutlined,
   LogoutOutlined,
   MoonOutlined,
@@ -46,7 +48,7 @@ const { Text, Title } = Typography
 function MainLayout({ children, isDarkMode, toggleTheme }) {
   const location = useLocation()
   const { token } = theme.useToken()
-  const { user, logout, isSuperAdmin, isCompanyAdmin, hasPermission } = useAuth()
+  const { user, logout, isSuperAdmin, isCompanyAdmin, hasPermission, maintenanceMode } = useAuth()
 
   // ── Menu items (tuỳ theo quyền) ────────────────────────────────
   const menuItems = isSuperAdmin
@@ -70,6 +72,11 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           key: '/admin/settings',
           icon: <SettingOutlined />,
           label: <Link to="/admin/settings">Cấu hình Gói & Hạn mức</Link>,
+        },
+        {
+          key: '/admin/quotation-templates',
+          icon: <FileTextOutlined />,
+          label: <Link to="/admin/quotation-templates">Kho Mẫu Báo Giá</Link>,
         },
       ]
     : [
@@ -115,6 +122,11 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                 icon: <SettingOutlined />,
                 label: 'Quản lý công ty',
                 children: [
+                  {
+                    key: '/settings/general',
+                    icon: <SettingOutlined />,
+                    label: <Link to="/settings/general">Cài đặt & Mẫu báo giá</Link>,
+                  },
                   {
                     key: '/settings/users',
                     icon: <UsergroupAddOutlined />,
@@ -599,6 +611,16 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
             background: token.colorBgLayout,
           }}
         >
+          {maintenanceMode && (
+            <Alert
+              message="⚠️ HỆ THỐNG ĐANG TRONG CHẾ ĐỘ BẢO TRÌ DỮ LIỆU"
+              description="Toàn bộ chức năng thêm, sửa, xóa dữ liệu trên hệ thống tạm thời bị khóa để phục vụ bảo trì kỹ thuật. Bạn vẫn có thể tra cứu, truy cập và xem báo cáo bình thường."
+              type="warning"
+              showIcon
+              banner
+              style={{ marginBottom: 20, borderRadius: 8, border: '1px solid #f59e0b', background: '#fffbeb', color: '#b45309', fontWeight: 500 }}
+            />
+          )}
           {children}
         </Content>
       </Layout>

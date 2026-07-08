@@ -8,10 +8,12 @@ import {
   EditOutlined,
   HistoryOutlined,
   InboxOutlined,
+  PictureOutlined,
   PlusOutlined,
   SearchOutlined,
   ShopOutlined,
   TagOutlined,
+  UploadOutlined,
 } from '@ant-design/icons'
 import {
   Button,
@@ -30,6 +32,7 @@ import {
   Tabs,
   Tag,
   Typography,
+  Upload,
   message,
 } from 'antd'
 import dayjs from 'dayjs'
@@ -42,7 +45,7 @@ const { Option } = Select
 const { TextArea } = Input
 
 export default function Inventory() {
-  const { isCompanyAdmin, hasPermission } = useAuth()
+  const { isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
 
   const [activeTab, setActiveTab] = useState('products')
@@ -64,6 +67,8 @@ export default function Inventory() {
   // Modals
   const [productModalVisible, setProductModalVisible] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
+  const [productImageFile, setProductImageFile] = useState(null)
+  const [productPreviewImage, setProductPreviewImage] = useState(null)
   const [productForm] = Form.useForm()
 
   const [categoryModalVisible, setCategoryModalVisible] = useState(false)
@@ -177,8 +182,11 @@ export default function Inventory() {
 
   // ── Product Handlers ──────────────────────────────────────────────────
   const openProductModal = (prod = null) => {
+    if (checkMaintenance()) return
     setEditingProduct(prod)
+    setProductImageFile(null)
     if (prod) {
+      setProductPreviewImage(prod.image_url || prod.image || null)
       productForm.setFieldsValue({
         sku: prod.sku,
         name: prod.name,
@@ -190,6 +198,7 @@ export default function Inventory() {
         description: prod.description || '',
       })
     } else {
+      setProductPreviewImage(null)
       productForm.resetFields()
       productForm.setFieldsValue({ unit: 'cái', price: 0, cost_price: 0, is_active: true })
     }
@@ -200,11 +209,29 @@ export default function Inventory() {
     try {
       const values = await productForm.validateFields()
       setSubmitting(true)
+
+      const formData = new FormData()
+      formData.append('sku', values.sku)
+      formData.append('name', values.name)
+      formData.append('category', values.category)
+      formData.append('unit', values.unit || 'cái')
+      formData.append('price', values.price || 0)
+      formData.append('cost_price', values.cost_price || 0)
+      formData.append('description', values.description || '')
+      formData.append('is_active', values.is_active !== false)
+      if (productImageFile) {
+        formData.append('image', productImageFile)
+      }
+
       if (editingProduct) {
-        await api.patch(`/inventory/products/${editingProduct.id}/`, values)
+        await api.patch(`/inventory/products/${editingProduct.id}/`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
         messageApi.success('Cập nhật sản phẩm thành công!')
       } else {
-        await api.post('/inventory/products/', values)
+        await api.post('/inventory/products/', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
         messageApi.success('Thêm sản phẩm mới thành công!')
       }
       setProductModalVisible(false)
@@ -218,6 +245,7 @@ export default function Inventory() {
   }
 
   const handleProductDelete = async (id) => {
+    if (checkMaintenance()) return
     try {
       await api.delete(`/inventory/products/${id}/`)
       messageApi.success('Đã xoá sản phẩm.')
@@ -229,6 +257,7 @@ export default function Inventory() {
 
   // ── Category Handlers ─────────────────────────────────────────────────
   const openCategoryModal = (cat = null) => {
+    if (checkMaintenance()) return
     setEditingCategory(cat)
     if (cat) {
       categoryForm.setFieldsValue({ name: cat.name, description: cat.description || '' })
@@ -259,6 +288,7 @@ export default function Inventory() {
   }
 
   const handleCategoryDelete = async (id) => {
+    if (checkMaintenance()) return
     try {
       await api.delete(`/inventory/product-categories/${id}/`)
       messageApi.success('Đã xoá danh mục.')
@@ -270,6 +300,7 @@ export default function Inventory() {
 
   // ── Warehouse Handlers ────────────────────────────────────────────────
   const openWarehouseModal = (wh = null) => {
+    if (checkMaintenance()) return
     setEditingWarehouse(wh)
     if (wh) {
       warehouseForm.setFieldsValue({ name: wh.name, location: wh.location || '', is_active: wh.is_active !== false })
@@ -302,6 +333,7 @@ export default function Inventory() {
 
   // ── Transaction (Nhập kho / Điều chỉnh) Handlers ──────────────────────
   const openTxnModal = () => {
+    if (checkMaintenance()) return
     txnForm.resetFields()
     txnForm.setFieldsValue({ type: 'import', quantity: 1, unit_cost: 0 })
     setTxnModalVisible(true)
@@ -330,15 +362,33 @@ export default function Inventory() {
       title: 'Mã SKU',
       dataIndex: 'sku',
       key: 'sku',
+      width: 130,
       render: (val) => <Tag color="blue" style={{ fontWeight: 600 }}>{val}</Tag>,
+    },
+    {
+      title: 'Hình ảnh',
+      key: 'image',
+      width: 95,
+      align: 'center',
+      render: (_, r) => {
+        const imgUrl = r.image_url || r.image
+        return imgUrl ? (
+          <img src={imgUrl} alt={r.name} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6, border: '1px solid #e2e8f0' }} />
+        ) : (
+          <div style={{ width: 48, height: 48, background: '#f1f5f9', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: 11, margin: '0 auto' }}>
+            No Img
+          </div>
+        )
+      },
     },
     {
       title: 'Tên sản phẩm / Dịch vụ',
       dataIndex: 'name',
       key: 'name',
+      width: 300,
       render: (val, r) => (
         <div>
-          <Text strong style={{ display: 'block', fontSize: 14 }}>{val}</Text>
+          <Text strong style={{ display: 'block', fontSize: 14, color: '#0f172a' }}>{val}</Text>
           {r.description && <Text type="secondary" style={{ fontSize: 12 }}>{r.description}</Text>}
         </div>
       ),
@@ -347,6 +397,7 @@ export default function Inventory() {
       title: 'Loại sản phẩm',
       dataIndex: 'category',
       key: 'category',
+      width: 160,
       render: (catId) => {
         const cat = categories.find((c) => c.id === catId)
         return <Tag color="cyan">{cat ? cat.name : 'Chưa phân loại'}</Tag>
@@ -356,6 +407,7 @@ export default function Inventory() {
       title: 'Đơn vị',
       dataIndex: 'unit',
       key: 'unit',
+      width: 90,
       align: 'center',
       render: (v) => <Tag>{v || 'cái'}</Tag>,
     },
@@ -363,6 +415,7 @@ export default function Inventory() {
       title: 'Giá bán',
       dataIndex: 'price',
       key: 'price',
+      width: 140,
       align: 'right',
       render: (v) => (
         <Text strong style={{ color: '#16a34a' }}>
@@ -374,6 +427,7 @@ export default function Inventory() {
       title: 'Giá nhập (Vốn)',
       dataIndex: 'cost_price',
       key: 'cost_price',
+      width: 140,
       align: 'right',
       render: (v) => <Text type="secondary">{Number(v || 0).toLocaleString('vi-VN')} đ</Text>,
     },
@@ -381,6 +435,7 @@ export default function Inventory() {
       title: 'Trạng thái',
       dataIndex: 'is_active',
       key: 'is_active',
+      width: 130,
       align: 'center',
       render: (v) =>
         v !== false ? (
@@ -392,7 +447,9 @@ export default function Inventory() {
     {
       title: 'Hành động',
       key: 'action',
+      width: 110,
       align: 'right',
+      fixed: 'right',
       render: (_, record) => (
         <Space>
           {canEdit && (
@@ -632,6 +689,7 @@ export default function Inventory() {
                     rowKey="id"
                     loading={loading}
                     pagination={{ pageSize: 10 }}
+                    scroll={{ x: 1300 }}
                   />
                 </div>
               ),
@@ -673,6 +731,7 @@ export default function Inventory() {
                     rowKey="id"
                     loading={loading}
                     pagination={{ pageSize: 10 }}
+                    scroll={{ x: 800 }}
                   />
                 </div>
               ),
@@ -692,6 +751,7 @@ export default function Inventory() {
                   rowKey="id"
                   loading={loading}
                   pagination={{ pageSize: 10 }}
+                  scroll={{ x: 1000 }}
                 />
               ),
             },
@@ -786,6 +846,49 @@ export default function Inventory() {
             <Col span={12}>
               <Form.Item name="cost_price" label="Giá nhập / Giá vốn (VNĐ)">
                 <InputNumber min={0} step={10000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item label="Hình ảnh sản phẩm (Tải lên ảnh mẫu cửa / sản phẩm)">
+                <Upload
+                  beforeUpload={(file) => {
+                    const isImage = file.type.startsWith('image/')
+                    if (!isImage) {
+                      messageApi.error('Chỉ được tải lên file hình ảnh!')
+                      return Upload.LIST_IGNORE
+                    }
+                    setProductImageFile(file)
+                    setProductPreviewImage(URL.createObjectURL(file))
+                    return false
+                  }}
+                  maxCount={1}
+                  showUploadList={false}
+                >
+                  <Button icon={<UploadOutlined />} style={{ marginBottom: 8 }}>
+                    Chọn hình ảnh sản phẩm
+                  </Button>
+                </Upload>
+                {productPreviewImage && (
+                  <div style={{ marginTop: 8, position: 'relative', display: 'inline-block' }}>
+                    <img
+                      src={productPreviewImage}
+                      alt="Preview"
+                      style={{ height: 100, borderRadius: 8, border: '1px solid #d9d9d9', objectFit: 'cover' }}
+                    />
+                    <Button
+                      type="text"
+                      danger
+                      size="small"
+                      style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(255,255,255,0.8)' }}
+                      onClick={() => {
+                        setProductImageFile(null)
+                        setProductPreviewImage(null)
+                      }}
+                    >
+                      Xóa ảnh
+                    </Button>
+                  </div>
+                )}
               </Form.Item>
             </Col>
             <Col span={24}>

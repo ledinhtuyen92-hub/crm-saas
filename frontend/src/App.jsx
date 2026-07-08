@@ -25,9 +25,11 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminSettings from './pages/admin/AdminSettings'
 import CompanyManagement from './pages/admin/CompanyManagement'
 import SystemUserManagement from './pages/admin/SystemUserManagement'
+import QuotationTemplateManagement from './pages/admin/QuotationTemplateManagement'
 import RoleManagement from './pages/settings/RoleManagement'
 import UserManagement from './pages/settings/UserManagement'
 import DepartmentManagement from './pages/settings/DepartmentManagement'
+import CompanyGeneralSettings from './pages/settings/CompanyGeneralSettings'
 
 function ApplicationLayout({ isDarkMode, toggleTheme }) {
   return (
@@ -84,6 +86,14 @@ function App() {
 
               {/* Company Admin routes */}
               <Route
+                path="/settings/general"
+                element={
+                  <CompanyAdminRoute>
+                    <CompanyGeneralSettings />
+                  </CompanyAdminRoute>
+                }
+              />
+              <Route
                 path="/settings/users"
                 element={
                   <CompanyAdminRoute>
@@ -138,6 +148,14 @@ function App() {
                 element={
                   <SuperAdminRoute>
                     <AdminSettings />
+                  </SuperAdminRoute>
+                }
+              />
+              <Route
+                path="/admin/quotation-templates"
+                element={
+                  <SuperAdminRoute>
+                    <QuotationTemplateManagement />
                   </SuperAdminRoute>
                 }
               />

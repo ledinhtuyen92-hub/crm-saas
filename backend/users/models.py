@@ -21,6 +21,29 @@ class Company(models.Model):
         null=True,
         verbose_name="Logo công ty",
     )
+    stamp_image = models.ImageField(
+        upload_to="company_stamps/",
+        blank=True,
+        null=True,
+        verbose_name="Ảnh con dấu công ty",
+    )
+    director_signature = models.ImageField(
+        upload_to="company_signatures/",
+        blank=True,
+        null=True,
+        verbose_name="Ảnh chữ ký giám đốc",
+    )
+    director_name = models.CharField(
+        max_length=150,
+        blank=True,
+        verbose_name="Họ tên Người đại diện / Giám đốc",
+    )
+    director_title = models.CharField(
+        max_length=100,
+        blank=True,
+        default="Giám đốc",
+        verbose_name="Chức danh",
+    )
     is_active = models.BooleanField(default=True, verbose_name="Đang hoạt động")
     user_limit = models.PositiveIntegerField(
         null=True,
@@ -28,7 +51,16 @@ class Company(models.Model):
         verbose_name="Giới hạn nhân viên",
         help_text="Số tài khoản nhân viên tối đa. Để trống = không giới hạn.",
     )
+    quotation_template = models.ForeignKey(
+        "sales.QuotationTemplate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="companies",
+        verbose_name="Mẫu báo giá áp dụng",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+
 
     class Meta:
         ordering = ["name"]
@@ -247,8 +279,22 @@ class CompanySettings(models.Model):
         default="Asia/Ho_Chi_Minh",
         verbose_name="Múi giờ",
     )
+    quotation_template = models.ForeignKey(
+        "sales.QuotationTemplate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="company_settings",
+        verbose_name="Mẫu báo giá áp dụng",
+    )
+    default_quotation_terms = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Ghi chú & Điều khoản báo giá mặc định",
+    )
 
     class Meta:
+
         verbose_name = "Cấu hình công ty"
         verbose_name_plural = "Cấu hình công ty"
 
@@ -306,6 +352,11 @@ class SystemSettings(models.Model):
     max_file_upload_mb = models.IntegerField(
         default=25,
         verbose_name="Dung lượng tải file tối đa",
+    )
+    maintenance_mode = models.BooleanField(
+        default=False,
+        verbose_name="Chế độ bảo trì dữ liệu",
+        help_text="Khóa toàn bộ chức năng thêm/sửa/xóa dữ liệu của các doanh nghiệp, chỉ cho phép đọc và truy cập hệ thống.",
     )
 
     class Meta:

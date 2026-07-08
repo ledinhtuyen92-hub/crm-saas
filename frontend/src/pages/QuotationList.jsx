@@ -5,11 +5,14 @@ import {
   DeleteOutlined,
   EditOutlined,
   FileDoneOutlined,
+  FilePdfOutlined,
   FileTextOutlined,
   PlusOutlined,
   PrinterOutlined,
   SearchOutlined,
   SendOutlined,
+  SettingOutlined,
+  UserOutlined,
 } from '@ant-design/icons'
 import {
   Badge,
@@ -36,6 +39,7 @@ import {
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useLocation } from 'react-router-dom'
 import api from '../utils/api'
 
 const { Title, Text, Paragraph } = Typography
@@ -52,13 +56,15 @@ const statusConfig = {
 
 export default function QuotationList() {
   const { token } = theme.useToken()
-  const { isCompanyAdmin, hasPermission } = useAuth()
+  const { isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
+  const location = useLocation()
   const [messageApi, contextHolder] = message.useMessage()
 
   // Data states
   const [quotations, setQuotations] = useState([])
   const [customers, setCustomers] = useState([])
   const [products, setProducts] = useState([])
+  const [companyTemplate, setCompanyTemplate] = useState(null)
   const [loading, setLoading] = useState(false)
 
   // Filters
@@ -105,14 +111,16 @@ export default function QuotationList() {
   const fetchCustomersAndProducts = useCallback(async () => {
     await Promise.resolve()
     try {
-      const [custRes, prodRes] = await Promise.all([
-        api.get('/crm/customers/'),
-        api.get('/inventory/products/'),
+      const [custRes, prodRes, tmplRes] = await Promise.all([
+        api.get('/crm/customers/').catch(() => ({ data: [] })),
+        api.get('/inventory/products/').catch(() => ({ data: [] })),
+        api.get('/sales/quotation-templates/my-company-template/').catch(() => ({ data: null })),
       ])
       const custData = Array.isArray(custRes.data) ? custRes.data : custRes.data?.results ?? []
       const prodData = Array.isArray(prodRes.data) ? prodRes.data : prodRes.data?.results ?? []
       setCustomers(custData)
       setProducts(prodData)
+      if (tmplRes?.data) setCompanyTemplate(tmplRes.data)
     } catch {
       // ignore silently
     }
@@ -125,6 +133,18 @@ export default function QuotationList() {
   useEffect(() => {
     fetchCustomersAndProducts()
   }, [fetchCustomersAndProducts])
+
+  useEffect(() => {
+    const stateCustId = location.state?.createForCustomer
+    const params = new URLSearchParams(location.search)
+    const queryCustId = params.get('customerId')
+    const targetId = stateCustId || queryCustId
+    if (targetId) {
+      const numId = Number(targetId) || targetId
+      openModal(null, numId)
+      window.history.replaceState({}, '', '/quotations')
+    }
+  }, [location.state, location.search])
 
   // ── Filtered list ─────────────────────────────────────────────────────
   const filteredQuotations = quotations.filter((item) => {
@@ -143,12 +163,124 @@ export default function QuotationList() {
     .filter((q) => q.status === 'accepted')
     .reduce((sum, q) => sum + Number(q.total_amount || 0), 0)
 
+  // ── Helper to compute line total consistently ─────────────────────────
+  const computeLineTotal = (item, templateOverride) => {
+    const qty = Number(item.quantity || 1)
+    const price = Number(item.unit_price || 0)
+    const discount = Number(item.discount_percent || 0)
+    const tmpl = templateOverride || companyTemplate
+    const tmplCode = tmpl?.code || 'STANDARD'
+    const isLandscape = tmplCode === 'production_landscape_a4' || tmpl?.layout_config?.paper_orientation === 'landscape'
+    if (isLandscape) {
+      return Number((qty * price * (1 - discount / 100)).toFixed(0))
+    }
+    const area = Number(item.area || 0)
+    if ((item.unit === 'm²' || item.custom_data?.unit === 'm²' || (area > 0 && item.width > 0 && item.height > 0)) && area > 0) {
+      return Number((area * qty * price * (1 - discount / 100)).toFixed(0))
+    }
+    return Number((qty * price * (1 - discount / 100)).toFixed(0))
+  }
+
+  // ── Helper for Excel rowSpan calculation ──────────────────────────────
+  const computeRowSpan = (data, index, field = 'product') => {
+    const currentVal = data[index]?.[field]
+    if (!currentVal) return 1
+    if (index > 0 && data[index - 1]?.[field] === currentVal) {
+      return 0
+    }
+    let count = 1
+    for (let i = index + 1; i < data.length; i++) {
+      if (data[i]?.[field] === currentVal) {
+        count++
+      } else {
+        break
+      }
+    }
+    return count
+  }
+
+  const computeProductSTT = (data, index, field = 'product') => {
+    let count = 0
+    for (let i = 0; i <= index; i++) {
+      if (i === 0 || data[i]?.[field] !== data[i - 1]?.[field]) {
+        count++
+      }
+    }
+    return count
+  }
+
+  // ── Template Snapshot Helper ───────────────────────────────────────────
+  // Returns the effective template for a given quotation:
+  // 1. If the quotation has a saved template_snapshot in custom_data → use it ("frozen" layout)
+  // 2. Otherwise → fall back to the current company template
+  const getEffectiveTemplate = (quotation) => {
+    const snap = quotation?.custom_data?.template_snapshot
+    if (snap && snap.code) return snap
+    return companyTemplate
+  }
+
+  // Backfill: when opening a quotation with no snapshot, silently save current template as snapshot
+  const backfillTemplateSnapshot = async (quotation) => {
+    if (!quotation || !companyTemplate) return
+    if (quotation?.custom_data?.template_snapshot?.code) return // already has snapshot
+    try {
+      const snap = {
+        id: companyTemplate.id,
+        code: companyTemplate.code,
+        name: companyTemplate.name,
+        layout_config: companyTemplate.layout_config,
+        layout_style: companyTemplate.layout_style,
+        footer_content: companyTemplate.footer_content,
+      }
+      const updated = {
+        ...quotation,
+        custom_data: { ...(quotation.custom_data || {}), template_snapshot: snap },
+      }
+      await api.patch(`/sales/quotations/${quotation.id}/`, {
+        custom_data: updated.custom_data,
+      })
+      // Update local state so the current drawer session also benefits
+      setSelectedQuotation(updated)
+    } catch {
+      // Non-critical — silently ignore
+    }
+  }
+
   // ── Handlers for modal form items ─────────────────────────────────────
   const handleAddLine = () => {
     setFormItems((prev) => [
       ...prev,
-      { key: Date.now(), product: null, width: 0, height: 0, quantity: 1, unit_price: 0, discount_percent: 0 },
+      { key: Date.now(), product: null, width: 0, height: 0, length: 0, thickness: 0, area: 0, spec: '', warranty: '12 tháng', quantity: 1, unit_price: 0, discount_percent: 0, note: '', product_image: '', unit: 'cái', symbol: '', custom_data: {} },
     ])
+  }
+
+  const handleAddSameProduct = (index) => {
+    setFormItems((prev) => {
+      const currentItem = prev[index]
+      if (!currentItem) return prev
+      const newItem = {
+        key: Date.now(),
+        product: currentItem.product,
+        product_name: currentItem.product_name,
+        product_image: currentItem.product_image,
+        unit: currentItem.unit || 'cái',
+        unit_price: currentItem.unit_price || 0,
+        width: 0,
+        height: 0,
+        length: 0,
+        thickness: 0,
+        area: 0,
+        spec: currentItem.spec || '',
+        note: '',
+        symbol: '',
+        custom_data: { ...(currentItem.custom_data || {}), symbol: '' },
+        quantity: 1,
+        discount_percent: currentItem.discount_percent || 0,
+      }
+      const updated = [...prev]
+      updated.splice(index + 1, 0, newItem)
+      return updated
+    })
   }
 
   const handleRemoveLine = (index) => {
@@ -159,13 +291,30 @@ export default function QuotationList() {
   const handleLineChange = (index, field, value) => {
     setFormItems((prev) => {
       const updated = [...prev]
-      updated[index] = { ...updated[index], [field]: value }
+      const currentItem = { ...updated[index], [field]: value }
       if (field === 'product') {
         const prod = products.find((p) => p.id === value)
         if (prod) {
-          updated[index].unit_price = Number(prod.unit_price || 0)
+          currentItem.unit_price = Number(prod.price || prod.unit_price || 0)
+          currentItem.product_name = prod.name || ''
+          currentItem.unit = prod.unit || 'cái'
+          currentItem.product_image = prod.image_url || prod.image || ''
         }
       }
+      if (field === 'width' || field === 'height' || field === 'length') {
+        const w = Number(field === 'width' ? value : currentItem.width || 0)
+        const h = Number(field === 'height' ? value : currentItem.height || 0)
+        const l = Number(field === 'length' ? value : currentItem.length || 0)
+        if (w > 0 && h > 0) {
+          currentItem.area = Number((w * h).toFixed(2))
+        } else if (l > 0 && w > 0) {
+          currentItem.area = Number((l * w).toFixed(2))
+        }
+      }
+      if (field === 'symbol') {
+        currentItem.custom_data = { ...(currentItem.custom_data || {}), symbol: value }
+      }
+      updated[index] = currentItem
       return updated
     })
   }
@@ -174,49 +323,74 @@ export default function QuotationList() {
   const calculateModalTotal = () => {
     let subtotal = 0
     formItems.forEach((item) => {
-      const qty = Number(item.quantity || 1)
-      const price = Number(item.unit_price || 0)
-      const discount = Number(item.discount_percent || 0)
-      const lineTotal = qty * price * (1 - discount / 100)
-      subtotal += lineTotal
+      subtotal += computeLineTotal(item)
     })
     return subtotal
   }
 
   // ── Open Modal ────────────────────────────────────────────────────────
-  const openModal = (quotation = null) => {
+  const openModal = (quotation = null, prefillCustomerId = null) => {
+    if (checkMaintenance()) return
     setEditingQuotation(quotation)
+    const defaultTerms = companyTemplate?.company_default_terms || companyTemplate?.footer_content || 'Thanh toán 50% sau khi ký hợp đồng, 50% sau khi nghiệm thu thi công.'
+    const defaultPaymentTerms = 'Thanh toán 50% tạm ứng ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.'
     if (quotation) {
       form.setFieldsValue({
         customer: quotation.customer,
         status: quotation.status,
         installation_date: quotation.installation_date ? dayjs(quotation.installation_date) : null,
+        shipping_fee: Number(quotation.shipping_fee || 0),
+        installation_fee: Number(quotation.installation_fee || 0),
+        delivery_time: quotation.delivery_time || '3-5 ngày làm việc',
+        payment_terms: quotation.payment_terms || defaultPaymentTerms,
+        validity_days: Number(quotation.validity_days || 15),
         notes: quotation.notes,
         discount_total: Number(quotation.discount_total || 0),
       })
       if (quotation.items && quotation.items.length > 0) {
         setFormItems(
-          quotation.items.map((it, idx) => ({
-            key: it.id || idx,
-            id: it.id,
-            product: it.product,
-            width: Number(it.width || 0),
-            height: Number(it.height || 0),
-            quantity: Number(it.quantity || 1),
-            unit_price: Number(it.unit_price || 0),
-            discount_percent: Number(it.discount_percent || 0),
-          }))
+          quotation.items.map((it, idx) => {
+            const prodObj = products.find((p) => p.id === it.product)
+            return {
+              key: it.id || idx,
+              id: it.id,
+              product: it.product,
+              width: Math.round(Number(it.width || 0)),
+              height: Math.round(Number(it.height || 0)),
+              length: Math.round(Number(it.length || 0)),
+              thickness: Math.round(Number(it.thickness || it.custom_data?.thickness || 0)),
+              area: Number(it.area || 0),
+              spec: it.spec || '',
+              warranty: it.warranty || '12 tháng',
+              quantity: Number(it.quantity || 1),
+              unit_price: Number(it.unit_price || 0),
+              discount_percent: Number(it.discount_percent || 0),
+              note: it.note || '',
+              product_image: it.product_image || (prodObj ? (prodObj.image_url || prodObj.image) : '') || '',
+              unit: it.custom_data?.unit || (prodObj ? prodObj.unit : 'cái'),
+            }
+          })
         )
       } else {
         setFormItems([
-          { key: Date.now(), product: null, width: 0, height: 0, quantity: 1, unit_price: 0, discount_percent: 0 },
+          { key: Date.now(), product: null, width: 0, height: 0, length: 0, thickness: 0, area: 0, spec: '', warranty: '12 tháng', quantity: 1, unit_price: 0, discount_percent: 0, note: '', product_image: '', unit: 'cái' },
         ])
       }
     } else {
       form.resetFields()
-      form.setFieldsValue({ status: 'draft', discount_total: 0 })
+      form.setFieldsValue({
+        customer: prefillCustomerId || undefined,
+        status: 'draft',
+        discount_total: 0,
+        shipping_fee: 0,
+        installation_fee: 0,
+        delivery_time: '3-5 ngày làm việc',
+        payment_terms: defaultPaymentTerms,
+        validity_days: 15,
+        notes: defaultTerms,
+      })
       setFormItems([
-        { key: Date.now(), product: null, width: 0, height: 0, quantity: 1, unit_price: 0, discount_percent: 0 },
+        { key: Date.now(), product: null, width: 0, height: 0, length: 0, thickness: 0, area: 0, spec: '', warranty: '12 tháng', quantity: 1, unit_price: 0, discount_percent: 0, note: '', product_image: '', unit: 'cái' },
       ])
     }
     setModalVisible(true)
@@ -236,15 +410,35 @@ export default function QuotationList() {
         return
       }
 
-      const totalAmt = calculateModalTotal() - Number(values.discount_total || 0)
+      const subtotal = calculateModalTotal()
+      const totalAmt = subtotal + Number(values.shipping_fee || 0) + Number(values.installation_fee || 0) - Number(values.discount_total || 0)
+
+      // Build template snapshot to freeze the current layout with this quotation
+      const templateSnapshot = companyTemplate ? {
+        id: companyTemplate.id,
+        code: companyTemplate.code,
+        name: companyTemplate.name,
+        layout_config: companyTemplate.layout_config,
+        layout_style: companyTemplate.layout_style,
+        footer_content: companyTemplate.footer_content,
+      } : null
 
       const payload = {
         customer: values.customer,
         status: values.status,
         installation_date: values.installation_date ? values.installation_date.format('YYYY-MM-DD') : null,
         notes: values.notes || '',
+        shipping_fee: Number(values.shipping_fee || 0),
+        installation_fee: Number(values.installation_fee || 0),
+        delivery_time: values.delivery_time || '',
+        payment_terms: values.payment_terms || '',
+        validity_days: Number(values.validity_days || 15),
         discount_total: Number(values.discount_total || 0),
         total_amount: Math.max(0, totalAmt),
+        custom_data: {
+          ...(editingQuotation?.custom_data || {}),
+          ...(templateSnapshot ? { template_snapshot: templateSnapshot } : {}),
+        },
       }
 
       let quotationId
@@ -259,14 +453,12 @@ export default function QuotationList() {
       }
 
       // Add / replace items
-      // Xoá các items cũ nếu chỉnh sửa
       if (editingQuotation && editingQuotation.items) {
         await Promise.all(
           editingQuotation.items.map((it) => api.delete(`/sales/quotation-items/${it.id}/`).catch(() => {}))
         )
       }
 
-      // Tạo mới items
       await Promise.all(
         validItems.map((it) => {
           const prodObj = products.find((p) => p.id === it.product)
@@ -275,10 +467,23 @@ export default function QuotationList() {
             product: it.product,
             product_name: prodObj ? prodObj.name : 'Sản phẩm',
             unit_price: Number(it.unit_price || 0),
-            width: Number(it.width || 0),
-            height: Number(it.height || 0),
+            width: Math.round(Number(it.width || 0)),
+            height: Math.round(Number(it.height || 0)),
+            length: Math.round(Number(it.length || 0)),
+            thickness: Math.round(Number(it.thickness || 0)),
+            area: Number(it.area || 0),
+            spec: it.spec || '',
+            warranty: it.warranty || '12 tháng',
+            product_image: it.product_image || (prodObj ? (prodObj.image_url || prodObj.image) : '') || '',
+            custom_data: {
+              ...(it.custom_data || {}),
+              unit: it.unit || (prodObj ? prodObj.unit : 'cái'),
+              thickness: Math.round(Number(it.thickness || 0)),
+              symbol: it.custom_data?.symbol || it.symbol || '',
+            },
             quantity: Number(it.quantity || 1),
             discount_percent: Number(it.discount_percent || 0),
+            note: it.note || '',
           })
         })
       )
@@ -287,7 +492,20 @@ export default function QuotationList() {
       fetchQuotations()
     } catch (error) {
       if (error.errorFields) return
-      messageApi.error('Lưu báo giá thất bại. Vui lòng thử lại.')
+      let detailMsg = error.response?.data?.detail || error.response?.data?.message
+      if (!detailMsg && typeof error.response?.data === 'string') {
+        detailMsg = error.response.data
+      }
+      if (!detailMsg && error.response?.data && typeof error.response.data === 'object') {
+        const errList = []
+        for (const [k, v] of Object.entries(error.response.data)) {
+          const valStr = Array.isArray(v) ? v.join(', ') : (typeof v === 'object' ? JSON.stringify(v) : String(v))
+          errList.push(`${k}: ${valStr}`)
+        }
+        if (errList.length > 0) detailMsg = errList.join('; ')
+      }
+      console.error('Lỗi khi lưu báo giá:', error.response?.data || error)
+      messageApi.error(detailMsg || 'Lưu báo giá thất bại. Vui lòng thử lại.')
     } finally {
       setSubmitting(false)
     }
@@ -295,6 +513,7 @@ export default function QuotationList() {
 
   // ── Delete Quotation ──────────────────────────────────────────────────
   const handleDelete = async (id) => {
+    if (checkMaintenance()) return
     try {
       await api.delete(`/sales/quotations/${id}/`)
       messageApi.success('Đã xoá báo giá.')
@@ -304,8 +523,167 @@ export default function QuotationList() {
     }
   }
 
+  // ── Print or Export Quotation to PDF (Clean Window with Exact Title) ────
+  const handlePrintOrPDF = () => {
+    if (!selectedQuotation) return
+    const contentEl = document.querySelector('.printable-quotation-content')
+    const qNum = selectedQuotation.quotation_number || 'Bao_Gia'
+
+    if (!contentEl) {
+      const oldTitle = document.title
+      document.title = qNum
+      window.print()
+      document.title = oldTitle
+      return
+    }
+
+    const effectiveTmpl = getEffectiveTemplate(selectedQuotation)
+    const isLand = effectiveTmpl?.layout_config?.paper_orientation === 'landscape' || effectiveTmpl?.code === 'production_landscape_a4'
+
+    // Collect all existing stylesheets from the current document
+    const styleTags = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map((el) => el.outerHTML)
+      .join('\n')
+
+    // Open dedicated printable window without Ant Design Drawer wrappers
+    const printWin = window.open('', '_blank', 'width=1180,height=850')
+    if (!printWin) {
+      const oldTitle = document.title
+      document.title = qNum
+      window.print()
+      document.title = oldTitle
+      return
+    }
+
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${qNum}</title>
+        ${styleTags}
+        <style>
+          @media print {
+            body, html, .printable-quotation-content {
+              display: block !important;
+              visibility: visible !important;
+              opacity: 1 !important;
+            }
+          }
+          @page {
+            size: A4 ${isLand ? 'landscape' : 'portrait'};
+            margin: 8mm;
+          }
+          * {
+            box-sizing: border-box;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            font-family: Inter, ui-sans-serif, system-ui, Arial, sans-serif !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .printable-quotation-content {
+            width: ${isLand ? '1060px' : '730px'} !important;
+            max-width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+          }
+          @media print {
+            .printable-quotation-content > div:first-child {
+              margin-bottom: 6px !important;
+              padding: 8px 14px !important;
+            }
+            .printable-quotation-content h2 {
+              font-size: 18px !important;
+              margin: 4px 0 !important;
+            }
+            .ant-card {
+              margin-bottom: 8px !important;
+            }
+            .ant-card-body {
+              padding: 8px 12px !important;
+            }
+            .ant-table-wrapper {
+              margin-top: 4px !important;
+            }
+            tr {
+              page-break-inside: auto !important;
+              break-inside: auto !important;
+            }
+          }
+          .ant-table-wrapper,
+          .ant-spin-nested-loading,
+          .ant-spin-container,
+          .ant-table,
+          .ant-table-container,
+          .ant-table-content {
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+            overflow: visible !important;
+            height: auto !important;
+          }
+          table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            page-break-inside: auto !important;
+          }
+          tr {
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+          }
+          thead {
+            display: table-header-group !important;
+          }
+          tfoot {
+            display: table-footer-group !important;
+          }
+          button, .ant-btn, .no-print {
+            display: none !important;
+          }
+          .signature-block {
+            display: flex !important;
+            flex-direction: row !important;
+            justify-content: space-between !important;
+            align-items: flex-start !important;
+            width: 100% !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-top: 36px !important;
+          }
+          .signature-block > div,
+          .signature-block > .ant-col {
+            width: 45% !important;
+            max-width: 45% !important;
+            flex: 0 0 45% !important;
+          }
+        </style>
+      </head>
+      <body>
+        ${contentEl.outerHTML}
+      </body>
+      </html>
+    `)
+    printWin.document.close()
+    printWin.focus()
+
+    setTimeout(() => {
+      printWin.print()
+      printWin.close()
+    }, 800)
+  }
+
   // ── Convert Quotation to Order ────────────────────────────────────────
   const handleConvertToOrder = async (id) => {
+    if (checkMaintenance()) return
     try {
       await api.post(`/sales/quotations/${id}/create-order/`)
       messageApi.success('🎉 Đã chuyển báo giá thành Đơn hàng chính thức!')
@@ -346,6 +724,10 @@ export default function QuotationList() {
               onClick={() => {
                 setSelectedQuotation(record)
                 setDrawerVisible(true)
+                // Backfill snapshot for old quotations (non-blocking)
+                if (!record?.custom_data?.template_snapshot?.code) {
+                  setTimeout(() => backfillTemplateSnapshot(record), 500)
+                }
               }}
             >
               {val || `BG-${record.id}`}
@@ -412,6 +794,10 @@ export default function QuotationList() {
             onClick={() => {
               setSelectedQuotation(record)
               setDrawerVisible(true)
+              // Backfill snapshot for old quotations (non-blocking)
+              if (!record?.custom_data?.template_snapshot?.code) {
+                setTimeout(() => backfillTemplateSnapshot(record), 500)
+              }
             }}
           />
           {canEdit && (
@@ -437,6 +823,372 @@ export default function QuotationList() {
       ),
     },
   ]
+
+  // ── Dynamic Editable Table Columns based on Template ──────────────────
+  const getItemColumns = () => {
+    const tmplCode = companyTemplate?.code || 'STANDARD'
+    const isLandscape = tmplCode === 'production_landscape_a4' || companyTemplate?.layout_config?.paper_orientation === 'landscape'
+
+    if (isLandscape) {
+      return [
+        {
+          title: 'STT',
+          key: 'stt',
+          width: 50,
+          align: 'center',
+          render: (_, __, idx) => idx + 1,
+        },
+        {
+          title: 'MẪU CỬA / SẢN PHẨM',
+          dataIndex: 'product',
+          key: 'product',
+          width: 260,
+          render: (val, record, idx) => {
+            const prodObj = products.find((p) => p.id === val)
+            const imgUrl = record.product_image || (prodObj ? (prodObj.image_url || prodObj.image) : null)
+            const rowSpan = computeRowSpan(formItems, idx, 'product')
+            return {
+              children: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
+                  <Select
+                    showSearch
+                    placeholder="Chọn mẫu cửa / sản phẩm..."
+                    optionFilterProp="children"
+                    style={{ width: '100%' }}
+                    value={val || undefined}
+                    onChange={(v) => handleLineChange(idx, 'product', v)}
+                  >
+                    {products.map((p) => (
+                      <Option key={p.id} value={p.id}>{p.name} ({p.unit || 'cái'})</Option>
+                    ))}
+                  </Select>
+                  {val && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#f8fafc', padding: 10, borderRadius: 8, border: '1px solid #e2e8f0', gap: 6 }}>
+                      {imgUrl ? (
+                        <img src={imgUrl} alt="product" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }} />
+                      ) : (
+                        <div style={{ width: 80, height: 80, background: '#e2e8f0', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#64748b' }}>Không có ảnh</div>
+                      )}
+                      <Text strong style={{ fontSize: 13, textAlign: 'center', color: '#0f172a', lineHeight: 1.3 }}>
+                        {record.product_name || (prodObj ? prodObj.name : '')}
+                      </Text>
+                      {(record.spec || (prodObj && prodObj.description) || record.note) && (
+                        <div style={{ fontSize: 11.5, color: '#475569', textAlign: 'center', lineHeight: 1.4, fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+                          {record.spec || (prodObj && prodObj.description) || record.note}
+                        </div>
+                      )}
+                      <Button
+                        type="dashed"
+                        size="small"
+                        icon={<PlusOutlined />}
+                        onClick={() => handleAddSameProduct(idx)}
+                        style={{ marginTop: 4, borderColor: '#2563eb', color: '#2563eb', width: '100%' }}
+                      >
+                        Thêm kích thước
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ),
+              props: { rowSpan },
+            }
+          },
+        },
+        {
+          title: 'KÍCH THƯỚC Ô CHỜ (mm)',
+          children: [
+            {
+              title: 'Cao',
+              dataIndex: 'height',
+              width: 85,
+              align: 'center',
+              render: (val, record, idx) => (
+                <InputNumber
+                  min={0}
+                  step={1}
+                  precision={0}
+                  style={{ width: '100%', textAlign: 'center' }}
+                  value={val !== undefined && val !== null && val !== '' ? Math.round(Number(val)) : undefined}
+                  onChange={(v) => handleLineChange(idx, 'height', v !== null && v !== undefined ? Math.round(Number(v)) : 0)}
+                  placeholder="0"
+                />
+              ),
+            },
+            {
+              title: 'Rộng',
+              dataIndex: 'width',
+              width: 85,
+              align: 'center',
+              render: (val, record, idx) => (
+                <InputNumber
+                  min={0}
+                  step={1}
+                  precision={0}
+                  style={{ width: '100%', textAlign: 'center' }}
+                  value={val !== undefined && val !== null && val !== '' ? Math.round(Number(val)) : undefined}
+                  onChange={(v) => handleLineChange(idx, 'width', v !== null && v !== undefined ? Math.round(Number(v)) : 0)}
+                  placeholder="0"
+                />
+              ),
+            },
+            {
+              title: 'Dày',
+              dataIndex: 'thickness',
+              width: 85,
+              align: 'center',
+              render: (val, record, idx) => (
+                <InputNumber
+                  min={0}
+                  step={1}
+                  precision={0}
+                  style={{ width: '100%', textAlign: 'center' }}
+                  value={val !== undefined && val !== null && val !== '' ? Math.round(Number(val)) : undefined}
+                  onChange={(v) => handleLineChange(idx, 'thickness', v !== null && v !== undefined ? Math.round(Number(v)) : 0)}
+                  placeholder="0"
+                />
+              ),
+            },
+          ],
+        },
+        {
+          title: 'KÝ HIỆU',
+          dataIndex: 'symbol',
+          width: 100,
+          align: 'center',
+          render: (val, record, idx) => <Input style={{ textAlign: 'center', fontWeight: 600, color: '#2563eb' }} placeholder="VD: D1.1" value={record.custom_data?.symbol || record.symbol || ''} onChange={(e) => handleLineChange(idx, 'symbol', e.target.value)} />,
+        },
+        {
+          title: 'GHI CHÚ KỸ THUẬT',
+          dataIndex: 'note',
+          width: 170,
+          render: (val, record, idx) => <Input placeholder="Khóa, bản lề, kính..." value={val || ''} onChange={(e) => handleLineChange(idx, 'note', e.target.value)} />,
+        },
+        {
+          title: 'SL',
+          dataIndex: 'quantity',
+          width: 70,
+          align: 'center',
+          render: (val, record, idx) => <InputNumber min={1} style={{ width: '100%', textAlign: 'center' }} value={val} onChange={(v) => handleLineChange(idx, 'quantity', v)} />,
+        },
+        {
+          title: 'ĐVT',
+          dataIndex: 'unit',
+          width: 70,
+          align: 'center',
+          render: (val, record, idx) => <Input style={{ textAlign: 'center' }} value={val || 'bộ'} onChange={(e) => handleLineChange(idx, 'unit', e.target.value)} />,
+        },
+        {
+          title: 'ĐƠN GIÁ/BỘ',
+          dataIndex: 'unit_price',
+          width: 130,
+          align: 'right',
+          render: (val, record, idx) => <InputNumber min={0} step={1000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} value={val} onChange={(v) => handleLineChange(idx, 'unit_price', v)} />,
+        },
+        {
+          title: 'TỔNG TIỀN',
+          key: 'total',
+          width: 130,
+          align: 'right',
+          render: (_, record) => {
+            const total = computeLineTotal(record)
+            return <Text strong style={{ color: '#16a34a', fontSize: 14 }}>{total.toLocaleString('vi-VN')} đ</Text>
+          },
+        },
+        {
+          title: '',
+          key: 'action',
+          width: 50,
+          render: (_, __, idx) => formItems.length > 1 ? (
+            <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveLine(idx)} />
+          ) : null,
+        },
+      ]
+    }
+
+    const baseCols = [
+      {
+        title: 'Sản phẩm / Dịch vụ',
+        dataIndex: 'product',
+        key: 'product',
+        width: 220,
+        render: (val, record, idx) => (
+          <Select
+            showSearch
+            placeholder="Chọn sản phẩm / dịch vụ..."
+            optionFilterProp="children"
+            style={{ width: '100%' }}
+            value={val || undefined}
+            onChange={(v) => handleLineChange(idx, 'product', v)}
+          >
+            {products.map((p) => (
+              <Option key={p.id} value={p.id}>{p.name} ({p.unit || 'cái'})</Option>
+            ))}
+          </Select>
+        ),
+      },
+    ]
+
+    if (tmplCode === 'CURTAIN') {
+      baseCols.push(
+        {
+          title: 'Rộng (m)',
+          dataIndex: 'width',
+          width: 90,
+          render: (val, record, idx) => <InputNumber min={0} step={0.1} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'width', v)} />,
+        },
+        {
+          title: 'Cao (m)',
+          dataIndex: 'height',
+          width: 90,
+          render: (val, record, idx) => <InputNumber min={0} step={0.1} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'height', v)} />,
+        },
+        {
+          title: 'D.Tích (m²)',
+          dataIndex: 'area',
+          width: 90,
+          render: (val, record, idx) => <InputNumber min={0} step={0.1} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'area', v)} />,
+        }
+      )
+    } else if (tmplCode === 'GLASS_ALUMINUM') {
+      baseCols.push(
+        {
+          title: 'Rộng (m)',
+          dataIndex: 'width',
+          width: 80,
+          render: (val, record, idx) => <InputNumber min={0} step={0.1} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'width', v)} />,
+        },
+        {
+          title: 'Cao (m)',
+          dataIndex: 'height',
+          width: 80,
+          render: (val, record, idx) => <InputNumber min={0} step={0.1} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'height', v)} />,
+        },
+        {
+          title: 'Quy cách / Hệ nhôm',
+          dataIndex: 'spec',
+          width: 160,
+          render: (val, record, idx) => <Input placeholder="Hệ 55, kính 10mm..." value={val} onChange={(e) => handleLineChange(idx, 'spec', e.target.value)} />,
+        },
+        {
+          title: 'Bảo hành',
+          dataIndex: 'warranty',
+          width: 100,
+          render: (val, record, idx) => <Input placeholder="5 năm..." value={val} onChange={(e) => handleLineChange(idx, 'warranty', e.target.value)} />,
+        }
+      )
+    } else if (tmplCode === 'SERVICES') {
+      baseCols.push(
+        {
+          title: 'Phạm vi / Mô tả chi tiết',
+          dataIndex: 'spec',
+          width: 200,
+          render: (val, record, idx) => <Input placeholder="Chi tiết phạm vi công việc..." value={val} onChange={(e) => handleLineChange(idx, 'spec', e.target.value)} />,
+        },
+        {
+          title: 'Thời gian bảo hành / duy trì',
+          dataIndex: 'warranty',
+          width: 140,
+          render: (val, record, idx) => <Input placeholder="12 tháng / 1 năm..." value={val} onChange={(e) => handleLineChange(idx, 'warranty', e.target.value)} />,
+        }
+      )
+    } else if (tmplCode === 'PRINTING') {
+      baseCols.push(
+        {
+          title: 'Dài (cm)',
+          dataIndex: 'length',
+          width: 80,
+          render: (val, record, idx) => <InputNumber min={0} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'length', v)} />,
+        },
+        {
+          title: 'Rộng (cm)',
+          dataIndex: 'width',
+          width: 80,
+          render: (val, record, idx) => <InputNumber min={0} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'width', v)} />,
+        },
+        {
+          title: 'Cao (cm)',
+          dataIndex: 'height',
+          width: 80,
+          render: (val, record, idx) => <InputNumber min={0} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'height', v)} />,
+        },
+        {
+          title: 'Chất liệu / Quy cách',
+          dataIndex: 'spec',
+          width: 150,
+          render: (val, record, idx) => <Input placeholder="Giấy C250, cán mờ..." value={val} onChange={(e) => handleLineChange(idx, 'spec', e.target.value)} />,
+        }
+      )
+    } else {
+      baseCols.push(
+        {
+          title: 'Kích thước / Ghi chú',
+          dataIndex: 'note',
+          width: 200,
+          render: (val, record, idx) => (
+            <Input
+              placeholder="VD: 800×2000mm, màu vân gỗ, lắp đặt kèm..."
+              value={val || ''}
+              onChange={(e) => handleLineChange(idx, 'note', e.target.value)}
+            />
+          ),
+        },
+        {
+          title: 'ĐVT',
+          dataIndex: 'unit',
+          width: 75,
+          align: 'center',
+          render: (val, record, idx) => (
+            <Input
+              style={{ textAlign: 'center' }}
+              value={val || record.custom_data?.unit || 'cái'}
+              onChange={(e) => handleLineChange(idx, 'unit', e.target.value)}
+            />
+          ),
+        }
+      )
+    }
+
+    baseCols.push(
+      {
+        title: 'SL',
+        dataIndex: 'quantity',
+        width: 70,
+        render: (val, record, idx) => <InputNumber min={1} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'quantity', v)} />,
+      },
+      {
+        title: 'Đơn giá (VNĐ)',
+        dataIndex: 'unit_price',
+        width: 130,
+        render: (val, record, idx) => <InputNumber min={0} step={1000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} value={val} onChange={(v) => handleLineChange(idx, 'unit_price', v)} />,
+      },
+      {
+        title: 'CK(%)',
+        dataIndex: 'discount_percent',
+        width: 70,
+        render: (val, record, idx) => <InputNumber min={0} max={100} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'discount_percent', v)} />,
+      },
+      {
+        title: 'Thành tiền',
+        key: 'total',
+        width: 130,
+        align: 'right',
+        render: (_, record) => {
+          const total = computeLineTotal(record)
+          return <Text strong style={{ color: '#16a34a' }}>{total.toLocaleString('vi-VN')} đ</Text>
+        },
+      },
+      {
+        title: '',
+        key: 'action',
+        width: 50,
+        render: (_, __, idx) => formItems.length > 1 ? (
+          <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveLine(idx)} />
+        ) : null,
+      }
+    )
+
+    return baseCols
+  }
 
   return (
     <div style={{ padding: '24px 32px' }}>
@@ -577,7 +1329,7 @@ export default function QuotationList() {
         confirmLoading={submitting}
         okText="Lưu Báo Giá"
         cancelText="Hủy"
-        width={850}
+        width={1050}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Row gutter={16}>
@@ -611,116 +1363,91 @@ export default function QuotationList() {
               </Form.Item>
             </Col>
             <Col xs={24} md={6}>
-              <Form.Item name="installation_date" label="Ngày lắp đặt dự kiến">
+              <Form.Item name="installation_date" label="Ngày thi công / lắp đặt">
                 <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Divider style={{ margin: '12px 0' }}>Danh sách sản phẩm / dịch vụ</Divider>
+          <Divider style={{ margin: '12px 0' }}>
+            <Space>
+              <Text strong>Bảng Tính Chi Tiết Hạng Mục (Mẫu: {companyTemplate?.name || 'Tiêu chuẩn'})</Text>
+              <Tag color="blue">{formItems.length} dòng</Tag>
+            </Space>
+          </Divider>
 
-          {/* Dynamic products lines */}
-          {formItems.map((item, index) => (
-            <Card
-              key={item.key}
+          <div style={{ marginBottom: 16, border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
+            <Table
+              dataSource={formItems}
+              columns={getItemColumns()}
+              rowKey="key"
+              pagination={false}
               size="small"
-              style={{
-                marginBottom: 12,
-                background: token.colorFillAlter,
-                borderRadius: 8,
-                border: '1px solid rgba(0,0,0,0.06)',
-              }}
-            >
-              <Row gutter={12} align="middle">
-                <Col xs={24} sm={8}>
-                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Sản phẩm / Vật tư</Text>
-                  <Select
-                    showSearch
-                    placeholder="Chọn sản phẩm..."
-                    optionFilterProp="children"
-                    style={{ width: '100%' }}
-                    value={item.product || undefined}
-                    onChange={(val) => handleLineChange(index, 'product', val)}
-                  >
-                    {products.map((p) => (
-                      <Option key={p.id} value={p.id}>
-                        {p.name} ({p.unit || 'cái'})
-                      </Option>
-                    ))}
-                  </Select>
-                </Col>
-                <Col xs={12} sm={3}>
-                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Rộng (m)</Text>
-                  <InputNumber
-                    min={0}
-                    step={0.1}
-                    style={{ width: '100%' }}
-                    value={item.width}
-                    onChange={(val) => handleLineChange(index, 'width', val)}
-                  />
-                </Col>
-                <Col xs={12} sm={3}>
-                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Cao (m)</Text>
-                  <InputNumber
-                    min={0}
-                    step={0.1}
-                    style={{ width: '100%' }}
-                    value={item.height}
-                    onChange={(val) => handleLineChange(index, 'height', val)}
-                  />
-                </Col>
-                <Col xs={12} sm={3}>
-                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Số lượng</Text>
-                  <InputNumber
-                    min={1}
-                    style={{ width: '100%' }}
-                    value={item.quantity}
-                    onChange={(val) => handleLineChange(index, 'quantity', val)}
-                  />
-                </Col>
-                <Col xs={12} sm={4}>
-                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Đơn giá (đ)</Text>
-                  <InputNumber
-                    min={0}
-                    step={1000}
-                    style={{ width: '100%' }}
-                    value={item.unit_price}
-                    onChange={(val) => handleLineChange(index, 'unit_price', val)}
-                  />
-                </Col>
-                <Col xs={24} sm={3} style={{ textAlign: 'right', marginTop: 18 }}>
-                  {formItems.length > 1 && (
-                    <Button
-                      type="text"
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() => handleRemoveLine(index)}
-                    />
-                  )}
-                </Col>
-              </Row>
-            </Card>
-          ))}
+              scroll={{ x: 'max-content' }}
+            />
+          </div>
 
-          <Button type="dashed" onClick={handleAddLine} block icon={<PlusOutlined />} style={{ marginBottom: 16 }}>
-            Thêm dòng sản phẩm
+          <Button type="dashed" onClick={handleAddLine} block icon={<PlusOutlined />} style={{ marginBottom: 20 }}>
+            Thêm dòng sản phẩm / hạng mục mới
           </Button>
 
-          <Row gutter={16} justify="end">
-            <Col xs={24} md={8}>
-              <Form.Item name="discount_total" label="Tổng chiết khấu chung (VNĐ)">
-                <InputNumber
-                  min={0}
-                  step={10000}
-                  style={{ width: '100%' }}
-                  formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(val) => val.replace(/\$\s?|(,*)/g, '')}
-                />
+          <Card size="small" style={{ background: '#f8fafc', borderRadius: 8, marginBottom: 16 }}>
+            <Row gutter={16} align="bottom">
+              <Col xs={24} sm={6}>
+                <Form.Item name="shipping_fee" label="Phí vận chuyển (VNĐ)" style={{ marginBottom: 8 }}>
+                  <InputNumber min={0} step={50000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={6}>
+                <Form.Item name="installation_fee" label="Phí thi công / lắp đặt (VNĐ)" style={{ marginBottom: 8 }}>
+                  <InputNumber min={0} step={50000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={6}>
+                <Form.Item name="discount_total" label="Chiết khấu chung (VNĐ)" style={{ marginBottom: 8 }}>
+                  <InputNumber min={0} step={10000} style={{ width: '100%' }} formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(val) => val.replace(/\$\s?|(,*)/g, '')} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={6}>
+                <Form.Item shouldUpdate noStyle>
+                  {() => {
+                    const shipping = Number(form.getFieldValue('shipping_fee') || 0)
+                    const install = Number(form.getFieldValue('installation_fee') || 0)
+                    const discount = Number(form.getFieldValue('discount_total') || 0)
+                    const total = Math.max(0, calculateModalTotal() + shipping + install - discount)
+                    return (
+                      <div style={{ textAlign: 'right', paddingRight: 8, marginBottom: 8 }}>
+                        <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Tổng Thanh Toán Dự Kiến</Text>
+                        <Text strong style={{ fontSize: 20, color: '#e11d48' }}>
+                          {total.toLocaleString('vi-VN')} đ
+                        </Text>
+                      </div>
+                    )
+                  }}
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={8}>
+              <Form.Item name="delivery_time" label="Thời gian giao hàng / thi công">
+                <Input placeholder="3-5 ngày làm việc..." />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="validity_days" label="Hiệu lực báo giá (số ngày)">
+                <InputNumber min={1} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="payment_terms" label="Điều khoản thanh toán">
+                <Input placeholder="50% tạm ứng, 50% nghiệm thu..." />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item name="notes" label="Ghi chú & Điều khoản báo giá">
+          <Form.Item name="notes" label="Ghi chú & Điều khoản chung">
             <TextArea
               rows={3}
               placeholder="VD: Báo giá có hiệu lực trong vòng 15 ngày. Chưa bao gồm thuế VAT..."
@@ -731,46 +1458,206 @@ export default function QuotationList() {
 
       {/* ── Drawer View Quotation Details ──────────────────────────────── */}
       <Drawer
-        title={
-          <Space>
-            <PrinterOutlined style={{ color: '#2563eb' }} />
-            <Text strong>Chi tiết Báo Giá {selectedQuotation?.quotation_number}</Text>
-          </Space>
+        title={(() => {
+          const et = getEffectiveTemplate(selectedQuotation)
+          const isLandEt = et?.layout_config?.paper_orientation === 'landscape' || et?.code === 'production_landscape_a4'
+          return (
+            <Space>
+              <PrinterOutlined style={{ color: '#2563eb' }} />
+              <Text strong>Chi tiết Báo Giá {selectedQuotation?.quotation_number}</Text>
+              {isLandEt && <Tag color="purple">📐 Khổ Ngang A4</Tag>}
+              {selectedQuotation?.custom_data?.template_snapshot?.code && (
+                <Tag color="cyan" style={{ fontSize: 11 }}>🔒 {selectedQuotation.custom_data.template_snapshot.name}</Tag>
+              )}
+            </Space>
+          )
+        })()}
+        extra={
+          <Button
+            type="primary"
+            icon={<PrinterOutlined />}
+            style={{ background: '#1d4ed8', fontWeight: 600, padding: '0 20px' }}
+            onClick={handlePrintOrPDF}
+          >
+            In / Xuất PDF Báo Giá
+          </Button>
         }
-        width={650}
+        width={(() => {
+          const et = getEffectiveTemplate(selectedQuotation)
+          return (et?.layout_config?.paper_orientation === 'landscape' || et?.code === 'production_landscape_a4') ? 1080 : 920
+        })()}
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
       >
-        {selectedQuotation && (
-          <div>
-            <Card style={{ marginBottom: 20, background: token.colorFillAlter }}>
-              <Row gutter={[16, 16]}>
-                <Col span={12}>
-                  <Text type="secondary">Khách hàng:</Text>
-                  <Title level={5} style={{ margin: 0 }}>{selectedQuotation.customer_name}</Title>
+        {selectedQuotation && (() => {
+          // Use snapshot template frozen at creation time, fallback to current company template
+          const effectiveTemplate = getEffectiveTemplate(selectedQuotation)
+          const isLand = effectiveTemplate?.layout_config?.paper_orientation === 'landscape' || effectiveTemplate?.code === 'production_landscape_a4'
+          const themeColor = effectiveTemplate?.layout_config?.theme_color || '#1649c9'
+          return (
+          <div className="printable-quotation-content">
+            {/* ── Header: Bên trái Logo, Bên phải TT Công ty ───────────── */}
+            <div
+              style={{
+                marginBottom: 20,
+                padding: '20px 24px',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: 12,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+              }}
+            >
+              <Row justify="space-between" align="middle" gutter={24}>
+                {/* Cột trái: Logo */}
+                <Col xs={24} sm={8} style={{ textAlign: 'left' }}>
+                  {(selectedQuotation?.company_info?.logo || effectiveTemplate?.company_info?.logo) ? (
+                    <img
+                      src={selectedQuotation?.company_info?.logo || effectiveTemplate?.company_info?.logo}
+                      alt="Logo công ty"
+                      style={{ maxHeight: 75, maxWidth: '100%', objectFit: 'contain', borderRadius: 4 }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: 8,
+                        background: '#e0e7ff',
+                        color: '#3730a3',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: 18,
+                      }}
+                    >
+                      LOGO
+                    </div>
+                  )}
                 </Col>
-                <Col span={12}>
-                  <Text type="secondary">Mã báo giá:</Text>
-                  <Title level={5} style={{ margin: 0, color: '#2563eb' }}>
-                    {selectedQuotation.quotation_number}
+
+                {/* Cột phải: Thông tin công ty */}
+                <Col xs={24} sm={16} style={{ textAlign: 'right' }}>
+                  <Title level={4} style={{ margin: '0 0 4px 0', color: '#1e3a8a', fontWeight: 700 }}>
+                    {selectedQuotation?.company_info?.name || effectiveTemplate?.company_info?.name || 'TÊN CÔNG TY CỦA BẠN'}
                   </Title>
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">Ngày tạo:</Text>
-                  <div><Text strong>{dayjs(selectedQuotation.created_at).format('DD/MM/YYYY HH:mm')}</Text></div>
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">Trạng thái:</Text>
-                  <div>
-                    {(() => {
-                      const st = selectedQuotation.status
-                      const cfg = statusConfig[st] || { label: st, color: 'default' }
-                      return <Tag color={cfg.color}>{cfg.label}</Tag>
-                    })()}
+                  <div style={{ color: '#475569', fontSize: 13.5, lineHeight: '1.6' }}>
+                    <div><strong>MST:</strong> {selectedQuotation?.company_info?.tax_code || effectiveTemplate?.company_info?.tax_code || 'Chưa cập nhật'}</div>
+                    <div><strong>Địa chỉ:</strong> {selectedQuotation?.company_info?.address || effectiveTemplate?.company_info?.address || 'Chưa cập nhật'}</div>
+                    <div><strong>Hotline:</strong> {selectedQuotation?.company_info?.phone || effectiveTemplate?.company_info?.phone || 'Chưa cập nhật'}</div>
                   </div>
+                  {isCompanyAdmin && (
+                    <div style={{ marginTop: 8 }}>
+                      <Button
+                        size="small"
+                        type="dashed"
+                        icon={<SettingOutlined />}
+                        onClick={() => window.location.href = '/settings/general'}
+                      >
+                        ⚙️ Sửa thông tin & Logo
+                      </Button>
+                    </div>
+                  )}
                 </Col>
               </Row>
-            </Card>
+            </div>
+
+            {/* ── Tiêu đề Bảng Báo Giá (Căn giữa) ──────────────────────── */}
+            <div style={{ textAlign: 'center', margin: '24px 0 24px', padding: '0 16px' }}>
+              <Title level={2} style={{ margin: '0 0 8px 0', color: '#1649c9', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>
+                {effectiveTemplate?.layout_config?.custom_title || (isLand ? 'BÁO GIÁ SẢN XUẤT CỬA COMPOSITE' : 'Bảng Báo Giá Chi Tiết')}
+              </Title>
+              <div style={{ marginBottom: 12 }}>
+                <Space size={16} style={{ justifyContent: 'center', display: 'inline-flex', background: '#eff6ff', padding: '4px 16px', borderRadius: 20, border: '1px solid #bfdbfe' }}>
+                  <span style={{ color: '#1d4ed8', fontSize: 13.5 }}>Số báo giá: <strong>{selectedQuotation.quotation_number}</strong></span>
+                  <span style={{ color: '#cbd5e1' }}>|</span>
+                  <span style={{ color: '#334155', fontSize: 13.5 }}>Ngày báo giá: <strong>{dayjs(selectedQuotation.created_at).format('DD/MM/YYYY')}</strong></span>
+                </Space>
+              </div>
+              <div
+                style={{
+                  color: '#475569',
+                  fontSize: 14,
+                  fontStyle: 'italic',
+                  maxWidth: 680,
+                  margin: '0 auto',
+                  lineHeight: '1.6',
+                }}
+              >
+                Kính gửi Quý khách hàng, chúng tôi xin trân trọng gửi bảng báo giá các hạng mục sản phẩm / dịch vụ chi tiết dưới đây:
+              </div>
+            </div>
+
+            {/* ── Thông tin Khách hàng & Bên Bán ── */}
+            {isLand ? (
+              <Row gutter={16} style={{ marginBottom: 20 }}>
+                <Col xs={24} sm={12}>
+                  <Card size="small" style={{ background: '#f8fafc', borderColor: '#cbd5e1', borderRadius: 10, height: '100%' }}>
+                    <div style={{ fontWeight: 700, color: '#1e3a8a', fontSize: 13.5, marginBottom: 8, borderBottom: '1px solid #e2e8f0', paddingBottom: 4 }}>
+                      🏢 BÊN BÁN (BÊN B): {selectedQuotation?.company_info?.name || effectiveTemplate?.company_info?.name || 'CÔNG TY CỦA BẠN'}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#334155', lineHeight: '1.7' }}>
+                      <div><strong>Đại diện:</strong> Nguyễn Anh Tuấn • <strong>Chức vụ:</strong> Giám đốc</div>
+                      <div><strong>Mã số thuế:</strong> {selectedQuotation?.company_info?.tax_code || effectiveTemplate?.company_info?.tax_code || '0111100289'}</div>
+                      <div><strong>Điện thoại:</strong> {selectedQuotation?.company_info?.phone || effectiveTemplate?.company_info?.phone || '0961442882'}</div>
+                      <div><strong>Địa chỉ:</strong> {selectedQuotation?.company_info?.address || effectiveTemplate?.company_info?.address || 'Hà Đông, Hà Nội'}</div>
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Card size="small" style={{ background: '#eff6ff', borderColor: '#bfdbfe', borderRadius: 10, height: '100%' }}>
+                    <div style={{ fontWeight: 700, color: '#1d4ed8', fontSize: 13.5, marginBottom: 8, borderBottom: '1px solid #bfdbfe', paddingBottom: 4 }}>
+                      👤 BÊN MUA (BÊN A): {selectedQuotation.customer_name || 'Khách hàng lẻ'}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#334155', lineHeight: '1.7' }}>
+                      <div><strong>Khách hàng:</strong> {selectedQuotation.customer_name || 'Khách hàng lẻ'}</div>
+                      <div><strong>Số điện thoại:</strong> <Text strong>{selectedQuotation.customer_phone || '—'}</Text></div>
+                      <div><strong>Email / MST:</strong> {selectedQuotation.customer_email || '—'}</div>
+                      <div><strong>Địa chỉ:</strong> {selectedQuotation.customer_address || selectedQuotation.customer_city || '—'}</div>
+                      <div>
+                        <strong>Ngày lắp đặt dự kiến:</strong>{' '}
+                        <strong style={{ color: '#2563eb' }}>
+                          {selectedQuotation.installation_date ? dayjs(selectedQuotation.installation_date).format('DD/MM/YYYY') : 'Chưa xác định'}
+                        </strong>
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+              </Row>
+            ) : (
+              <div
+                style={{
+                  marginBottom: 18,
+                  padding: '12px 18px',
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: 8,
+                }}
+              >
+                <div style={{ fontWeight: 700, color: '#1d4ed8', fontSize: 13.5, marginBottom: 8, borderBottom: '1px solid #dbeafe', paddingBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <span>👤 THÔNG TIN KHÁCH HÀNG / ĐỐI TÁC</span>
+                  {selectedQuotation.installation_date && (
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#2563eb' }}>
+                      📅 Ngày lắp đặt dự kiến: {dayjs(selectedQuotation.installation_date).format('DD/MM/YYYY')}
+                    </span>
+                  )}
+                </div>
+                <Row gutter={[20, 6]} style={{ fontSize: 13.5, color: '#1e293b', lineHeight: 1.7 }}>
+                  <Col xs={24} sm={12}>
+                    <strong>Khách hàng:</strong> <span style={{ fontWeight: 600, color: '#1e3a8a' }}>{selectedQuotation.customer_name || 'Khách hàng lẻ'}</span>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <strong>Điện thoại:</strong> <span style={{ fontWeight: 600 }}>{selectedQuotation.customer_phone || '—'}</span>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <strong>Địa chỉ:</strong> {selectedQuotation.customer_address || selectedQuotation.customer_city || '—'}
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <strong>Email:</strong> {selectedQuotation.customer_email || '—'}
+                  </Col>
+                </Row>
+              </div>
+            )}
 
             <Title level={5}>Danh sách hạng mục báo giá</Title>
             <Table
@@ -778,50 +1665,203 @@ export default function QuotationList() {
               rowKey="id"
               pagination={false}
               size="small"
-              columns={[
-                {
-                  title: 'Sản phẩm',
-                  dataIndex: 'product_name',
-                  key: 'product_name',
-                  render: (val) => <Text strong>{val}</Text>,
-                },
-                {
-                  title: 'KT (R x C)',
-                  key: 'dimensions',
-                  render: (_, r) => (
-                    <Text type="secondary">
-                      {r.width > 0 || r.height > 0 ? `${r.width}m x ${r.height}m` : '—'}
-                    </Text>
-                  ),
-                },
-                {
-                  title: 'SL',
-                  dataIndex: 'quantity',
-                  key: 'quantity',
-                  align: 'center',
-                },
-                {
-                  title: 'Đơn giá',
-                  dataIndex: 'unit_price',
-                  key: 'unit_price',
-                  align: 'right',
-                  render: (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`,
-                },
-                {
-                  title: 'Thành tiền',
-                  key: 'total',
-                  align: 'right',
-                  render: (_, r) => {
-                    const tot = r.quantity * r.unit_price * (1 - (r.discount_percent || 0) / 100)
-                    return <Text strong>{tot.toLocaleString('vi-VN')} đ</Text>
+              columns={
+                isLand ? [
+                  {
+                    title: 'STT',
+                    key: 'stt',
+                    width: 50,
+                    align: 'center',
+                    render: (_, __, idx) => {
+                      const rowSpan = computeRowSpan(selectedQuotation.items || [], idx, 'product')
+                      const sttNum = computeProductSTT(selectedQuotation.items || [], idx, 'product')
+                      return {
+                        children: <Text strong>{sttNum}</Text>,
+                        props: { rowSpan },
+                      }
+                    },
                   },
-                },
-              ]}
+                  {
+                    title: 'MẪU CỬA / SẢN PHẨM',
+                    key: 'product_info',
+                    width: 240,
+                    render: (_, r, idx) => {
+                      const prodObj = products.find((p) => p.id === r.product)
+                      const imgUrl = r.product_image || (prodObj ? (prodObj.image_url || prodObj.image) : null)
+                      const rowSpan = computeRowSpan(selectedQuotation.items || [], idx, 'product')
+                      return {
+                        children: (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '6px 4px', gap: 6, width: '100%' }}>
+                            {imgUrl ? (
+                              <img src={imgUrl} alt="prod" style={{ width: 68, height: 68, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1' }} />
+                            ) : null}
+                            <Text strong style={{ display: 'block', color: '#0f172a', fontSize: 13.5, textAlign: 'left', width: '100%', lineHeight: 1.3 }}>
+                              {r.product_name || (prodObj ? prodObj.name : '—')}
+                            </Text>
+                            {(r.spec || (prodObj && prodObj.description) || r.note) && (
+                              <div style={{ fontSize: 11.5, color: '#475569', textAlign: 'left', width: '100%', lineHeight: 1.4, marginTop: 2, fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+                                {r.spec || (prodObj && prodObj.description) || r.note}
+                              </div>
+                            )}
+                          </div>
+                        ),
+                        props: { rowSpan },
+                      }
+                    },
+                  },
+                  {
+                    title: 'KÍCH THƯỚC Ô CHỜ (mm)',
+                    children: [
+                      {
+                        title: 'Cao',
+                        dataIndex: 'height',
+                        width: 70,
+                        align: 'center',
+                        render: (v) => <Text>{v || 0}</Text>,
+                      },
+                      {
+                        title: 'Rộng',
+                        dataIndex: 'width',
+                        width: 70,
+                        align: 'center',
+                        render: (v) => <Text>{v || 0}</Text>,
+                      },
+                      {
+                        title: 'Dày',
+                        dataIndex: 'thickness',
+                        width: 70,
+                        align: 'center',
+                        render: (v, r) => <Text>{v || r.custom_data?.thickness || 0}</Text>,
+                      },
+                    ],
+                  },
+                  {
+                    title: 'KÝ HIỆU',
+                    key: 'symbol',
+                    width: 90,
+                    align: 'center',
+                    render: (_, r) => {
+                      const sym = r.custom_data?.symbol || r.symbol
+                      return sym ? <Tag color="blue" style={{ fontWeight: 600 }}>{sym}</Tag> : <Text type="secondary">—</Text>
+                    },
+                  },
+                  {
+                    title: 'GHI CHÚ KỸ THUẬT',
+                    dataIndex: 'note',
+                    key: 'note',
+                    width: 150,
+                    render: (val) => <Text style={{ fontSize: 12 }}>{val || '—'}</Text>,
+                  },
+                  {
+                    title: 'SL',
+                    dataIndex: 'quantity',
+                    key: 'quantity',
+                    align: 'center',
+                    width: 50,
+                  },
+                  {
+                    title: 'ĐVT',
+                    key: 'unit',
+                    align: 'center',
+                    width: 60,
+                    render: (_, r) => <Text>{r.unit || r.custom_data?.unit || 'bộ'}</Text>,
+                  },
+                  {
+                    title: 'ĐƠN GIÁ/BỘ',
+                    dataIndex: 'unit_price',
+                    key: 'unit_price',
+                    align: 'right',
+                    width: 120,
+                    render: (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`,
+                  },
+                  {
+                    title: 'TỔNG TIỀN',
+                    key: 'total',
+                    align: 'right',
+                    width: 130,
+                    render: (_, r) => {
+                      const tot = computeLineTotal(r)
+                      return <Text strong style={{ color: '#16a34a' }}>{tot.toLocaleString('vi-VN')} đ</Text>
+                    },
+                  },
+                ] : [
+                  {
+                    title: 'STT',
+                    key: 'stt',
+                    width: 42,
+                    align: 'center',
+                    render: (_, __, idx) => <Text strong style={{ color: themeColor }}>{idx + 1}</Text>,
+                  },
+                  {
+                    title: 'Sản phẩm / Hàng hoá',
+                    dataIndex: 'product_name',
+                    key: 'product_name',
+                    width: 240,
+                    render: (val) => <Text strong style={{ color: '#0f172a', lineHeight: 1.4 }}>{val}</Text>,
+                  },
+                  {
+                    title: 'Kích thước / Ghi chú',
+                    dataIndex: 'note',
+                    key: 'note',
+                    width: 175,
+                    render: (val) => val
+                      ? <Text style={{ fontSize: 12.5, whiteSpace: 'pre-wrap', color: '#334155', lineHeight: 1.4 }}>{val}</Text>
+                      : <Text type="secondary">—</Text>,
+                  },
+                  {
+                    title: 'ĐVT',
+                    key: 'unit',
+                    width: 55,
+                    align: 'center',
+                    render: (_, r) => <Text>{r.unit || r.custom_data?.unit || 'cái'}</Text>,
+                  },
+                  {
+                    title: 'SL',
+                    dataIndex: 'quantity',
+                    key: 'quantity',
+                    align: 'center',
+                    width: 48,
+                    render: (v) => <Text strong>{v || 1}</Text>,
+                  },
+                  {
+                    title: 'Đơn giá',
+                    dataIndex: 'unit_price',
+                    key: 'unit_price',
+                    align: 'right',
+                    width: 110,
+                    render: (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`,
+                  },
+                  {
+                    title: 'CK%',
+                    dataIndex: 'discount_percent',
+                    key: 'discount_percent',
+                    align: 'center',
+                    width: 50,
+                    render: (v) => v > 0 ? <Text type="warning">{v}%</Text> : <Text type="secondary">—</Text>,
+                  },
+                  {
+                    title: 'Thành tiền',
+                    key: 'total',
+                    align: 'right',
+                    width: 125,
+                    render: (_, r) => {
+                      const tot = computeLineTotal(r, effectiveTemplate)
+                      return <Text strong style={{ color: '#16a34a' }}>{tot.toLocaleString('vi-VN')} đ</Text>
+                    },
+                  },
+                ]
+              }
             />
 
             <Divider />
             <Row justify="end">
               <Col span={12} style={{ textAlign: 'right' }}>
+                {Number(selectedQuotation.shipping_fee || 0) > 0 && (
+                  <div><Text type="secondary">Phí vận chuyển:</Text> <Text strong>+{Number(selectedQuotation.shipping_fee).toLocaleString('vi-VN')} đ</Text></div>
+                )}
+                {Number(selectedQuotation.installation_fee || 0) > 0 && (
+                  <div><Text type="secondary">Phí thi công / lắp đặt:</Text> <Text strong>+{Number(selectedQuotation.installation_fee).toLocaleString('vi-VN')} đ</Text></div>
+                )}
                 <div><Text type="secondary">Chiết khấu chung:</Text> <Text strong>-{Number(selectedQuotation.discount_total || 0).toLocaleString('vi-VN')} đ</Text></div>
                 <div style={{ marginTop: 8 }}>
                   <Text type="secondary">TỔNG THANH TOÁN:</Text>{' '}
@@ -832,16 +1872,59 @@ export default function QuotationList() {
               </Col>
             </Row>
 
-            {selectedQuotation.notes && (
-              <Card size="small" style={{ marginTop: 24, background: '#fffbeb', borderColor: '#fef3c7' }}>
-                <Text strong style={{ color: '#d97706' }}>Ghi chú & Điều khoản:</Text>
-                <Paragraph style={{ margin: '4px 0 0', color: '#92400e' }}>
-                  {selectedQuotation.notes}
+            {(selectedQuotation.notes || effectiveTemplate?.company_default_terms || effectiveTemplate?.footer_content) && (
+              <Card size="small" style={{ marginTop: 24, background: '#f8fafc', borderColor: '#e2e8f0' }}>
+                <Text strong style={{ color: '#0f172a' }}>Ghi chú & Điều khoản thanh toán:</Text>
+                <Paragraph style={{ margin: '8px 0 0', color: '#334155', whiteSpace: 'pre-wrap' }}>
+                  {selectedQuotation.notes || effectiveTemplate?.company_default_terms || effectiveTemplate?.footer_content}
                 </Paragraph>
               </Card>
             )}
+
+            {/* Khối Chữ Ký & Con Dấu */}
+            <Row justify="space-between" className="signature-block" style={{ marginTop: 40, textAlign: 'center', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+              <Col span={10}>
+                <Text strong style={{ display: 'block', fontSize: 13, color: '#1e293b' }}>BÊN MUA / KHÁCH HÀNG</Text>
+                <Text type="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>(Ký, ghi rõ họ tên)</Text>
+                <div style={{ height: 130 }} />
+              </Col>
+              <Col span={10} style={{ position: 'relative' }}>
+                <Text strong style={{ display: 'block', fontSize: 13, color: '#1e293b' }}>
+                  {selectedQuotation?.company_info?.director_title || effectiveTemplate?.company_info?.director_title || 'ĐẠI DIỆN CÔNG TY'}
+                </Text>
+                <Text type="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>(Ký, đóng dấu)</Text>
+                <div style={{ height: 145, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', marginTop: 12 }}>
+                  {(() => {
+                    const stImg = selectedQuotation?.company_info?.stamp || selectedQuotation?.company_info?.stamp_image || effectiveTemplate?.company_info?.stamp || effectiveTemplate?.company_info?.stamp_image
+                    const sigImg = selectedQuotation?.company_info?.signature || selectedQuotation?.company_info?.director_signature || effectiveTemplate?.company_info?.signature || effectiveTemplate?.company_info?.director_signature
+                    return (
+                      <>
+                        {stImg && (
+                          <img
+                            src={stImg}
+                            alt="Stamp"
+                            style={{ height: 135, maxWidth: 165, position: 'absolute', opacity: 0.88, zIndex: 1, objectFit: 'contain' }}
+                          />
+                        )}
+                        {sigImg && (
+                          <img
+                            src={sigImg}
+                            alt="Signature"
+                            style={{ height: 115, maxWidth: 200, position: 'relative', zIndex: 2, objectFit: 'contain' }}
+                          />
+                        )}
+                      </>
+                    )
+                  })()}
+                </div>
+                <Text strong style={{ display: 'block', fontSize: 15, color: '#0f172a', marginTop: 8 }}>
+                  {selectedQuotation?.company_info?.director_name || effectiveTemplate?.company_info?.director_name || ''}
+                </Text>
+              </Col>
+            </Row>
           </div>
-        )}
+          )
+        })()}
       </Drawer>
     </div>
   )

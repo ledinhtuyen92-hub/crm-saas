@@ -187,7 +187,7 @@ export default function SystemUserManagement() {
     }
     try {
       await api.delete(`users/users/${deletingUser.id}/`)
-      messageApi.success(`Đã xoá tài khoản ${deletingUser.username} thành công.`)
+      messageApi.success(`Đã xoá tài khoản ${deletingUser.username} và tự động chuyển giao dữ liệu thành công.`)
       setDeletingUser(null)
       setDeleteConfirmText('')
       fetchData()
@@ -402,19 +402,30 @@ export default function SystemUserManagement() {
         <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false} style={{ marginTop: 24 }}>
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item
-                name="company_id"
-                label="Thuộc Công ty (Workspace)"
-                rules={[{ required: true, message: 'Vui lòng chọn công ty' }]}
-              >
-                <Select
-                  size="large"
-                  placeholder="Chọn công ty"
-                  onChange={handleCompanyChange}
-                  options={companies.map(c => ({ value: c.id, label: c.name }))}
-                  disabled={!!editingUser}
-                />
-              </Form.Item>
+              {editingUser?.is_superuser ? (
+                <Form.Item label="Thuộc Công ty (Workspace)">
+                  <Input
+                    size="large"
+                    disabled
+                    value="🛡️ Hệ thống Quản trị SaaS (Không thuộc doanh nghiệp nào)"
+                    style={{ color: '#1649c9', fontWeight: 600, backgroundColor: '#f0f5ff' }}
+                  />
+                </Form.Item>
+              ) : (
+                <Form.Item
+                  name="company_id"
+                  label="Thuộc Công ty (Workspace)"
+                  rules={[{ required: true, message: 'Vui lòng chọn công ty' }]}
+                >
+                  <Select
+                    size="large"
+                    placeholder="Chọn công ty"
+                    onChange={handleCompanyChange}
+                    options={companies.map(c => ({ value: c.id, label: c.name }))}
+                    disabled={!!editingUser}
+                  />
+                </Form.Item>
+              )}
             </Col>
             <Col span={12}>
               <Form.Item
@@ -458,14 +469,25 @@ export default function SystemUserManagement() {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="role" label="Vai trò / Chức danh">
-                <Select
-                  size="large"
-                  placeholder="Chọn vai trò"
-                  allowClear
-                  options={roles.map((r) => ({ value: r.id, label: r.name }))}
-                />
-              </Form.Item>
+              {editingUser?.is_superuser ? (
+                <Form.Item label="Vai trò / Chức danh">
+                  <Input
+                    size="large"
+                    disabled
+                    value="Superuser (Toàn quyền hệ thống)"
+                    style={{ color: '#52c41a', fontWeight: 600, backgroundColor: '#f6ffed' }}
+                  />
+                </Form.Item>
+              ) : (
+                <Form.Item name="role" label="Vai trò / Chức danh">
+                  <Select
+                    size="large"
+                    placeholder="Chọn vai trò"
+                    allowClear
+                    options={roles.map((r) => ({ value: r.id, label: r.name }))}
+                  />
+                </Form.Item>
+              )}
             </Col>
           </Row>
 
@@ -518,8 +540,10 @@ export default function SystemUserManagement() {
         okButtonProps={{ danger: true, disabled: deleteConfirmText !== deletingUser?.username }}
       >
         <div style={{ marginBottom: 16 }}>
-          Hành động này <strong>không thể hoàn tác</strong>. Dữ liệu liên quan có thể bị mất.
-          <br />
+          Hành động này <strong>không thể hoàn tác</strong>.
+          <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', padding: '8px 12px', borderRadius: 6, margin: '10px 0', color: '#d46b08', fontSize: 13 }}>
+            ℹ️ <strong>Lưu ý:</strong> Toàn bộ dữ liệu (Đơn hàng, Báo giá, Lịch sử chăm sóc, v.v.) sẽ được <strong>tự động chuyển giao cho Admin công ty</strong>. Riêng Khách hàng do nhân viên này phụ trách sẽ được chuyển thành <strong>"Chưa có nhân viên phụ trách"</strong> để thuận tiện phân bổ lại.
+          </div>
           Vui lòng nhập tên đăng nhập <Text strong type="danger">{deletingUser?.username}</Text> để xác nhận:
         </div>
         <Input

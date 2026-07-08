@@ -17,6 +17,7 @@ from .views import (
     SubscriptionPlanViewSet,
     UserQuotaView,
     UserViewSet,
+    MyCompanyView,
 )
 
 router = DefaultRouter()
@@ -38,6 +39,7 @@ urlpatterns = [
     # Profile & Settings
     path("me/", CurrentUserView.as_view(), name="current-user"),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
+    path("my-company/", MyCompanyView.as_view(), name="my-company"),
     path("company-settings/", CompanySettingsView.as_view(), name="company-settings"),
     path("system-settings/", SystemSettingsView.as_view(), name="system-settings"),
     path("quota/", UserQuotaView.as_view(), name="user-quota"),

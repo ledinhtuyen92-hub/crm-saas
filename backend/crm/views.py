@@ -48,7 +48,7 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         "partial_update": "crm.edit",
         "destroy": "crm.delete",
         "assign": "crm.assign",
-        "round_robin_assign": "crm.assign",
+        "round_robin_assign": "crm.auto_assign",
         "import_excel": "crm.import",
     }
 
@@ -139,9 +139,9 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         Phân bổ tự động khách hàng chưa có nhân viên theo Round-robin.
         Chỉ Company Admin mới gọi được.
         """
-        if not request.user.is_company_admin:
+        if not request.user.is_company_admin and not request.user.has_perm_code("crm.auto_assign"):
             return Response(
-                {"detail": "Chỉ Quản lý mới có thể thực hiện Round-robin."},
+                {"detail": "Bạn không có quyền thực hiện Phân bổ khách hàng tự động."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 

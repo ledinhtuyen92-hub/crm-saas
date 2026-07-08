@@ -53,7 +53,7 @@ const statusConfig = {
 
 export default function OrderList() {
   const { token } = theme.useToken()
-  const { isCompanyAdmin, hasPermission } = useAuth()
+  const { isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
 
   // Data states
@@ -108,8 +108,8 @@ export default function OrderList() {
     await Promise.resolve()
     try {
       const [custRes, prodRes] = await Promise.all([
-        api.get('/crm/customers/'),
-        api.get('/inventory/products/'),
+        api.get('/crm/customers/').catch(() => ({ data: [] })),
+        api.get('/inventory/products/').catch(() => ({ data: [] })),
       ])
       const custData = Array.isArray(custRes.data) ? custRes.data : custRes.data?.results ?? []
       const prodData = Array.isArray(prodRes.data) ? prodRes.data : prodRes.data?.results ?? []
@@ -194,6 +194,7 @@ export default function OrderList() {
 
   // ── Open Modal ────────────────────────────────────────────────────────
   const openModal = (order = null) => {
+    if (checkMaintenance()) return
     setEditingOrder(order)
     if (order) {
       form.setFieldsValue({
@@ -300,6 +301,7 @@ export default function OrderList() {
 
   // ── Delete Order ──────────────────────────────────────────────────────
   const handleDelete = async (id) => {
+    if (checkMaintenance()) return
     try {
       await api.delete(`/orders/orders/${id}/`)
       messageApi.success('Đã xoá đơn hàng.')
@@ -311,6 +313,7 @@ export default function OrderList() {
 
   // ── Approve & Reject Order ────────────────────────────────────────────
   const handleApprove = async (id) => {
+    if (checkMaintenance()) return
     try {
       await api.post(`/orders/orders/${id}/approve/`)
       messageApi.success('✅ Đã duyệt đơn hàng! Hệ thống đã tự động xuất kho & tạo lệnh sản xuất.')
@@ -322,6 +325,7 @@ export default function OrderList() {
   }
 
   const handleReject = async (id) => {
+    if (checkMaintenance()) return
     try {
       await api.post(`/orders/orders/${id}/reject/`)
       messageApi.warning('Đã từ chối đơn hàng.')

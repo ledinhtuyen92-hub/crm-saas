@@ -63,6 +63,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'users.middleware.FileUploadLimitMiddleware',
+    'users.middleware.MaintenanceModeMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -163,6 +164,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
         'users.permissions.IsActiveUserAndCompany',
+        'users.permissions.CheckDataMaintenanceMode',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,

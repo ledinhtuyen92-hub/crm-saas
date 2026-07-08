@@ -14,6 +14,7 @@ PERMISSIONS = [
     {"code": "crm.edit", "name": "Chỉnh sửa thông tin khách hàng", "module": "crm"},
     {"code": "crm.delete", "name": "Xóa khách hàng", "module": "crm"},
     {"code": "crm.assign", "name": "Phân công / Gán khách hàng cho nhân viên", "module": "crm"},
+    {"code": "crm.auto_assign", "name": "Chia khách tự động (Round-robin)", "module": "crm"},
     {"code": "crm.import", "name": "Import khách hàng từ Excel", "module": "crm"},
     {"code": "crm.export", "name": "Xuất danh sách khách hàng", "module": "crm"},
     {"code": "crm.view_all", "name": "Xem tất cả khách hàng (không giới hạn bởi phân công)", "module": "crm"},
@@ -27,6 +28,7 @@ PERMISSIONS = [
     {"code": "sales.edit", "name": "Chỉnh sửa báo giá", "module": "sales"},
     {"code": "sales.delete", "name": "Xóa báo giá", "module": "sales"},
     {"code": "sales.export_pdf", "name": "Xuất PDF báo giá", "module": "sales"},
+    {"code": "sales.view_all", "name": "Xem tất cả báo giá (không giới hạn bởi phòng ban/người tạo)", "module": "sales"},
 
     # ── Orders (Đơn hàng) ─────────────────────────────────────────
     {"code": "orders.view", "name": "Xem danh sách đơn hàng", "module": "orders"},

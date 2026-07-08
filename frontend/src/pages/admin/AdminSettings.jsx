@@ -26,11 +26,13 @@ import {
 } from 'antd'
 import api from '../../utils/api'
 import SubscriptionPlanManager from './SubscriptionPlanManager'
+import { useAuth } from '../../contexts/AuthContext'
 
 const { Title, Text } = Typography
 
 export default function AdminSettings() {
   const { token } = theme.useToken()
+  const { refreshSettings } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
   const [loading, setLoading] = useState(false)
 
@@ -62,6 +64,7 @@ export default function AdminSettings() {
           tenant_isolation_mode: res.data.tenant_isolation_mode,
           jwt_expiration_hours: res.data.jwt_expiration_hours,
           max_file_upload_mb: res.data.max_file_upload_mb,
+          maintenance_mode: res.data.maintenance_mode,
         })
       } catch (err) {
         console.error("Failed to fetch system settings:", err)
@@ -81,7 +84,9 @@ export default function AdminSettings() {
         tenant_isolation_mode: values.tenant_isolation_mode,
         jwt_expiration_hours: values.jwt_expiration_hours,
         max_file_upload_mb: values.max_file_upload_mb,
+        maintenance_mode: values.maintenance_mode,
       })
+      if (refreshSettings) refreshSettings()
       messageApi.success('Đã lưu cấu hình hệ thống SaaS thành công!')
     } catch (err) {
       console.error(err)
@@ -169,6 +174,7 @@ export default function AdminSettings() {
           jwt_expiration_hours: 24,
           tenant_isolation_mode: 'strict',
           max_file_upload_mb: 25,
+          maintenance_mode: false,
         }}
       >
         <Row gutter={[20, 20]}>
@@ -296,6 +302,27 @@ export default function AdminSettings() {
                 valuePropName="checked"
               >
                 <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
+              </Form.Item>
+
+              <Divider />
+
+              <Form.Item
+                name="maintenance_mode"
+                label={
+                  <Space>
+                    <Text style={{ fontWeight: 700, color: '#dc2626', fontSize: 14 }}>
+                      🛑 Chế độ Bảo trì Hệ thống (Khóa thao tác thêm/sửa/xóa dữ liệu)
+                    </Text>
+                  </Space>
+                }
+                valuePropName="checked"
+                help="Khi bật, toàn bộ chức năng thêm, sửa, xóa dữ liệu trên hệ thống sẽ bị khóa để bảo trì kỹ thuật (trừ System Admin). Các tính năng xem, tra cứu và báo cáo vẫn hoạt động bình thường."
+              >
+                <Switch 
+                  checkedChildren="ĐANG BẢO TRÌ" 
+                  unCheckedChildren="Hoạt động bình thường" 
+                  style={{ backgroundColor: Form.useWatch('maintenance_mode', form) ? '#dc2626' : undefined }}
+                />
               </Form.Item>
             </Card>
 

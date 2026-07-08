@@ -52,7 +52,7 @@ const stepStatusConfig = {
 }
 
 export default function ProductionList() {
-  const { isCompanyAdmin, hasPermission } = useAuth()
+  const { isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
 
   // Data
@@ -134,6 +134,7 @@ export default function ProductionList() {
 
   // ── Open Modal (PO) ───────────────────────────────────────────────────
   const openModal = (po = null) => {
+    if (checkMaintenance()) return
     setEditingPO(po)
     if (po) {
       form.setFieldsValue({
@@ -182,6 +183,7 @@ export default function ProductionList() {
   }
 
   const handleDeletePO = async (id) => {
+    if (checkMaintenance()) return
     try {
       await api.delete(`/production/orders/${id}/`)
       messageApi.success('Đã xoá lệnh sản xuất.')
@@ -193,6 +195,7 @@ export default function ProductionList() {
 
   // ── Step Management ───────────────────────────────────────────────────
   const openStepModal = (step = null) => {
+    if (checkMaintenance()) return
     setEditingStep(step)
     if (step) {
       stepForm.setFieldsValue({
@@ -248,6 +251,7 @@ export default function ProductionList() {
   }
 
   const handleDeleteStep = async (stepId) => {
+    if (checkMaintenance()) return
     try {
       await api.delete(`/production/steps/${stepId}/`)
       messageApi.success('Đã xoá công đoạn.')
@@ -260,6 +264,7 @@ export default function ProductionList() {
   }
 
   const handleQuickStepStatus = async (step, newStatus) => {
+    if (checkMaintenance()) return
     try {
       const payload = { status: newStatus }
       if (newStatus === 'in_progress' && !step.started_at) {
