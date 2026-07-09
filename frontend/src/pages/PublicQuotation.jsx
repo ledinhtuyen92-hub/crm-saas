@@ -24,7 +24,11 @@ export default function PublicQuotation() {
       const res = await api.get(`/sales/public-quotations/${token}/`)
       setQuotation(res.data)
     } catch (err) {
-      setError('Báo giá không tồn tại hoặc link đã hết hạn.')
+      if (err.response?.status === 403) {
+        setError({ status: '403', title: 'Đã Hết Hạn', message: err.response.data?.detail || 'Báo giá này đã hết hạn truy cập (quá 24h). Vui lòng liên hệ lại nhân viên tư vấn để nhận link mới.' })
+      } else {
+        setError({ status: '404', title: 'Không tìm thấy', message: 'Báo giá không tồn tại hoặc link không hợp lệ.' })
+      }
     } finally {
       setLoading(false)
     }
@@ -102,7 +106,7 @@ export default function PublicQuotation() {
   if (error) {
     return (
       <div style={{ padding: 50 }}>
-        <Result status="404" title="Không tìm thấy" subTitle={error} />
+        <Result status={error.status} title={error.title} subTitle={error.message} />
       </div>
     )
   }

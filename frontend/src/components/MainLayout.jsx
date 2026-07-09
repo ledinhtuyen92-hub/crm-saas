@@ -87,11 +87,11 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           icon: <DashboardOutlined />,
           label: <Link to="/dashboard">Bảng điều khiển</Link>,
         }] : []),
-        {
+        ...(isModuleActive('approvals') ? [{
           key: '/approvals',
           icon: <CheckCircleOutlined />,
           label: <Link to="/approvals">Phê duyệt</Link>,
-        },
+        }] : []),
         ...(isModuleActive('crm') && hasPermission('crm.view') ? [{
           key: '/customers',
           icon: <TeamOutlined />,

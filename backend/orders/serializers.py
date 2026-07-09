@@ -21,6 +21,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "line_total"]
 
 
+from sales.serializers import get_company_info_dict
+
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
@@ -31,6 +33,7 @@ class OrderSerializer(serializers.ModelSerializer):
     financial_status_display = serializers.CharField(source="get_financial_status_display", read_only=True)
     paid_amount = serializers.FloatField(read_only=True)
     remaining_debt = serializers.FloatField(read_only=True)
+    company_info = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -61,11 +64,15 @@ class OrderSerializer(serializers.ModelSerializer):
             "items",
             "created_at",
             "updated_at",
+            "company_info",
         ]
         read_only_fields = [
             "id", "company", "order_number", "status_display", "financial_status_display",
             "paid_amount", "remaining_debt",
             "customer_name", "customer_phone",
             "created_by_name", "approved_by_name", "approved_at",
-            "items", "created_at", "updated_at",
+            "items", "created_at", "updated_at", "company_info",
         ]
+
+    def get_company_info(self, obj):
+        return get_company_info_dict(self, obj)

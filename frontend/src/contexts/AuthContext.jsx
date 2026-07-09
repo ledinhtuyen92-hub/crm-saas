@@ -61,14 +61,32 @@ export function AuthProvider({ children }) {
     navigate('/login')
   }, [navigate])
 
+  const activeModules = useMemo(() => user?.active_modules || [], [user])
+  const isModuleActive = useCallback(
+    (moduleCode) => {
+      if (user?.is_superuser && !user?.company_id) return true
+      return activeModules.includes(moduleCode)
+    },
+    [activeModules, user]
+  )
+
   // ── Kiểm tra quyền ─────────────────────────────────────────────────
   const hasPermission = useCallback(
     (permissionCode) => {
       if (!user) return false
+      
+      const moduleCode = permissionCode.split('.')[0]
+      const coreModules = ['dashboard', 'settings', 'notifications', 'reports']
+      
+      // Nếu không phải module cốt lõi, bắt buộc module đó phải đang được kích hoạt
+      if (!coreModules.includes(moduleCode) && !isModuleActive(moduleCode)) {
+        return false
+      }
+
       if (user.is_superuser || user.is_company_admin) return true
       return (user.permissions || []).includes(permissionCode)
     },
-    [user],
+    [user, isModuleActive],
   )
 
   const isSuperAdmin = user?.is_superuser === true
@@ -83,16 +101,6 @@ export function AuthProvider({ children }) {
     }
     return false // Không bị chặn
   }, [maintenanceMode, user])
-
-  const activeModules = useMemo(() => user?.active_modules || [], [user])
-  const isModuleActive = useCallback(
-    (moduleCode) => {
-      // Nếu là Superadmin mà chưa gán công ty thì được xem hết
-      if (user?.is_superuser && !user?.company_id) return true
-      return activeModules.includes(moduleCode)
-    },
-    [activeModules, user]
-  )
 
   const value = useMemo(
     () => ({

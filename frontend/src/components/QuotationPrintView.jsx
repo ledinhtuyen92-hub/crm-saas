@@ -52,11 +52,21 @@ const computeProductSTT = (data, index, field = 'product') => {
   return count
 }
 
-export default function QuotationPrintView({ quotation, effectiveTemplate, isCompanyAdmin, products = [], renderCustomerSignature }) {
+export default function QuotationPrintView({ quotation, type = 'quotation', effectiveTemplate, isCompanyAdmin, products = [], renderCustomerSignature }) {
   if (!quotation) return null
   
   const isLand = effectiveTemplate?.layout_config?.paper_orientation === 'landscape' || effectiveTemplate?.code === 'production_landscape_a4'
   const themeColor = effectiveTemplate?.layout_config?.theme_color || '#1649c9'
+
+  const docNumber = type === 'order' ? quotation.order_number : quotation.quotation_number;
+  const defaultTitle = type === 'order' ? 'ĐƠN HÀNG SẢN XUẤT' : (isLand ? 'BÁO GIÁ SẢN XUẤT CỬA COMPOSITE' : 'Bảng Báo Giá Chi Tiết');
+  
+  let docTitle = effectiveTemplate?.layout_config?.custom_title || defaultTitle;
+  if (type === 'quotation' && quotation?.company_info?.custom_quotation_title) {
+      docTitle = quotation.company_info.custom_quotation_title;
+  } else if (type === 'order' && quotation?.company_info?.custom_order_title) {
+      docTitle = quotation.company_info.custom_order_title;
+  }
 
   return (
     <div className="printable-quotation-content" style={{ fontFamily: effectiveTemplate?.layout_config?.font_family || 'Inter, sans-serif' }}>
@@ -126,13 +136,13 @@ export default function QuotationPrintView({ quotation, effectiveTemplate, isCom
 
       <div style={{ textAlign: 'center', margin: '24px 0 24px', padding: '0 16px' }}>
         <Title level={2} style={{ margin: '0 0 8px 0', color: '#1649c9', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>
-          {effectiveTemplate?.layout_config?.custom_title || (isLand ? 'BÁO GIÁ SẢN XUẤT CỬA COMPOSITE' : 'Bảng Báo Giá Chi Tiết')}
+          {docTitle}
         </Title>
         <div style={{ marginBottom: 12 }}>
           <Space size={16} style={{ justifyContent: 'center', display: 'inline-flex', background: '#eff6ff', padding: '4px 16px', borderRadius: 20, border: '1px solid #bfdbfe' }}>
-            <span style={{ color: '#1d4ed8', fontSize: 13.5 }}>Số báo giá: <strong>{quotation.quotation_number}</strong></span>
+            <span style={{ color: '#1d4ed8', fontSize: 13.5 }}>Số {type === 'order' ? 'đơn hàng' : 'báo giá'}: <strong>{docNumber}</strong></span>
             <span style={{ color: '#cbd5e1' }}>|</span>
-            <span style={{ color: '#334155', fontSize: 13.5 }}>Ngày báo giá: <strong>{dayjs(quotation.created_at).format('DD/MM/YYYY')}</strong></span>
+            <span style={{ color: '#334155', fontSize: 13.5 }}>Ngày {type === 'order' ? 'tạo' : 'báo giá'}: <strong>{dayjs(quotation.created_at).format('DD/MM/YYYY')}</strong></span>
           </Space>
         </div>
         <div
@@ -145,7 +155,7 @@ export default function QuotationPrintView({ quotation, effectiveTemplate, isCom
             lineHeight: '1.6',
           }}
         >
-          Kính gửi Quý khách hàng, chúng tôi xin trân trọng gửi bảng báo giá các hạng mục sản phẩm / dịch vụ chi tiết dưới đây:
+          Kính gửi Quý khách hàng, chúng tôi xin trân trọng gửi bảng {type === 'order' ? 'đơn hàng' : 'báo giá'} các hạng mục sản phẩm / dịch vụ chi tiết dưới đây:
         </div>
       </div>
 

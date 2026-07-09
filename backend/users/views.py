@@ -448,11 +448,21 @@ class UserViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
 class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
     """GET permissions — dùng để hiển thị danh sách quyền khi cấu hình vai trò."""
-
-    queryset = Permission.objects.all().order_by("module", "code")
     serializer_class = PermissionSerializer
     permission_classes = [IsCompanyAdmin]
     pagination_class = None
+
+    def get_queryset(self):
+        company = self.request.user.company
+        if not company:
+            return Permission.objects.none()
+            
+        # Core modules are always available for permission assignment
+        core_modules = ["dashboard", "reports", "settings", "notifications"]
+        active_modules = company.settings.active_modules if hasattr(company, "settings") else []
+        allowed_modules = core_modules + active_modules
+        
+        return Permission.objects.filter(module__in=allowed_modules).order_by("module", "code")
 
 
 # ─────────────────────────────────────────────
@@ -602,11 +612,11 @@ class UserQuotaView(APIView):
 # ─────────────────────────────────────────────
 
 from rest_framework.views import APIView
-from users.models import AVAILABLE_MODULES
+from users.models import get_available_modules
 
 class SystemModuleView(APIView):
     """GET list of available modules in the system"""
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        return Response(AVAILABLE_MODULES)
+        return Response(get_available_modules())

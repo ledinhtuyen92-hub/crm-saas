@@ -98,9 +98,9 @@ export default function Inventory() {
   const [submitting, setSubmitting] = useState(false)
 
   // Permissions
-  const canCreate = isCompanyAdmin || hasPermission('inventory.create')
-  const canEdit = isCompanyAdmin || hasPermission('inventory.edit')
-  const canDelete = isCompanyAdmin || hasPermission('inventory.delete')
+  const canCreate = hasPermission('inventory.create')
+  const canEdit = hasPermission('inventory.edit')
+  const canDelete = hasPermission('inventory.delete')
 
   // ── Fetch Data ────────────────────────────────────────────────────────
   const fetchProducts = useCallback(async () => {

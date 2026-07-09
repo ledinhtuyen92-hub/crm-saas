@@ -82,6 +82,8 @@ export default function CompanyGeneralSettings() {
         timezone: settingsRes.data.timezone || 'Asia/Ho_Chi_Minh',
         quotation_template: settingsRes.data.quotation_template || null,
         default_quotation_terms: settingsRes.data.default_quotation_terms || '',
+        custom_quotation_title: settingsRes.data.custom_quotation_title || '',
+        custom_order_title: settingsRes.data.custom_order_title || '',
       })
     } catch (err) {
       console.error('Failed to fetch company settings:', err)
@@ -395,6 +397,27 @@ export default function CompanyGeneralSettings() {
               placeholder="Nhập ghi chú, điều khoản thanh toán, bảo hành, số tài khoản ngân hàng của công ty bạn..."
             />
           </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="custom_quotation_title"
+                label="Tiêu đề mẫu in Báo Giá (Tùy chỉnh)"
+                help="Nếu để trống sẽ dùng mặc định (VD: BÁO GIÁ SẢN XUẤT)"
+              >
+                <Input placeholder="VD: BÁO GIÁ DỊCH VỤ, HỢP ĐỒNG NGUYÊN TẮC..." style={{ textTransform: 'uppercase' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="custom_order_title"
+                label="Tiêu đề mẫu in Đơn Hàng (Tùy chỉnh)"
+                help="Nếu để trống sẽ dùng mặc định (VD: ĐƠN HÀNG SẢN XUẤT)"
+              >
+                <Input placeholder="VD: HỢP ĐỒNG THI CÔNG, ĐƠN ĐẶT HÀNG..." style={{ textTransform: 'uppercase' }} />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Button type="primary" icon={<SaveOutlined />} htmlType="submit" loading={loading}>
             Lưu cài đặt nghiệp vụ

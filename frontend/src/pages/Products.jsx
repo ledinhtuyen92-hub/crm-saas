@@ -5,6 +5,7 @@ import {
   CloseCircleOutlined,
   DatabaseOutlined,
   DeleteOutlined,
+  DownloadOutlined,
   EditOutlined,
   HistoryOutlined,
   InboxOutlined,
@@ -37,7 +38,7 @@ import {
   message,
 } from 'antd'
 import dayjs from 'dayjs'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
 import ProductTemplateTab from './inventory/ProductTemplateTab'
@@ -49,6 +50,7 @@ const { TextArea } = Input
 export default function Products() {
   const { isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
+  const fileInputRef = useRef(null)
 
   const [activeTab, setActiveTab] = useState('products')
 
@@ -75,9 +77,9 @@ export default function Products() {
   const [submitting, setSubmitting] = useState(false)
 
   // Permissions
-  const canCreate = isCompanyAdmin || hasPermission('products.create')
-  const canEdit = isCompanyAdmin || hasPermission('products.edit')
-  const canDelete = isCompanyAdmin || hasPermission('products.delete')
+  const canCreate = hasPermission('products.create')
+  const canEdit = hasPermission('products.edit')
+  const canDelete = hasPermission('products.delete')
 
   // ── Fetch Data ────────────────────────────────────────────────────────
   const fetchProducts = useCallback(async () => {
@@ -243,9 +245,61 @@ export default function Products() {
     }
   }
 
+  // ── Import / Export CSV ───────────────────────────────────────────────
+  const handleExportCSV = async () => {
+    if (checkMaintenance()) return
+    try {
+      const res = await api.get('/inventory/products/export-csv/', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'products.xlsx')
+      document.body.appendChild(link)
+      link.click()
+      link.parentNode.removeChild(link)
+    } catch (error) {
+      messageApi.error('Lỗi khi xuất file Excel.')
+    }
+  }
 
+  const handleDownloadTemplate = async () => {
+    try {
+      const res = await api.get('/inventory/products/export-template/', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'mau_nhap_san_pham.xlsx')
+      document.body.appendChild(link)
+      link.click()
+      link.parentNode.removeChild(link)
+    } catch (error) {
+      messageApi.error('Lỗi khi tải file mẫu.')
+    }
+  }
 
-  // ── Columns for Products ──────────────────────────────────────────────
+  const handleImportCSV = async (e) => {
+    if (checkMaintenance()) return
+    const file = e.target.files[0]
+    if (!file) return
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      messageApi.loading({ content: 'Đang xử lý file...', key: 'importing' })
+      const res = await api.post('/inventory/products/import-csv/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      messageApi.success({ content: res.data.detail, key: 'importing' })
+      fetchProducts()
+      fetchCategories()
+    } catch (error) {
+      messageApi.error({ content: error.response?.data?.detail || 'Lỗi khi nhập file CSV.', key: 'importing' })
+    } finally {
+      e.target.value = ''
+    }
+  }
+
+  // ── Columns for Products Table ──────────────────────────────────────────────
   const productColumns = [
     {
       title: 'Mã SKU',
@@ -391,6 +445,26 @@ export default function Products() {
         </Col>
         <Col>
           <Space>
+            {activeTab === 'products' && (
+              <>
+                <input
+                  type="file"
+                  accept=".csv,.xlsx"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleImportCSV}
+                />
+                <Button type="dashed" icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
+                  Tải File Mẫu
+                </Button>
+                <Button icon={<UploadOutlined />} onClick={() => fileInputRef.current?.click()}>
+                  Nhập Excel/CSV
+                </Button>
+                <Button icon={<DownloadOutlined />} onClick={handleExportCSV}>
+                  Xuất Excel
+                </Button>
+              </>
+            )}
             {activeTab === 'products' && canCreate && (
               <Button
                 type="primary"

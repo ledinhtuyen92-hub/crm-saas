@@ -42,6 +42,8 @@ import {
   DeleteOutlined,
   PaperClipOutlined,
   FileAddOutlined,
+  FileTextOutlined,
+  FileDoneOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import api from '../utils/api'
@@ -58,6 +60,8 @@ const STATUS_MAP = {
   new: { label: 'Mới (Lead)', color: 'blue' },
   potential: { label: 'Tiềm năng', color: 'cyan' },
   active: { label: 'Đang giao dịch', color: 'green' },
+  has_order: { label: 'Đã có đơn hàng', color: 'purple' },
+  repeat_order: { label: 'Mua thêm đơn hàng', color: 'magenta' },
   lost: { label: 'Thất bại', color: 'red' },
   inactive: { label: 'Ngừng giao dịch', color: 'default' },
 }
@@ -236,6 +240,17 @@ function CustomerList() {
     navigate('/quotations', { state: { createForCustomer: record.id } })
   }
 
+  const handleViewQuotations = (record, e) => {
+    e?.stopPropagation()
+    // Truyền số điện thoại hoặc tên khách hàng qua query URL để tìm kiếm
+    navigate(`/quotations?search=${encodeURIComponent(record.phone || record.name)}`)
+  }
+
+  const handleViewOrders = (record, e) => {
+    e?.stopPropagation()
+    navigate(`/orders?search=${encodeURIComponent(record.phone || record.name)}`)
+  }
+
   const handleSaveCustomer = async (values) => {
     setSubmitting(true)
     try {
@@ -309,7 +324,7 @@ function CustomerList() {
       const url = window.URL.createObjectURL(new Blob([response.data]))
       const link = document.createElement('a')
       link.href = url
-      link.setAttribute('download', 'customers.csv')
+      link.setAttribute('download', 'customers.xlsx')
       document.body.appendChild(link)
       link.click()
       link.parentNode.removeChild(link)
@@ -344,16 +359,19 @@ function CustomerList() {
     }
   }
 
-  const handleDownloadTemplate = () => {
-    const csvContent = '\ufeffHọ và tên,Số điện thoại,Email,Địa chỉ,Tỉnh/Thành phố,Tags\nNguyễn Văn A,0901234567,nguyenvana@gmail.com,123 Lê Lợi,TP.HCM,VIP, Khách sỉ\nCông ty TNHH B,0987654321,,,,Khách mới'
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', 'mau_nhap_khach_hang.csv')
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await api.get('/crm/customers/export-template/', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'mau_nhap_khach_hang.xlsx')
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch {
+      message.error('Có lỗi xảy ra khi tải file mẫu.')
+    }
   }
 
   const handleRoundRobinAssign = () => {
@@ -565,7 +583,27 @@ function CustomerList() {
               onClick={(e) => handleCreateQuotationFromCustomer(record, e)}
             />
           </Tooltip>
-          {(isCompanyAdmin || hasPermission('crm.assign')) && (
+          {record.quotation_count > 0 && (
+            <Tooltip title={`Xem ${record.quotation_count} báo giá`}>
+              <Button
+                size="small"
+                icon={<FileTextOutlined />}
+                style={{ color: '#2563eb' }}
+                onClick={(e) => handleViewQuotations(record, e)}
+              />
+            </Tooltip>
+          )}
+          {record.order_count > 0 && (
+            <Tooltip title={`Xem ${record.order_count} đơn hàng`}>
+              <Button
+                size="small"
+                icon={<FileDoneOutlined />}
+                style={{ color: '#16a34a' }}
+                onClick={(e) => handleViewOrders(record, e)}
+              />
+            </Tooltip>
+          )}
+          {(hasPermission('crm.assign')) && (
             <Tooltip title="Phân công Sale">
               <Button
                 size="small"
@@ -574,12 +612,12 @@ function CustomerList() {
               />
             </Tooltip>
           )}
-          {(isCompanyAdmin || hasPermission('crm.edit')) && (
+          {(hasPermission('crm.edit')) && (
             <Button size="small" onClick={(e) => handleOpenEditModal(record, e)}>
               Sửa
             </Button>
           )}
-          {(isCompanyAdmin || hasPermission('crm.delete')) && (
+          {(hasPermission('crm.delete')) && (
             <Popconfirm
               title="Xóa khách hàng này?"
               onConfirm={(e) => handleDeleteCustomer(record.id, e)}
@@ -609,7 +647,7 @@ function CustomerList() {
         </div>
 
         <Space>
-          {(isCompanyAdmin || hasPermission('crm.auto_assign')) && (
+          {(hasPermission('crm.auto_assign')) && (
             <Tooltip title="Tự động chia đều khách hàng chưa phân công cho Sale">
               <Button
                 icon={<ReloadOutlined />}
@@ -620,7 +658,7 @@ function CustomerList() {
             </Tooltip>
           )}
 
-          {(isCompanyAdmin || hasPermission('crm.import')) && (
+          {(hasPermission('crm.import')) && (
             <Button
               icon={<ImportOutlined />}
               onClick={() => { if (!checkMaintenance()) setImportModalVisible(true) }}
@@ -629,7 +667,7 @@ function CustomerList() {
             </Button>
           )}
 
-          {(isCompanyAdmin || hasPermission('crm.export')) && (
+          {(hasPermission('crm.export')) && (
             <Button
               icon={<ExportOutlined />}
               onClick={handleExportCsv}
@@ -638,7 +676,7 @@ function CustomerList() {
             </Button>
           )}
 
-          {(isCompanyAdmin || hasPermission('crm.manage_tags')) && (
+          {(hasPermission('crm.manage_tags')) && (
             <Button
               icon={<TagsOutlined />}
               onClick={() => { if (!checkMaintenance()) setTagModalVisible(true) }}
@@ -647,7 +685,7 @@ function CustomerList() {
             </Button>
           )}
 
-          {(isCompanyAdmin || hasPermission('crm.create')) && (
+          {(hasPermission('crm.create')) && (
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -692,7 +730,7 @@ function CustomerList() {
               ))}
             </Select>
           </Col>
-          {(isCompanyAdmin || hasPermission('crm.assign') || hasPermission('crm.auto_assign') || hasPermission('crm.view_all')) && (
+          {(hasPermission('crm.assign') || hasPermission('crm.auto_assign') || hasPermission('crm.view_all')) && (
             <Col xs={24} sm={12} md={6} style={{ marginBottom: 8 }}>
               <Select
                 placeholder="Lọc theo Sale phụ trách"
@@ -712,7 +750,7 @@ function CustomerList() {
               </Select>
             </Col>
           )}
-          <Col xs={24} sm={12} md={(isCompanyAdmin || hasPermission('crm.assign') || hasPermission('crm.auto_assign') || hasPermission('crm.view_all')) ? 4 : 10} style={{ textAlign: 'right', marginBottom: 8 }}>
+          <Col xs={24} sm={12} md={(hasPermission('crm.assign') || hasPermission('crm.auto_assign') || hasPermission('crm.view_all')) ? 4 : 10} style={{ textAlign: 'right', marginBottom: 8 }}>
             <Button onClick={fetchCustomers} icon={<ReloadOutlined />}>
               Làm mới
             </Button>

@@ -53,12 +53,16 @@ class Customer(models.Model):
     STATUS_NEW = "new"
     STATUS_POTENTIAL = "potential"
     STATUS_ACTIVE = "active"
+    STATUS_HAS_ORDER = "has_order"
+    STATUS_REPEAT_ORDER = "repeat_order"
     STATUS_LOST = "lost"
     STATUS_INACTIVE = "inactive"
     STATUS_CHOICES = [
         (STATUS_NEW, "Khách mới"),
         (STATUS_POTENTIAL, "Tiềm năng"),
         (STATUS_ACTIVE, "Đang hoạt động"),
+        (STATUS_HAS_ORDER, "Đã có đơn hàng"),
+        (STATUS_REPEAT_ORDER, "Mua thêm đơn hàng"),
         (STATUS_LOST, "Đã mất"),
         (STATUS_INACTIVE, "Không hoạt động"),
     ]

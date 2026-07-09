@@ -35,8 +35,10 @@ import {
 } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
+import QuotationPrintView from '../components/QuotationPrintView'
 
 const { Title, Text, Paragraph } = Typography
 const { Option } = Select
@@ -55,12 +57,15 @@ export default function OrderList() {
   const { token } = theme.useToken()
   const { isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
+  const location = useLocation()
 
   // Data states
   const [orders, setOrders] = useState([])
   const [customers, setCustomers] = useState([])
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(false)
+  const [templates, setTemplates] = useState([])
+  const [companyTemplate, setCompanyTemplate] = useState(null)
 
   // Filters
   const [searchText, setSearchText] = useState('')
@@ -130,10 +135,10 @@ export default function OrderList() {
   }
 
   // Permissions
-  const canCreate = isCompanyAdmin || hasPermission('orders.create')
-  const canEdit = isCompanyAdmin || hasPermission('orders.edit')
-  const canDelete = isCompanyAdmin || hasPermission('orders.delete')
-  const canApprove = isCompanyAdmin || hasPermission('orders.approve')
+  const canCreate = hasPermission('orders.create')
+  const canEdit = hasPermission('orders.edit')
+  const canDelete = hasPermission('orders.delete')
+  const canApprove = hasPermission('orders.approve')
 
   // ── Fetch data ────────────────────────────────────────────────────────
   const fetchOrders = useCallback(async () => {
@@ -155,14 +160,18 @@ export default function OrderList() {
   const fetchCustomersAndProducts = useCallback(async () => {
     await Promise.resolve()
     try {
-      const [custRes, prodRes] = await Promise.all([
+      const [custRes, prodRes, tmplRes, myCompRes] = await Promise.all([
         api.get('/crm/customers/').catch(() => ({ data: [] })),
         api.get('/inventory/products/').catch(() => ({ data: [] })),
+        api.get('/sales/quotation-templates/active/').catch(() => ({ data: [] })),
+        api.get('/users/my-company/').catch(() => ({ data: null })),
       ])
       const custData = Array.isArray(custRes.data) ? custRes.data : custRes.data?.results ?? []
       const prodData = Array.isArray(prodRes.data) ? prodRes.data : prodRes.data?.results ?? []
       setCustomers(custData)
       setProducts(prodData)
+      setTemplates(tmplRes.data || [])
+      setCompanyTemplate(myCompRes.data?.settings || null)
     } catch {
       // ignore silently
     }
@@ -171,6 +180,112 @@ export default function OrderList() {
   useEffect(() => {
     fetchOrders()
   }, [fetchOrders])
+
+  const getEffectiveTemplate = (order) => {
+    if (order?.quotation?.effective_template_detail) return order.quotation.effective_template_detail
+    
+    // Fallback to company default template
+    const companyTemplateId = companyTemplate?.quotation_template || null
+    if (companyTemplateId) {
+      const found = templates.find((t) => t.id === companyTemplateId)
+      if (found) return found
+    }
+    const defaultSys = templates.find((t) => t.is_default)
+    return defaultSys || null
+  }
+
+  const handlePrintOrPDF = () => {
+    if (!selectedOrder) return
+    const contentEl = document.querySelector('.printable-quotation-content')
+    const dNum = selectedOrder.order_number || 'Don_Hang'
+
+    if (!contentEl) {
+      const oldTitle = document.title
+      document.title = dNum
+      window.print()
+      document.title = oldTitle
+      return
+    }
+
+    const effectiveTmpl = getEffectiveTemplate(selectedOrder)
+    const isLand = effectiveTmpl?.layout_config?.paper_orientation === 'landscape' || effectiveTmpl?.code === 'production_landscape_a4'
+
+    const styleTags = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map((el) => el.outerHTML)
+      .join('\n')
+
+    const printWin = window.open('', '_blank', 'width=1180,height=850')
+    if (!printWin) {
+      const oldTitle = document.title
+      document.title = dNum
+      window.print()
+      document.title = oldTitle
+      return
+    }
+
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${dNum}</title>
+        ${styleTags}
+        <style>
+          @media print {
+            body, html, .printable-quotation-content {
+              display: block !important;
+              visibility: visible !important;
+              opacity: 1 !important;
+            }
+          }
+          @page {
+            size: A4 ${isLand ? 'landscape' : 'portrait'};
+            margin: 8mm;
+          }
+          * { box-sizing: border-box; }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            font-family: Inter, ui-sans-serif, system-ui, Arial, sans-serif !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .printable-quotation-content {
+            width: ${isLand ? '1060px' : '730px'} !important;
+            max-width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+          }
+        </style>
+      </head>
+      <body>
+        ${contentEl.outerHTML}
+        <script>
+          setTimeout(() => {
+            window.print();
+            window.close();
+          }, 500);
+        </script>
+      </body>
+      </html>
+    `)
+    printWin.document.close()
+  }
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const searchQuery = params.get('search')
+    if (searchQuery) {
+      setSearchText(searchQuery)
+    }
+  }, [location.search])
 
   useEffect(() => {
     fetchCustomersAndProducts()
@@ -181,8 +296,9 @@ export default function OrderList() {
     if (!searchText) return true
     const oNum = (item.order_number || '').toLowerCase()
     const cName = (item.customer_name || '').toLowerCase()
+    const cPhone = (item.customer_phone || '').toLowerCase()
     const query = searchText.toLowerCase()
-    return oNum.includes(query) || cName.includes(query)
+    return oNum.includes(query) || cName.includes(query) || cPhone.includes(query)
   })
 
   // ── Stats ─────────────────────────────────────────────────────────────
@@ -667,6 +783,7 @@ export default function OrderList() {
           dataSource={filteredOrders}
           rowKey="id"
           loading={loading}
+          scroll={{ x: 'max-content' }}
           pagination={{
             pageSize: 10,
             showSizeChanger: false,
@@ -851,101 +968,29 @@ export default function OrderList() {
             <Text strong>Chi tiết Đơn Hàng {selectedOrder?.order_number}</Text>
           </Space>
         }
-        width={650}
+        width={(() => {
+          const et = getEffectiveTemplate(selectedOrder)
+          return (et?.layout_config?.paper_orientation === 'landscape' || et?.code === 'production_landscape_a4') ? 1080 : 920
+        })()}
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
+        extra={
+          <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrintOrPDF} style={{ background: '#10b981', borderColor: '#10b981' }}>
+            In Đơn Hàng
+          </Button>
+        }
       >
         {selectedOrder && (
           <div>
-            <Card style={{ marginBottom: 20, background: token.colorFillAlter }}>
-              <Row gutter={[16, 16]}>
-                <Col span={12}>
-                  <Text type="secondary">Khách hàng:</Text>
-                  <Title level={5} style={{ margin: 0 }}>{selectedOrder.customer_name}</Title>
-                  {selectedOrder.customer_phone && <Text type="secondary">{selectedOrder.customer_phone}</Text>}
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">Mã đơn hàng:</Text>
-                  <Title level={5} style={{ margin: 0, color: '#10b981' }}>
-                    {selectedOrder.order_number}
-                  </Title>
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">Ngày tạo:</Text>
-                  <div><Text strong>{dayjs(selectedOrder.created_at).format('DD/MM/YYYY HH:mm')}</Text></div>
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">Trạng thái:</Text>
-                  <div>
-                    {(() => {
-                      const st = selectedOrder.status
-                      const cfg = statusConfig[st] || { label: st, color: 'default' }
-                      return <Tag color={cfg.color}>{cfg.label}</Tag>
-                    })()}
-                  </div>
-                </Col>
-              </Row>
-            </Card>
-
-            <Title level={5}>Danh sách sản phẩm thi công</Title>
-            <Table
-              dataSource={selectedOrder.items || []}
-              rowKey="id"
-              pagination={false}
-              size="small"
-              columns={[
-                {
-                  title: 'Sản phẩm',
-                  dataIndex: 'product_name',
-                  key: 'product_name',
-                  render: (val) => <Text strong>{val}</Text>,
-                },
-                {
-                  title: 'KT (R x C)',
-                  key: 'dimensions',
-                  render: (_, r) => (
-                    <Text type="secondary">
-                      {r.width > 0 || r.height > 0 ? `${r.width}m x ${r.height}m` : '—'}
-                    </Text>
-                  ),
-                },
-                {
-                  title: 'SL',
-                  dataIndex: 'quantity',
-                  key: 'quantity',
-                  align: 'center',
-                },
-                {
-                  title: 'Đơn giá',
-                  dataIndex: 'unit_price',
-                  key: 'unit_price',
-                  align: 'right',
-                  render: (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`,
-                },
-                {
-                  title: 'Thành tiền',
-                  key: 'total',
-                  align: 'right',
-                  render: (_, r) => {
-                    const tot = r.quantity * r.unit_price * (1 - (r.discount_percent || 0) / 100)
-                    return <Text strong>{tot.toLocaleString('vi-VN')} đ</Text>
-                  },
-                },
-              ]}
-            />
-
-            <Divider />
-            <Row justify="end">
-              <Col span={12} style={{ textAlign: 'right' }}>
-                <div><Text type="secondary">Chiết khấu chung:</Text> <Text strong>-{Number(selectedOrder.discount_total || 0).toLocaleString('vi-VN')} đ</Text></div>
-                <div style={{ marginTop: 8 }}>
-                  <Text type="secondary">TỔNG THANH TOÁN:</Text>{' '}
-                  <Title level={4} style={{ display: 'inline', color: '#16a34a', margin: 0 }}>
-                    {Number(selectedOrder.total_amount || 0).toLocaleString('vi-VN')} đ
-                  </Title>
-                </div>
-              </Col>
-            </Row>
+            <div style={{ marginBottom: 24, border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, background: '#fff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
+              <QuotationPrintView
+                quotation={selectedOrder}
+                type="order"
+                effectiveTemplate={getEffectiveTemplate(selectedOrder)}
+                isCompanyAdmin={isCompanyAdmin}
+                products={products}
+              />
+            </div>
 
             <Card
               size="small"
@@ -982,7 +1027,7 @@ export default function OrderList() {
                   </Text>
                 </Col>
                 <Col>
-                  {(isCompanyAdmin || hasPermission('finance.create_receipt') || hasPermission('finance.view')) && selectedOrder.remaining_debt > 0 && (
+                  {(hasPermission('finance.create_receipt') || hasPermission('finance.view')) && selectedOrder.remaining_debt > 0 && (
                     <Button
                       type="primary"
                       style={{ background: '#10b981', borderColor: '#10b981', fontWeight: 600 }}

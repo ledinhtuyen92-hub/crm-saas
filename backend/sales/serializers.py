@@ -35,6 +35,12 @@ def get_company_info_dict(serializer_instance, obj):
         except Exception:
             signature_url = company.director_signature.url
 
+    custom_quotation_title = ""
+    custom_order_title = ""
+    if hasattr(company, "settings") and company.settings:
+        custom_quotation_title = company.settings.custom_quotation_title or ""
+        custom_order_title = company.settings.custom_order_title or ""
+
     return {
         "name": company.name,
         "tax_code": company.tax_code,
@@ -47,6 +53,8 @@ def get_company_info_dict(serializer_instance, obj):
         "director_signature": signature_url,
         "director_name": getattr(company, "director_name", "") or "",
         "director_title": getattr(company, "director_title", "") or "Giám đốc",
+        "custom_quotation_title": custom_quotation_title,
+        "custom_order_title": custom_order_title,
     }
 
 
@@ -156,6 +164,7 @@ class QuotationSerializer(serializers.ModelSerializer):
             "updated_at",
             "company_info",
             "public_token",
+            "public_link_expires_at",
             "signature_image",
             "signed_at",
             "customer_name_signed",
@@ -165,7 +174,7 @@ class QuotationSerializer(serializers.ModelSerializer):
             "id", "company", "quotation_number", "items", "status_display",
             "customer_name", "customer_phone", "customer_address", "customer_email", "customer_city",
             "created_by_name", "created_at", "updated_at", "company_info",
-            "public_token", "signature_image", "signed_at", "customer_name_signed", "order_status",
+            "public_token", "public_link_expires_at", "signature_image", "signed_at", "customer_name_signed", "order_status",
         ]
 
     def get_company_info(self, obj):

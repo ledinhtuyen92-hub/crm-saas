@@ -70,6 +70,11 @@ class Quotation(models.Model):
         unique=True,
         verbose_name="Token Public",
     )
+    public_link_expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Hết hạn Link Public",
+    )
     signature_image = models.TextField(
         blank=True,
         null=True,

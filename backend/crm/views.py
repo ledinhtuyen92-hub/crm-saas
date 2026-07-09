@@ -61,7 +61,7 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("crm.view_all"):
             managed_deps = user.managed_departments.all()
             if managed_deps.exists():
-                from django.db.models import Q
+                from django.db.models import Q, Count
                 qs = qs.filter(
                     Q(assigned_to=user) | 
                     Q(assigned_to__department__in=managed_deps)
@@ -81,6 +81,12 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         if search:
             from django.db.models import Q
             qs = qs.filter(Q(name__icontains=search) | Q(phone__icontains=search))
+            
+        from django.db.models import Count
+        qs = qs.annotate(
+            quotation_count=Count('quotations', distinct=True),
+            order_count=Count('orders', distinct=True)
+        )
         return qs
 
     def perform_create(self, serializer):
@@ -193,20 +199,17 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     def export_csv(self, request):
         """
         GET /api/crm/customers/export-csv/
-        Xuất danh sách khách hàng ra file CSV (dựa theo quyền xem của user).
+        Xuất danh sách khách hàng ra file Excel (.xlsx).
         """
-        import csv
+        import openpyxl
         from django.http import HttpResponse
 
-        # Sử dụng get_queryset đã phân quyền
         qs = self.get_queryset()
 
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="customers.csv"'
-        response.write('\ufeff'.encode('utf8')) # Thêm BOM để Excel đọc tiếng Việt đúng
-
-        writer = csv.writer(response)
-        writer.writerow([
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "KhachHang"
+        ws.append([
             'Họ và tên', 'Số điện thoại', 'Email', 'Địa chỉ', 'Tỉnh/Thành phố', 'Tags',
             'Nguồn khách', 'Trạng thái', 'Nhân viên phụ trách', 'Ngày tạo'
         ])
@@ -214,7 +217,7 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         for customer in qs:
             assigned = customer.assigned_to.full_name if customer.assigned_to else ''
             tags_str = ", ".join(t.name for t in customer.tags.all())
-            writer.writerow([
+            ws.append([
                 customer.name,
                 customer.phone,
                 customer.email,
@@ -224,9 +227,35 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 customer.get_source_display(),
                 customer.get_status_display(),
                 assigned,
-                customer.created_at.strftime('%Y-%m-%d %H:%M')
+                customer.created_at.strftime('%Y-%m-%d %H:%M') if customer.created_at else ''
             ])
 
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="customers.xlsx"'
+        wb.save(response)
+        return response
+
+    @action(detail=False, methods=["get"], url_path="export-template")
+    def export_template(self, request):
+        import openpyxl
+        from django.http import HttpResponse
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "KhachHang_Mau"
+        ws.append([
+            'Họ và tên', 'Số điện thoại', 'Email', 'Địa chỉ', 'Tỉnh/Thành phố', 'Tags'
+        ])
+        ws.append([
+            'Nguyễn Văn A', '0901234567', 'nguyenvana@gmail.com', '123 Lê Lợi', 'TP.HCM', 'VIP, Khách sỉ'
+        ])
+        ws.append([
+            'Công ty TNHH B', '0987654321', '', '', '', 'Khách mới'
+        ])
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="mau_nhap_khach_hang.xlsx"'
+        wb.save(response)
         return response
 
     @action(detail=False, methods=["post"], url_path="import-csv")
@@ -246,8 +275,8 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         if not file_obj:
             return Response({"detail": "Vui lòng chọn file CSV."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not file_obj.name.endswith('.csv'):
-            return Response({"detail": "Chỉ hỗ trợ định dạng .csv"}, status=status.HTTP_400_BAD_REQUEST)
+        if not (file_obj.name.endswith('.csv') or file_obj.name.endswith('.xlsx')):
+            return Response({"detail": "Chỉ hỗ trợ định dạng .csv hoặc .xlsx"}, status=status.HTTP_400_BAD_REQUEST)
 
         company = request.user.company
         created_count = 0
@@ -255,25 +284,45 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         errors = []
 
         try:
-            # Decode file về chuỗi string
-            decoded_file = file_obj.read().decode('utf-8-sig')
-            io_string = io.StringIO(decoded_file)
-            reader = csv.reader(io_string)
-            headers = next(reader, None)
-
-            if not headers:
-                return Response({"detail": "File CSV trống."}, status=status.HTTP_400_BAD_REQUEST)
+            if file_obj.name.endswith('.xlsx'):
+                import openpyxl
+                wb = openpyxl.load_workbook(file_obj, data_only=True)
+                ws = wb.active
+                rows = list(ws.iter_rows(values_only=True))
+                if not rows or len(rows) < 2:
+                    return Response({"detail": "File trống."}, status=status.HTTP_400_BAD_REQUEST)
+                data_rows = rows[1:]
+                
+                def get_val(r, idx):
+                    if idx < len(r) and r[idx] is not None:
+                        return str(r[idx]).strip()
+                    return ""
+            else:
+                decoded_file = file_obj.read().decode('utf-8-sig')
+                io_string = io.StringIO(decoded_file)
+                reader = csv.reader(io_string)
+                headers = next(reader, None)
+                if headers and headers[0].startswith('sep='):
+                    headers = next(reader, None)
+                if not headers:
+                    return Response({"detail": "File trống."}, status=status.HTTP_400_BAD_REQUEST)
+                data_rows = list(reader)
+                
+                def get_val(r, idx):
+                    if idx < len(r):
+                        return str(r[idx]).strip()
+                    return ""
 
             # Dự kiến định dạng cột tối thiểu: Tên, SĐT. Tùy chọn: Email, Địa chỉ, Thành phố, Tags
-            for i, row in enumerate(reader):
+            for i, row in enumerate(data_rows):
                 if not row or not any(row): continue
                 try:
-                    name = row[0].strip() if len(row) > 0 else ""
-                    phone = row[1].strip() if len(row) > 1 else ""
-                    email = row[2].strip() if len(row) > 2 else ""
-                    address = row[3].strip() if len(row) > 3 else ""
-                    city = row[4].strip() if len(row) > 4 else ""
-                    tags_str = row[5].strip() if len(row) > 5 else ""
+                    name = get_val(row, 0)
+                    phone = get_val(row, 1)
+                    email = get_val(row, 2)
+                    address = get_val(row, 3)
+                    city = get_val(row, 4)
+                    tags_str = get_val(row, 5)
 
                     if not name or not phone:
                         error_count += 1

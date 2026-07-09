@@ -52,6 +52,17 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         order_status = self.request.query_params.get("status")
         if order_status:
             qs = qs.filter(status=order_status)
+            
+        # Tìm kiếm theo tên khách, SĐT khách, mã đơn hàng
+        search = self.request.query_params.get("search")
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(order_number__icontains=search) | 
+                Q(customer__name__icontains=search) |
+                Q(customer__phone__icontains=search)
+            )
+            
         return qs
 
     def perform_create(self, serializer):
@@ -82,8 +93,10 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 step_order=1,
                 status=ApprovalStep.STATUS_PENDING,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            import traceback
+            with open("error_approval.txt", "w", encoding="utf-8") as f:
+                f.write(traceback.format_exc())
 
     @action(detail=True, methods=["post"], url_path="approve")
     def approve(self, request, pk=None):

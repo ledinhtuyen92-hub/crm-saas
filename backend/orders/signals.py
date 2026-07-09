@@ -161,6 +161,25 @@ def _handle_order_approved(order):
     except Exception as exc:
         logger.error("Failed to send approved notification for order %s: %s", order.order_number, exc)
 
+    # 5. Tự động chuyển trạng thái Khách hàng (Pipeline)
+    try:
+        from crm.models import Customer
+        customer = order.customer
+        approved_count = customer.orders.filter(status=order.STATUS_APPROVED).count()
+        
+        # Nếu có từ 2 đơn trở lên -> Khách hàng quay lại (Mua thêm)
+        if approved_count >= 2:
+            if customer.status != Customer.STATUS_REPEAT_ORDER:
+                customer.status = Customer.STATUS_REPEAT_ORDER
+                customer.save(update_fields=['status'])
+        # Nếu mới có 1 đơn -> Khách hàng mới chốt (Đã có đơn hàng)
+        elif approved_count == 1:
+            if customer.status != Customer.STATUS_HAS_ORDER:
+                customer.status = Customer.STATUS_HAS_ORDER
+                customer.save(update_fields=['status'])
+    except Exception as exc:
+        logger.error("Failed to update customer status pipeline for order %s: %s", order.order_number, exc)
+
 
 def check_and_trigger_mo_gate(order):
     """Cổng kiểm soát MO: Chỉ khởi tạo lệnh sản xuất khi đơn đã cọc hoặc thanh toán đủ hoặc được duyệt ngoại lệ."""

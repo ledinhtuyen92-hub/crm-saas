@@ -178,6 +178,175 @@ class ProductViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             qs = qs.filter(category_id=category_id)
         return qs
 
+    @action(detail=False, methods=["get"], url_path="export-csv")
+    def export_csv(self, request):
+        import openpyxl
+        from django.http import HttpResponse
+        qs = self.get_queryset()
+        
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "SanPham"
+        ws.append([
+            'Mã SP', 'Tên SP', 'Loại SP', 'Mô tả', 'Đơn vị tính', 'Giá bán', 'Giá nhập', 'Đang kinh doanh'
+        ])
+        
+        for p in qs:
+            ws.append([
+                p.sku,
+                p.name,
+                p.category.name if p.category else '',
+                p.description,
+                p.get_unit_display() if hasattr(p, 'get_unit_display') else p.unit,
+                p.price,
+                p.cost_price,
+                'Có' if p.is_active else 'Không'
+            ])
+            
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="products.xlsx"'
+        wb.save(response)
+        return response
+
+    @action(detail=False, methods=["get"], url_path="export-template")
+    def export_template(self, request):
+        import openpyxl
+        from django.http import HttpResponse
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "SanPham_Mau"
+        ws.append([
+            'Mã SP', 'Tên SP', 'Loại SP', 'Mô tả', 'Đơn vị tính', 'Giá bán', 'Giá nhập'
+        ])
+        ws.append([
+            'SP001', 'Cửa sổ trượt nhôm Xingfa', 'Cửa nhôm', 'Kính cường lực 8mm', 'm2', 1500000, 1200000
+        ])
+        ws.append([
+            'SP002', 'Bản lề 3D', 'Phụ kiện', 'Phụ kiện Kinlong', 'cái', 120000, 100000
+        ])
+        
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="mau_nhap_san_pham.xlsx"'
+        wb.save(response)
+        return response
+
+    @action(detail=False, methods=["post"], url_path="import-csv")
+    def import_csv(self, request):
+        import csv
+        import io
+        from rest_framework.parsers import MultiPartParser
+        
+        self.parser_classes = [MultiPartParser]
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response({"detail": "Vui lòng chọn file."}, status=status.HTTP_400_BAD_REQUEST)
+        if not (file_obj.name.endswith('.csv') or file_obj.name.endswith('.xlsx')):
+            return Response({"detail": "Chỉ hỗ trợ định dạng .csv hoặc .xlsx"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        company = request.user.company
+        created_count = 0
+        updated_count = 0
+        
+        try:
+            if file_obj.name.endswith('.xlsx'):
+                import openpyxl
+                wb = openpyxl.load_workbook(file_obj, data_only=True)
+                ws = wb.active
+                rows = list(ws.iter_rows(values_only=True))
+                if not rows or len(rows) < 2:
+                    return Response({"detail": "File trống."}, status=status.HTTP_400_BAD_REQUEST)
+                data_rows = rows[1:]
+                
+                def get_val(r, idx):
+                    if idx < len(r) and r[idx] is not None:
+                        return str(r[idx]).strip()
+                    return ""
+            else:
+                decoded_file = file_obj.read().decode('utf-8-sig')
+                io_string = io.StringIO(decoded_file)
+                reader = csv.reader(io_string)
+                headers = next(reader, None)
+                if headers and headers[0].startswith('sep='):
+                    headers = next(reader, None)
+                if not headers:
+                    return Response({"detail": "File trống."}, status=status.HTTP_400_BAD_REQUEST)
+                data_rows = list(reader)
+                
+                def get_val(r, idx):
+                    if idx < len(r):
+                        return str(r[idx]).strip()
+                    return ""
+                
+            for row in data_rows:
+                if not row or not any(row): continue
+                try:
+                    sku = get_val(row, 0)
+                    if not sku:
+                        continue
+                        
+                    name = get_val(row, 1)
+                    category_name = get_val(row, 2)
+                    description = get_val(row, 3)
+                    unit = get_val(row, 4).lower() if get_val(row, 4) else "cái"
+                    if unit == "mét": unit = "m"
+                    elif unit == "lít": unit = "lít"
+                    
+                    try:
+                        price_str = get_val(row, 5)
+                        price = float(price_str.replace(',', '')) if price_str else 0
+                    except ValueError:
+                        price = 0
+                        
+                    try:
+                        cost_str = get_val(row, 6)
+                        cost_price = float(cost_str.replace(',', '')) if cost_str else 0
+                    except ValueError:
+                        cost_price = 0
+                        
+                    is_active_str = row[7].strip().lower() if len(row) > 7 else "có"
+                    is_active = is_active_str not in ["không", "false", "0", "no"]
+                    
+                    category = None
+                    if category_name:
+                        category = ProductCategory.objects.filter(company=company, name__iexact=category_name).first()
+                        if not category:
+                            category = ProductCategory.objects.create(company=company, name=category_name)
+                            
+                    product = Product.objects.filter(company=company, sku=sku).first()
+                    if product:
+                        product.name = name or product.name
+                        product.category = category
+                        product.description = description
+                        product.unit = unit
+                        product.price = price
+                        product.cost_price = cost_price
+                        product.is_active = is_active
+                        product.save()
+                        updated_count += 1
+                    else:
+                        Product.objects.create(
+                            company=company,
+                            sku=sku,
+                            name=name,
+                            category=category,
+                            description=description,
+                            unit=unit,
+                            price=price,
+                            cost_price=cost_price,
+                            is_active=is_active
+                        )
+                        created_count += 1
+                except Exception as e:
+                    continue
+                    
+        except Exception as e:
+            return Response({"detail": f"Lỗi đọc file: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        return Response({
+            "detail": f"Nhập thành công. Thêm mới: {created_count}, Cập nhật: {updated_count} sản phẩm."
+        }, status=status.HTTP_200_OK)
+
 
 class WarehouseViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     """CRUD kho hàng — cô lập theo company."""

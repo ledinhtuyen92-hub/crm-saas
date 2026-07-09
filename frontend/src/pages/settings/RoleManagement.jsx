@@ -30,6 +30,20 @@ import { useAuth } from '../../contexts/AuthContext'
 
 const { Title, Text } = Typography
 
+const MODULE_ORDER = [
+  'dashboard',
+  'approvals',
+  'crm',
+  'sales',
+  'orders',
+  'finance',
+  'products',
+  'inventory',
+  'production',
+  'reports',
+  'settings',
+  'notifications'
+]
 export default function RoleManagement() {
   const { token } = theme.useToken()
   const { checkMaintenance } = useAuth()
@@ -319,7 +333,13 @@ export default function RoleManagement() {
 
           <Form.Item name="permissions">
             <Checkbox.Group style={{ width: '100%' }}>
-              {Object.entries(permissionsByModule).map(([module, perms]) => {
+              {Object.entries(permissionsByModule)
+                .sort(([modA], [modB]) => {
+                  const a = MODULE_ORDER.indexOf(modA)
+                  const b = MODULE_ORDER.indexOf(modB)
+                  return (a === -1 ? 999 : a) - (b === -1 ? 999 : b)
+                })
+                .map(([module, perms]) => {
                 const allCodes = perms.map((p) => p.id)
                 const currentValues = form.getFieldValue('permissions') || []
                 const allChecked = allCodes.every((id) => currentValues.includes(id))

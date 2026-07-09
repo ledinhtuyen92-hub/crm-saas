@@ -245,22 +245,19 @@ class User(AbstractUser):
     def __str__(self):
         return self.full_name or self.username
 
+from django.apps import apps
 
-AVAILABLE_MODULES = [
-    {"code": "dashboard", "name": "Dashboard"},
-    {"code": "crm", "name": "CRM (Khách hàng)"},
-    {"code": "sales", "name": "Bán hàng (Báo giá)"},
-    {"code": "orders", "name": "Đơn hàng"},
-    {"code": "products", "name": "Sản phẩm & Dịch vụ"},
-    {"code": "inventory", "name": "Kho vận"},
-    {"code": "production", "name": "Sản xuất"},
-    {"code": "reports", "name": "Báo cáo"},
-    {"code": "settings", "name": "Cài đặt"},
-    {"code": "notifications", "name": "Thông báo"},
-]
+def get_available_modules():
+    """Tự động scan các apps để lấy danh sách module được đăng ký."""
+    modules = []
+    for app_config in apps.get_app_configs():
+        if hasattr(app_config, 'crm_modules'):
+            modules.extend(app_config.crm_modules)
+    return modules
 
 def get_default_modules():
-    return ["crm", "sales", "orders", "products", "inventory", "production"]
+    return [m["code"] for m in get_available_modules()]
+
 
 class CompanySettings(models.Model):
     """Cấu hình nghiệp vụ của công ty — 1:1 với Company."""
@@ -313,6 +310,18 @@ class CompanySettings(models.Model):
         blank=True,
         default="",
         verbose_name="Ghi chú & Điều khoản báo giá mặc định",
+    )
+    custom_quotation_title = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Tiêu đề mẫu in Báo giá",
+    )
+    custom_order_title = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Tiêu đề mẫu in Đơn hàng",
     )
 
     class Meta:

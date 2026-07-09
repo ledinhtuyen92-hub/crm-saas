@@ -64,14 +64,24 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         if not self.check_object_permission(self.request.user, serializer.instance):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Bạn chỉ có quyền chỉnh sửa báo giá do mình tạo hoặc của nhân viên thuộc phòng ban do bạn quản lý.")
+            
         instance = serializer.instance
-        if instance.status in [Quotation.STATUS_ACCEPTED, 'pending_approval'] and not (self.request.user.is_superuser or self.request.user.is_company_admin):
+        old_status = instance.status
+        
+        if old_status == Quotation.STATUS_ACCEPTED and not (self.request.user.is_superuser or self.request.user.is_company_admin):
             from rest_framework.exceptions import ValidationError
-            raise ValidationError("Báo giá này đã được khách hàng ký chấp nhận (hoặc đang chờ duyệt), bạn không thể chỉnh sửa nữa.")
-        new_status = serializer.validated_data.get('status')
-        if new_status == Quotation.STATUS_ACCEPTED and not (self.request.user.is_superuser or self.request.user.is_company_admin):
+            raise ValidationError("Báo giá này đã được khách hàng ký chấp nhận, bạn không thể chỉnh sửa nữa.")
+            
+        new_status = serializer.validated_data.get('status', old_status)
+        
+        if new_status == Quotation.STATUS_ACCEPTED and old_status != Quotation.STATUS_ACCEPTED and not (self.request.user.is_superuser or self.request.user.is_company_admin):
             from rest_framework.exceptions import ValidationError
             raise ValidationError("Trạng thái 'Đã chấp nhận' tự động cập nhật khi khách ký qua link. Bạn không được tự chọn trạng thái này.")
+            
+        # Nếu sửa đổi báo giá đang ở trạng thái Chờ duyệt hoặc Đã duyệt -> Tự động đưa về Nháp
+        if old_status in [Quotation.STATUS_APPROVED, Quotation.STATUS_PENDING_APPROVAL]:
+            serializer.validated_data['status'] = Quotation.STATUS_DRAFT
+            
         serializer.save()
 
     def perform_destroy(self, instance):
@@ -136,6 +146,30 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                     quantity=item.quantity,
                     discount_percent=item.discount_percent,
                 )
+
+            # Khởi tạo yêu cầu phê duyệt cho Đơn hàng
+            try:
+                from approvals.models import ApprovalRequest, ApprovalStep
+                from django.contrib.contenttypes.models import ContentType
+                ct = ContentType.objects.get_for_model(order)
+                req = ApprovalRequest.objects.create(
+                    company=order.company,
+                    content_type=ct,
+                    object_id=order.id,
+                    requester=request.user,
+                    title=f"Phê duyệt Đơn hàng {order.order_number}",
+                    description=f"Đơn hàng {order.order_number} — Khách hàng: {order.customer.name if order.customer else 'Khách lẻ'}",
+                    status=ApprovalRequest.STATUS_PENDING,
+                )
+                ApprovalStep.objects.create(
+                    request=req,
+                    step_order=1,
+                    status=ApprovalStep.STATUS_PENDING,
+                )
+            except Exception as e:
+                import traceback
+                import logging
+                logging.error(f"Failed to create ApprovalRequest for order {order.id}: {e}")
 
         serializer = OrderSerializer(order)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -280,6 +314,21 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             pass
         return Response({"detail": "Đã từ chối báo giá."}, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=["post"], url_path="activate-link")
+    def activate_link(self, request, pk=None):
+        quotation = self.get_object()
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        quotation.public_link_expires_at = timezone.now() + timedelta(hours=24)
+        quotation.save(update_fields=["public_link_expires_at"])
+        
+        return Response({
+            "detail": "Link chia sẻ đã được kích hoạt/gia hạn 24 giờ.",
+            "public_token": quotation.public_token,
+            "public_link_expires_at": quotation.public_link_expires_at
+        }, status=status.HTTP_200_OK)
+
 
 class QuotationItemViewSet(viewsets.ModelViewSet):
     """CRUD dòng sản phẩm trong báo giá — filter qua quotation.company."""
@@ -363,6 +412,9 @@ class PublicQuotationView(APIView):
     def get(self, request, public_token):
         try:
             quotation = Quotation.objects.get(public_token=public_token)
+            if quotation.public_link_expires_at and quotation.public_link_expires_at < timezone.now():
+                return Response({"detail": "Báo giá này đã hết hạn truy cập."}, status=status.HTTP_403_FORBIDDEN)
+                
             # Dùng context request để serialize ra absolute URL ảnh
             serializer = QuotationSerializer(quotation, context={"request": request})
             return Response(serializer.data)
@@ -374,6 +426,9 @@ class PublicQuotationView(APIView):
             quotation = Quotation.objects.get(public_token=public_token)
         except Quotation.DoesNotExist:
             return Response({"detail": "Báo giá không tồn tại."}, status=status.HTTP_404_NOT_FOUND)
+
+        if quotation.public_link_expires_at and quotation.public_link_expires_at < timezone.now():
+            return Response({"detail": "Báo giá này đã hết hạn truy cập."}, status=status.HTTP_403_FORBIDDEN)
 
         if quotation.status == Quotation.STATUS_ACCEPTED:
             return Response({"detail": "Báo giá này đã được duyệt trước đó."}, status=status.HTTP_400_BAD_REQUEST)

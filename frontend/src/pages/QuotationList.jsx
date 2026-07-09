@@ -98,9 +98,9 @@ export default function QuotationList() {
   const [approvalForm] = Form.useForm()
 
   // Permissions
-  const canCreate = isCompanyAdmin || hasPermission('sales.create')
-  const canEdit = isCompanyAdmin || hasPermission('sales.edit')
-  const canDelete = isCompanyAdmin || hasPermission('sales.delete')
+  const canCreate = hasPermission('sales.create')
+  const canEdit = hasPermission('sales.edit')
+  const canDelete = hasPermission('sales.delete')
 
   // ── Fetch data ────────────────────────────────────────────────────────
   const fetchQuotations = useCallback(async () => {
@@ -149,6 +149,12 @@ export default function QuotationList() {
     const stateCustId = location.state?.createForCustomer
     const params = new URLSearchParams(location.search)
     const queryCustId = params.get('customerId')
+    const searchQuery = params.get('search')
+
+    if (searchQuery) {
+      setSearchText(searchQuery)
+    }
+
     const targetId = stateCustId || queryCustId
     if (targetId) {
       const numId = Number(targetId) || targetId
@@ -579,6 +585,30 @@ export default function QuotationList() {
     }
   }
 
+  // ── Copy Link & Activate Expiration ─────────────────────────────────────
+  const handleCopyLink = async (quotation, isExtending = false) => {
+    if (checkMaintenance()) return
+    const isExpired = quotation.public_link_expires_at && dayjs(quotation.public_link_expires_at).isBefore(dayjs())
+    const needsActivation = !quotation.public_link_expires_at || isExpired || isExtending
+    
+    try {
+      let expires_at = quotation.public_link_expires_at
+      if (needsActivation) {
+        const res = await api.post(`/sales/quotations/${quotation.id}/activate-link/`)
+        expires_at = res.data.public_link_expires_at
+        if (selectedQuotation && selectedQuotation.id === quotation.id) {
+          setSelectedQuotation({ ...selectedQuotation, public_link_expires_at: expires_at })
+        }
+        fetchQuotations() // Update list
+      }
+      const link = `${window.location.origin}/quote/${quotation.public_token}`
+      navigator.clipboard.writeText(link)
+      messageApi.success(needsActivation ? 'Đã copy link! Hệ thống bắt đầu đếm ngược 24h.' : 'Đã copy link gửi khách hàng!')
+    } catch (err) {
+      messageApi.error('Lỗi khi kích hoạt link chia sẻ.')
+    }
+  }
+
   // ── Print or Export Quotation to PDF (Clean Window with Exact Title) ────
   const handlePrintOrPDF = () => {
     if (!selectedQuotation) return
@@ -770,6 +800,22 @@ export default function QuotationList() {
     }
   }
 
+  const handleEditClick = (record) => {
+    if (record.status === 'approved' || record.status === 'pending_approval') {
+      Modal.confirm({
+        title: 'Cảnh báo sửa Báo giá',
+        content: 'Báo giá này đã được duyệt (hoặc đang chờ duyệt). Nếu bạn thay đổi dữ liệu, hệ thống sẽ tự động đưa báo giá về trạng thái "Nháp" và bạn phải trình duyệt lại. Bạn có chắc chắn muốn sửa không?',
+        okText: 'Sửa Báo Giá',
+        cancelText: 'Hủy',
+        onOk: () => {
+          openModal(record)
+        }
+      })
+    } else {
+      openModal(record)
+    }
+  }
+
   // ── Table Columns ─────────────────────────────────────────────────────
   const columns = [
     {
@@ -918,7 +964,7 @@ export default function QuotationList() {
               Trình duyệt
             </Button>
           ) : null}
-          {record.status === 'pending_approval' && (isCompanyAdmin || hasPermission('sales.approve') || hasPermission('approvals.approve')) && (
+          {record.status === 'pending_approval' && (hasPermission('sales.approve') || hasPermission('approvals.approve')) && (
             <Space size={4}>
               <Tooltip title="Duyệt báo giá">
                 <Button
@@ -944,11 +990,11 @@ export default function QuotationList() {
               </Tooltip>
             </Space>
           )}
-          {canEdit && record.status !== 'pending_approval' && (isCompanyAdmin || record.status !== 'accepted') && (
+          {canEdit && (isCompanyAdmin || record.status !== 'accepted') && (
             <Button
               type="text"
               icon={<EditOutlined style={{ color: '#d97706' }} />}
-              onClick={() => openModal(record)}
+              onClick={() => handleEditClick(record)}
             />
           )}
           {canDelete && record.status !== 'pending_approval' && (isCompanyAdmin || record.status !== 'accepted') && (
@@ -1640,33 +1686,66 @@ export default function QuotationList() {
         title={(() => {
           const et = getEffectiveTemplate(selectedQuotation)
           const isLandEt = et?.layout_config?.paper_orientation === 'landscape' || et?.code === 'production_landscape_a4'
+          const expiresAt = selectedQuotation?.public_link_expires_at
+          const isExpired = expiresAt && dayjs(expiresAt).isBefore(dayjs())
+          const hoursLeft = expiresAt && !isExpired ? dayjs(expiresAt).diff(dayjs(), 'hour') : 0
+          
           return (
-            <Space>
-              <PrinterOutlined style={{ color: '#2563eb' }} />
-              <Text strong>Chi tiết Báo Giá {selectedQuotation?.quotation_number}</Text>
-              {isLandEt && <Tag color="purple">📐 Khổ Ngang A4</Tag>}
-              {selectedQuotation?.custom_data?.template_snapshot?.code && (
-                <Tag color="cyan" style={{ fontSize: 11 }}>🔒 {selectedQuotation.custom_data.template_snapshot.name}</Tag>
+            <Space direction="vertical" size={0}>
+              <Space>
+                <PrinterOutlined style={{ color: '#2563eb' }} />
+                <Text strong>Chi tiết Báo Giá {selectedQuotation?.quotation_number}</Text>
+                {isLandEt && <Tag color="purple">📐 Khổ Ngang A4</Tag>}
+                {selectedQuotation?.custom_data?.template_snapshot?.code && (
+                  <Tag color="cyan" style={{ fontSize: 11 }}>🔒 {selectedQuotation.custom_data.template_snapshot.name}</Tag>
+                )}
+              </Space>
+              {expiresAt && (
+                <div style={{ marginTop: 4 }}>
+                  {isExpired ? (
+                    <Text type="danger" style={{ fontSize: 13, fontWeight: 600 }}>
+                      <CloseCircleOutlined /> Link gửi khách đã HẾT HẠN. Vui lòng bấm "Gia hạn" để khách có thể xem lại!
+                    </Text>
+                  ) : (
+                    <Text type={hoursLeft <= 6 ? 'danger' : 'warning'} style={{ fontSize: 13, fontWeight: 600 }}>
+                      <ClockCircleOutlined /> Link hết hạn lúc {dayjs(expiresAt).format('HH:mm DD/MM/YYYY')} (Còn {hoursLeft} tiếng) - Hãy gọi điện giục khách ký!
+                    </Text>
+                  )}
+                </div>
               )}
             </Space>
           )
         })()}
         extra={
           <Space>
-            {selectedQuotation?.public_token && selectedQuotation?.status !== 'pending_approval' && (
-              <Button
-                type="dashed"
-                icon={<SendOutlined />}
-                style={{ color: '#059669', borderColor: '#059669', fontWeight: 600 }}
-                onClick={() => {
-                  const link = `${window.location.origin}/quote/${selectedQuotation.public_token}`
-                  navigator.clipboard.writeText(link)
-                  message.success('Đã copy link! Gửi link này cho khách hàng.')
-                }}
-              >
-                Copy Link Gửi Khách
-              </Button>
-            )}
+            {selectedQuotation?.public_token && selectedQuotation?.status !== 'pending_approval' && (() => {
+              const expiresAt = selectedQuotation.public_link_expires_at
+              const isExpired = expiresAt && dayjs(expiresAt).isBefore(dayjs())
+              
+              if (isExpired) {
+                return (
+                  <Button
+                    type="primary"
+                    danger
+                    icon={<ClockCircleOutlined />}
+                    style={{ fontWeight: 600 }}
+                    onClick={() => handleCopyLink(selectedQuotation, true)}
+                  >
+                    Gia hạn Link 24h
+                  </Button>
+                )
+              }
+              return (
+                <Button
+                  type="dashed"
+                  icon={<SendOutlined />}
+                  style={{ color: '#059669', borderColor: '#059669', fontWeight: 600 }}
+                  onClick={() => handleCopyLink(selectedQuotation, false)}
+                >
+                  Copy Link Gửi Khách
+                </Button>
+              )
+            })()}
             <Button
               type="primary"
               icon={<PrinterOutlined />}

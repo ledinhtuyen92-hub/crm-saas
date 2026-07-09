@@ -79,9 +79,9 @@ export default function ProductionList() {
   const [stepForm] = Form.useForm()
 
   // Permissions
-  const canCreate = isCompanyAdmin || hasPermission('production.create')
-  const canEdit = isCompanyAdmin || hasPermission('production.edit')
-  const canDelete = isCompanyAdmin || hasPermission('production.delete')
+  const canCreate = hasPermission('production.create')
+  const canEdit = hasPermission('production.edit')
+  const canDelete = hasPermission('production.delete')
 
   // ── Fetch data ────────────────────────────────────────────────────────
   const fetchProductionOrders = useCallback(async () => {

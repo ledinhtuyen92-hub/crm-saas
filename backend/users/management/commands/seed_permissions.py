@@ -72,6 +72,17 @@ PERMISSIONS = [
     {"code": "settings.users", "name": "Quản lý tài khoản nhân viên", "module": "settings"},
     {"code": "settings.roles", "name": "Quản lý vai trò & phân quyền", "module": "settings"},
     {"code": "settings.company", "name": "Cài đặt thông tin công ty", "module": "settings"},
+
+    # ── Approvals (Phê duyệt) ─────────────────────────────────────
+    {"code": "approvals.view", "name": "Xem danh sách phê duyệt", "module": "approvals"},
+    {"code": "approvals.approve", "name": "Duyệt/Từ chối yêu cầu", "module": "approvals"},
+    {"code": "approvals.manage", "name": "Quản lý luồng phê duyệt", "module": "approvals"},
+
+    # ── Finance (Tài chính & Kế toán) ─────────────────────────────
+    {"code": "finance.view", "name": "Xem danh sách giao dịch tài chính", "module": "finance"},
+    {"code": "finance.create_receipt", "name": "Tạo giao dịch thu/chi mới", "module": "finance"},
+    {"code": "finance.edit", "name": "Chỉnh sửa giao dịch", "module": "finance"},
+    {"code": "finance.delete", "name": "Xóa giao dịch", "module": "finance"},
 ]
 
 

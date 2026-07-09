@@ -34,7 +34,7 @@ try:
     with codecs.open(sync_file, 'r', encoding='utf-16') as f:
         raw = f.read()
     print(f"✅ Đọc file thành công ({len(raw)} ký tự)")
-except UnicodeDecodeError:
+except (UnicodeDecodeError, UnicodeError):
     print("⚠️  UTF-16 thất bại, thử UTF-8...")
     with open(sync_file, 'r', encoding='utf-8') as f:
         raw = f.read()
