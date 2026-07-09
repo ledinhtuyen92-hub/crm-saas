@@ -175,6 +175,29 @@ class CompanyViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save()
 
+    def perform_destroy(self, instance):
+        # Khi xoá công ty, Django's collector có thể bị vướng ProtectedError 
+        # do các liên kết chéo (vd: Quotation -> Customer là PROTECT).
+        # Ta cần xoá thủ công các dữ liệu có Protected ForeignKey trước.
+        try:
+            from sales.models import Quotation
+            from orders.models import Order
+            from production.models import ProductionOrder
+            from inventory.models import InventoryTransaction, Product
+            from crm.models import CustomerInteraction, Customer
+            
+            CustomerInteraction.objects.filter(customer__company=instance).delete()
+            ProductionOrder.objects.filter(company=instance).delete()
+            Order.objects.filter(company=instance).delete()
+            Quotation.objects.filter(company=instance).delete()
+            InventoryTransaction.objects.filter(warehouse__company=instance).delete()
+            Product.objects.filter(company=instance).delete()
+            Customer.objects.filter(company=instance).delete()
+        except Exception as e:
+            pass # Cứ để instance.delete() catch phần còn lại
+            
+        instance.delete()
+
     @action(detail=True, methods=["post"])
     def recreate_admin(self, request, pk=None):
         from rest_framework.response import Response
@@ -312,16 +335,6 @@ class UserViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         if company_id:
             qs = qs.filter(company_id=company_id)
             
-        # Nếu không phải admin, giới hạn danh sách user trả về (ví dụ cho dropdown Phân công)
-        user = self.request.user
-        if not user.is_superuser and not user.is_company_admin:
-            managed_deps = user.managed_departments.all()
-            if managed_deps.exists():
-                from django.db.models import Q
-                qs = qs.filter(Q(id=user.id) | Q(department__in=managed_deps))
-            else:
-                qs = qs.filter(id=user.id)
-                
         return qs
 
     def perform_create(self, serializer):
@@ -584,3 +597,16 @@ class UserQuotaView(APIView):
         })
         return Response(serializer.data)
 
+# ─────────────────────────────────────────────
+# System Module View
+# ─────────────────────────────────────────────
+
+from rest_framework.views import APIView
+from users.models import AVAILABLE_MODULES
+
+class SystemModuleView(APIView):
+    """GET list of available modules in the system"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        return Response(AVAILABLE_MODULES)

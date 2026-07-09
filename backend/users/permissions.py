@@ -22,6 +22,40 @@ class IsActiveUserAndCompany(BasePermission):
         return True
 
 
+class IsModuleActivePermission(BasePermission):
+    """
+    Kiểm tra xem tính năng (module) của API này có được BẬT cho công ty của người dùng hay không.
+    View cần định nghĩa thuộc tính `module_code = "crm"` hoặc `module_code = "sales"`.
+    """
+    message = "Phân hệ này chưa được kích hoạt cho công ty của bạn. Vui lòng liên hệ quản trị viên."
+
+    def has_permission(self, request, view):
+        # Nếu view không định nghĩa module_code, bỏ qua kiểm tra
+        module_code = getattr(view, 'module_code', None)
+        if not module_code:
+            return True
+            
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+            
+        # Superadmin hệ thống không bị ràng buộc bởi module công ty nếu không thuộc công ty nào
+        if user.is_superuser and not user.company_id:
+            return True
+            
+        if not hasattr(user, 'company') or not user.company:
+            return False
+            
+        if not hasattr(user.company, 'settings'):
+            return False
+            
+        active_modules = user.company.settings.active_modules
+        if not isinstance(active_modules, list):
+            return False
+            
+        return module_code in active_modules
+
+
 class CheckDataMaintenanceMode(BasePermission):
     """
     Khi chế độ bảo trì dữ liệu (maintenance_mode) được bật,

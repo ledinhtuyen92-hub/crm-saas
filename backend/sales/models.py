@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 
 
@@ -5,11 +6,15 @@ class Quotation(models.Model):
     """Báo giá — được tạo từ profile khách hàng, có thể chuyển thành Đơn hàng."""
 
     STATUS_DRAFT = "draft"
+    STATUS_PENDING_APPROVAL = "pending_approval"
+    STATUS_APPROVED = "approved"
     STATUS_SENT = "sent"
     STATUS_ACCEPTED = "accepted"
     STATUS_REJECTED = "rejected"
     STATUS_CHOICES = [
         (STATUS_DRAFT, "Nháp"),
+        (STATUS_PENDING_APPROVAL, "Chờ duyệt"),
+        (STATUS_APPROVED, "Đã duyệt"),
         (STATUS_SENT, "Đã gửi"),
         (STATUS_ACCEPTED, "Đã chấp nhận"),
         (STATUS_REJECTED, "Đã từ chối"),
@@ -57,11 +62,45 @@ class Quotation(models.Model):
         default=0,
         verbose_name="Tổng chiết khấu",
     )
+    
+    # ── Fields cho Public Link & Ký duyệt ──
+    public_token = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        unique=True,
+        verbose_name="Token Public",
+    )
+    signature_image = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Chữ ký khách hàng (Base64)",
+    )
+    signed_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="Thời gian ký",
+    )
+    customer_name_signed = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Tên người ký",
+    )
     total_amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
         default=0,
         verbose_name="Tổng tiền",
+    )
+
+    order = models.OneToOneField(
+        "orders.Order",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="linked_quotation",
+        verbose_name="Đơn hàng liên kết",
+        help_text="Đơn hàng được sinh ra sau khi duyệt báo giá",
     )
     template = models.ForeignKey(
         "sales.QuotationTemplate",
@@ -124,6 +163,33 @@ class Quotation(models.Model):
 
     def __str__(self):
         return self.quotation_number
+
+    def clone(self):
+        """Tạo một bản sao của báo giá hiện tại (thường dùng khi tạo version mới)."""
+        new_q = Quotation.objects.get(pk=self.pk)
+        new_q.pk = None
+        new_q.quotation_number = f"{self.quotation_number}-COPY"
+        new_q.status = self.STATUS_DRAFT
+        new_q.save()
+
+        # Copy items
+        for item in self.items.all():
+            item.pk = None
+            item.quotation = new_q
+            item.save()
+
+        return new_q
+
+    def handle_approval_result(self, approval_status):
+        """
+        Được gọi tự động khi ApprovalRequest liên kết với Báo giá này thay đổi trạng thái.
+        """
+        if approval_status == "approved":
+            self.status = self.STATUS_APPROVED
+            self.save(update_fields=["status"])
+        elif approval_status == "rejected":
+            self.status = self.STATUS_DRAFT
+            self.save(update_fields=["status"])
 
 
 class QuotationItem(models.Model):

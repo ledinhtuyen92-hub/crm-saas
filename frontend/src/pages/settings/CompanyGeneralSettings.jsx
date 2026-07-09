@@ -348,11 +348,11 @@ export default function CompanyGeneralSettings() {
             <Col span={12}>
               <Form.Item
                 name="order_prefix"
-                label="Tiền tố mã đơn hàng (Order Prefix)"
+                label="Tiền tố mã chứng từ công ty (Prefix chung)"
                 rules={[{ required: true, message: 'Vui lòng nhập tiền tố' }]}
-                help="Ví dụ: 'DH' → Đơn hàng tạo ra sẽ có mã DH-20260706-0001"
+                help="Ví dụ: 'ABC' → Mã Đơn: ABC-DH-..., Báo Giá: ABC-BG-..., Xuất Kho: ABC-EXP-..., Phiếu Thu: ABC-PT-..."
               >
-                <Input placeholder="DH" maxLength={10} style={{ textTransform: 'uppercase' }} />
+                <Input placeholder="VD: ABC hoặc CTY1" maxLength={10} style={{ textTransform: 'uppercase' }} />
               </Form.Item>
             </Col>
             <Col span={12}>

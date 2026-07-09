@@ -81,6 +81,54 @@ export default function OrderList() {
   const [drawerVisible, setDrawerVisible] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState(null)
 
+  // Finance modal
+  const [receiptModalVisible, setReceiptModalVisible] = useState(false)
+  const [receiptSubmitting, setReceiptSubmitting] = useState(false)
+  const [receiptForm] = Form.useForm()
+
+  const openReceiptModal = () => {
+    if (checkMaintenance()) return
+    receiptForm.resetFields()
+    receiptForm.setFieldsValue({
+      amount: selectedOrder?.remaining_debt || selectedOrder?.total_amount || 0,
+      payment_method: 'transfer',
+      note: `Thanh toán cho Đơn hàng ${selectedOrder?.order_number}`,
+    })
+    setReceiptModalVisible(true)
+  }
+
+  const handleCreateReceipt = async (values) => {
+    setReceiptSubmitting(true)
+    try {
+      await api.post('/finance/receipts/', {
+        order: selectedOrder.id,
+        amount: values.amount,
+        payment_method: values.payment_method,
+        note: values.note,
+      })
+      messageApi.success('Lập phiếu thu thành công! Hệ thống đã tự động cập nhật cổng kiểm soát.')
+      setReceiptModalVisible(false)
+      fetchOrders()
+      const { data } = await api.get(`/orders/orders/${selectedOrder.id}/`)
+      setSelectedOrder(data)
+    } catch (err) {
+      messageApi.error('Lỗi khi lập phiếu thu!')
+    } finally {
+      setReceiptSubmitting(false)
+    }
+  }
+
+  const handleRequestCreditApproval = async (orderId) => {
+    if (checkMaintenance()) return
+    try {
+      await api.post(`/orders/orders/${orderId}/request_credit_approval/`)
+      messageApi.success('Đã gửi yêu cầu phê duyệt xuất kho nợ tới Giám đốc trong Approval Center!')
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Lỗi khi trình duyệt xuất kho nợ!'
+      messageApi.error(msg)
+    }
+  }
+
   // Permissions
   const canCreate = isCompanyAdmin || hasPermission('orders.create')
   const canEdit = isCompanyAdmin || hasPermission('orders.edit')
@@ -392,9 +440,18 @@ export default function OrderList() {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (st) => {
+      render: (st, r) => {
         const cfg = statusConfig[st] || { label: st, color: 'default' }
-        return <Tag color={cfg.color} icon={cfg.icon}>{cfg.label}</Tag>
+        return (
+          <Space direction="vertical" size={2}>
+            <Tag color={cfg.color} icon={cfg.icon}>{cfg.label}</Tag>
+            {r.financial_status && (
+              <Tag color={r.financial_status === 'fully_paid' ? 'success' : r.financial_status === 'deposit_paid' ? 'processing' : 'warning'} style={{ fontSize: 11 }}>
+                {r.financial_status_display || 'Chờ cọc'}
+              </Tag>
+            )}
+          </Space>
+        )
       },
     },
     {
@@ -890,8 +947,89 @@ export default function OrderList() {
               </Col>
             </Row>
 
+            <Card
+              size="small"
+              style={{
+                marginTop: 16,
+                background: '#f0fdf4',
+                borderColor: '#86efac',
+                borderRadius: 8,
+              }}
+            >
+              <Row justify="space-between" align="middle" gutter={[8, 8]}>
+                <Col>
+                  <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>
+                    TÌNH TRẠNG THANH TOÁN
+                  </Text>
+                  <Tag color={selectedOrder.financial_status === 'fully_paid' ? 'green' : selectedOrder.financial_status === 'deposit_paid' ? 'blue' : 'orange'} style={{ marginTop: 4, fontWeight: 600 }}>
+                    {selectedOrder.financial_status_display || 'Chờ cọc'}
+                  </Tag>
+                </Col>
+                <Col>
+                  <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>
+                    ĐÃ THU
+                  </Text>
+                  <Text strong style={{ color: '#16a34a', fontSize: 14 }}>
+                    {Number(selectedOrder.paid_amount || 0).toLocaleString('vi-VN')} đ
+                  </Text>
+                </Col>
+                <Col>
+                  <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>
+                    CÒN NỢ
+                  </Text>
+                  <Text strong style={{ color: selectedOrder.remaining_debt > 0 ? '#dc2626' : '#16a34a', fontSize: 14 }}>
+                    {Number(selectedOrder.remaining_debt || 0).toLocaleString('vi-VN')} đ
+                  </Text>
+                </Col>
+                <Col>
+                  {(isCompanyAdmin || hasPermission('finance.create_receipt') || hasPermission('finance.view')) && selectedOrder.remaining_debt > 0 && (
+                    <Button
+                      type="primary"
+                      style={{ background: '#10b981', borderColor: '#10b981', fontWeight: 600 }}
+                      onClick={openReceiptModal}
+                    >
+                      + Lập Phiếu Thu
+                    </Button>
+                  )}
+                </Col>
+              </Row>
+            </Card>
+
+            {/* CỔNG XUẤT KHO (DO GATE) */}
+            <Card
+              size="small"
+              style={{
+                marginTop: 12,
+                background: selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? '#f0fdf4' : '#fff1f2',
+                borderColor: selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? '#86efac' : '#fecdd3',
+                borderRadius: 8,
+              }}
+            >
+              <Row justify="space-between" align="middle" gutter={[8, 8]}>
+                <Col span={15}>
+                  <Text strong style={{ fontSize: 12, color: selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? '#16a34a' : '#e11d48' }}>
+                    {selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved'
+                      ? '🟢 CỔNG XUẤT KHO (DO GATE): ĐÃ MỞ (Đủ điều kiện xuất kho)'
+                      : '🔴 CỔNG XUẤT KHO (DO GATE): KHÓA (Chờ thanh toán đủ hoặc duyệt nợ)'}
+                  </Text>
+                </Col>
+                <Col span={9} style={{ textAlign: 'right' }}>
+                  {selectedOrder.financial_status !== 'fully_paid' && selectedOrder.financial_status !== 'credit_approved' && (
+                    <Button
+                      danger
+                      type="primary"
+                      size="small"
+                      onClick={() => handleRequestCreditApproval(selectedOrder.id)}
+                    >
+                      🛡️ Trình Duyệt Xuất Kho Nợ
+                    </Button>
+                  )}
+                </Col>
+              </Row>
+            </Card>
+
             {selectedOrder.notes && (
-              <Card size="small" style={{ marginTop: 24, background: '#fffbeb', borderColor: '#fef3c7' }}>
+              <Card size="small" style={{ marginTop: 16, background: '#fffbeb', borderColor: '#fef3c7' }}>
                 <Text strong style={{ color: '#d97706' }}>Ghi chú thi công:</Text>
                 <Paragraph style={{ margin: '4px 0 0', color: '#92400e' }}>
                   {selectedOrder.notes}
@@ -901,6 +1039,52 @@ export default function OrderList() {
           </div>
         )}
       </Drawer>
+
+      {/* ── Modal Lập Phiếu Thu Tiền ──────────────────────────────────── */}
+      <Modal
+        title={
+          <Space>
+            <Tag color="green">KẾ TOÁN</Tag>
+            <Text strong>Lập Phiếu Thu Tiền - {selectedOrder?.order_number}</Text>
+          </Space>
+        }
+        open={receiptModalVisible}
+        onCancel={() => setReceiptModalVisible(false)}
+        onOk={() => receiptForm.submit()}
+        confirmLoading={receiptSubmitting}
+        okText="Xác nhận thu tiền & Mở Cổng"
+        cancelText="Hủy"
+        okButtonProps={{ style: { background: '#10b981', borderColor: '#10b981' } }}
+      >
+        <Form form={receiptForm} layout="vertical" onFinish={handleCreateReceipt}>
+          <Form.Item
+            name="amount"
+            label="Số tiền thu (VNĐ)"
+            rules={[{ required: true, message: 'Vui lòng nhập số tiền thu' }]}
+          >
+            <InputNumber
+              min={1000}
+              style={{ width: '100%' }}
+              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
+            />
+          </Form.Item>
+          <Form.Item
+            name="payment_method"
+            label="Hình thức thanh toán"
+            rules={[{ required: true }]}
+          >
+            <Select>
+              <Option value="transfer">Chuyển khoản ngân hàng</Option>
+              <Option value="cash">Tiền mặt</Option>
+              <Option value="card">Thẻ / POS</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="note" label="Ghi chú Kế toán">
+            <TextArea rows={2} placeholder="Nhập ghi chú giao dịch, số UNC..." />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }

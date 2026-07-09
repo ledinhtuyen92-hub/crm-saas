@@ -42,30 +42,59 @@ def _generate_code(model_class, field_name: str, company, prefix: str) -> str:
         return f"{base_prefix}{next_seq:03d}"
 
 
-def generate_order_number(company) -> str:
-    """Sinh mã đơn hàng: {PREFIX}-{YYYYMMDD}-{SEQ}."""
-    from orders.models import Order
+def resolve_doc_prefix(company, default_doc_code: str) -> str:
+    """
+    Nếu company có cấu hình order_prefix khác 'DH' và không rỗng (ví dụ 'LEDINH', 'ABC'),
+    sẽ tự động dùng làm tiền tố chung cho tất cả các loại phiếu:
+      - mặc định 'DH' -> 'LEDINH-DH'
+      - mặc định 'BG' -> 'LEDINH-BG'
+      - mặc định 'IMP' -> 'LEDINH-IMP'
+      - mặc định 'EXP' -> 'LEDINH-EXP'
+      - mặc định 'PT'  -> 'LEDINH-PT'
+      - mặc định 'LSX' -> 'LEDINH-LSX'
+    """
     try:
-        prefix = company.settings.order_prefix
+        p = (company.settings.order_prefix or "").strip().upper()
+        if p and p != "DH":
+            if p == default_doc_code or p.endswith(f"-{default_doc_code}"):
+                return p
+            return f"{p}-{default_doc_code}"
     except Exception:
-        prefix = "DH"
+        pass
+    return default_doc_code
+
+
+def generate_order_number(company) -> str:
+    """Sinh mã đơn hàng: {COMPANY_PREFIX}-DH-{YYYYMMDD}-{SEQ}."""
+    from orders.models import Order
+    prefix = resolve_doc_prefix(company, "DH")
     return _generate_code(Order, "order_number", company, prefix)
 
 
 def generate_quotation_number(company) -> str:
-    """Sinh mã báo giá: BG-{YYYYMMDD}-{SEQ}."""
+    """Sinh mã báo giá: {COMPANY_PREFIX}-BG-{YYYYMMDD}-{SEQ}."""
     from sales.models import Quotation
-    return _generate_code(Quotation, "quotation_number", company, "BG")
+    prefix = resolve_doc_prefix(company, "BG")
+    return _generate_code(Quotation, "quotation_number", company, prefix)
 
 
 def generate_transaction_code(company, txn_type: str) -> str:
     """
-    Sinh mã phiếu kho.
-    - import → IMP-YYYYMMDD-SEQ
-    - export → EXP-YYYYMMDD-SEQ
-    - adjust → ADJ-YYYYMMDD-SEQ
+    Sinh mã phiếu kho:
+    - import → {COMPANY_PREFIX}-IMP-YYYYMMDD-SEQ
+    - export → {COMPANY_PREFIX}-EXP-YYYYMMDD-SEQ
+    - adjust → {COMPANY_PREFIX}-ADJ-YYYYMMDD-SEQ
     """
     from inventory.models import InventoryTransaction
     prefix_map = {"import": "IMP", "export": "EXP", "adjust": "ADJ"}
-    prefix = prefix_map.get(txn_type, "TXN")
+    base_code = prefix_map.get(txn_type, "TXN")
+    prefix = resolve_doc_prefix(company, base_code)
     return _generate_code(InventoryTransaction, "transaction_code", company, prefix)
+
+
+def generate_receipt_code(company) -> str:
+    """Sinh mã phiếu thu: {COMPANY_PREFIX}-PT-{YYYYMMDD}-{SEQ}."""
+    from finance.models import PaymentReceipt
+    prefix = resolve_doc_prefix(company, "PT")
+    return _generate_code(PaymentReceipt, "receipt_code", company, prefix)
+

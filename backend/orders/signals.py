@@ -93,16 +93,21 @@ def _handle_order_approved(order):
     from notifications.utils import notify_order_approved
 
     # Lấy kho mặc định của công ty
+    from inventory.models import Warehouse
+    default_warehouse = None
     try:
         default_warehouse = order.company.settings.default_warehouse
     except Exception:
-        default_warehouse = None
+        pass
 
     if default_warehouse is None:
-        # Lấy kho đầu tiên của company nếu không có kho mặc định
-        default_warehouse = Warehouse.objects.filter(
-            company=order.company, is_active=True
-        ).first()
+        default_warehouse = Warehouse.objects.filter(company=order.company).first()
+        if default_warehouse is None:
+            default_warehouse = Warehouse.objects.create(
+                company=order.company,
+                name="Kho chính",
+                is_active=True,
+            )
 
     for item in order.items.select_related("product").all():
         # 1. Tạo InventoryTransaction (xuất kho)
@@ -147,14 +152,29 @@ def _handle_order_approved(order):
                 except Exception as exc:
                     logger.warning("Low stock notification failed: %s", exc)
 
-    # 3. Tạo ProductionOrder tự động
-    _create_production_order(order)
+    # 3. Tạo ProductionOrder tự động nếu đủ điều kiện tài chính (Cọc / Đủ tiền / Duyệt nợ)
+    check_and_trigger_mo_gate(order)
 
     # 4. Thông báo cho người tạo đơn
     try:
         notify_order_approved(order)
     except Exception as exc:
         logger.error("Failed to send approved notification for order %s: %s", order.order_number, exc)
+
+
+def check_and_trigger_mo_gate(order):
+    """Cổng kiểm soát MO: Chỉ khởi tạo lệnh sản xuất khi đơn đã cọc hoặc thanh toán đủ hoặc được duyệt ngoại lệ."""
+    if order.status != order.STATUS_APPROVED:
+        return
+    allowed_statuses = [
+        order.FIN_STATUS_DEPOSIT_PAID,
+        order.FIN_STATUS_FULLY_PAID,
+        order.FIN_STATUS_CREDIT_APPROVED,
+    ]
+    if order.financial_status in allowed_statuses:
+        _create_production_order(order)
+    else:
+        logger.info("Order %s approved but waiting for deposit payment to open MO Gate.", order.order_number)
 
 
 def _create_production_order(order):

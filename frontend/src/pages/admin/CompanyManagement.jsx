@@ -42,6 +42,7 @@ export default function CompanyManagement() {
 
   const [companies, setCompanies] = useState([])
   const [plans, setPlans] = useState([])
+  const [systemModules, setSystemModules] = useState([])
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCompany, setEditingCompany] = useState(null)
@@ -73,10 +74,20 @@ export default function CompanyManagement() {
     }
   }, [messageApi])
 
+  const fetchModules = useCallback(async () => {
+    try {
+      const { data } = await api.get('users/modules/')
+      setSystemModules(Array.isArray(data) ? data : [])
+    } catch {
+      messageApi.error('Không thể tải danh sách phân hệ.')
+    }
+  }, [messageApi])
+
   useEffect(() => {
     fetchCompanies()
     fetchPlans()
-  }, [fetchCompanies, fetchPlans])
+    fetchModules()
+  }, [fetchCompanies, fetchPlans, fetchModules])
 
   // ── Mở modal tạo mới / chỉnh sửa ───────────────────────────────
   const openModal = (company = null) => {
@@ -90,8 +101,9 @@ export default function CompanyManagement() {
             address: company.address,
             user_limit: company.user_limit ?? 15,
             is_active: company.is_active,
+            set_active_modules: company.active_modules || [],
           }
-        : { name: '', workspace_id: '', tax_code: '', address: '', user_limit: 15, admin_username: '', admin_password: '', admin_fullname: '', admin_email: '' },
+        : { name: '', workspace_id: '', tax_code: '', address: '', user_limit: 15, admin_username: '', admin_password: '', admin_fullname: '', admin_email: '', set_active_modules: ['crm', 'sales', 'inventory'] },
     )
     setModalOpen(true)
   }
@@ -251,6 +263,17 @@ export default function CompanyManagement() {
           </div>
         )
       },
+    },
+    {
+      title: 'Module',
+      key: 'active_modules',
+      render: (_, record) => (
+        <Space size={[0, 4]} wrap style={{ maxWidth: 200 }}>
+          {record.active_modules?.map(m => (
+            <Tag key={m} color="blue">{m.toUpperCase()}</Tag>
+          ))}
+        </Space>
+      )
     },
     {
       title: 'Trạng thái',
@@ -480,6 +503,18 @@ export default function CompanyManagement() {
 
           <Form.Item name="address" label="Địa chỉ">
             <Input.TextArea rows={2} placeholder="Địa chỉ trụ sở..." />
+          </Form.Item>
+
+          <Form.Item
+            name="set_active_modules"
+            label="Module kích hoạt"
+            tooltip="Chọn các module mà công ty này được phép sử dụng."
+          >
+            <Select mode="multiple" size="large" placeholder="Chọn module...">
+              {systemModules.map(m => (
+                <Select.Option key={m.code} value={m.code}>{m.name}</Select.Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Row gutter={12}>

@@ -246,6 +246,22 @@ class User(AbstractUser):
         return self.full_name or self.username
 
 
+AVAILABLE_MODULES = [
+    {"code": "dashboard", "name": "Dashboard"},
+    {"code": "crm", "name": "CRM (Khách hàng)"},
+    {"code": "sales", "name": "Bán hàng (Báo giá)"},
+    {"code": "orders", "name": "Đơn hàng"},
+    {"code": "products", "name": "Sản phẩm & Dịch vụ"},
+    {"code": "inventory", "name": "Kho vận"},
+    {"code": "production", "name": "Sản xuất"},
+    {"code": "reports", "name": "Báo cáo"},
+    {"code": "settings", "name": "Cài đặt"},
+    {"code": "notifications", "name": "Thông báo"},
+]
+
+def get_default_modules():
+    return ["crm", "sales", "orders", "products", "inventory", "production"]
+
 class CompanySettings(models.Model):
     """Cấu hình nghiệp vụ của công ty — 1:1 với Company."""
 
@@ -278,6 +294,12 @@ class CompanySettings(models.Model):
         max_length=50,
         default="Asia/Ho_Chi_Minh",
         verbose_name="Múi giờ",
+    )
+    active_modules = models.JSONField(
+        default=get_default_modules,
+        blank=True,
+        verbose_name="Các phân hệ kích hoạt",
+        help_text="Danh sách mã phân hệ được phép sử dụng (vd: crm, sales, products, inventory, production, orders)",
     )
     quotation_template = models.ForeignKey(
         "sales.QuotationTemplate",

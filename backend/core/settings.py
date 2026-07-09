@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'production',
     'notifications',
     'dashboard',
+    'approvals',
+    'finance',
 ]
 
 MIDDLEWARE = [
@@ -165,6 +167,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
         'users.permissions.IsActiveUserAndCompany',
         'users.permissions.CheckDataMaintenanceMode',
+        'users.permissions.IsModuleActivePermission',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,

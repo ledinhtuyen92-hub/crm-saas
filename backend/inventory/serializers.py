@@ -1,6 +1,9 @@
 from rest_framework import serializers
 
-from .models import InventoryTransaction, Product, ProductCategory, StockLevel, Warehouse
+from .models import (
+    InventoryTransaction, Product, ProductCategory, StockLevel, Warehouse,
+    ProductTemplate, ProductAttribute, ProductAttributeValue
+)
 
 
 class ProductCategorySerializer(serializers.ModelSerializer):
@@ -10,8 +13,31 @@ class ProductCategorySerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "company"]
 
 
+class ProductAttributeValueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductAttributeValue
+        fields = ["id", "attribute", "value"]
+
+
+class ProductAttributeSerializer(serializers.ModelSerializer):
+    values = ProductAttributeValueSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ProductAttribute
+        fields = ["id", "company", "name", "values"]
+        read_only_fields = ["id", "company"]
+
+
+class ProductTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductTemplate
+        fields = ["id", "company", "name", "description", "category", "created_at", "updated_at"]
+        read_only_fields = ["id", "company", "created_at", "updated_at"]
+
+
 class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
+    template_name = serializers.CharField(source="template.name", read_only=True)
     unit_display = serializers.CharField(source="get_unit_display", read_only=True)
     image_url = serializers.SerializerMethodField()
 
@@ -20,11 +46,14 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "company",
+            "template",
+            "template_name",
             "category",
             "category_name",
             "sku",
             "name",
             "description",
+            "attributes",
             "unit",
             "unit_display",
             "price",
@@ -35,7 +64,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "company", "category_name", "unit_display", "image_url", "created_at", "updated_at"]
+        read_only_fields = ["id", "company", "category_name", "template_name", "unit_display", "image_url", "created_at", "updated_at"]
 
     def get_image_url(self, obj):
         request = self.context.get("request")

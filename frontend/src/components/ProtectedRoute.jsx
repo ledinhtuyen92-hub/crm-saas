@@ -37,6 +37,33 @@ export function ProtectedRoute({ children }) {
 }
 
 /**
+ * ModuleRoute — Bảo vệ các route thuộc về một module cụ thể.
+ * Nếu module bị tắt (không nằm trong active_modules), redirect về /dashboard.
+ */
+export function ModuleRoute({ children, moduleCode }) {
+  const { isAuthenticated, isModuleActive, loading } = useAuth()
+  const location = useLocation()
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <Spin size="large" />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  if (!isModuleActive(moduleCode)) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return children
+}
+
+/**
  * SuperAdminRoute — Chỉ cho phép System Administrator (is_superuser=true).
  * Các tài khoản khác sẽ bị redirect về /dashboard.
  */

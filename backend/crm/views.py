@@ -16,6 +16,7 @@ from .serializers import (
 
 class CustomerTagViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     """CRUD Tags khách hàng — cô lập theo company."""
+    module_code = "crm"
 
     queryset = CustomerTag.objects.select_related("company").order_by("name")
     serializer_class = CustomerTagSerializer
@@ -33,6 +34,7 @@ class CustomerTagViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
 class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     """CRUD khách hàng — luôn filter theo company của user đang đăng nhập."""
+    module_code = "crm"
 
     queryset = Customer.objects.select_related(
         "company", "assigned_to", "created_by"
@@ -323,6 +325,7 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
 class CustomerContactViewSet(viewsets.ModelViewSet):
     """CRUD đầu mối liên hệ — filter qua customer.company."""
+    module_code = "crm"
 
     queryset = CustomerContact.objects.select_related("customer__company").order_by("name")
     serializer_class = CustomerContactSerializer
@@ -362,6 +365,7 @@ class CustomerContactViewSet(viewsets.ModelViewSet):
 
 class CustomerInteractionViewSet(viewsets.ModelViewSet):
     """CRUD lịch sử chăm sóc — filter qua customer.company."""
+    module_code = "crm"
 
     queryset = CustomerInteraction.objects.select_related(
         "customer__company", "created_by"

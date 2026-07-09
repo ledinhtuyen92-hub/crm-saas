@@ -10,16 +10,20 @@ import {
   ProtectedRoute,
   SuperAdminRoute,
   PermissionRoute,
+  ModuleRoute,
 } from './components/ProtectedRoute'
 
 // Pages
 import CustomerList from './pages/CustomerList'
 import Dashboard from './pages/Dashboard'
 import Inventory from './pages/Inventory'
+import Products from './pages/Products'
 import Login from './pages/Login'
 import OrderList from './pages/OrderList'
 import ProductionList from './pages/ProductionList'
 import QuotationList from './pages/QuotationList'
+import PublicQuotation from './pages/PublicQuotation'
+import ApprovalList from './pages/ApprovalList'
 import RegisterCompany from './pages/RegisterCompany'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminSettings from './pages/admin/AdminSettings'
@@ -66,6 +70,7 @@ function App() {
             {/* ── Public routes ──────────────────────────────────── */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<RegisterCompany />} />
+            <Route path="/quote/:token" element={<PublicQuotation />} />
 
             {/* ── Protected routes (requires login) ──────────────── */}
             <Route element={<ApplicationLayout isDarkMode={isDarkMode} toggleTheme={toggleTheme} />}>
@@ -78,11 +83,53 @@ function App() {
                   <Dashboard />
                 </PermissionRoute>
               } />
-              <Route path="/customers" element={<CustomerList />} />
-              <Route path="/quotations" element={<QuotationList />} />
-              <Route path="/orders" element={<OrderList />} />
-              <Route path="/inventory" element={<Inventory />} />
-              <Route path="/production" element={<ProductionList />} />
+
+              <Route path="/approvals" element={
+                <ApprovalList />
+              } />
+
+              <Route path="/customers" element={
+                <ModuleRoute moduleCode="crm">
+                  <PermissionRoute permissionCode="crm.view" fallback="/dashboard">
+                    <CustomerList />
+                  </PermissionRoute>
+                </ModuleRoute>
+              } />
+              <Route path="/quotations" element={
+                <ModuleRoute moduleCode="sales">
+                  <PermissionRoute permissionCode="sales.view" fallback="/dashboard">
+                    <QuotationList />
+                  </PermissionRoute>
+                </ModuleRoute>
+              } />
+              <Route path="/orders" element={
+                <ModuleRoute moduleCode="orders">
+                  <PermissionRoute permissionCode="orders.view" fallback="/dashboard">
+                    <OrderList />
+                  </PermissionRoute>
+                </ModuleRoute>
+              } />
+              <Route path="/products" element={
+                <ModuleRoute moduleCode="products">
+                  <PermissionRoute permissionCode="products.view" fallback="/dashboard">
+                    <Products />
+                  </PermissionRoute>
+                </ModuleRoute>
+              } />
+              <Route path="/inventory" element={
+                <ModuleRoute moduleCode="inventory">
+                  <PermissionRoute permissionCode="inventory.view" fallback="/dashboard">
+                    <Inventory />
+                  </PermissionRoute>
+                </ModuleRoute>
+              } />
+              <Route path="/production" element={
+                <ModuleRoute moduleCode="production">
+                  <PermissionRoute permissionCode="production.view" fallback="/dashboard">
+                    <ProductionList />
+                  </PermissionRoute>
+                </ModuleRoute>
+              } />
 
               {/* Company Admin routes */}
               <Route

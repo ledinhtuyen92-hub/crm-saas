@@ -28,6 +28,9 @@ class OrderSerializer(serializers.ModelSerializer):
     customer_phone = serializers.CharField(source="customer.phone", read_only=True)
     created_by_name = serializers.CharField(source="created_by.full_name", read_only=True)
     approved_by_name = serializers.CharField(source="approved_by.full_name", read_only=True)
+    financial_status_display = serializers.CharField(source="get_financial_status_display", read_only=True)
+    paid_amount = serializers.FloatField(read_only=True)
+    remaining_debt = serializers.FloatField(read_only=True)
 
     class Meta:
         model = Order
@@ -45,6 +48,11 @@ class OrderSerializer(serializers.ModelSerializer):
             "approved_by_name",
             "status",
             "status_display",
+            "financial_status",
+            "financial_status_display",
+            "payment_term",
+            "paid_amount",
+            "remaining_debt",
             "installation_date",
             "notes",
             "discount_total",
@@ -55,7 +63,9 @@ class OrderSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = [
-            "id", "company", "order_number", "status_display", "customer_name", "customer_phone",
+            "id", "company", "order_number", "status_display", "financial_status_display",
+            "paid_amount", "remaining_debt",
+            "customer_name", "customer_phone",
             "created_by_name", "approved_by_name", "approved_at",
             "items", "created_at", "updated_at",
         ]

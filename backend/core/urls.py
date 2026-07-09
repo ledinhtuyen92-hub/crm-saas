@@ -11,8 +11,11 @@ urlpatterns = [
     path('api/crm/', include('crm.urls')),
     path('api/sales/', include('sales.urls')),
     path('api/orders/', include('orders.urls')),
+    path('api/finance/', include('finance.urls')),
     path('api/inventory/', include('inventory.urls')),
     path('api/production/', include('production.urls')),
+    # ── Approvals ──────────────────────────────────────────────────
+    path('api/approvals/', include('approvals.urls')),
     # ── Notifications ─────────────────────────────────────────────────
     path('api/notifications/', include('notifications.urls')),
     # ── Dashboard ─────────────────────────────────────────────

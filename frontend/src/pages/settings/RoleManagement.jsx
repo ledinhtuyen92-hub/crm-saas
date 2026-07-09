@@ -41,6 +41,7 @@ export default function RoleManagement() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingRole, setEditingRole] = useState(null)
   const [form] = Form.useForm()
+  const [systemModules, setSystemModules] = useState([])
 
   // ── Nhóm permissions theo module ─────────────────────────────────
   const permissionsByModule = useMemo(() => {
@@ -53,30 +54,27 @@ export default function RoleManagement() {
     return groups
   }, [allPermissions])
 
-  const moduleLabels = {
-    dashboard: 'Dashboard',
-    crm: 'CRM — Khách hàng',
-    sales: 'Bán hàng',
-    orders: 'Đơn hàng',
-    inventory: 'Kho bãi',
-    production: 'Sản xuất',
-    reports: 'Báo cáo',
-    settings: 'Cài đặt',
-  }
+  const moduleLabels = useMemo(() => {
+    const map = {}
+    systemModules.forEach(m => map[m.code] = m.name)
+    return map
+  }, [systemModules])
 
   // ── Fetch ─────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     await Promise.resolve()
     setLoading(true)
     try {
-      const [rolesRes, permsRes] = await Promise.all([
+      const [rolesRes, permsRes, modsRes] = await Promise.all([
         api.get('users/roles/'),
         api.get('users/permissions/'),
+        api.get('users/modules/'),
       ])
       const rolesData = Array.isArray(rolesRes.data) ? rolesRes.data : rolesRes.data?.results ?? []
       const permsData = Array.isArray(permsRes.data) ? permsRes.data : permsRes.data?.results ?? []
       setRoles(rolesData)
       setAllPermissions(permsData)
+      setSystemModules(Array.isArray(modsRes.data) ? modsRes.data : [])
     } catch {
       messageApi.error('Không thể tải dữ liệu.')
     } finally {

@@ -32,8 +32,103 @@ class ProductCategory(models.Model):
         return f"{self.name} ({self.company.name})"
 
 
+class ProductTemplate(models.Model):
+    """Mẫu sản phẩm gốc (chứa các thông tin chung của các biến thể)."""
+
+    company = models.ForeignKey(
+        "users.Company",
+        on_delete=models.CASCADE,
+        related_name="product_templates",
+        verbose_name="Công ty",
+    )
+    category = models.ForeignKey(
+        "inventory.ProductCategory",
+        on_delete=models.PROTECT,
+        related_name="templates",
+        verbose_name="Loại sản phẩm",
+    )
+    name = models.CharField(max_length=255, verbose_name="Tên mẫu sản phẩm")
+    description = models.TextField(blank=True, verbose_name="Mô tả")
+    
+    UNIT_CAI = "cái"
+    UNIT_M2 = "m²"
+    UNIT_M = "m"
+    UNIT_BO = "bộ"
+    UNIT_KG = "kg"
+    UNIT_LIT = "lít"
+    UNIT_CHOICES = [
+        (UNIT_CAI, "Cái"),
+        (UNIT_M2, "m²"),
+        (UNIT_M, "Mét"),
+        (UNIT_BO, "Bộ"),
+        (UNIT_KG, "Kg"),
+        (UNIT_LIT, "Lít"),
+    ]
+    unit = models.CharField(
+        max_length=20,
+        choices=UNIT_CHOICES,
+        default=UNIT_CAI,
+        verbose_name="Đơn vị tính",
+    )
+    image = models.ImageField(
+        upload_to="products/templates/",
+        blank=True,
+        null=True,
+        verbose_name="Hình ảnh",
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Đang kinh doanh")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Mẫu sản phẩm"
+        verbose_name_plural = "Mẫu sản phẩm"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class ProductAttribute(models.Model):
+    """Danh mục thuộc tính (vd: Màu sắc, Kích thước)."""
+    company = models.ForeignKey(
+        "users.Company",
+        on_delete=models.CASCADE,
+        related_name="attributes",
+        verbose_name="Công ty",
+    )
+    name = models.CharField(max_length=100, verbose_name="Tên thuộc tính")
+
+    class Meta:
+        verbose_name = "Thuộc tính"
+        verbose_name_plural = "Thuộc tính"
+        unique_together = ["company", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+class ProductAttributeValue(models.Model):
+    """Giá trị thuộc tính (vd: Đỏ, Xanh, S, M, L)."""
+    attribute = models.ForeignKey(
+        ProductAttribute,
+        on_delete=models.CASCADE,
+        related_name="values",
+        verbose_name="Thuộc tính",
+    )
+    value = models.CharField(max_length=100, verbose_name="Giá trị")
+
+    class Meta:
+        verbose_name = "Giá trị thuộc tính"
+        verbose_name_plural = "Giá trị thuộc tính"
+        unique_together = ["attribute", "value"]
+
+    def __str__(self):
+        return f"{self.attribute.name}: {self.value}"
+
+
 class Product(models.Model):
-    """Sản phẩm / Dịch vụ — cô lập theo từng công ty."""
+    """Sản phẩm (Biến thể) — cô lập theo từng công ty."""
 
     UNIT_CAI = "cái"
     UNIT_M2 = "m²"
@@ -56,15 +151,31 @@ class Product(models.Model):
         related_name="products",
         verbose_name="Công ty",
     )
+    template = models.ForeignKey(
+        ProductTemplate,
+        on_delete=models.CASCADE,
+        related_name="variants",
+        null=True,
+        blank=True,
+        verbose_name="Thuộc mẫu sản phẩm",
+    )
     category = models.ForeignKey(
         "inventory.ProductCategory",
         on_delete=models.PROTECT,
         related_name="products",
         verbose_name="Loại sản phẩm",
+        null=True,
+        blank=True,
     )
     sku = models.CharField(max_length=100, verbose_name="Mã sản phẩm")
-    name = models.CharField(max_length=255, verbose_name="Tên sản phẩm")
+    name = models.CharField(max_length=255, verbose_name="Tên sản phẩm (biến thể)", blank=True)
     description = models.TextField(blank=True, verbose_name="Mô tả")
+    attributes = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Thuộc tính biến thể",
+        help_text="vd: {'Màu sắc': 'Đỏ', 'Kích thước': 'XL'}",
+    )
     unit = models.CharField(
         max_length=20,
         choices=UNIT_CHOICES,

@@ -84,6 +84,16 @@ export function AuthProvider({ children }) {
     return false // Không bị chặn
   }, [maintenanceMode, user])
 
+  const activeModules = useMemo(() => user?.active_modules || [], [user])
+  const isModuleActive = useCallback(
+    (moduleCode) => {
+      // Nếu là Superadmin mà chưa gán công ty thì được xem hết
+      if (user?.is_superuser && !user?.company_id) return true
+      return activeModules.includes(moduleCode)
+    },
+    [activeModules, user]
+  )
+
   const value = useMemo(
     () => ({
       user,
@@ -101,8 +111,10 @@ export function AuthProvider({ children }) {
         setUser(data)
       },
       refreshSettings: fetchPublicSettings,
+      activeModules,
+      isModuleActive,
     }),
-    [user, loading, isAuthenticated, isSuperAdmin, isCompanyAdmin, maintenanceMode, checkMaintenance, login, logout, hasPermission, fetchPublicSettings],
+    [user, loading, isAuthenticated, isSuperAdmin, isCompanyAdmin, maintenanceMode, checkMaintenance, login, logout, hasPermission, fetchPublicSettings, activeModules, isModuleActive],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

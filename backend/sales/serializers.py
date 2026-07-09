@@ -122,6 +122,7 @@ class QuotationSerializer(serializers.ModelSerializer):
     customer_city = serializers.CharField(source="customer.city", read_only=True)
     created_by_name = serializers.CharField(source="created_by.full_name", read_only=True)
     company_info = serializers.SerializerMethodField()
+    order_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Quotation
@@ -154,12 +155,25 @@ class QuotationSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "company_info",
+            "public_token",
+            "signature_image",
+            "signed_at",
+            "customer_name_signed",
+            "order_status",
         ]
         read_only_fields = [
             "id", "company", "quotation_number", "items", "status_display",
             "customer_name", "customer_phone", "customer_address", "customer_email", "customer_city",
             "created_by_name", "created_at", "updated_at", "company_info",
+            "public_token", "signature_image", "signed_at", "customer_name_signed", "order_status",
         ]
 
     def get_company_info(self, obj):
         return get_company_info_dict(self, obj)
+
+    def get_order_status(self, obj):
+        from orders.models import Order
+        latest_order = Order.objects.filter(quotation=obj).order_by("-id").first()
+        if latest_order:
+            return latest_order.status
+        return None

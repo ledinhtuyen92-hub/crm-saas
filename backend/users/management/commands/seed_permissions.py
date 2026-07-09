@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from users.models import Permission
+from users.models import Permission, Role, CompanySettings
 
 
 # Bộ permissions chuẩn theo module — đồng bộ với AI_CONTEXT.md
@@ -27,6 +27,7 @@ PERMISSIONS = [
     {"code": "sales.create", "name": "Tạo báo giá mới", "module": "sales"},
     {"code": "sales.edit", "name": "Chỉnh sửa báo giá", "module": "sales"},
     {"code": "sales.delete", "name": "Xóa báo giá", "module": "sales"},
+    {"code": "sales.approve", "name": "Duyệt báo giá", "module": "sales"},
     {"code": "sales.export_pdf", "name": "Xuất PDF báo giá", "module": "sales"},
     {"code": "sales.view_all", "name": "Xem tất cả báo giá (không giới hạn bởi phòng ban/người tạo)", "module": "sales"},
 
@@ -39,16 +40,19 @@ PERMISSIONS = [
     {"code": "orders.export_pdf", "name": "Xuất PDF đơn hàng", "module": "orders"},
     {"code": "orders.view_all", "name": "Xem tất cả đơn hàng (không giới hạn bởi người tạo)", "module": "orders"},
 
-    # ── Inventory (Sản phẩm & Kho vận) ───────────────────────────
-    {"code": "inventory.view", "name": "Xem danh sách sản phẩm & tồn kho", "module": "inventory"},
-    {"code": "inventory.create_product", "name": "Thêm sản phẩm mới", "module": "inventory"},
-    {"code": "inventory.edit_product", "name": "Chỉnh sửa sản phẩm", "module": "inventory"},
-    {"code": "inventory.delete_product", "name": "Xóa sản phẩm", "module": "inventory"},
+    # ── Products (Sản phẩm & Dịch vụ) ─────────────────────────────
+    {"code": "products.view", "name": "Xem danh sách sản phẩm", "module": "products"},
+    {"code": "products.create", "name": "Thêm sản phẩm mới", "module": "products"},
+    {"code": "products.edit", "name": "Chỉnh sửa sản phẩm", "module": "products"},
+    {"code": "products.delete", "name": "Xóa sản phẩm", "module": "products"},
+    {"code": "products.manage_categories", "name": "Quản lý loại sản phẩm", "module": "products"},
+
+    # ── Inventory (Kho vận) ───────────────────────────
+    {"code": "inventory.view", "name": "Xem tồn kho & lịch sử giao dịch", "module": "inventory"},
     {"code": "inventory.import", "name": "Nhập hàng vào kho (tạo phiếu nhập)", "module": "inventory"},
     {"code": "inventory.adjust", "name": "Điều chỉnh tồn kho", "module": "inventory"},
     {"code": "inventory.export", "name": "Xem phiếu xuất kho", "module": "inventory"},
     {"code": "inventory.manage_warehouse", "name": "Quản lý kho hàng", "module": "inventory"},
-    {"code": "inventory.manage_categories", "name": "Quản lý loại sản phẩm", "module": "inventory"},
 
     # ── Production (Sản xuất) ─────────────────────────────────────
     {"code": "production.view", "name": "Xem lệnh sản xuất", "module": "production"},
@@ -75,6 +79,42 @@ class Command(BaseCommand):
     help = "Seed danh sách permissions mặc định cho toàn bộ module CRM SaaS."
 
     def handle(self, *args, **options):
+        # --- MIGRATION LOGIC CHO VIỆC TÁCH MODULE SẢN PHẨM ---
+        self.stdout.write("Checking module products migration...")
+        for cs in CompanySettings.objects.all():
+            if 'inventory' in cs.active_modules and 'products' not in cs.active_modules:
+                cs.active_modules.append('products')
+                cs.save(update_fields=['active_modules'])
+        
+        try:
+            inv_view_perm = Permission.objects.get(code="inventory.view")
+            prod_view_perm, _ = Permission.objects.get_or_create(
+                code="products.view",
+                defaults={"name": "Xem danh sách sản phẩm", "module": "products"}
+            )
+            roles_with_inv = Role.objects.filter(permissions=inv_view_perm)
+            for role in roles_with_inv:
+                role.permissions.add(prod_view_perm)
+            
+            rename_map = {
+                "inventory.create_product": ("products.create", "Thêm sản phẩm mới"),
+                "inventory.edit_product": ("products.edit", "Chỉnh sửa sản phẩm"),
+                "inventory.delete_product": ("products.delete", "Xóa sản phẩm"),
+                "inventory.manage_categories": ("products.manage_categories", "Quản lý loại sản phẩm"),
+            }
+            for old_code, (new_code, new_name) in rename_map.items():
+                try:
+                    p = Permission.objects.get(code=old_code)
+                    p.code = new_code
+                    p.name = new_name
+                    p.module = "products"
+                    p.save()
+                except Permission.DoesNotExist:
+                    pass
+        except Permission.DoesNotExist:
+            pass
+        # ------------------------------------------------------
+
         created_count = 0
         updated_count = 0
 

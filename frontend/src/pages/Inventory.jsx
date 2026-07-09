@@ -16,6 +16,7 @@ import {
   UploadOutlined,
 } from '@ant-design/icons'
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -39,6 +40,7 @@ import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
+import ProductTemplateTab from './inventory/ProductTemplateTab'
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -48,7 +50,7 @@ export default function Inventory() {
   const { isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
 
-  const [activeTab, setActiveTab] = useState('products')
+  const [activeTab, setActiveTab] = useState('stock')
 
   // Data states
   const [products, setProducts] = useState([])
@@ -60,9 +62,13 @@ export default function Inventory() {
 
   // Filters
   const [searchText, setSearchText] = useState('')
+  const [stockSearchText, setStockSearchText] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [warehouseFilter, setWarehouseFilter] = useState('')
   const [lowStockOnly, setLowStockOnly] = useState(false)
+  const [txnSearchText, setTxnSearchText] = useState('')
+  const [txnTypeFilter, setTxnTypeFilter] = useState('')
+  const [txnWarehouseFilter, setTxnWarehouseFilter] = useState('')
 
   // Modals
   const [productModalVisible, setProductModalVisible] = useState(false)
@@ -79,8 +85,15 @@ export default function Inventory() {
   const [editingWarehouse, setEditingWarehouse] = useState(null)
   const [warehouseForm] = Form.useForm()
 
+  const [transferModalVisible, setTransferModalVisible] = useState(false)
+  const [deletingWarehouse, setDeletingWarehouse] = useState(null)
+  const [targetWarehouseId, setTargetWarehouseId] = useState(null)
+
   const [txnModalVisible, setTxnModalVisible] = useState(false)
   const [txnForm] = Form.useForm()
+
+  const [clearTxnModalVisible, setClearTxnModalVisible] = useState(false)
+  const [clearConfirmText, setClearConfirmText] = useState('')
 
   const [submitting, setSubmitting] = useState(false)
 
@@ -167,9 +180,15 @@ export default function Inventory() {
   useEffect(() => {
     if (activeTab === 'products') fetchProducts()
     else if (activeTab === 'categories') fetchCategories()
-    else if (activeTab === 'stock') fetchStockLevels()
-    else if (activeTab === 'transactions') fetchTransactions()
-  }, [activeTab, fetchProducts, fetchCategories, fetchStockLevels, fetchTransactions])
+    else if (activeTab === 'stock') {
+      fetchStockLevels()
+      if (products.length === 0) fetchProducts()
+    }
+    else if (activeTab === 'transactions') {
+      fetchTransactions()
+      if (products.length === 0) fetchProducts()
+    }
+  }, [activeTab, fetchProducts, fetchCategories, fetchStockLevels, fetchTransactions, products.length])
 
   // ── Filtered Products ─────────────────────────────────────────────────
   const filteredProducts = products.filter((item) => {
@@ -178,6 +197,35 @@ export default function Inventory() {
     const sku = (item.sku || '').toLowerCase()
     const query = searchText.toLowerCase()
     return name.includes(query) || sku.includes(query)
+  })
+
+  // ── Filtered Stock Levels ─────────────────────────────────────────────
+  const filteredStockLevels = stockLevels.filter((stk) => {
+    if (!stockSearchText.trim()) return true
+    const kw = stockSearchText.trim().toLowerCase()
+    const prod = products.find((p) => p.id === stk.product)
+    const name = (prod?.name || stk.product_name || '').toLowerCase()
+    const sku = (prod?.sku || stk.product_sku || '').toLowerCase()
+  })
+
+  // ── Filtered Transactions ─────────────────────────────────────────────
+  const filteredTransactions = transactions.filter((txn) => {
+    let match = true
+    if (txnTypeFilter) {
+      match = match && txn.type === txnTypeFilter
+    }
+    if (txnWarehouseFilter) {
+      match = match && txn.warehouse === txnWarehouseFilter
+    }
+    if (txnSearchText.trim()) {
+      const kw = txnSearchText.trim().toLowerCase()
+      const code = (txn.transaction_code || '').toLowerCase()
+      const prod = products.find((p) => p.id === txn.product)
+      const name = (prod?.name || txn.product_name || '').toLowerCase()
+      const sku = (prod?.sku || txn.product_sku || '').toLowerCase()
+      match = match && (code.includes(kw) || name.includes(kw) || sku.includes(kw))
+    }
+    return match
   })
 
   // ── Product Handlers ──────────────────────────────────────────────────
@@ -331,6 +379,68 @@ export default function Inventory() {
     }
   }
 
+  const handleWarehouseDelete = async (id) => {
+    if (checkMaintenance()) return
+    try {
+      await api.delete(`/inventory/warehouses/${id}/`)
+      messageApi.success('Đã xoá kho hàng thành công.')
+      fetchWarehouses()
+      fetchStockLevels()
+    } catch (error) {
+      if (error.response?.data?.has_stock) {
+        const wh = warehouses.find((w) => w.id === id)
+        setDeletingWarehouse(wh || { id, name: `Kho #${id}` })
+        setTargetWarehouseId(null)
+        setTransferModalVisible(true)
+      } else {
+        messageApi.error(error.response?.data?.detail || 'Không thể xoá kho hàng này vì đang có sản phẩm tồn kho.')
+      }
+    }
+  }
+
+  const handleConfirmTransferAndDelete = async () => {
+    if (checkMaintenance()) return
+    if (!targetWarehouseId) {
+      messageApi.warning('Vui lòng chọn kho nhận sản phẩm!')
+      return
+    }
+    if (!deletingWarehouse) return
+    setSubmitting(true)
+    try {
+      await api.delete(`/inventory/warehouses/${deletingWarehouse.id}/?target_warehouse_id=${targetWarehouseId}`)
+      messageApi.success('Đã chuyển toàn bộ sản phẩm sang kho mới và xoá kho thành công!')
+      setTransferModalVisible(false)
+      setDeletingWarehouse(null)
+      fetchWarehouses()
+      fetchStockLevels()
+      fetchTransactions()
+    } catch (err) {
+      messageApi.error(err.response?.data?.detail || 'Chuyển kho và xoá thất bại.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleConfirmClearAllTxn = async () => {
+    if (checkMaintenance()) return
+    if (clearConfirmText !== 'XOA TOAN BO') {
+      messageApi.error('Xác nhận không hợp lệ. Vui lòng nhập đúng: XOA TOAN BO')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const res = await api.delete('/inventory/transactions/clear-history/')
+      messageApi.success(res.data?.detail || 'Đã xoá toàn bộ lịch sử giao dịch kho.')
+      setClearTxnModalVisible(false)
+      setClearConfirmText('')
+      fetchTransactions()
+    } catch {
+      messageApi.error('Không thể xoá toàn bộ lịch sử giao dịch.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   // ── Transaction (Nhập kho / Điều chỉnh) Handlers ──────────────────────
   const openTxnModal = () => {
     if (checkMaintenance()) return
@@ -388,8 +498,15 @@ export default function Inventory() {
       width: 300,
       render: (val, r) => (
         <div>
-          <Text strong style={{ display: 'block', fontSize: 14, color: '#0f172a' }}>{val}</Text>
-          {r.description && <Text type="secondary" style={{ fontSize: 12 }}>{r.description}</Text>}
+          <Text strong style={{ display: 'block', fontSize: 14, color: '#0f172a' }}>{val || r.template_name || 'Sản phẩm'}</Text>
+          {r.attributes && Object.keys(r.attributes).length > 0 && (
+            <Space size={[0, 4]} wrap style={{ marginTop: 4, marginBottom: 4 }}>
+              {Object.entries(r.attributes).map(([k, v]) => (
+                <Tag key={k} color="purple">{k}: {v}</Tag>
+              ))}
+            </Space>
+          )}
+          {r.description && <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>{r.description}</Text>}
         </div>
       ),
     },
@@ -590,34 +707,15 @@ export default function Inventory() {
         <Col>
           <Title level={3} style={{ margin: 0, fontWeight: 800 }}>
             <DatabaseOutlined style={{ color: '#0284c7', marginRight: 10 }} />
-            Quản lý Kho bãi & Sản phẩm
+            Quản lý Kho Vận
           </Title>
           <Text type="secondary">
-            Danh mục vật tư, kiểm soát tồn kho theo thời gian thực và lịch sử biến động kho.
+            Kiểm soát tồn kho theo thời gian thực và lịch sử biến động kho.
           </Text>
         </Col>
         <Col>
           <Space>
-            {activeTab === 'products' && canCreate && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => openProductModal()}
-                style={{ background: '#0284c7', fontWeight: 600, borderRadius: 8 }}
-              >
-                Thêm Sản Phẩm Mới
-              </Button>
-            )}
-            {activeTab === 'categories' && canCreate && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => openCategoryModal()}
-                style={{ background: '#0891b2', fontWeight: 600, borderRadius: 8 }}
-              >
-                Thêm Danh Mục Mới
-              </Button>
-            )}
+
             {activeTab === 'stock' && canCreate && (
               <Button
                 type="primary"
@@ -648,52 +746,7 @@ export default function Inventory() {
           activeKey={activeTab}
           onChange={setActiveTab}
           items={[
-            {
-              key: 'products',
-              label: (
-                <Space>
-                  <InboxOutlined />
-                  <span>Sản phẩm & Dịch vụ ({products.length})</span>
-                </Space>
-              ),
-              children: (
-                <div>
-                  <Row gutter={16} align="middle" style={{ marginBottom: 16 }}>
-                    <Col xs={24} sm={10}>
-                      <Input
-                        placeholder="Tìm theo tên sản phẩm, mã SKU..."
-                        prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
-                        value={searchText}
-                        onChange={(e) => setSearchText(e.target.value)}
-                        allowClear
-                        style={{ borderRadius: 8 }}
-                      />
-                    </Col>
-                    <Col xs={24} sm={8}>
-                      <Select
-                        placeholder="Lọc theo danh mục"
-                        value={categoryFilter || undefined}
-                        onChange={(val) => setCategoryFilter(val || '')}
-                        allowClear
-                        style={{ width: '100%' }}
-                      >
-                        {categories.map((c) => (
-                          <Option key={c.id} value={c.id}>{c.name}</Option>
-                        ))}
-                      </Select>
-                    </Col>
-                  </Row>
-                  <Table
-                    columns={productColumns}
-                    dataSource={filteredProducts}
-                    rowKey="id"
-                    loading={loading}
-                    pagination={{ pageSize: 10 }}
-                    scroll={{ x: 1300 }}
-                  />
-                </div>
-              ),
-            },
+
             {
               key: 'stock',
               label: (
@@ -705,9 +758,19 @@ export default function Inventory() {
               children: (
                 <div>
                   <Row gutter={16} align="middle" justify="space-between" style={{ marginBottom: 16 }}>
-                    <Col xs={24} sm={10}>
+                    <Col xs={24} sm={9}>
+                      <Input
+                        placeholder="Tìm theo tên sản phẩm hoặc mã SKU..."
+                        prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
+                        value={stockSearchText}
+                        onChange={(e) => setStockSearchText(e.target.value)}
+                        allowClear
+                        style={{ borderRadius: 8 }}
+                      />
+                    </Col>
+                    <Col xs={24} sm={8}>
                       <Select
-                        placeholder="Chọn kho hàng để xem..."
+                        placeholder="Lọc theo kho hàng..."
                         value={warehouseFilter || undefined}
                         onChange={(val) => setWarehouseFilter(val || '')}
                         allowClear
@@ -718,7 +781,7 @@ export default function Inventory() {
                         ))}
                       </Select>
                     </Col>
-                    <Col>
+                    <Col xs={24} sm={7} style={{ textAlign: 'right' }}>
                       <Space>
                         <Text strong style={{ color: lowStockOnly ? '#dc2626' : 'inherit' }}>Chỉ hiện tồn kho báo động:</Text>
                         <Switch checked={lowStockOnly} onChange={setLowStockOnly} />
@@ -727,7 +790,7 @@ export default function Inventory() {
                   </Row>
                   <Table
                     columns={stockColumns}
-                    dataSource={stockLevels}
+                    dataSource={filteredStockLevels}
                     rowKey="id"
                     loading={loading}
                     pagination={{ pageSize: 10 }}
@@ -745,49 +808,138 @@ export default function Inventory() {
                 </Space>
               ),
               children: (
-                <Table
-                  columns={txnColumns}
-                  dataSource={transactions}
-                  rowKey="id"
-                  loading={loading}
-                  pagination={{ pageSize: 10 }}
-                  scroll={{ x: 1000 }}
-                />
+                <div>
+                  <Row gutter={16} align="middle" justify="space-between" style={{ marginBottom: 16 }}>
+                    <Col xs={24} lg={18}>
+                      <Space wrap>
+                        <Input
+                          placeholder="Tìm mã phiếu, tên/mã SP..."
+                          prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
+                          value={txnSearchText}
+                          onChange={(e) => setTxnSearchText(e.target.value)}
+                          allowClear
+                          style={{ borderRadius: 8, minWidth: 250 }}
+                        />
+                        <Select
+                          placeholder="Loại phiếu"
+                          value={txnTypeFilter || undefined}
+                          onChange={(val) => setTxnTypeFilter(val || '')}
+                          allowClear
+                          style={{ minWidth: 150 }}
+                        >
+                          <Option value="import">Nhập kho</Option>
+                          <Option value="export">Xuất kho</Option>
+                          <Option value="adjust">Điều chỉnh</Option>
+                        </Select>
+                        <Select
+                          placeholder="Chọn kho hàng..."
+                          value={txnWarehouseFilter || undefined}
+                          onChange={(val) => setTxnWarehouseFilter(val || '')}
+                          allowClear
+                          style={{ minWidth: 180 }}
+                        >
+                          {warehouses.map((w) => (
+                            <Option key={w.id} value={w.id}>{w.name}</Option>
+                          ))}
+                        </Select>
+                      </Space>
+                    </Col>
+                    {canDelete && transactions.length > 0 && (
+                      <Col xs={24} lg={6} style={{ textAlign: 'right', marginTop: window.innerWidth < 992 ? 16 : 0 }}>
+                        <Button
+                          danger
+                          type="primary"
+                          icon={<DeleteOutlined />}
+                          style={{ fontWeight: 600, borderRadius: 8 }}
+                          onClick={() => {
+                            if (checkMaintenance()) return
+                            setClearConfirmText('')
+                            setClearTxnModalVisible(true)
+                          }}
+                        >
+                          Xoá Toàn Bộ Lịch Sử ({transactions.length})
+                        </Button>
+                      </Col>
+                    )}
+                  </Row>
+                  <Table
+                    columns={txnColumns}
+                    dataSource={filteredTransactions}
+                    rowKey="id"
+                    loading={loading}
+                    pagination={{ pageSize: 10 }}
+                    scroll={{ x: 1050 }}
+                  />
+                </div>
               ),
             },
             {
-              key: 'categories',
+              key: 'warehouses',
               label: (
                 <Space>
-                  <TagOutlined />
-                  <span>Loại Sản Phẩm</span>
+                  <ShopOutlined />
+                  <span>Danh Sách Kho Hàng ({warehouses.length})</span>
                 </Space>
               ),
               children: (
-                <Table
-                  dataSource={categories}
-                  rowKey="id"
-                  columns={[
-                    { title: 'Tên loại sản phẩm', dataIndex: 'name', key: 'name', render: (v) => <Text strong>{v}</Text> },
-                    { title: 'Mô tả', dataIndex: 'description', key: 'description', render: (v) => <Text type="secondary">{v || '—'}</Text> },
-                    {
-                      title: 'Hành động',
-                      key: 'action',
-                      align: 'right',
-                      render: (_, r) => (
-                        <Space>
-                          {canEdit && <Button type="text" icon={<EditOutlined style={{ color: '#d97706' }} />} onClick={() => openCategoryModal(r)} />}
-                          {canDelete && (
-                            <Popconfirm title="Xoá danh mục?" onConfirm={() => handleCategoryDelete(r.id)} okText="Xoá" cancelText="Hủy" okButtonProps={{ danger: true }}>
-                              <Button type="text" danger icon={<DeleteOutlined />} />
-                            </Popconfirm>
-                          )}
-                        </Space>
-                      ),
-                    },
-                  ]}
-                  pagination={{ pageSize: 10 }}
-                />
+                <div>
+                  {canCreate && (
+                    <Row justify="end" style={{ marginBottom: 16 }}>
+                      <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => openWarehouseModal()}
+                        style={{ background: '#4f46e5', fontWeight: 600, borderRadius: 8 }}
+                      >
+                        + Thêm Kho Hàng Mới
+                      </Button>
+                    </Row>
+                  )}
+                  <Table
+                    dataSource={warehouses}
+                    rowKey="id"
+                    columns={[
+                      { title: 'Tên kho hàng', dataIndex: 'name', key: 'name', render: (v) => <Text strong style={{ fontSize: 15 }}>{v}</Text> },
+                      { title: 'Vị trí / Địa chỉ', dataIndex: 'location', key: 'location', render: (v) => <Text type="secondary">{v || '—'}</Text> },
+                      {
+                        title: 'Trạng thái',
+                        dataIndex: 'is_active',
+                        key: 'is_active',
+                        render: (v) => (v !== false ? <Tag color="success">Hoạt động</Tag> : <Tag color="default">Ngừng hoạt động</Tag>),
+                      },
+                      {
+                        title: 'Hành động',
+                        key: 'action',
+                        align: 'right',
+                        render: (_, r) => (
+                          <Space>
+                            {canEdit && (
+                              <Button
+                                type="text"
+                                icon={<EditOutlined style={{ color: '#d97706' }} />}
+                                onClick={() => openWarehouseModal(r)}
+                                title="Sửa kho hàng"
+                              />
+                            )}
+                            {canDelete && (
+                              <Popconfirm
+                                title="Xoá kho hàng?"
+                                description="Bạn có chắc chắn muốn xoá kho hàng này không?"
+                                onConfirm={() => handleWarehouseDelete(r.id)}
+                                okText="Xoá"
+                                cancelText="Hủy"
+                                okButtonProps={{ danger: true }}
+                              >
+                                <Button type="text" danger icon={<DeleteOutlined />} title="Xoá kho hàng" />
+                              </Popconfirm>
+                            )}
+                          </Space>
+                        ),
+                      },
+                    ]}
+                    pagination={{ pageSize: 10 }}
+                  />
+                </div>
               ),
             },
           ]}
@@ -1003,6 +1155,103 @@ export default function Inventory() {
             </Col>
           </Row>
         </Form>
+      </Modal>
+
+      {/* ── Modal Chuyển Tồn Kho Trước Khi Xóa Kho ────────────────────────── */}
+      <Modal
+        title={
+          <Space>
+            <AlertOutlined style={{ color: '#d97706' }} />
+            <Text strong style={{ fontSize: 17 }}>Chuyển Sản Phẩm & Xóa Kho Hàng</Text>
+          </Space>
+        }
+        open={transferModalVisible}
+        onCancel={() => {
+          setTransferModalVisible(false)
+          setDeletingWarehouse(null)
+          setTargetWarehouseId(null)
+        }}
+        onOk={handleConfirmTransferAndDelete}
+        confirmLoading={submitting}
+        okText="Xác nhận chuyển kho & Xoá"
+        okButtonProps={{ danger: true }}
+        cancelText="Hủy"
+        width={550}
+      >
+        <div style={{ marginTop: 12 }}>
+          <Alert
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message={
+              <span>
+                Kho hàng <Text strong>{deletingWarehouse?.name}</Text> hiện đang chứa sản phẩm tồn kho.
+              </span>
+            }
+            description="Để bảo toàn dữ liệu tồn kho, bạn bắt buộc phải chọn một kho hàng khác để chuyển toàn bộ sản phẩm sang trước khi xoá kho này."
+          />
+          <Form layout="vertical">
+            <Form.Item
+              label={<Text strong>Chọn kho nhận toàn bộ sản phẩm</Text>}
+              required
+            >
+              <Select
+                placeholder="Chọn kho đích nhận sản phẩm..."
+                value={targetWarehouseId}
+                onChange={setTargetWarehouseId}
+                style={{ width: '100%' }}
+                size="large"
+              >
+                {warehouses
+                  .filter((w) => w.id !== deletingWarehouse?.id && w.is_active !== false)
+                  .map((w) => (
+                    <Option key={w.id} value={w.id}>
+                      {w.name} {w.location ? `(${w.location})` : ''}
+                    </Option>
+                  ))}
+              </Select>
+            </Form.Item>
+          </Form>
+        </div>
+      </Modal>
+
+      {/* ── Clear Transaction History Modal ── */}
+      <Modal
+        title={
+          <Space>
+            <DeleteOutlined style={{ color: '#dc2626' }} />
+            <span style={{ color: '#dc2626' }}>Cảnh báo: Xoá toàn bộ lịch sử giao dịch</span>
+          </Space>
+        }
+        open={clearTxnModalVisible}
+        onCancel={() => {
+          setClearTxnModalVisible(false)
+          setClearConfirmText('')
+        }}
+        onOk={handleConfirmClearAllTxn}
+        okText="Xác nhận Xoá toàn bộ"
+        cancelText="Huỷ"
+        okButtonProps={{
+          danger: true,
+          disabled: clearConfirmText !== 'XOA TOAN BO',
+          loading: submitting,
+        }}
+      >
+        <div style={{ padding: '8px 0' }}>
+          <Text type="danger" style={{ display: 'block', marginBottom: 12, fontWeight: 500 }}>
+            Hành động này sẽ xoá vĩnh viễn toàn bộ lịch sử nhập/xuất/điều chỉnh kho của công ty. Bạn KHÔNG THỂ khôi phục lại dữ liệu sau khi xoá.
+          </Text>
+          <Text style={{ display: 'block', marginBottom: 8 }}>
+            Để xác nhận, vui lòng nhập chính xác dòng chữ: <strong>XOA TOAN BO</strong> vào ô bên dưới:
+          </Text>
+          <Input
+            value={clearConfirmText}
+            onChange={(e) => setClearConfirmText(e.target.value)}
+            placeholder="XOA TOAN BO"
+            style={{ fontWeight: 'bold', color: '#dc2626' }}
+            autoFocus
+          />
+        </div>
       </Modal>
     </div>
   )

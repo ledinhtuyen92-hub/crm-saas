@@ -18,6 +18,17 @@ class Order(models.Model):
         (STATUS_COMPLETED, "Hoàn thành"),
     ]
 
+    FIN_STATUS_UNPAID = "unpaid"
+    FIN_STATUS_DEPOSIT_PAID = "deposit_paid"
+    FIN_STATUS_FULLY_PAID = "fully_paid"
+    FIN_STATUS_CREDIT_APPROVED = "credit_approved"
+    FIN_STATUS_CHOICES = [
+        (FIN_STATUS_UNPAID, "Chờ thanh toán / Chờ cọc"),
+        (FIN_STATUS_DEPOSIT_PAID, "Đã cọc (Đủ ĐK sản xuất)"),
+        (FIN_STATUS_FULLY_PAID, "Đã thanh toán đủ (Đủ ĐK xuất kho)"),
+        (FIN_STATUS_CREDIT_APPROVED, "Duyệt xuất nợ ngoại lệ"),
+    ]
+
     company = models.ForeignKey(
         "users.Company",
         on_delete=models.CASCADE,
@@ -66,6 +77,18 @@ class Order(models.Model):
         verbose_name="Trạng thái",
         db_index=True,
     )
+    financial_status = models.CharField(
+        max_length=30,
+        choices=FIN_STATUS_CHOICES,
+        default=FIN_STATUS_UNPAID,
+        verbose_name="Trạng thái tài chính",
+        db_index=True,
+    )
+    payment_term = models.CharField(
+        max_length=150,
+        default="Cọc 30% - Giao hàng 70%",
+        verbose_name="Mẫu thanh toán",
+    )
     installation_date = models.DateField(
         null=True,
         blank=True,
@@ -111,6 +134,18 @@ class Order(models.Model):
             ),
         ]
 
+    @property
+    def paid_amount(self):
+        try:
+            total = self.payment_receipts.aggregate(s=models.Sum("amount"))["s"] or 0
+            return float(total)
+        except Exception:
+            return 0.0
+
+    @property
+    def remaining_debt(self):
+        return max(0.0, float(self.total_amount or 0) - self.paid_amount)
+
     def approve(self, approved_by_user):
         """
         Duyệt đơn hàng — chỉ gọi từ API view sau khi kiểm tra quyền.
@@ -122,6 +157,25 @@ class Order(models.Model):
         self.approved_by = approved_by_user
         self.approved_at = timezone.now()
         self.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
+
+    def handle_approval_result(self, approval_status, acted_by=None):
+        if approval_status == "approved":
+            if self.status == self.STATUS_PENDING:
+                self.approve(approved_by_user=acted_by)
+            else:
+                self.financial_status = self.FIN_STATUS_CREDIT_APPROVED
+                self.save(update_fields=["financial_status", "updated_at"])
+                try:
+                    from orders.signals import check_and_trigger_mo_gate
+                    check_and_trigger_mo_gate(self)
+                except Exception:
+                    pass
+        elif approval_status == "rejected":
+            if self.status == self.STATUS_PENDING:
+                self.status = self.STATUS_REJECTED
+                if acted_by:
+                    self.approved_by = acted_by
+                self.save(update_fields=["status", "approved_by", "updated_at"])
 
     def __str__(self):
         return self.order_number

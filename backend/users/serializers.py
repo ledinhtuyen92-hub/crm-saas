@@ -145,6 +145,8 @@ class UserSerializer(serializers.ModelSerializer):
     role_name = serializers.CharField(source="role.name", read_only=True)
     department_name = serializers.CharField(source="department.name", read_only=True)
     permissions = serializers.SerializerMethodField()
+    active_modules = serializers.SerializerMethodField()
+    managed_department_ids = serializers.SerializerMethodField()
 
     company_id = serializers.IntegerField(write_only=True, required=False)
 
@@ -160,6 +162,7 @@ class UserSerializer(serializers.ModelSerializer):
             "job_title",
             "company",
             "company_name",
+            "active_modules",
             "role",
             "role_name",
             "permissions",
@@ -170,12 +173,21 @@ class UserSerializer(serializers.ModelSerializer):
             "department_name",
             "created_at",
             "company_id",
+            "managed_department_ids",
         ]
-        read_only_fields = ["created_at", "permissions", "is_superuser", "company"]
+        read_only_fields = ["created_at", "permissions", "is_superuser", "company", "active_modules"]
 
     def get_permissions(self, obj):
         """Trả về danh sách permission code của user."""
         return list(obj.get_permission_codes())
+
+    def get_active_modules(self, obj):
+        if obj.company and hasattr(obj.company, 'settings'):
+            return obj.company.settings.active_modules
+        return []
+
+    def get_managed_department_ids(self, obj):
+        return list(obj.managed_departments.values_list("id", flat=True))
 
     def validate(self, attrs):
         request = self.context["request"]
@@ -260,6 +272,13 @@ class CompanySerializer(serializers.ModelSerializer):
     admin_email = serializers.EmailField(write_only=True, required=False, allow_blank=True)
     admin_fullname = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
+    active_modules = serializers.SerializerMethodField()
+    set_active_modules = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        write_only=True,
+    )
+
     class Meta:
         model = Company
         fields = [
@@ -283,8 +302,10 @@ class CompanySerializer(serializers.ModelSerializer):
             "admin_password",
             "admin_email",
             "admin_fullname",
+            "active_modules",
+            "set_active_modules",
         ]
-        read_only_fields = ["created_at"]
+        read_only_fields = ["created_at", "active_modules"]
 
     def get_user_count(self, obj):
         return obj.users.count()
@@ -292,6 +313,11 @@ class CompanySerializer(serializers.ModelSerializer):
     def get_owner_email(self, obj):
         owner = obj.users.filter(is_company_admin=True).first()
         return owner.email if owner else None
+
+    def get_active_modules(self, obj):
+        if hasattr(obj, 'settings'):
+            return obj.settings.active_modules
+        return []
 
     def validate_admin_username(self, value):
         if value and User.objects.filter(username__iexact=value).exists():
@@ -320,11 +346,15 @@ class CompanySerializer(serializers.ModelSerializer):
         admin_password = validated_data.pop("admin_password", None)
         admin_email = validated_data.pop("admin_email", None)
         admin_fullname = validated_data.pop("admin_fullname", None)
+        set_active_modules = validated_data.pop("set_active_modules", None)
 
         company = super().create(validated_data)
 
         # Khởi tạo cài đặt mặc định cho công ty
-        CompanySettings.objects.create(company=company)
+        settings = CompanySettings.objects.create(company=company)
+        if set_active_modules is not None:
+            settings.active_modules = set_active_modules
+            settings.save(update_fields=["active_modules"])
 
         # Tự động tạo tài khoản Giám đốc nếu có nhập thông tin admin
         if admin_username and admin_password:
@@ -347,6 +377,30 @@ class CompanySerializer(serializers.ModelSerializer):
                 job_title="Giám đốc",
             )
 
+        return company
+
+    def update(self, instance, validated_data):
+        active_modules = validated_data.pop("active_modules", None)
+        
+        company = super().update(instance, validated_data)
+        
+        if active_modules is not None:
+            settings, _ = CompanySettings.objects.get_or_create(company=company)
+            settings.active_modules = active_modules
+            settings.save(update_fields=["active_modules"])
+            
+        return company
+
+    def update(self, instance, validated_data):
+        set_active_modules = validated_data.pop("set_active_modules", None)
+        
+        company = super().update(instance, validated_data)
+        
+        if set_active_modules is not None:
+            settings, _ = CompanySettings.objects.get_or_create(company=company)
+            settings.active_modules = set_active_modules
+            settings.save(update_fields=["active_modules"])
+            
         return company
 
     def validate_tax_code(self, value):

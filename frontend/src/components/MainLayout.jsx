@@ -24,10 +24,12 @@ import {
   AppstoreOutlined,
   BankOutlined,
   BellOutlined,
+  CheckCircleOutlined,
   DashboardOutlined,
   DatabaseOutlined,
   FileDoneOutlined,
   FileTextOutlined,
+  InboxOutlined,
   KeyOutlined,
   LogoutOutlined,
   MoonOutlined,
@@ -48,7 +50,7 @@ const { Text, Title } = Typography
 function MainLayout({ children, isDarkMode, toggleTheme }) {
   const location = useLocation()
   const { token } = theme.useToken()
-  const { user, logout, isSuperAdmin, isCompanyAdmin, hasPermission, maintenanceMode } = useAuth()
+  const { user, logout, isSuperAdmin, isCompanyAdmin, hasPermission, maintenanceMode, isModuleActive } = useAuth()
 
   // ── Menu items (tuỳ theo quyền) ────────────────────────────────
   const menuItems = isSuperAdmin
@@ -80,40 +82,46 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
         },
       ]
     : [
-        ...(hasPermission('dashboard.view') 
-          ? [
-              {
-                key: '/dashboard',
-                icon: <DashboardOutlined />,
-                label: <Link to="/dashboard">Dashboard</Link>,
-              },
-            ]
-          : []),
+        ...(hasPermission('dashboard.view') ? [{
+          key: '/dashboard',
+          icon: <DashboardOutlined />,
+          label: <Link to="/dashboard">Bảng điều khiển</Link>,
+        }] : []),
         {
+          key: '/approvals',
+          icon: <CheckCircleOutlined />,
+          label: <Link to="/approvals">Phê duyệt</Link>,
+        },
+        ...(isModuleActive('crm') && hasPermission('crm.view') ? [{
           key: '/customers',
           icon: <TeamOutlined />,
           label: <Link to="/customers">Khách hàng</Link>,
-        },
-        {
+        }] : []),
+        ...(isModuleActive('sales') && hasPermission('sales.view') ? [{
           key: '/quotations',
           icon: <ShoppingCartOutlined />,
           label: <Link to="/quotations">Bán hàng (Báo giá)</Link>,
-        },
-        {
+        }] : []),
+        ...(isModuleActive('orders') && hasPermission('orders.view') ? [{
           key: '/orders',
           icon: <FileDoneOutlined />,
           label: <Link to="/orders">Đơn hàng</Link>,
-        },
-        {
+        }] : []),
+        ...(isModuleActive('products') && hasPermission('products.view') ? [{
+          key: '/products',
+          icon: <InboxOutlined />,
+          label: <Link to="/products">Sản phẩm & Dịch vụ</Link>,
+        }] : []),
+        ...(isModuleActive('inventory') && hasPermission('inventory.view') ? [{
           key: '/inventory',
           icon: <DatabaseOutlined />,
-          label: <Link to="/inventory">Kho bãi & SP</Link>,
-        },
-        {
+          label: <Link to="/inventory">Kho vận</Link>,
+        }] : []),
+        ...(isModuleActive('production') && hasPermission('production.view') ? [{
           key: '/production',
           icon: <ToolOutlined />,
           label: <Link to="/production">Sản xuất</Link>,
-        },
+        }] : []),
         ...(isCompanyAdmin
           ? [
               { type: 'divider' },

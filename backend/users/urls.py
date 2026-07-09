@@ -18,6 +18,7 @@ from .views import (
     UserQuotaView,
     UserViewSet,
     MyCompanyView,
+    SystemModuleView,
 )
 
 router = DefaultRouter()
@@ -29,6 +30,8 @@ router.register("permissions", PermissionViewSet, basename="permission")
 router.register("subscription-plans", SubscriptionPlanViewSet, basename="subscription-plan")
 
 urlpatterns = [
+    path("modules/", SystemModuleView.as_view(), name="system-modules"),
+    
     # Auth
     path("login/", CustomTokenObtainPairView.as_view(), name="token-obtain-pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),

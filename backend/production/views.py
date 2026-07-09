@@ -9,6 +9,7 @@ from .serializers import ProductionOrderSerializer, ProductionStepSerializer
 
 class ProductionOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     """Lệnh sản xuất — cô lập theo company."""
+    module_code = "production"
 
     queryset = ProductionOrder.objects.select_related(
         "company", "order__customer"
@@ -40,6 +41,7 @@ class ProductionOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
 class ProductionStepViewSet(viewsets.ModelViewSet):
     """Công đoạn sản xuất — filter qua production_order.company."""
+    module_code = "production"
 
     queryset = ProductionStep.objects.select_related(
         "production_order__company", "assigned_to"
