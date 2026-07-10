@@ -28,6 +28,7 @@ PERMISSIONS = [
     {"code": "sales.edit", "name": "Chỉnh sửa báo giá", "module": "sales"},
     {"code": "sales.delete", "name": "Xóa báo giá", "module": "sales"},
     {"code": "sales.approve", "name": "Duyệt báo giá", "module": "sales"},
+    {"code": "sales.require_approval", "name": "Bắt buộc trình duyệt (không cho gửi trực tiếp)", "module": "sales"},
     {"code": "sales.export_pdf", "name": "Xuất PDF báo giá", "module": "sales"},
     {"code": "sales.view_all", "name": "Xem tất cả báo giá (không giới hạn bởi phòng ban/người tạo)", "module": "sales"},
 
@@ -52,6 +53,8 @@ PERMISSIONS = [
     {"code": "inventory.import", "name": "Nhập hàng vào kho (tạo phiếu nhập)", "module": "inventory"},
     {"code": "inventory.adjust", "name": "Điều chỉnh tồn kho", "module": "inventory"},
     {"code": "inventory.export", "name": "Xem phiếu xuất kho", "module": "inventory"},
+    {"code": "inventory.approve_export", "name": "Duyệt lệnh xuất kho", "module": "inventory"},
+    {"code": "inventory.manual_export", "name": "Tạo phiếu xuất kho thủ công", "module": "inventory"},
     {"code": "inventory.manage_warehouse", "name": "Quản lý kho hàng", "module": "inventory"},
 
     # ── Production (Sản xuất) ─────────────────────────────────────

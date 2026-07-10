@@ -89,12 +89,55 @@ class Order(models.Model):
         default="Cọc 30% - Giao hàng 70%",
         verbose_name="Mẫu thanh toán",
     )
+    payment_terms_schedule = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Tiến độ thanh toán",
+    )
     installation_date = models.DateField(
         null=True,
         blank=True,
         verbose_name="Ngày lắp đặt",
     )
     notes = models.TextField(blank=True, verbose_name="Ghi chú")
+    subtotal = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0,
+        verbose_name="Tổng trước thuế (Subtotal)",
+    )
+    vat_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name="% Thuế VAT",
+    )
+    vat_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0,
+        verbose_name="Tiền thuế VAT",
+    )
+    shipping_fee = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0,
+        verbose_name="Chi phí vận chuyển",
+    )
+    installation_fee = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0,
+        verbose_name="Chi phí lắp đặt",
+    )
+    delivery_time = models.TextField(
+        blank=True,
+        verbose_name="Thời gian giao hàng dự kiến",
+    )
+    validity_days = models.PositiveIntegerField(
+        default=30,
+        verbose_name="Hiệu lực (ngày)",
+    )
     discount_total = models.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -105,12 +148,17 @@ class Order(models.Model):
         max_digits=15,
         decimal_places=2,
         default=0,
-        verbose_name="Tổng tiền",
+        verbose_name="Tổng cộng sau thuế",
     )
     approved_at = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Thời điểm duyệt",
+    )
+    custom_data = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Dữ liệu mở rộng theo mẫu",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -157,6 +205,41 @@ class Order(models.Model):
         self.approved_by = approved_by_user
         self.approved_at = timezone.now()
         self.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
+        
+        # Tự động khởi tạo Công nợ / Kỳ thanh toán
+        self.generate_payment_milestones()
+
+    def generate_payment_milestones(self):
+        """Khởi tạo OrderPaymentMilestone dựa vào payment_terms_schedule."""
+        if not self.payment_terms_schedule:
+            return
+            
+        from finance.models import OrderPaymentMilestone
+        
+        # Kiểm tra nếu đã có kỳ thanh toán thì bỏ qua để tránh duplicate
+        if OrderPaymentMilestone.objects.filter(order=self).exists():
+            return
+            
+        total = float(self.total_amount or 0)
+        
+        for idx, term in enumerate(self.payment_terms_schedule):
+            try:
+                title = term.get("title", f"Kỳ {idx + 1}")
+                percentage = float(term.get("percentage", 0))
+                m_type = term.get("type", OrderPaymentMilestone.TYPE_DEPOSIT)
+                amount = (total * percentage) / 100.0
+                
+                OrderPaymentMilestone.objects.create(
+                    company=self.company,
+                    order=self,
+                    milestone_type=m_type,
+                    title=title,
+                    percentage=percentage,
+                    amount=amount,
+                    status=OrderPaymentMilestone.STATUS_PENDING
+                )
+            except Exception:
+                pass
 
     def handle_approval_result(self, approval_status, acted_by=None):
         if approval_status == "approved":
@@ -231,6 +314,46 @@ class OrderItem(models.Model):
         decimal_places=2,
         default=0,
         verbose_name="Thành tiền",
+    )
+    note = models.CharField(max_length=255, blank=True, verbose_name="Ghi chú dòng")
+    length = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Chiều dài (m)",
+    )
+    area = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Diện tích (m2)",
+    )
+    spec = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Quy cách / Mô tả",
+    )
+    warranty = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Thời gian bảo hành",
+    )
+    thickness = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Chiều dày / Dày (mm/cm/m)",
+    )
+    product_image = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name="URL hình ảnh sản phẩm",
+    )
+    custom_data = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Dữ liệu tùy chỉnh khác (công thức, quy cách...)",
     )
 
     class Meta:

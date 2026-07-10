@@ -79,7 +79,7 @@ export default function OrderList() {
 
   // Dynamic products in form
   const [formItems, setFormItems] = useState(() => [
-    { key: 'init-item-1', product: null, width: 0, height: 0, quantity: 1, unit_price: 0, discount_percent: 0 },
+    { key: Date.now(), product: null, width: 0, height: 0, length: 0, thickness: 0, area: 0, spec: '', warranty: '12 tháng', quantity: 1, unit_price: 0, discount_percent: 0, note: '', product_image: '', unit: 'cái' },
   ])
 
   // Drawer details
@@ -344,14 +344,440 @@ export default function OrderList() {
     })
   }
 
+
+
+  const computeLineTotal = (item, templateOverride) => {
+    const qty = Number(item.quantity || 1)
+    const price = Number(item.unit_price || 0)
+    const discount = Number(item.discount_percent || 0)
+    const tmpl = templateOverride || companyTemplate
+    const tmplCode = tmpl?.code || 'STANDARD'
+    const isLandscape = tmplCode === 'production_landscape_a4' || tmpl?.layout_config?.paper_orientation === 'landscape'
+    if (isLandscape) {
+      return Number((qty * price * (1 - discount / 100)).toFixed(0))
+    }
+    const area = Number(item.area || 0)
+    if ((item.unit === 'm²' || item.custom_data?.unit === 'm²' || (area > 0 && item.width > 0 && item.height > 0)) && area > 0) {
+      return Number((area * qty * price * (1 - discount / 100)).toFixed(0))
+    }
+    return Number((qty * price * (1 - discount / 100)).toFixed(0))
+  }
+
+  const computeRowSpan = (data, index, field = 'product') => {
+    const currentVal = data[index]?.[field]
+    if (!currentVal) return 1
+    if (index > 0 && data[index - 1]?.[field] === currentVal) {
+      return 0
+    }
+    let count = 1
+    for (let i = index + 1; i < data.length; i++) {
+      if (data[i]?.[field] === currentVal) {
+        count++
+      } else {
+        break
+      }
+    }
+    return count
+  }
+
+  const handleAddSameProduct = (index) => {
+    setFormItems((prev) => {
+      const currentItem = prev[index]
+      if (!currentItem) return prev
+      const newItem = {
+        key: Date.now(),
+        product: currentItem.product,
+        product_name: currentItem.product_name,
+        product_image: currentItem.product_image,
+        unit: currentItem.unit || 'cái',
+        unit_price: currentItem.unit_price || 0,
+        width: 0,
+        height: 0,
+        length: 0,
+        thickness: 0,
+        area: 0,
+        spec: currentItem.spec || '',
+        note: '',
+        symbol: '',
+        custom_data: { ...(currentItem.custom_data || {}), symbol: '' },
+        quantity: 1,
+        discount_percent: currentItem.discount_percent || 0,
+      }
+      const updated = [...prev]
+      updated.splice(index + 1, 0, newItem)
+      return updated
+    })
+  }
+
+  const getItemColumns = () => {
+    const tmplCode = companyTemplate?.code || 'STANDARD'
+    const isLandscape = tmplCode === 'production_landscape_a4' || companyTemplate?.layout_config?.paper_orientation === 'landscape'
+
+    if (isLandscape) {
+      return [
+        {
+          title: 'STT',
+          key: 'stt',
+          width: 50,
+          align: 'center',
+          render: (_, __, idx) => idx + 1,
+        },
+        {
+          title: 'MẪU CỬA / SẢN PHẨM',
+          dataIndex: 'product',
+          key: 'product',
+          width: 260,
+          render: (val, record, idx) => {
+            const prodObj = products.find((p) => p.id === val)
+            const imgUrl = record.product_image || (prodObj ? (prodObj.image_url || prodObj.image) : null)
+            const rowSpan = computeRowSpan(formItems, idx, 'product')
+            return {
+              children: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
+                  <Select
+                    showSearch
+                    placeholder="Chọn mẫu cửa / sản phẩm..."
+                    optionFilterProp="children"
+                    style={{ width: '100%' }}
+                    value={val || undefined}
+                    onChange={(v) => handleLineChange(idx, 'product', v)}
+                  >
+                    {products.map((p) => (
+                      <Option key={p.id} value={p.id}>{p.name} ({p.unit || 'cái'})</Option>
+                    ))}
+                  </Select>
+                  {val && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#f8fafc', padding: 10, borderRadius: 8, border: '1px solid #e2e8f0', gap: 6 }}>
+                      {imgUrl ? (
+                        <img src={imgUrl} alt="product" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }} />
+                      ) : (
+                        <div style={{ width: 80, height: 80, background: '#e2e8f0', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#64748b' }}>Không có ảnh</div>
+                      )}
+                      <Text strong style={{ fontSize: 13, textAlign: 'center', color: '#0f172a', lineHeight: 1.3 }}>
+                        {record.product_name || (prodObj ? prodObj.name : '')}
+                      </Text>
+                      {(record.spec || (prodObj && prodObj.description) || record.note) && (
+                        <div style={{ fontSize: 11.5, color: '#475569', textAlign: 'center', lineHeight: 1.4, fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+                          {record.spec || (prodObj && prodObj.description) || record.note}
+                        </div>
+                      )}
+                      <Button
+                        type="dashed"
+                        size="small"
+                        icon={<PlusOutlined />}
+                        onClick={() => handleAddSameProduct(idx)}
+                        style={{ marginTop: 4, borderColor: '#2563eb', color: '#2563eb', width: '100%' }}
+                      >
+                        Thêm kích thước
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ),
+              props: { rowSpan },
+            }
+          },
+        },
+        {
+          title: 'KÍCH THƯỚC Ô CHỜ (mm)',
+          children: [
+            {
+              title: 'Cao',
+              dataIndex: 'height',
+              width: 85,
+              align: 'center',
+              render: (val, record, idx) => (
+                <InputNumber
+                  min={0}
+                  step={1}
+                  precision={0}
+                  style={{ width: '100%', textAlign: 'center' }}
+                  value={val !== undefined && val !== null && val !== '' ? Math.round(Number(val)) : undefined}
+                  onChange={(v) => handleLineChange(idx, 'height', v !== null && v !== undefined ? Math.round(Number(v)) : 0)}
+                  placeholder="0"
+                />
+              ),
+            },
+            {
+              title: 'Rộng',
+              dataIndex: 'width',
+              width: 85,
+              align: 'center',
+              render: (val, record, idx) => (
+                <InputNumber
+                  min={0}
+                  step={1}
+                  precision={0}
+                  style={{ width: '100%', textAlign: 'center' }}
+                  value={val !== undefined && val !== null && val !== '' ? Math.round(Number(val)) : undefined}
+                  onChange={(v) => handleLineChange(idx, 'width', v !== null && v !== undefined ? Math.round(Number(v)) : 0)}
+                  placeholder="0"
+                />
+              ),
+            },
+            {
+              title: 'Dày',
+              dataIndex: 'thickness',
+              width: 85,
+              align: 'center',
+              render: (val, record, idx) => (
+                <InputNumber
+                  min={0}
+                  step={1}
+                  precision={0}
+                  style={{ width: '100%', textAlign: 'center' }}
+                  value={val !== undefined && val !== null && val !== '' ? Math.round(Number(val)) : undefined}
+                  onChange={(v) => handleLineChange(idx, 'thickness', v !== null && v !== undefined ? Math.round(Number(v)) : 0)}
+                  placeholder="0"
+                />
+              ),
+            },
+          ],
+        },
+        {
+          title: 'KÝ HIỆU',
+          dataIndex: 'symbol',
+          width: 100,
+          align: 'center',
+          render: (val, record, idx) => <Input style={{ textAlign: 'center', fontWeight: 600, color: '#2563eb' }} placeholder="VD: D1.1" value={record.custom_data?.symbol || record.symbol || ''} onChange={(e) => handleLineChange(idx, 'symbol', e.target.value)} />,
+        },
+        {
+          title: 'GHI CHÚ KỸ THUẬT',
+          dataIndex: 'note',
+          width: 170,
+          render: (val, record, idx) => <Input placeholder="Khóa, bản lề, kính..." value={val || ''} onChange={(e) => handleLineChange(idx, 'note', e.target.value)} />,
+        },
+        {
+          title: 'SL',
+          dataIndex: 'quantity',
+          width: 70,
+          align: 'center',
+          render: (val, record, idx) => <InputNumber min={1} style={{ width: '100%', textAlign: 'center' }} value={val} onChange={(v) => handleLineChange(idx, 'quantity', v)} />,
+        },
+        {
+          title: 'ĐVT',
+          dataIndex: 'unit',
+          width: 70,
+          align: 'center',
+          render: (val, record, idx) => <Input style={{ textAlign: 'center' }} value={val || 'bộ'} onChange={(e) => handleLineChange(idx, 'unit', e.target.value)} />,
+        },
+        {
+          title: 'ĐƠN GIÁ/BỘ',
+          dataIndex: 'unit_price',
+          width: 130,
+          align: 'right',
+          render: (val, record, idx) => <InputNumber min={0} step={1000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} value={val} onChange={(v) => handleLineChange(idx, 'unit_price', v)} />,
+        },
+        {
+          title: 'TỔNG TIỀN',
+          key: 'total',
+          width: 130,
+          align: 'right',
+          render: (_, record) => {
+            const total = computeLineTotal(record)
+            return <Text strong style={{ color: '#16a34a', fontSize: 14 }}>{total.toLocaleString('vi-VN')} đ</Text>
+          },
+        },
+        {
+          title: '',
+          key: 'action',
+          width: 50,
+          render: (_, __, idx) => formItems.length > 1 ? (
+            <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveLine(idx)} />
+          ) : null,
+        },
+      ]
+    }
+
+    const baseCols = [
+      {
+        title: 'Sản phẩm / Dịch vụ',
+        dataIndex: 'product',
+        key: 'product',
+        width: 220,
+        render: (val, record, idx) => (
+          <Select
+            showSearch
+            placeholder="Chọn sản phẩm / dịch vụ..."
+            optionFilterProp="children"
+            style={{ width: '100%' }}
+            value={val || undefined}
+            onChange={(v) => handleLineChange(idx, 'product', v)}
+          >
+            {products.map((p) => (
+              <Option key={p.id} value={p.id}>{p.name} ({p.unit || 'cái'})</Option>
+            ))}
+          </Select>
+        ),
+      },
+    ]
+
+    if (tmplCode === 'CURTAIN') {
+      baseCols.push(
+        {
+          title: 'Rộng (m)',
+          dataIndex: 'width',
+          width: 90,
+          render: (val, record, idx) => <InputNumber min={0} step={0.1} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'width', v)} />,
+        },
+        {
+          title: 'Cao (m)',
+          dataIndex: 'height',
+          width: 90,
+          render: (val, record, idx) => <InputNumber min={0} step={0.1} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'height', v)} />,
+        },
+        {
+          title: 'D.Tích (m²)',
+          dataIndex: 'area',
+          width: 90,
+          render: (val, record, idx) => <InputNumber min={0} step={0.1} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'area', v)} />,
+        }
+      )
+    } else if (tmplCode === 'GLASS_ALUMINUM') {
+      baseCols.push(
+        {
+          title: 'Rộng (m)',
+          dataIndex: 'width',
+          width: 80,
+          render: (val, record, idx) => <InputNumber min={0} step={0.1} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'width', v)} />,
+        },
+        {
+          title: 'Cao (m)',
+          dataIndex: 'height',
+          width: 80,
+          render: (val, record, idx) => <InputNumber min={0} step={0.1} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'height', v)} />,
+        },
+        {
+          title: 'Quy cách / Hệ nhôm',
+          dataIndex: 'spec',
+          width: 160,
+          render: (val, record, idx) => <Input placeholder="Hệ 55, kính 10mm..." value={val} onChange={(e) => handleLineChange(idx, 'spec', e.target.value)} />,
+        },
+        {
+          title: 'Bảo hành',
+          dataIndex: 'warranty',
+          width: 100,
+          render: (val, record, idx) => <Input placeholder="5 năm..." value={val} onChange={(e) => handleLineChange(idx, 'warranty', e.target.value)} />,
+        }
+      )
+    } else if (tmplCode === 'SERVICES') {
+      baseCols.push(
+        {
+          title: 'Phạm vi / Mô tả chi tiết',
+          dataIndex: 'spec',
+          width: 200,
+          render: (val, record, idx) => <Input placeholder="Chi tiết phạm vi công việc..." value={val} onChange={(e) => handleLineChange(idx, 'spec', e.target.value)} />,
+        },
+        {
+          title: 'Thời gian bảo hành / duy trì',
+          dataIndex: 'warranty',
+          width: 140,
+          render: (val, record, idx) => <Input placeholder="12 tháng / 1 năm..." value={val} onChange={(e) => handleLineChange(idx, 'warranty', e.target.value)} />,
+        }
+      )
+    } else if (tmplCode === 'PRINTING') {
+      baseCols.push(
+        {
+          title: 'Dài (cm)',
+          dataIndex: 'length',
+          width: 80,
+          render: (val, record, idx) => <InputNumber min={0} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'length', v)} />,
+        },
+        {
+          title: 'Rộng (cm)',
+          dataIndex: 'width',
+          width: 80,
+          render: (val, record, idx) => <InputNumber min={0} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'width', v)} />,
+        },
+        {
+          title: 'Cao (cm)',
+          dataIndex: 'height',
+          width: 80,
+          render: (val, record, idx) => <InputNumber min={0} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'height', v)} />,
+        },
+        {
+          title: 'Chất liệu / Quy cách',
+          dataIndex: 'spec',
+          width: 150,
+          render: (val, record, idx) => <Input placeholder="Giấy C250, cán mờ..." value={val} onChange={(e) => handleLineChange(idx, 'spec', e.target.value)} />,
+        }
+      )
+    } else {
+      baseCols.push(
+        {
+          title: 'Kích thước / Ghi chú',
+          dataIndex: 'note',
+          width: 200,
+          render: (val, record, idx) => (
+            <Input
+              placeholder="VD: 800×2000mm, màu vân gỗ, lắp đặt kèm..."
+              value={val || ''}
+              onChange={(e) => handleLineChange(idx, 'note', e.target.value)}
+            />
+          ),
+        },
+        {
+          title: 'ĐVT',
+          dataIndex: 'unit',
+          width: 75,
+          align: 'center',
+          render: (val, record, idx) => (
+            <Input
+              style={{ textAlign: 'center' }}
+              value={val || record.custom_data?.unit || 'cái'}
+              onChange={(e) => handleLineChange(idx, 'unit', e.target.value)}
+            />
+          ),
+        }
+      )
+    }
+
+    baseCols.push(
+      {
+        title: 'SL',
+        dataIndex: 'quantity',
+        width: 70,
+        render: (val, record, idx) => <InputNumber min={1} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'quantity', v)} />,
+      },
+      {
+        title: 'Đơn giá (VNĐ)',
+        dataIndex: 'unit_price',
+        width: 130,
+        render: (val, record, idx) => <InputNumber min={0} step={1000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} value={val} onChange={(v) => handleLineChange(idx, 'unit_price', v)} />,
+      },
+      {
+        title: 'CK(%)',
+        dataIndex: 'discount_percent',
+        width: 70,
+        render: (val, record, idx) => <InputNumber min={0} max={100} style={{ width: '100%' }} value={val} onChange={(v) => handleLineChange(idx, 'discount_percent', v)} />,
+      },
+      {
+        title: 'Thành tiền',
+        key: 'total',
+        width: 130,
+        align: 'right',
+        render: (_, record) => {
+          const total = computeLineTotal(record)
+          return <Text strong style={{ color: '#16a34a' }}>{total.toLocaleString('vi-VN')} đ</Text>
+        },
+      },
+      {
+        title: '',
+        key: 'action',
+        width: 50,
+        render: (_, __, idx) => formItems.length > 1 ? (
+          <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveLine(idx)} />
+        ) : null,
+      }
+    )
+
+    return baseCols
+  }
+
   const calculateModalTotal = () => {
     let subtotal = 0
     formItems.forEach((item) => {
-      const qty = Number(item.quantity || 1)
-      const price = Number(item.unit_price || 0)
-      const discount = Number(item.discount_percent || 0)
-      const lineTotal = qty * price * (1 - discount / 100)
-      subtotal += lineTotal
+      subtotal += computeLineTotal(item)
     })
     return subtotal
   }
@@ -367,30 +793,53 @@ export default function OrderList() {
         installation_date: order.installation_date ? dayjs(order.installation_date) : null,
         notes: order.notes,
         discount_total: Number(order.discount_total || 0),
+        shipping_fee: Number(order.shipping_fee || 0),
+        installation_fee: Number(order.installation_fee || 0),
+        delivery_time: order.delivery_time || '3-5 ngày làm việc',
+        payment_terms_schedule: order.payment_terms_schedule && order.payment_terms_schedule.length > 0 
+          ? order.payment_terms_schedule 
+          : [{ title: 'Thanh toán đợt 1', percentage: 100, type: 'deposit' }],
+        vat_rate: Number(order.vat_rate || 0),
+        validity_days: Number(order.validity_days || 15),
       })
       if (order.items && order.items.length > 0) {
         setFormItems(
           order.items.map((it, idx) => ({
-            key: it.id || `edit-${idx}`,
+            key: it.id || idx,
             id: it.id,
             product: it.product,
-            width: Number(it.width || 0),
-            height: Number(it.height || 0),
+            width: Math.round(Number(it.width || 0)),
+            height: Math.round(Number(it.height || 0)),
+            length: Math.round(Number(it.length || 0)),
+            thickness: Math.round(Number(it.thickness || it.custom_data?.thickness || 0)),
+            area: Number(it.area || 0),
+            spec: it.spec || '',
+            warranty: it.warranty || '12 tháng',
             quantity: Number(it.quantity || 1),
             unit_price: Number(it.unit_price || 0),
             discount_percent: Number(it.discount_percent || 0),
+            note: it.note || '',
+            product_image: it.product_image || '',
+            unit: it.custom_data?.unit || 'cái',
+            custom_data: it.custom_data || {},
           }))
         )
       } else {
         setFormItems([
-          { key: 'init-item-1', product: null, width: 0, height: 0, quantity: 1, unit_price: 0, discount_percent: 0 },
+          { key: Date.now(), product: null, width: 0, height: 0, length: 0, thickness: 0, area: 0, spec: '', warranty: '12 tháng', quantity: 1, unit_price: 0, discount_percent: 0, note: '', product_image: '', unit: 'cái' },
         ])
       }
     } else {
       form.resetFields()
-      form.setFieldsValue({ status: 'pending', discount_total: 0 })
+      form.setFieldsValue({ status: 'pending', discount_total: 0,
+        shipping_fee: 0,
+        installation_fee: 0,
+        vat_rate: 0,
+        delivery_time: '3-5 ngày làm việc',
+        payment_terms_schedule: [{ title: 'Thanh toán đợt 1', percentage: 100, type: 'deposit' }],
+        validity_days: 15 })
       setFormItems([
-        { key: 'init-item-1', product: null, width: 0, height: 0, quantity: 1, unit_price: 0, discount_percent: 0 },
+        { key: Date.now(), product: null, width: 0, height: 0, length: 0, thickness: 0, area: 0, spec: '', warranty: '12 tháng', quantity: 1, unit_price: 0, discount_percent: 0, note: '', product_image: '', unit: 'cái' },
       ])
     }
     setModalVisible(true)
@@ -409,15 +858,46 @@ export default function OrderList() {
         return
       }
 
-      const totalAmt = calculateModalTotal() - Number(values.discount_total || 0)
+      const pt = values.payment_terms_schedule || []
+      const totalPercentage = pt.reduce((sum, item) => sum + Number(item.percentage || 0), 0)
+      if (pt.length > 0 && Math.abs(totalPercentage - 100) > 0.01) {
+        messageApi.error('Tổng % của các đợt thanh toán phải bằng đúng 100%.')
+        setSubmitting(false)
+        return
+      }
+
+      const subtotal = calculateModalTotal()
+      const vatAmount = (subtotal * Number(values.vat_rate || 0)) / 100.0
+      const totalAmt = subtotal + vatAmount + Number(values.shipping_fee || 0) + Number(values.installation_fee || 0) - Number(values.discount_total || 0)
+
+      const templateSnapshot = companyTemplate ? {
+        id: companyTemplate.id,
+        code: companyTemplate.code,
+        name: companyTemplate.name,
+        layout_config: companyTemplate.layout_config,
+        layout_style: companyTemplate.layout_style,
+        footer_content: companyTemplate.footer_content,
+      } : null
 
       const payload = {
         customer: values.customer,
         status: values.status,
         installation_date: values.installation_date ? values.installation_date.format('YYYY-MM-DD') : null,
         notes: values.notes || '',
+        shipping_fee: Number(values.shipping_fee || 0),
+        installation_fee: Number(values.installation_fee || 0),
+        delivery_time: values.delivery_time || '',
+        payment_terms_schedule: values.payment_terms_schedule || [],
+        validity_days: Number(values.validity_days || 15),
+        subtotal: subtotal,
+        vat_rate: Number(values.vat_rate || 0),
+        vat_amount: vatAmount,
         discount_total: Number(values.discount_total || 0),
         total_amount: Math.max(0, totalAmt),
+        custom_data: {
+          ...(editingOrder?.custom_data || {}),
+          ...(templateSnapshot ? { template_snapshot: templateSnapshot } : {}),
+        },
       }
 
       let orderId
@@ -447,8 +927,15 @@ export default function OrderList() {
             unit_price: Number(it.unit_price || 0),
             width: Number(it.width || 0),
             height: Number(it.height || 0),
+            length: Number(it.length || 0),
+            thickness: Number(it.thickness || 0),
+            area: Number(it.area || 0),
+            spec: it.spec || '',
+            warranty: it.warranty || '',
+            note: it.note || '',
             quantity: Number(it.quantity || 1),
             discount_percent: Number(it.discount_percent || 0),
+            custom_data: it.custom_data || {},
           })
         })
       )
@@ -642,7 +1129,7 @@ export default function OrderList() {
             }}
           />
 
-          {canEdit && record.status === 'pending' && (
+          {canEdit && (isCompanyAdmin || record.status === 'pending') && (
             <Button
               type="text"
               icon={<EditOutlined style={{ color: '#d97706' }} />}
@@ -849,107 +1336,162 @@ export default function OrderList() {
             </Col>
           </Row>
 
-          <Divider style={{ margin: '12px 0' }}>Danh sách sản phẩm / dịch vụ</Divider>
+          <Divider style={{ margin: '12px 0' }}>
+            <Space>
+              <Text strong>Bảng Tính Chi Tiết Hạng Mục (Mẫu: {companyTemplate?.name || 'Tiêu chuẩn'})</Text>
+              <Tag color="blue">{formItems.length} dòng</Tag>
+            </Space>
+          </Divider>
 
-          {formItems.map((item, index) => (
-            <Card
-              key={item.key}
+          <div style={{ marginBottom: 16, border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
+            <Table
+              dataSource={formItems}
+              columns={getItemColumns()}
+              rowKey="key"
+              pagination={false}
               size="small"
-              style={{
-                marginBottom: 12,
-                background: token.colorFillAlter,
-                borderRadius: 8,
-                border: '1px solid rgba(0,0,0,0.06)',
-              }}
-            >
-              <Row gutter={12} align="middle">
-                <Col xs={24} sm={8}>
-                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Sản phẩm / Vật tư</Text>
-                  <Select
-                    showSearch
-                    placeholder="Chọn sản phẩm..."
-                    optionFilterProp="children"
-                    style={{ width: '100%' }}
-                    value={item.product || undefined}
-                    onChange={(val) => handleLineChange(index, 'product', val)}
-                  >
-                    {products.map((p) => (
-                      <Option key={p.id} value={p.id}>
-                        {p.name} ({p.unit || 'cái'})
-                      </Option>
-                    ))}
-                  </Select>
-                </Col>
-                <Col xs={12} sm={3}>
-                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Rộng (m)</Text>
-                  <InputNumber
-                    min={0}
-                    step={0.1}
-                    style={{ width: '100%' }}
-                    value={item.width}
-                    onChange={(val) => handleLineChange(index, 'width', val)}
-                  />
-                </Col>
-                <Col xs={12} sm={3}>
-                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Cao (m)</Text>
-                  <InputNumber
-                    min={0}
-                    step={0.1}
-                    style={{ width: '100%' }}
-                    value={item.height}
-                    onChange={(val) => handleLineChange(index, 'height', val)}
-                  />
-                </Col>
-                <Col xs={12} sm={3}>
-                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Số lượng</Text>
-                  <InputNumber
-                    min={1}
-                    style={{ width: '100%' }}
-                    value={item.quantity}
-                    onChange={(val) => handleLineChange(index, 'quantity', val)}
-                  />
-                </Col>
-                <Col xs={12} sm={4}>
-                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Đơn giá (đ)</Text>
-                  <InputNumber
-                    min={0}
-                    step={1000}
-                    style={{ width: '100%' }}
-                    value={item.unit_price}
-                    onChange={(val) => handleLineChange(index, 'unit_price', val)}
-                  />
-                </Col>
-                <Col xs={24} sm={3} style={{ textAlign: 'right', marginTop: 18 }}>
-                  {formItems.length > 1 && (
-                    <Button
-                      type="text"
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() => handleRemoveLine(index)}
-                    />
-                  )}
-                </Col>
-              </Row>
-            </Card>
-          ))}
+              scroll={{ x: 'max-content' }}
+            />
+          </div>
 
-          <Button type="dashed" onClick={handleAddLine} block icon={<PlusOutlined />} style={{ marginBottom: 16 }}>
-            Thêm dòng sản phẩm
+
+          <Button type="dashed" onClick={handleAddLine} block icon={<PlusOutlined />} style={{ marginBottom: 20 }}>
+            Thêm dòng sản phẩm / hạng mục mới
           </Button>
 
-          <Row gutter={16} justify="end">
-            <Col xs={24} md={8}>
-              <Form.Item name="discount_total" label="Tổng chiết khấu chung (VNĐ)">
-                <InputNumber
-                  min={0}
-                  step={10000}
-                  style={{ width: '100%' }}
-                  formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(val) => val.replace(/\$\s?|(,*)/g, '')}
-                />
+          <Card size="small" style={{ background: '#f8fafc', borderRadius: 8, marginBottom: 16 }}>
+            <Row gutter={16} align="bottom">
+              <Col xs={24} sm={4}>
+                <Form.Item name="shipping_fee" label="Phí vận chuyển" style={{ marginBottom: 8 }}>
+                  <InputNumber min={0} step={50000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={4}>
+                <Form.Item name="installation_fee" label="Phí thi công" style={{ marginBottom: 8 }}>
+                  <InputNumber min={0} step={50000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={4}>
+                <Form.Item name="discount_total" label="Chiết khấu" style={{ marginBottom: 8 }}>
+                  <InputNumber min={0} step={10000} style={{ width: '100%' }} formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(val) => val.replace(/\$\s?|(,*)/g, '')} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={4}>
+                <Form.Item name="vat_rate" label="% VAT" style={{ marginBottom: 8 }}>
+                  <InputNumber min={0} max={100} step={1} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.Item shouldUpdate noStyle>
+                  {() => {
+                    const shipping = Number(form.getFieldValue('shipping_fee') || 0)
+                    const install = Number(form.getFieldValue('installation_fee') || 0)
+                    const discount = Number(form.getFieldValue('discount_total') || 0)
+                    const vatRate = Number(form.getFieldValue('vat_rate') || 0)
+                    const subtotal = calculateModalTotal()
+                    const vatAmount = (subtotal * vatRate) / 100.0
+                    const total = Math.max(0, subtotal + vatAmount + shipping + install - discount)
+                    return (
+                      <div style={{ textAlign: 'right', paddingRight: 8, marginBottom: 8 }}>
+                        <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Tổng Trước Thuế: {subtotal.toLocaleString('vi-VN')} đ</Text>
+                        <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Tiền VAT: {vatAmount.toLocaleString('vi-VN')} đ</Text>
+                        <Text strong style={{ fontSize: 18, color: '#e11d48', display: 'block', marginTop: 4 }}>
+                          Tổng: {total.toLocaleString('vi-VN')} đ
+                        </Text>
+                      </div>
+                    )
+                  }}
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item name="delivery_time" label="Thời gian giao hàng / thi công">
+                <Input placeholder="3-5 ngày làm việc..." />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="validity_days" label="Hiệu lực báo giá (số ngày)">
+                <InputNumber min={1} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           </Row>
+
+          <Card size="small" title="Tiến độ thanh toán (Tự động chuyển sang Công nợ)" style={{ marginBottom: 16 }}>
+            <Form.List name="payment_terms_schedule">
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(({ key, name, ...restField }) => (
+                    <Row key={key} gutter={16} align="middle" style={{ marginBottom: 8 }}>
+                      <Col xs={24} sm={8}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'title']}
+                          rules={[{ required: true, message: 'Nhập tên đợt' }]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <Input placeholder="VD: Đặt cọc lần 1" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} sm={6}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'percentage']}
+                          rules={[{ required: true, message: 'Nhập %' }]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <InputNumber placeholder="%" min={0} max={100} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} sm={8}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'type']}
+                          rules={[{ required: true, message: 'Chọn loại' }]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <Select>
+                            <Option value="deposit">Đặt cọc</Option>
+                            <Option value="before_delivery">Trước giao hàng</Option>
+                            <Option value="after_delivery">Sau giao hàng / Lắp đặt</Option>
+                            <Option value="warranty">Bảo hành</Option>
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} sm={2}>
+                        {fields.length > 1 && (
+                          <Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} />
+                        )}
+                      </Col>
+                    </Row>
+                  ))}
+                  <Button type="dashed" onClick={() => add({ title: '', percentage: 0, type: 'deposit' })} block icon={<PlusOutlined />} style={{ marginTop: 8 }}>
+                    Thêm đợt thanh toán
+                  </Button>
+                  <Form.Item shouldUpdate noStyle>
+                    {() => {
+                      const pt = form.getFieldValue('payment_terms_schedule') || []
+                      const totalPercentage = pt.reduce((sum, item) => sum + Number(item?.percentage || 0), 0)
+                      if (pt.length > 0 && Math.abs(totalPercentage - 100) > 0.01) {
+                        return (
+                          <div style={{ marginTop: 12, padding: '8px 12px', background: '#fef2f2', border: '1px solid #f87171', borderRadius: 4 }}>
+                            <Text type="danger" strong>
+                              <AlertOutlined style={{ marginRight: 8 }} /> 
+                              Cảnh báo: Tổng % các đợt thanh toán hiện tại là {totalPercentage}%. (Bắt buộc phải đúng 100%)
+                            </Text>
+                          </div>
+                        )
+                      }
+                      return null
+                    }}
+                  </Form.Item>
+                </>
+              )}
+            </Form.List>
+          </Card>
+
 
           <Form.Item name="notes" label="Ghi chú thi công & giao hàng">
             <TextArea

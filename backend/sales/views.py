@@ -131,8 +131,17 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 created_by=request.user,
                 installation_date=quotation.installation_date,
                 notes=quotation.notes,
+                subtotal=quotation.subtotal,
+                vat_rate=quotation.vat_rate,
+                vat_amount=quotation.vat_amount,
                 discount_total=quotation.discount_total,
                 total_amount=quotation.total_amount,
+                payment_terms_schedule=quotation.payment_terms_schedule,
+                shipping_fee=quotation.shipping_fee,
+                installation_fee=quotation.installation_fee,
+                delivery_time=quotation.delivery_time,
+                validity_days=quotation.validity_days,
+                custom_data=quotation.custom_data,
                 status=Order.STATUS_PENDING,
             )
             for item in quotation.items.all():
@@ -145,6 +154,14 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                     height=item.height,
                     quantity=item.quantity,
                     discount_percent=item.discount_percent,
+                    note=item.note,
+                    length=item.length,
+                    area=item.area,
+                    spec=item.spec,
+                    warranty=item.warranty,
+                    thickness=item.thickness,
+                    product_image=item.product_image,
+                    custom_data=item.custom_data,
                 )
 
             # Khởi tạo yêu cầu phê duyệt cho Đơn hàng

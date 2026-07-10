@@ -87,7 +87,8 @@ a {
   }
 
   /* 4. Ensure Quotation Content flows naturally across pages */
-  .printable-quotation-content {
+  .printable-quotation-content,
+  .printable-transaction-content {
     width: 100% !important;
     height: auto !important;
     overflow: visible !important;

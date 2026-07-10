@@ -1,4 +1,5 @@
 import {
+  AlertOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
@@ -101,6 +102,7 @@ export default function QuotationList() {
   const canCreate = hasPermission('sales.create')
   const canEdit = hasPermission('sales.edit')
   const canDelete = hasPermission('sales.delete')
+  const requireApproval = hasPermission('sales.require_approval') && !isCompanyAdmin
 
   // ── Fetch data ────────────────────────────────────────────────────────
   const fetchQuotations = useCallback(async () => {
@@ -361,6 +363,10 @@ export default function QuotationList() {
         installation_fee: Number(quotation.installation_fee || 0),
         delivery_time: quotation.delivery_time || '3-5 ngày làm việc',
         payment_terms: quotation.payment_terms || defaultPaymentTerms,
+        payment_terms_schedule: quotation.payment_terms_schedule && quotation.payment_terms_schedule.length > 0 
+          ? quotation.payment_terms_schedule 
+          : [{ title: 'Thanh toán đợt 1', percentage: 100, type: 'deposit' }],
+        vat_rate: Number(quotation.vat_rate || 0),
         validity_days: Number(quotation.validity_days || 15),
         notes: quotation.notes,
         discount_total: Number(quotation.discount_total || 0),
@@ -402,8 +408,10 @@ export default function QuotationList() {
         discount_total: 0,
         shipping_fee: 0,
         installation_fee: 0,
+        vat_rate: 0,
         delivery_time: '3-5 ngày làm việc',
         payment_terms: defaultPaymentTerms,
+        payment_terms_schedule: [{ title: 'Thanh toán đợt 1', percentage: 100, type: 'deposit' }],
         validity_days: 15,
         notes: defaultTerms,
       })
@@ -428,8 +436,17 @@ export default function QuotationList() {
         return
       }
 
+      const pt = values.payment_terms_schedule || []
+      const totalPercentage = pt.reduce((sum, item) => sum + Number(item.percentage || 0), 0)
+      if (pt.length > 0 && Math.abs(totalPercentage - 100) > 0.01) {
+        messageApi.error('Tổng % của các đợt thanh toán phải bằng đúng 100%.')
+        setSubmitting(false)
+        return
+      }
+
       const subtotal = calculateModalTotal()
-      const totalAmt = subtotal + Number(values.shipping_fee || 0) + Number(values.installation_fee || 0) - Number(values.discount_total || 0)
+      const vatAmount = (subtotal * Number(values.vat_rate || 0)) / 100.0
+      const totalAmt = subtotal + vatAmount + Number(values.shipping_fee || 0) + Number(values.installation_fee || 0) - Number(values.discount_total || 0)
 
       // Build template snapshot to freeze the current layout with this quotation
       const templateSnapshot = companyTemplate ? {
@@ -450,7 +467,11 @@ export default function QuotationList() {
         installation_fee: Number(values.installation_fee || 0),
         delivery_time: values.delivery_time || '',
         payment_terms: values.payment_terms || '',
+        payment_terms_schedule: values.payment_terms_schedule || [],
         validity_days: Number(values.validity_days || 15),
+        subtotal: subtotal,
+        vat_rate: Number(values.vat_rate || 0),
+        vat_amount: vatAmount,
         discount_total: Number(values.discount_total || 0),
         total_amount: Math.max(0, totalAmt),
         custom_data: {
@@ -1544,9 +1565,11 @@ export default function QuotationList() {
             </Col>
             <Col xs={24} md={6}>
               <Form.Item name="status" label="Trạng thái">
-                <Select>
+                <Select disabled={requireApproval && !['approved', 'sent', 'accepted'].includes(editingQuotation?.status)}>
                   <Option value="draft">Nháp</Option>
-                  <Option value="sent">Đã gửi</Option>
+                  {(!requireApproval || ['approved', 'sent', 'accepted'].includes(editingQuotation?.status)) && (
+                    <Option value="sent">Đã gửi</Option>
+                  )}
                   {isCompanyAdmin && <Option value="accepted">Đã chấp nhận</Option>}
                   <Option value="rejected">Đã từ chối</Option>
                 </Select>
@@ -1583,33 +1606,42 @@ export default function QuotationList() {
 
           <Card size="small" style={{ background: '#f8fafc', borderRadius: 8, marginBottom: 16 }}>
             <Row gutter={16} align="bottom">
-              <Col xs={24} sm={6}>
-                <Form.Item name="shipping_fee" label="Phí vận chuyển (VNĐ)" style={{ marginBottom: 8 }}>
+              <Col xs={24} sm={4}>
+                <Form.Item name="shipping_fee" label="Phí vận chuyển" style={{ marginBottom: 8 }}>
                   <InputNumber min={0} step={50000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={6}>
-                <Form.Item name="installation_fee" label="Phí thi công / lắp đặt (VNĐ)" style={{ marginBottom: 8 }}>
+              <Col xs={24} sm={4}>
+                <Form.Item name="installation_fee" label="Phí thi công" style={{ marginBottom: 8 }}>
                   <InputNumber min={0} step={50000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={6}>
-                <Form.Item name="discount_total" label="Chiết khấu chung (VNĐ)" style={{ marginBottom: 8 }}>
+              <Col xs={24} sm={4}>
+                <Form.Item name="discount_total" label="Chiết khấu" style={{ marginBottom: 8 }}>
                   <InputNumber min={0} step={10000} style={{ width: '100%' }} formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(val) => val.replace(/\$\s?|(,*)/g, '')} />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={6}>
+              <Col xs={24} sm={4}>
+                <Form.Item name="vat_rate" label="% VAT" style={{ marginBottom: 8 }}>
+                  <InputNumber min={0} max={100} step={1} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={8}>
                 <Form.Item shouldUpdate noStyle>
                   {() => {
                     const shipping = Number(form.getFieldValue('shipping_fee') || 0)
                     const install = Number(form.getFieldValue('installation_fee') || 0)
                     const discount = Number(form.getFieldValue('discount_total') || 0)
-                    const total = Math.max(0, calculateModalTotal() + shipping + install - discount)
+                    const vatRate = Number(form.getFieldValue('vat_rate') || 0)
+                    const subtotal = calculateModalTotal()
+                    const vatAmount = (subtotal * vatRate) / 100.0
+                    const total = Math.max(0, subtotal + vatAmount + shipping + install - discount)
                     return (
                       <div style={{ textAlign: 'right', paddingRight: 8, marginBottom: 8 }}>
-                        <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Tổng Thanh Toán Dự Kiến</Text>
-                        <Text strong style={{ fontSize: 20, color: '#e11d48' }}>
-                          {total.toLocaleString('vi-VN')} đ
+                        <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Tổng Trước Thuế: {subtotal.toLocaleString('vi-VN')} đ</Text>
+                        <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Tiền VAT: {vatAmount.toLocaleString('vi-VN')} đ</Text>
+                        <Text strong style={{ fontSize: 18, color: '#e11d48', display: 'block', marginTop: 4 }}>
+                          Tổng: {total.toLocaleString('vi-VN')} đ
                         </Text>
                       </div>
                     )
@@ -1620,22 +1652,90 @@ export default function QuotationList() {
           </Card>
 
           <Row gutter={16}>
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={12}>
               <Form.Item name="delivery_time" label="Thời gian giao hàng / thi công">
                 <Input placeholder="3-5 ngày làm việc..." />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={12}>
               <Form.Item name="validity_days" label="Hiệu lực báo giá (số ngày)">
                 <InputNumber min={1} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item name="payment_terms" label="Điều khoản thanh toán">
-                <Input placeholder="50% tạm ứng, 50% nghiệm thu..." />
-              </Form.Item>
-            </Col>
           </Row>
+
+          <Card size="small" title="Tiến độ thanh toán (Tự động chuyển sang Công nợ)" style={{ marginBottom: 16 }}>
+            <Form.List name="payment_terms_schedule">
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(({ key, name, ...restField }) => (
+                    <Row key={key} gutter={16} align="middle" style={{ marginBottom: 8 }}>
+                      <Col xs={24} sm={8}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'title']}
+                          rules={[{ required: true, message: 'Nhập tên đợt' }]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <Input placeholder="VD: Đặt cọc lần 1" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} sm={6}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'percentage']}
+                          rules={[{ required: true, message: 'Nhập %' }]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <InputNumber placeholder="%" min={0} max={100} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} sm={8}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'type']}
+                          rules={[{ required: true, message: 'Chọn loại' }]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <Select>
+                            <Option value="deposit">Đặt cọc</Option>
+                            <Option value="before_delivery">Trước giao hàng</Option>
+                            <Option value="after_delivery">Sau giao hàng / Lắp đặt</Option>
+                            <Option value="warranty">Bảo hành</Option>
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} sm={2}>
+                        {fields.length > 1 && (
+                          <Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} />
+                        )}
+                      </Col>
+                    </Row>
+                  ))}
+                  <Button type="dashed" onClick={() => add({ title: '', percentage: 0, type: 'deposit' })} block icon={<PlusOutlined />} style={{ marginTop: 8 }}>
+                    Thêm đợt thanh toán
+                  </Button>
+                  <Form.Item shouldUpdate noStyle>
+                    {() => {
+                      const pt = form.getFieldValue('payment_terms_schedule') || []
+                      const totalPercentage = pt.reduce((sum, item) => sum + Number(item?.percentage || 0), 0)
+                      if (pt.length > 0 && Math.abs(totalPercentage - 100) > 0.01) {
+                        return (
+                          <div style={{ marginTop: 12, padding: '8px 12px', background: '#fef2f2', border: '1px solid #f87171', borderRadius: 4 }}>
+                            <Text type="danger" strong>
+                              <AlertOutlined style={{ marginRight: 8 }} /> 
+                              Cảnh báo: Tổng % các đợt thanh toán hiện tại là {totalPercentage}%. (Bắt buộc phải đúng 100%)
+                            </Text>
+                          </div>
+                        )
+                      }
+                      return null
+                    }}
+                  </Form.Item>
+                </>
+              )}
+            </Form.List>
+          </Card>
 
           <Form.Item name="notes" label="Ghi chú & Điều khoản chung">
             <TextArea
@@ -1718,7 +1818,7 @@ export default function QuotationList() {
         })()}
         extra={
           <Space>
-            {selectedQuotation?.public_token && selectedQuotation?.status !== 'pending_approval' && (() => {
+            {selectedQuotation?.public_token && selectedQuotation?.status !== 'pending_approval' && (!requireApproval || ['approved', 'sent', 'accepted'].includes(selectedQuotation?.status)) && (() => {
               const expiresAt = selectedQuotation.public_link_expires_at
               const isExpired = expiresAt && dayjs(expiresAt).isBefore(dayjs())
               

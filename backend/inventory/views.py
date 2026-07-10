@@ -394,7 +394,7 @@ class WarehouseViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                     target_stock, _ = StockLevel.objects.select_for_update().get_or_create(
                         product=stock.product,
                         warehouse=target_warehouse,
-                        defaults={"quantity": 0}
+                        defaults={"quantity": 0, "company": self.request.user.company}
                     )
                     target_stock.quantity += stock.quantity
                     target_stock.save(update_fields=["quantity"])
@@ -466,8 +466,8 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     action_permissions = {
         "list": "inventory.view",
         "retrieve": "inventory.view",
-        "create": "inventory.import", # We'll need a way to distinguish adjust/export, but import is default creation. Wait, we can let logic inside perform_create handle finer-grained permission if needed, but for now inventory.import covers transactions generally.
-        "update": "inventory.adjust", # Actually transaction cannot be updated usually, but let's map it
+        "create": ["inventory.import", "inventory.adjust", "inventory.manual_export"],
+        "update": "inventory.adjust",
         "partial_update": "inventory.adjust",
     }
 
@@ -498,6 +498,17 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         warehouse = serializer.validated_data.get("warehouse")
         quantity = serializer.validated_data.get("quantity", 0)
 
+        # Kiểm tra quyền chi tiết theo loại giao dịch
+        from rest_framework.exceptions import PermissionDenied
+        user_perms = self.request.user.get_permission_codes()
+        if txn_type == "import" and "inventory.import" not in user_perms:
+            raise PermissionDenied("Bạn không có quyền nhập kho.")
+        if txn_type == "adjust" and "inventory.adjust" not in user_perms:
+            raise PermissionDenied("Bạn không có quyền điều chỉnh tồn kho.")
+        if txn_type == "export" and not reference_order and "inventory.manual_export" not in user_perms:
+            raise PermissionDenied("Bạn không có quyền tạo xuất kho thủ công.")
+
+
         # ─── SECURITY GATE: chặn cứng xuất kho khi đơn chưa duyệt hoặc chưa qua DO Gate ───
         if txn_type == "export" and reference_order:
             if reference_order.status != Order.STATUS_APPROVED:
@@ -525,7 +536,7 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             stock, _ = StockLevel.objects.select_for_update().get_or_create(
                 product=product,
                 warehouse=warehouse,
-                defaults={"quantity": 0},
+                defaults={"quantity": 0, "company": company},
             )
             if txn_type == "import":
                 stock.quantity += quantity
@@ -536,6 +547,77 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             elif txn_type == "export" and not reference_order:
                 stock.quantity = max(0, stock.quantity - quantity)
                 stock.save(update_fields=["quantity"])
+
+    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated, ActionBasedPermission])
+    @transaction.atomic
+    def approve(self, request, pk=None):
+        """Duyệt lệnh xuất kho và trừ tồn kho"""
+        txn = self.get_object()
+        
+        # Check permissions
+        if not request.user.is_company_admin and not request.user.role.permissions.filter(code="inventory.approve_export").exists():
+            return Response({"detail": "Bạn không có quyền duyệt lệnh xuất kho."}, status=status.HTTP_403_FORBIDDEN)
+
+        if txn.type != "export" or txn.status != txn.STATUS_PENDING:
+            return Response({"detail": "Chỉ có thể duyệt các lệnh xuất kho đang ở trạng thái chờ duyệt."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        warehouse_id = request.data.get("warehouse_id")
+        if not warehouse_id:
+            return Response({"detail": "Vui lòng chọn kho để xuất."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        warehouse = Warehouse.objects.filter(company=txn.company, id=warehouse_id).first()
+        if not warehouse:
+            return Response({"detail": "Kho hàng không hợp lệ."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check and update stock
+        from .models import StockLevel
+        stock, _ = StockLevel.objects.select_for_update().get_or_create(
+            product=txn.product,
+            warehouse=warehouse,
+            defaults={"quantity": 0, "company": txn.company}
+        )
+        
+        if stock.quantity < txn.quantity:
+            return Response({
+                "detail": f"Không đủ tồn kho! Sản phẩm '{txn.product.sku}' trong kho '{warehouse.name}' chỉ còn {stock.quantity} (cần xuất {txn.quantity}).",
+                "stock_quantity": stock.quantity
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Deduct stock
+        stock.quantity -= txn.quantity
+        stock.save(update_fields=["quantity"])
+        
+        # Cảnh báo tồn kho thấp
+        if stock.is_low_stock and stock.min_quantity > 0:
+            try:
+                from notifications.utils import notify_inventory_low
+                notify_inventory_low(stock)
+            except Exception:
+                pass
+                
+        # Update transaction
+        txn.warehouse = warehouse
+        txn.status = txn.STATUS_COMPLETED
+        txn.save(update_fields=["warehouse", "status"])
+        
+        return Response({"detail": "Đã duyệt và xuất kho thành công."})
+
+    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated, ActionBasedPermission])
+    def reject(self, request, pk=None):
+        """Từ chối/hủy lệnh xuất kho"""
+        txn = self.get_object()
+        
+        # Check permissions
+        if not request.user.is_company_admin and not request.user.role.permissions.filter(code="inventory.approve_export").exists():
+            return Response({"detail": "Bạn không có quyền từ chối lệnh xuất kho."}, status=status.HTTP_403_FORBIDDEN)
+
+        if txn.type != "export" or txn.status != txn.STATUS_PENDING:
+            return Response({"detail": "Chỉ có thể từ chối các lệnh xuất kho đang ở trạng thái chờ duyệt."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        txn.status = txn.STATUS_REJECTED
+        txn.save(update_fields=["status"])
+        
+        return Response({"detail": "Đã hủy lệnh xuất kho."})
 
     @action(detail=False, methods=["delete"], url_path="clear-history")
     def clear_history(self, request):

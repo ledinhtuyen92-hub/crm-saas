@@ -424,17 +424,37 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
       />
 
       <Divider />
-      <Row justify="end">
+      <Row gutter={24}>
+        <Col span={12}>
+          {quotation.payment_terms_schedule && quotation.payment_terms_schedule.length > 0 && (
+            <div>
+              <Text strong style={{ fontSize: 13, textDecoration: 'underline' }}>Tiến độ thanh toán:</Text>
+              <ul style={{ paddingLeft: 20, marginTop: 8, fontSize: 13, color: '#334155' }}>
+                {quotation.payment_terms_schedule.map((term, idx) => (
+                  <li key={idx} style={{ marginBottom: 4 }}>
+                    {term.title} ({term.percentage}%): <Text strong style={{ color: '#0f172a' }}>{(Number(quotation.total_amount || 0) * (term.percentage / 100)).toLocaleString('vi-VN')} đ</Text>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Col>
         <Col span={12} style={{ textAlign: 'right' }}>
+          <div><Text>Tổng Phí Trước Thuế:</Text> <Text strong>{Number(quotation.subtotal || 0).toLocaleString('vi-VN')} đ</Text></div>
+          {Number(quotation.vat_rate || 0) > 0 && (
+            <div><Text>Thuế VAT ({quotation.vat_rate}%):</Text> <Text strong>+{Number(quotation.vat_amount || 0).toLocaleString('vi-VN')} đ</Text></div>
+          )}
           {Number(quotation.shipping_fee || 0) > 0 && (
-            <div><Text type="secondary">Phí vận chuyển:</Text> <Text strong>+{Number(quotation.shipping_fee).toLocaleString('vi-VN')} đ</Text></div>
+            <div><Text>Phí vận chuyển:</Text> <Text strong>+{Number(quotation.shipping_fee).toLocaleString('vi-VN')} đ</Text></div>
           )}
           {Number(quotation.installation_fee || 0) > 0 && (
-            <div><Text type="secondary">Phí thi công / lắp đặt:</Text> <Text strong>+{Number(quotation.installation_fee).toLocaleString('vi-VN')} đ</Text></div>
+            <div><Text>Phí thi công / lắp đặt:</Text> <Text strong>+{Number(quotation.installation_fee).toLocaleString('vi-VN')} đ</Text></div>
           )}
-          <div><Text type="secondary">Chiết khấu chung:</Text> <Text strong>-{Number(quotation.discount_total || 0).toLocaleString('vi-VN')} đ</Text></div>
+          {Number(quotation.discount_total || 0) > 0 && (
+            <div><Text>Chiết khấu chung:</Text> <Text strong>-{Number(quotation.discount_total || 0).toLocaleString('vi-VN')} đ</Text></div>
+          )}
           <div style={{ marginTop: 8 }}>
-            <Text type="secondary">TỔNG THANH TOÁN:</Text>{' '}
+            <Text>TỔNG THANH TOÁN:</Text>{' '}
             <Title level={4} style={{ display: 'inline', color: '#16a34a', margin: 0 }}>
               {Number(quotation.total_amount || 0).toLocaleString('vi-VN')} đ
             </Title>
@@ -442,9 +462,24 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
         </Col>
       </Row>
 
+      <div style={{ marginTop: 24 }}>
+        {quotation.delivery_time && (
+          <div style={{ marginBottom: 4 }}>
+            <Text>Thời gian giao hàng / thi công: </Text>
+            <Text strong>{quotation.delivery_time}</Text>
+          </div>
+        )}
+        {quotation.validity_days && (
+          <div style={{ marginBottom: 4 }}>
+            <Text>Báo giá có giá trị trong vòng: </Text>
+            <Text strong>{quotation.validity_days} ngày</Text>
+          </div>
+        )}
+      </div>
+
       {(quotation.notes || effectiveTemplate?.company_default_terms || effectiveTemplate?.footer_content) && (
-        <Card size="small" style={{ marginTop: 24, background: '#f8fafc', borderColor: '#e2e8f0' }}>
-          <Text strong style={{ color: '#0f172a' }}>Ghi chú & Điều khoản thanh toán:</Text>
+        <Card size="small" style={{ marginTop: 12, background: '#f8fafc', borderColor: '#e2e8f0' }}>
+          <Text strong style={{ color: '#0f172a' }}>Ghi chú & Điều khoản khác:</Text>
           <Paragraph style={{ margin: '8px 0 0', color: '#334155', whiteSpace: 'pre-wrap' }}>
             {quotation.notes || effectiveTemplate?.company_default_terms || effectiveTemplate?.footer_content}
           </Paragraph>

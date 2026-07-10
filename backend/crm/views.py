@@ -96,6 +96,16 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         assigned_to = serializer.validated_data.get('assigned_to', default_assignee)
         serializer.save(company=company, created_by=user, assigned_to=assigned_to)
 
+    def destroy(self, request, *args, **kwargs):
+        from django.db.models.deletion import ProtectedError
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {"detail": "Không thể xóa khách hàng này vì đã có dữ liệu liên quan (Báo giá, Đơn hàng...)."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
     @action(detail=True, methods=["post"], url_path="assign")
     def assign(self, request, pk=None):
         """

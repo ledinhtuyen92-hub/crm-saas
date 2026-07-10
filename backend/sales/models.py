@@ -91,11 +91,29 @@ class Quotation(models.Model):
         null=True,
         verbose_name="Tên người ký",
     )
+    subtotal = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0,
+        verbose_name="Tổng trước thuế (Subtotal)",
+    )
+    vat_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name="% Thuế VAT",
+    )
+    vat_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0,
+        verbose_name="Tiền thuế VAT",
+    )
     total_amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
         default=0,
-        verbose_name="Tổng tiền",
+        verbose_name="Tổng cộng sau thuế",
     )
 
     order = models.OneToOneField(
@@ -133,7 +151,12 @@ class Quotation(models.Model):
     )
     payment_terms = models.TextField(
         blank=True,
-        verbose_name="Điều khoản thanh toán",
+        verbose_name="Điều khoản thanh toán (Text)",
+    )
+    payment_terms_schedule = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Tiến độ thanh toán",
     )
     validity_days = models.PositiveIntegerField(
         default=30,

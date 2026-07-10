@@ -4,6 +4,7 @@ from .models import (
     InventoryTransaction, Product, ProductCategory, StockLevel, Warehouse,
     ProductTemplate, ProductAttribute, ProductAttributeValue
 )
+from sales.serializers import get_company_info_dict
 
 
 class ProductCategorySerializer(serializers.ModelSerializer):
@@ -110,10 +111,12 @@ class StockLevelSerializer(serializers.ModelSerializer):
 
 class InventoryTransactionSerializer(serializers.ModelSerializer):
     type_display = serializers.CharField(source="get_type_display", read_only=True)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
     created_by_name = serializers.CharField(source="created_by.full_name", read_only=True)
+    company_info = serializers.SerializerMethodField()
 
     class Meta:
         model = InventoryTransaction
@@ -123,6 +126,8 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
             "transaction_code",
             "type",
             "type_display",
+            "status",
+            "status_display",
             "product",
             "product_name",
             "product_sku",
@@ -135,8 +140,12 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
             "created_by",
             "created_by_name",
             "created_at",
+            "company_info",
         ]
         read_only_fields = [
-            "id", "company", "transaction_code", "type_display", "product_name", "product_sku",
-            "warehouse_name", "created_by_name", "created_at",
+            "id", "company", "transaction_code", "type_display", "status_display", "product_name", "product_sku",
+            "warehouse_name", "created_by", "created_by_name", "created_at", "company_info",
         ]
+
+    def get_company_info(self, obj):
+        return get_company_info_dict(self, obj)

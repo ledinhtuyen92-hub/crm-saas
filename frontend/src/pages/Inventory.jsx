@@ -8,8 +8,10 @@ import {
   EditOutlined,
   HistoryOutlined,
   InboxOutlined,
+  MinusOutlined,
   PictureOutlined,
   PlusOutlined,
+  PrinterOutlined,
   SearchOutlined,
   ShopOutlined,
   TagOutlined,
@@ -41,13 +43,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
 import ProductTemplateTab from './inventory/ProductTemplateTab'
+import TransactionPrintView from '../components/TransactionPrintView'
 
 const { Title, Text } = Typography
 const { Option } = Select
 const { TextArea } = Input
 
 export default function Inventory() {
-  const { isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
+  const { isCompanyAdmin, hasPermission, checkMaintenance, user } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
 
   const [activeTab, setActiveTab] = useState('stock')
@@ -68,6 +71,7 @@ export default function Inventory() {
   const [lowStockOnly, setLowStockOnly] = useState(false)
   const [txnSearchText, setTxnSearchText] = useState('')
   const [txnTypeFilter, setTxnTypeFilter] = useState('')
+  const [txnStatusFilter, setTxnStatusFilter] = useState('')
   const [txnWarehouseFilter, setTxnWarehouseFilter] = useState('')
 
   // Modals
@@ -90,10 +94,17 @@ export default function Inventory() {
   const [targetWarehouseId, setTargetWarehouseId] = useState(null)
 
   const [txnModalVisible, setTxnModalVisible] = useState(false)
+  const [txnModalMode, setTxnModalMode] = useState('import')
   const [txnForm] = Form.useForm()
+
+  const [exportApproveModalVisible, setExportApproveModalVisible] = useState(false)
+  const [selectedExportTxn, setSelectedExportTxn] = useState(null)
+  const [approveWarehouseId, setApproveWarehouseId] = useState(null)
 
   const [clearTxnModalVisible, setClearTxnModalVisible] = useState(false)
   const [clearConfirmText, setClearConfirmText] = useState('')
+
+  const [selectedTxnForPrint, setSelectedTxnForPrint] = useState(null)
 
   const [submitting, setSubmitting] = useState(false)
 
@@ -101,6 +112,7 @@ export default function Inventory() {
   const canCreate = hasPermission('inventory.create')
   const canEdit = hasPermission('inventory.edit')
   const canDelete = hasPermission('inventory.delete')
+  const canManualExport = hasPermission('inventory.manual_export')
 
   // ── Fetch Data ────────────────────────────────────────────────────────
   const fetchProducts = useCallback(async () => {
@@ -184,7 +196,7 @@ export default function Inventory() {
       fetchStockLevels()
       if (products.length === 0) fetchProducts()
     }
-    else if (activeTab === 'transactions') {
+    else if (activeTab === 'transactions' || activeTab === 'pending_exports') {
       fetchTransactions()
       if (products.length === 0) fetchProducts()
     }
@@ -206,13 +218,20 @@ export default function Inventory() {
     const prod = products.find((p) => p.id === stk.product)
     const name = (prod?.name || stk.product_name || '').toLowerCase()
     const sku = (prod?.sku || stk.product_sku || '').toLowerCase()
+    return name.includes(kw) || sku.includes(kw)
   })
 
   // ── Filtered Transactions ─────────────────────────────────────────────
   const filteredTransactions = transactions.filter((txn) => {
+    // Ẩn lệnh chờ duyệt khỏi tab Lịch sử nếu người dùng không chủ động lọc theo 'pending'
+    if (!txnStatusFilter && txn.status === 'pending') return false
+
     let match = true
     if (txnTypeFilter) {
       match = match && txn.type === txnTypeFilter
+    }
+    if (txnStatusFilter) {
+      match = match && txn.status === txnStatusFilter
     }
     if (txnWarehouseFilter) {
       match = match && txn.warehouse === txnWarehouseFilter
@@ -227,6 +246,43 @@ export default function Inventory() {
     }
     return match
   })
+
+  const pendingExports = transactions.filter((txn) => txn.type === 'export' && txn.status === 'pending')
+
+  const handleOpenApproveExport = (txn) => {
+    setSelectedExportTxn(txn)
+    setApproveWarehouseId(null)
+    setExportApproveModalVisible(true)
+  }
+
+  const handleApproveExport = async () => {
+    if (!approveWarehouseId) {
+      messageApi.error('Vui lòng chọn kho xuất hàng.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      await api.post(`/inventory/transactions/${selectedExportTxn.id}/approve/`, { warehouse_id: approveWarehouseId })
+      messageApi.success('Duyệt xuất kho thành công!')
+      setExportApproveModalVisible(false)
+      fetchTransactions()
+      fetchStockLevels()
+    } catch (err) {
+      messageApi.error(err.response?.data?.detail || 'Không đủ tồn kho hoặc lỗi hệ thống.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleRejectExport = async (id) => {
+    try {
+      await api.post(`/inventory/transactions/${id}/reject/`)
+      messageApi.success('Đã từ chối lệnh xuất kho.')
+      fetchTransactions()
+    } catch (err) {
+      messageApi.error('Từ chối thất bại.')
+    }
+  }
 
   // ── Product Handlers ──────────────────────────────────────────────────
   const openProductModal = (prod = null) => {
@@ -441,12 +497,78 @@ export default function Inventory() {
     }
   }
 
-  // ── Transaction (Nhập kho / Điều chỉnh) Handlers ──────────────────────
-  const openTxnModal = () => {
+  // ── Transaction (Nhập kho / Điều chỉnh / Xuất kho) Handlers ──────────────────────
+  const openTxnModal = (defaultType = 'import') => {
     if (checkMaintenance()) return
     txnForm.resetFields()
-    txnForm.setFieldsValue({ type: 'import', quantity: 1, unit_cost: 0 })
+    setTxnModalMode(defaultType)
+    txnForm.setFieldsValue({ type: defaultType, quantity: 1, unit_cost: 0 })
     setTxnModalVisible(true)
+  }
+
+  const handlePrintTxn = (txn) => {
+    setSelectedTxnForPrint(txn)
+    setTimeout(() => {
+      const contentEl = document.querySelector('.printable-transaction-content')
+      if (!contentEl) {
+        window.print()
+        return
+      }
+
+      const styleTags = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+        .map((el) => el.outerHTML)
+        .join('\n')
+
+      const printWin = window.open('', '_blank', 'width=1180,height=850')
+      if (!printWin) {
+        window.print()
+        return
+      }
+
+      printWin.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${txn.transaction_code}</title>
+          ${styleTags}
+          <style>
+            @media print {
+              body, html, .printable-transaction-content {
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                width: 100% !important;
+                height: auto !important;
+                overflow: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              .printable-transaction-content {
+                width: 794px !important; /* A4 width */
+                max-width: 100% !important;
+                height: auto !important;
+                margin: 0 auto !important;
+              }
+              @page {
+                size: A4 portrait;
+                margin: 15mm;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${contentEl.outerHTML}
+          <script>
+            setTimeout(() => {
+              window.print();
+              window.close();
+            }, 500);
+          </script>
+        </body>
+        </html>
+      `)
+      printWin.document.close()
+    }, 100)
   }
 
   const handleTxnSubmit = async () => {
@@ -460,7 +582,9 @@ export default function Inventory() {
       fetchStockLevels()
     } catch (error) {
       if (error.errorFields) return
-      messageApi.error('Tạo phiếu kho thất bại.')
+      console.error(error.response?.data)
+      const errDetail = error.response?.data ? JSON.stringify(error.response.data) : 'Tạo phiếu kho thất bại.'
+      messageApi.error(errDetail)
     } finally {
       setSubmitting(false)
     }
@@ -638,12 +762,87 @@ export default function Inventory() {
   ]
 
   // ── Columns for Transactions ──────────────────────────────────────────
+  const pendingTxnColumns = [
+    {
+      title: 'Mã phiếu',
+      dataIndex: 'transaction_code',
+      key: 'transaction_code',
+      render: (val) => <Tag color="purple" style={{ fontWeight: 600 }}>{val}</Tag>,
+    },
+    {
+      title: 'Sản phẩm',
+      dataIndex: 'product',
+      key: 'product',
+      render: (id) => {
+        const p = products.find((item) => item.id === id)
+        return p ? <Text strong>{p.name}</Text> : `SP #${id}`
+      },
+    },
+    {
+      title: 'Số lượng',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      align: 'center',
+      render: (v, r) => (
+        <Text strong style={{ color: '#0f172a' }}>
+          {v} {products.find(p => p.id === r.product)?.unit || 'cái'}
+        </Text>
+      ),
+    },
+    {
+      title: 'Ghi chú',
+      dataIndex: 'note',
+      key: 'note',
+    },
+    {
+      title: 'Hành động',
+      key: 'action',
+      align: 'right',
+      render: (_, record) => (
+        <Space>
+          {(isCompanyAdmin || hasPermission('inventory.approve_export')) && (
+            <Button
+              type="primary"
+              size="small"
+              icon={<CheckCircleOutlined />}
+              onClick={() => handleOpenApproveExport(record)}
+              style={{ background: '#16a34a', borderColor: '#16a34a' }}
+            >
+              Duyệt xuất
+            </Button>
+          )}
+          {(isCompanyAdmin || hasPermission('inventory.approve_export')) && (
+            <Popconfirm
+              title="Từ chối lệnh xuất?"
+              onConfirm={() => handleRejectExport(record.id)}
+              okText="Từ chối"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true }}
+            >
+              <Button danger size="small" icon={<CloseCircleOutlined />}>Từ chối</Button>
+            </Popconfirm>
+          )}
+        </Space>
+      ),
+    },
+  ]
+
   const txnColumns = [
     {
       title: 'Mã phiếu',
       dataIndex: 'transaction_code',
       key: 'transaction_code',
       render: (val) => <Tag color="purple" style={{ fontWeight: 600 }}>{val}</Tag>,
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status_display',
+      key: 'status',
+      render: (val, r) => {
+        if (r.status === 'pending') return <Tag color="warning">{val || 'Chờ duyệt'}</Tag>
+        if (r.status === 'rejected') return <Tag color="default">{val || 'Đã hủy'}</Tag>
+        return <Tag color="success">{val || 'Hoàn thành'}</Tag>
+      },
     },
     {
       title: 'Loại phiếu',
@@ -696,6 +895,19 @@ export default function Inventory() {
       key: 'created_at',
       render: (val) => dayjs(val).format('DD/MM/YYYY HH:mm'),
     },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      align: 'right',
+      render: (_, r) => (
+        <Button
+          type="text"
+          icon={<PrinterOutlined />}
+          onClick={() => handlePrintTxn(r)}
+          title="In phiếu"
+        />
+      ),
+    },
   ]
 
   return (
@@ -730,10 +942,20 @@ export default function Inventory() {
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={() => openTxnModal()}
+                onClick={() => openTxnModal('import')}
                 style={{ background: '#16a34a', fontWeight: 600, borderRadius: 8 }}
               >
                 Tạo Phiếu Nhập / Điều Chỉnh
+              </Button>
+            )}
+            {activeTab === 'transactions' && canManualExport && (
+              <Button
+                type="primary"
+                icon={<MinusOutlined />}
+                onClick={() => openTxnModal('export')}
+                style={{ background: '#ea580c', fontWeight: 600, borderRadius: 8, marginLeft: 8 }}
+              >
+                Tạo Phiếu Xuất Kho
               </Button>
             )}
           </Space>
@@ -746,7 +968,6 @@ export default function Inventory() {
           activeKey={activeTab}
           onChange={setActiveTab}
           items={[
-
             {
               key: 'stock',
               label: (
@@ -800,6 +1021,28 @@ export default function Inventory() {
               ),
             },
             {
+              key: 'pending_exports',
+              label: (
+                <Space>
+                  <AlertOutlined style={{ color: '#d97706' }} />
+                  <span style={{ color: '#d97706' }}>Lệnh Xuất Chờ Duyệt</span>
+                  {pendingExports.length > 0 && <Tag color="red">{pendingExports.length}</Tag>}
+                </Space>
+              ),
+              children: (
+                <div>
+                  <Table
+                    columns={pendingTxnColumns}
+                    dataSource={pendingExports}
+                    rowKey="id"
+                    loading={loading}
+                    pagination={{ pageSize: 10 }}
+                    scroll={{ x: 800 }}
+                  />
+                </div>
+              )
+            },
+            {
               key: 'transactions',
               label: (
                 <Space>
@@ -816,7 +1059,7 @@ export default function Inventory() {
                           placeholder="Tìm mã phiếu, tên/mã SP..."
                           prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
                           value={txnSearchText}
-                          onChange={(e) => setTxnSearchText(e.target.value)}
+                          onChange={(e) => setSearchText(e.target.value)}
                           allowClear
                           style={{ borderRadius: 8, minWidth: 250 }}
                         />
@@ -830,6 +1073,17 @@ export default function Inventory() {
                           <Option value="import">Nhập kho</Option>
                           <Option value="export">Xuất kho</Option>
                           <Option value="adjust">Điều chỉnh</Option>
+                        </Select>
+                        <Select
+                          placeholder="Trạng thái"
+                          value={txnStatusFilter || undefined}
+                          onChange={(val) => setTxnStatusFilter(val || '')}
+                          allowClear
+                          style={{ minWidth: 130 }}
+                        >
+                          <Option value="completed">Hoàn thành</Option>
+                          <Option value="pending">Chờ duyệt</Option>
+                          <Option value="rejected">Đã hủy</Option>
                         </Select>
                         <Select
                           placeholder="Chọn kho hàng..."
@@ -1102,7 +1356,7 @@ export default function Inventory() {
 
       {/* ── Modal Transaction (Nhập kho / Điều chỉnh) ──────────────────── */}
       <Modal
-        title={<Text strong style={{ fontSize: 18 }}>Tạo Phiếu Nhập / Điều Chỉnh Kho</Text>}
+        title={<Text strong style={{ fontSize: 18 }}>{txnModalMode === 'export' ? 'Tạo Phiếu Xuất Kho' : 'Tạo Phiếu Nhập / Điều Chỉnh Kho'}</Text>}
         open={txnModalVisible}
         onCancel={() => setTxnModalVisible(false)}
         onOk={handleTxnSubmit}
@@ -1114,9 +1368,15 @@ export default function Inventory() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="type" label="Loại giao dịch" rules={[{ required: true }]}>
-                <Select>
-                  <Option value="import">Nhập kho (+)</Option>
-                  <Option value="adjust">Điều chỉnh kiểm kê (=)</Option>
+                <Select placeholder="Chọn loại giao dịch" disabled={txnModalMode === 'export'}>
+                  {txnModalMode === 'export' ? (
+                    <Option value="export">Xuất kho (-)</Option>
+                  ) : (
+                    <>
+                      <Option value="import">Nhập kho (+)</Option>
+                      <Option value="adjust">Điều chỉnh (+/-)</Option>
+                    </>
+                  )}
                 </Select>
               </Form.Item>
             </Col>
@@ -1253,6 +1513,85 @@ export default function Inventory() {
           />
         </div>
       </Modal>
+
+      {/* Modal Approve Export */}
+      <Modal
+        title={
+          <Space>
+            <CheckCircleOutlined style={{ color: '#16a34a' }} />
+            <Text strong style={{ fontSize: 18 }}>Duyệt Xuất Kho</Text>
+          </Space>
+        }
+        open={exportApproveModalVisible}
+        onCancel={() => setExportApproveModalVisible(false)}
+        onOk={handleApproveExport}
+        confirmLoading={submitting}
+        okText="Xác nhận duyệt"
+        cancelText="Hủy"
+        okButtonProps={{ style: { background: '#16a34a', borderColor: '#16a34a' } }}
+      >
+        {selectedExportTxn && (
+          <div style={{ marginTop: 16 }}>
+            <Alert
+              message={selectedExportTxn.note || "Vui lòng chọn kho để trừ số lượng sản phẩm này."}
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+            <Row gutter={[16, 16]}>
+              <Col span={24}>
+                <Text type="secondary">Sản phẩm cần xuất:</Text>
+                <div>
+                  <Text strong style={{ fontSize: 16 }}>{selectedExportTxn.product_name}</Text>
+                  <Tag color="blue" style={{ marginLeft: 8 }}>SKU: {selectedExportTxn.product_sku}</Tag>
+                </div>
+              </Col>
+              <Col span={24}>
+                <Text type="secondary">Số lượng cần xuất:</Text>
+                <div>
+                  <Text strong style={{ fontSize: 18, color: '#dc2626' }}>{selectedExportTxn.quantity}</Text> {products.find(p => p.id === selectedExportTxn.product)?.unit}
+                </div>
+              </Col>
+              <Col span={24}>
+                <Text type="secondary">Chọn Kho để xuất hàng:</Text>
+                <Select
+                  style={{ width: '100%', marginTop: 8 }}
+                  placeholder="--- Chọn kho ---"
+                  value={approveWarehouseId}
+                  onChange={setApproveWarehouseId}
+                >
+                  {warehouses.map(w => {
+                    const stock = stockLevels.find(s => s.warehouse === w.id && s.product === selectedExportTxn.product)
+                    const qty = stock ? stock.quantity : 0
+                    const isEnough = qty >= selectedExportTxn.quantity
+                    return (
+                      <Option key={w.id} value={w.id} disabled={!isEnough}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>{w.name}</span>
+                          <span style={{ color: isEnough ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                            Tồn: {qty} {isEnough ? '' : '(Không đủ)'}
+                          </span>
+                        </div>
+                      </Option>
+                    )
+                  })}
+                </Select>
+              </Col>
+            </Row>
+          </div>
+        )}
+      </Modal>
+
+      {/* Hidden Print Container */}
+      {selectedTxnForPrint && (
+        <div style={{ display: 'none' }}>
+          <TransactionPrintView
+            transaction={selectedTxnForPrint}
+            company={user?.company}
+          />
+        </div>
+      )}
+
     </div>
   )
 }

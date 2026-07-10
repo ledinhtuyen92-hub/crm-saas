@@ -122,3 +122,15 @@ class CustomerSerializer(serializers.ModelSerializer):
             "status_display", "source_display",
             "created_at", "updated_at",
         ]
+
+    def validate_phone(self, value):
+        request = self.context.get("request")
+        if request and hasattr(request, "user"):
+            company = request.user.company
+            qs = Customer.objects.filter(company=company, phone=value)
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError("Số điện thoại này đã tồn tại trong hệ thống khách hàng của bạn.")
+        return value
+

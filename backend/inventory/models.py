@@ -312,6 +312,15 @@ class InventoryTransaction(models.Model):
         (TYPE_ADJUST, "Điều chỉnh"),
     ]
 
+    STATUS_PENDING = "pending"
+    STATUS_COMPLETED = "completed"
+    STATUS_REJECTED = "rejected"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Chờ duyệt"),
+        (STATUS_COMPLETED, "Hoàn thành"),
+        (STATUS_REJECTED, "Đã hủy"),
+    ]
+
     company = models.ForeignKey(
         "users.Company",
         on_delete=models.CASCADE,
@@ -340,6 +349,14 @@ class InventoryTransaction(models.Model):
         on_delete=models.PROTECT,
         related_name="inventory_transactions",
         verbose_name="Kho hàng",
+        null=True,  # Cho phép null ban đầu nếu chờ duyệt thủ kho mới chọn kho
+        blank=True,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_COMPLETED,  # Mặc định completed cho dữ liệu cũ
+        verbose_name="Trạng thái",
     )
     quantity = models.PositiveIntegerField(verbose_name="Số lượng")
     unit_cost = models.DecimalField(

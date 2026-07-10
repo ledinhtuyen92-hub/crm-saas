@@ -3,6 +3,8 @@ Chạy docker:
 - Chạy khởi tạo backend : docker-compose up -d
 - Chạy giao diện fontend: cd frontend
                           npm run dev
+                          docker-compose exec -T web python manage.py migrate
+
 - Tắt khi không dùng: docker-compose down
 - Xem báo lỗi: docker-compose logs -f
 - Tạo tk admin: docker exec -it crm_web python manage.py createsuperuser

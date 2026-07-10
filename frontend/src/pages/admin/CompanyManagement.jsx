@@ -13,6 +13,7 @@ import {
   Badge,
   Button,
   Card,
+  Checkbox,
   Col,
   Form,
   Input,
@@ -510,11 +511,15 @@ export default function CompanyManagement() {
             label="Module kích hoạt"
             tooltip="Chọn các module mà công ty này được phép sử dụng."
           >
-            <Select mode="multiple" size="large" placeholder="Chọn module...">
-              {systemModules.map(m => (
-                <Select.Option key={m.code} value={m.code}>{m.name}</Select.Option>
-              ))}
-            </Select>
+            <Checkbox.Group style={{ width: '100%' }}>
+              <Row gutter={[12, 12]}>
+                {systemModules.map(m => (
+                  <Col span={12} key={m.code}>
+                    <Checkbox value={m.code}>{m.name}</Checkbox>
+                  </Col>
+                ))}
+              </Row>
+            </Checkbox.Group>
           </Form.Item>
 
           <Row gutter={12}>

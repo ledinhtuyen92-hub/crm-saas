@@ -88,71 +88,7 @@ def _handle_order_approved(order):
     2. Tạo ProductionOrder
     3. Gửi notification
     """
-    from core.numbering import generate_transaction_code
-    from inventory.models import InventoryTransaction, StockLevel, Warehouse
-    from notifications.utils import notify_order_approved
-
-    # Lấy kho mặc định của công ty
-    from inventory.models import Warehouse
-    default_warehouse = None
-    try:
-        default_warehouse = order.company.settings.default_warehouse
-    except Exception:
-        pass
-
-    if default_warehouse is None:
-        default_warehouse = Warehouse.objects.filter(company=order.company).first()
-        if default_warehouse is None:
-            default_warehouse = Warehouse.objects.create(
-                company=order.company,
-                name="Kho chính",
-                is_active=True,
-            )
-
-    for item in order.items.select_related("product").all():
-        # 1. Tạo InventoryTransaction (xuất kho)
-        txn_code = generate_transaction_code(order.company, "export")
-        transaction_obj = InventoryTransaction.objects.create(
-            company=order.company,
-            transaction_code=txn_code,
-            type=InventoryTransaction.TYPE_EXPORT,
-            product=item.product,
-            warehouse=default_warehouse,
-            quantity=item.quantity,
-            unit_cost=0,
-            reference_order=order,
-            note=f"Xuất kho tự động cho đơn hàng {order.order_number}",
-            created_by=order.approved_by,
-        )
-
-        # 2. Cập nhật StockLevel (trừ tồn kho)
-        if default_warehouse:
-            stock, _ = StockLevel.objects.select_for_update().get_or_create(
-                product=item.product,
-                warehouse=default_warehouse,
-                defaults={"quantity": 0},
-            )
-
-            if stock.quantity < item.quantity:
-                logger.warning(
-                    "Stock insufficient for product %s: available=%s, required=%s",
-                    item.product.sku,
-                    stock.quantity,
-                    item.quantity,
-                )
-
-            stock.quantity = max(0, stock.quantity - item.quantity)
-            stock.save(update_fields=["quantity"])
-
-            # Cảnh báo tồn kho thấp
-            if stock.is_low_stock and stock.min_quantity > 0:
-                try:
-                    from notifications.utils import notify_inventory_low
-                    notify_inventory_low(stock)
-                except Exception as exc:
-                    logger.warning("Low stock notification failed: %s", exc)
-
-    # 3. Tạo ProductionOrder tự động nếu đủ điều kiện tài chính (Cọc / Đủ tiền / Duyệt nợ)
+    # Tự động tạo Lệnh xuất kho chờ duyệt và Lệnh sản xuất nếu đủ điều kiện tài chính
     check_and_trigger_mo_gate(order)
 
     # 4. Thông báo cho người tạo đơn
@@ -192,8 +128,9 @@ def check_and_trigger_mo_gate(order):
     ]
     if order.financial_status in allowed_statuses:
         _create_production_order(order)
+        _create_pending_inventory_export(order)
     else:
-        logger.info("Order %s approved but waiting for deposit payment to open MO Gate.", order.order_number)
+        logger.info("Order %s approved but waiting for deposit payment to open MO & Export Gate.", order.order_number)
 
 
 def _create_production_order(order):
@@ -211,6 +148,36 @@ def _create_production_order(order):
             logger.info("Auto-created ProductionOrder for order %s", order.order_number)
     except Exception as exc:
         logger.error("Failed to create ProductionOrder for order %s: %s", order.order_number, exc)
+
+
+def _create_pending_inventory_export(order):
+    """Tạo lệnh xuất kho ở trạng thái chờ duyệt (pending) khi đủ điều kiện tài chính."""
+    try:
+        from core.numbering import generate_transaction_code
+        from inventory.models import InventoryTransaction
+
+        for item in order.items.select_related("product").all():
+            # Kiểm tra xem đã tạo lệnh pending cho item này chưa (tránh duplicate)
+            if InventoryTransaction.objects.filter(reference_order=order, product=item.product, type=InventoryTransaction.TYPE_EXPORT).exists():
+                continue
+
+            txn_code = generate_transaction_code(order.company, "export")
+            InventoryTransaction.objects.create(
+                company=order.company,
+                transaction_code=txn_code,
+                type=InventoryTransaction.TYPE_EXPORT,
+                status=InventoryTransaction.STATUS_PENDING,
+                product=item.product,
+                warehouse=None,  # Chờ thủ kho chọn
+                quantity=item.quantity,
+                unit_cost=0,
+                reference_order=order,
+                note=f"Lệnh xuất kho chờ duyệt cho đơn hàng {order.order_number}",
+                created_by=order.approved_by,
+            )
+        logger.info("Auto-created pending InventoryTransaction(s) for order %s", order.order_number)
+    except Exception as exc:
+        logger.error("Failed to create pending InventoryTransaction for order %s: %s", order.order_number, exc)
 
 
 def _handle_order_rejected(order):
