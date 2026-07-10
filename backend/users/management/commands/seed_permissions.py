@@ -86,6 +86,7 @@ PERMISSIONS = [
     {"code": "finance.create_receipt", "name": "Tạo giao dịch thu/chi mới", "module": "finance"},
     {"code": "finance.edit", "name": "Chỉnh sửa giao dịch", "module": "finance"},
     {"code": "finance.delete", "name": "Xóa giao dịch", "module": "finance"},
+    {"code": "finance.request_credit", "name": "Trình duyệt xuất kho nợ", "module": "finance"},
 ]
 
 

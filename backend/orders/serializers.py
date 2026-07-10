@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from .models import Order, OrderItem
+from finance.serializers import OrderPaymentMilestoneSerializer
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -43,6 +44,8 @@ class OrderSerializer(serializers.ModelSerializer):
     paid_amount = serializers.FloatField(read_only=True)
     remaining_debt = serializers.FloatField(read_only=True)
     company_info = serializers.SerializerMethodField()
+    has_pending_credit_request = serializers.SerializerMethodField()
+    payment_milestones = OrderPaymentMilestoneSerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
@@ -84,6 +87,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "company_info",
+            "has_pending_credit_request",
+            "payment_milestones",
         ]
         read_only_fields = [
             "id", "company", "order_number", "status_display", "financial_status_display",
@@ -91,7 +96,23 @@ class OrderSerializer(serializers.ModelSerializer):
             "customer_name", "customer_phone",
             "created_by_name", "approved_by_name", "approved_at",
             "items", "created_at", "updated_at", "company_info", "quotation_detail",
+            "has_pending_credit_request",
+            "payment_milestones",
         ]
 
     def get_company_info(self, obj):
         return get_company_info_dict(self, obj)
+
+    def get_has_pending_credit_request(self, obj):
+        try:
+            from approvals.models import ApprovalRequest
+            from django.contrib.contenttypes.models import ContentType
+            ct = ContentType.objects.get_for_model(obj)
+            return ApprovalRequest.objects.filter(
+                content_type=ct, 
+                object_id=obj.id, 
+                status=ApprovalRequest.STATUS_PENDING,
+                title__startswith="Duyệt xuất kho nợ"
+            ).exists()
+        except Exception:
+            return False

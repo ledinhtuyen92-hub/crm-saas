@@ -181,3 +181,27 @@ class PaymentReceipt(models.Model):
             check_and_trigger_mo_gate(order)
         except Exception:
             pass
+
+    def delete(self, *args, **kwargs):
+        milestone = self.milestone
+        order = self.order
+        super().delete(*args, **kwargs)
+        
+        if milestone:
+            milestone.update_paid_status()
+        
+        if order:
+            total_paid = float(order.paid_amount)
+            total_order = float(order.total_amount or 0)
+            if total_order > 0 and total_paid >= total_order:
+                order.financial_status = order.FIN_STATUS_FULLY_PAID
+            elif total_paid > 0:
+                order.financial_status = order.FIN_STATUS_DEPOSIT_PAID
+            else:
+                order.financial_status = order.FIN_STATUS_UNPAID
+            order.save(update_fields=["financial_status"])
+            try:
+                from orders.signals import check_and_trigger_mo_gate
+                check_and_trigger_mo_gate(order)
+            except Exception:
+                pass

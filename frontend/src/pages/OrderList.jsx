@@ -1,4 +1,5 @@
 import {
+  AlertOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
@@ -34,11 +35,12 @@ import {
   theme,
 } from 'antd'
 import dayjs from 'dayjs'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
 import QuotationPrintView from '../components/QuotationPrintView'
+import ReceiptPrintView from '../components/ReceiptPrintView'
 
 const { Title, Text, Paragraph } = Typography
 const { Option } = Select
@@ -91,15 +93,97 @@ export default function OrderList() {
   const [receiptSubmitting, setReceiptSubmitting] = useState(false)
   const [receiptForm] = Form.useForm()
 
+  const [selectedReceiptForPrint, setSelectedReceiptForPrint] = useState(null)
+  const receiptPrintRef = useRef(null)
+
+  const handlePrintReceipt = (receipt) => {
+    setSelectedReceiptForPrint(receipt)
+    setTimeout(() => {
+      const contentEl = document.querySelector('.printable-receipt-content')
+      if (!contentEl) {
+        window.print()
+        return
+      }
+      
+      const printWin = window.open('', '_blank', 'width=900,height=700')
+      if (!printWin) {
+        window.print() // Fallback if popup blocked
+        return
+      }
+
+      printWin.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${receipt.receipt_code || 'Phieu_Thu'}</title>
+            <style>
+            body { font-family: "Times New Roman", Times, serif; }
+            @media print {
+              body, html {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+              }
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              .printable-receipt-content {
+                width: 100% !important;
+                margin: 0 auto !important;
+              }
+            }
+            </style>
+          </head>
+          <body>
+            ${contentEl.outerHTML}
+            <script>
+              setTimeout(() => {
+                window.print();
+                window.close();
+              }, 300);
+            </script>
+          </body>
+        </html>
+      `)
+      printWin.document.close()
+    }, 100)
+  }
+
   const openReceiptModal = () => {
     if (checkMaintenance()) return
     receiptForm.resetFields()
+    
+    let defaultMilestoneId = null
+    let defaultAmount = selectedOrder?.remaining_debt || selectedOrder?.total_amount || 0
+    let note = `Thanh toán cho Đơn hàng ${selectedOrder?.order_number}`
+
+    if (selectedOrder?.payment_milestones?.length > 0) {
+      const pendingMilestone = selectedOrder.payment_milestones.find(m => m.status !== 'paid')
+      if (pendingMilestone) {
+        defaultMilestoneId = pendingMilestone.id
+        defaultAmount = Number(pendingMilestone.amount) - Number(pendingMilestone.paid_amount)
+        note = `Thanh toán ${pendingMilestone.title} - Đơn hàng ${selectedOrder?.order_number}`
+      }
+    }
+
     receiptForm.setFieldsValue({
-      amount: selectedOrder?.remaining_debt || selectedOrder?.total_amount || 0,
+      milestone: defaultMilestoneId,
+      amount: defaultAmount,
       payment_method: 'transfer',
-      note: `Thanh toán cho Đơn hàng ${selectedOrder?.order_number}`,
+      note: note,
     })
     setReceiptModalVisible(true)
+  }
+
+  const handleMilestoneChange = (milestoneId) => {
+    const milestone = selectedOrder?.payment_milestones?.find(m => m.id === milestoneId)
+    if (milestone) {
+      receiptForm.setFieldsValue({
+        amount: Number(milestone.amount) - Number(milestone.paid_amount),
+        note: `Thanh toán ${milestone.title} - Đơn hàng ${selectedOrder?.order_number}`
+      })
+    }
   }
 
   const handleCreateReceipt = async (values) => {
@@ -107,6 +191,7 @@ export default function OrderList() {
     try {
       await api.post('/finance/receipts/', {
         order: selectedOrder.id,
+        milestone: values.milestone || null,
         amount: values.amount,
         payment_method: values.payment_method,
         note: values.note,
@@ -123,11 +208,30 @@ export default function OrderList() {
     }
   }
 
+  const handleDeleteReceipt = async (receiptId) => {
+    if (checkMaintenance()) return
+    try {
+      await api.delete(`/finance/receipts/${receiptId}/`)
+      messageApi.success('Đã xóa phiếu thu thành công. Công nợ đã được cập nhật lại.')
+      fetchOrders()
+      if (selectedOrder) {
+        const { data } = await api.get(`/orders/orders/${selectedOrder.id}/`)
+        setSelectedOrder(data)
+      }
+    } catch (err) {
+      messageApi.error('Lỗi khi xóa phiếu thu!')
+    }
+  }
+
   const handleRequestCreditApproval = async (orderId) => {
     if (checkMaintenance()) return
     try {
       await api.post(`/orders/orders/${orderId}/request_credit_approval/`)
       messageApi.success('Đã gửi yêu cầu phê duyệt xuất kho nợ tới Giám đốc trong Approval Center!')
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, has_pending_credit_request: true } : o)))
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder((prev) => ({ ...prev, has_pending_credit_request: true }))
+      }
     } catch (err) {
       const msg = err.response?.data?.detail || 'Lỗi khi trình duyệt xuất kho nợ!'
       messageApi.error(msg)
@@ -138,6 +242,7 @@ export default function OrderList() {
   const canCreate = hasPermission('orders.create')
   const canEdit = hasPermission('orders.edit')
   const canDelete = hasPermission('orders.delete')
+  const canRequestCredit = hasPermission('finance.request_credit')
   const canApprove = hasPermission('orders.approve')
 
   // ── Fetch data ────────────────────────────────────────────────────────
@@ -160,18 +265,22 @@ export default function OrderList() {
   const fetchCustomersAndProducts = useCallback(async () => {
     await Promise.resolve()
     try {
-      const [custRes, prodRes, tmplRes, myCompRes] = await Promise.all([
+      const [custRes, prodRes, tmplRes, myCompTmplRes] = await Promise.all([
         api.get('/crm/customers/').catch(() => ({ data: [] })),
         api.get('/inventory/products/').catch(() => ({ data: [] })),
         api.get('/sales/quotation-templates/active/').catch(() => ({ data: [] })),
-        api.get('/users/my-company/').catch(() => ({ data: null })),
+        api.get('/sales/quotation-templates/my-company-template/').catch(() => ({ data: null })),
       ])
       const custData = Array.isArray(custRes.data) ? custRes.data : custRes.data?.results ?? []
       const prodData = Array.isArray(prodRes.data) ? prodRes.data : prodRes.data?.results ?? []
       setCustomers(custData)
       setProducts(prodData)
       setTemplates(tmplRes.data || [])
-      setCompanyTemplate(myCompRes.data?.settings || null)
+      if (myCompTmplRes?.data) {
+        setCompanyTemplate(myCompTmplRes.data)
+      } else {
+        setCompanyTemplate((tmplRes.data || []).find(t => t.is_default) || null)
+      }
     } catch {
       // ignore silently
     }
@@ -182,13 +291,14 @@ export default function OrderList() {
   }, [fetchOrders])
 
   const getEffectiveTemplate = (order) => {
-    if (order?.quotation?.effective_template_detail) return order.quotation.effective_template_detail
-    
-    // Fallback to company default template
-    const companyTemplateId = companyTemplate?.quotation_template || null
-    if (companyTemplateId) {
-      const found = templates.find((t) => t.id === companyTemplateId)
-      if (found) return found
+    if (order?.custom_data?.template_snapshot?.code) {
+      return order.custom_data.template_snapshot
+    }
+    if (order?.quotation_detail?.custom_data?.template_snapshot?.code) {
+      return order.quotation_detail.custom_data.template_snapshot
+    }
+    if (companyTemplate) {
+      return companyTemplate
     }
     const defaultSys = templates.find((t) => t.is_default)
     return defaultSys || null
@@ -337,7 +447,10 @@ export default function OrderList() {
       if (field === 'product') {
         const prod = products.find((p) => p.id === value)
         if (prod) {
-          updated[index].unit_price = Number(prod.unit_price || 0)
+          updated[index].unit_price = Number(prod.price || prod.cost_price || 0)
+          updated[index].product_name = prod.name || ''
+          updated[index].unit = prod.unit || 'cái'
+          updated[index].product_image = prod.image_url || prod.image || ''
         }
       }
       return updated
@@ -410,8 +523,9 @@ export default function OrderList() {
   }
 
   const getItemColumns = () => {
-    const tmplCode = companyTemplate?.code || 'STANDARD'
-    const isLandscape = tmplCode === 'production_landscape_a4' || companyTemplate?.layout_config?.paper_orientation === 'landscape'
+    const et = getEffectiveTemplate(editingOrder)
+    const tmplCode = et?.code || 'STANDARD'
+    const isLandscape = tmplCode === 'production_landscape_a4' || et?.layout_config?.paper_orientation === 'landscape'
 
     if (isLandscape) {
       return [
@@ -1050,7 +1164,7 @@ export default function OrderList() {
             <Tag color={cfg.color} icon={cfg.icon}>{cfg.label}</Tag>
             {r.financial_status && (
               <Tag color={r.financial_status === 'fully_paid' ? 'success' : r.financial_status === 'deposit_paid' ? 'processing' : 'warning'} style={{ fontSize: 11 }}>
-                {r.financial_status_display || 'Chờ cọc'}
+                {r.has_pending_credit_request ? 'Chờ duyệt kho nợ' : r.financial_status_display || 'Chờ cọc'}
               </Tag>
             )}
           </Space>
@@ -1295,7 +1409,11 @@ export default function OrderList() {
         confirmLoading={submitting}
         okText="Lưu Đơn Hàng"
         cancelText="Hủy"
-        width={850}
+        width={(() => {
+          const et = getEffectiveTemplate(editingOrder)
+          const isLand = et?.code === 'production_landscape_a4' || et?.layout_config?.paper_orientation === 'landscape'
+          return isLand ? 1050 : 850
+        })()}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Row gutter={16}>
@@ -1320,7 +1438,7 @@ export default function OrderList() {
             </Col>
             <Col xs={24} md={6}>
               <Form.Item name="status" label="Trạng thái">
-                <Select>
+                <Select disabled={!canApprove}>
                   <Option value="pending">Chờ duyệt</Option>
                   <Option value="approved">Đã chấp nhận</Option>
                   <Option value="rejected">Đã từ chối</Option>
@@ -1534,94 +1652,144 @@ export default function OrderList() {
               />
             </div>
 
-            <Card
-              size="small"
-              style={{
-                marginTop: 16,
-                background: '#f0fdf4',
-                borderColor: '#86efac',
-                borderRadius: 8,
-              }}
-            >
-              <Row justify="space-between" align="middle" gutter={[8, 8]}>
-                <Col>
-                  <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>
-                    TÌNH TRẠNG THANH TOÁN
-                  </Text>
-                  <Tag color={selectedOrder.financial_status === 'fully_paid' ? 'green' : selectedOrder.financial_status === 'deposit_paid' ? 'blue' : 'orange'} style={{ marginTop: 4, fontWeight: 600 }}>
-                    {selectedOrder.financial_status_display || 'Chờ cọc'}
-                  </Tag>
+            <div style={{ padding: '16px', background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', borderRadius: '12px', border: '1px solid #bbf7d0', marginBottom: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <Row align="middle" justify="space-between">
+                <Col span={8}>
+                  <Space direction="vertical" size={0}>
+                    <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tình trạng thanh toán</Text>
+                    <Tag color={selectedOrder.financial_status === 'fully_paid' ? 'green' : selectedOrder.financial_status === 'deposit_paid' ? 'blue' : 'orange'} style={{ marginTop: 4, fontWeight: 700, padding: '4px 12px', borderRadius: '6px', fontSize: 13, border: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                      {selectedOrder.has_pending_credit_request ? 'Chờ duyệt kho nợ' : selectedOrder.financial_status_display || 'Chờ cọc'}
+                    </Tag>
+                  </Space>
                 </Col>
-                <Col>
-                  <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>
-                    ĐÃ THU
-                  </Text>
-                  <Text strong style={{ color: '#16a34a', fontSize: 14 }}>
-                    {Number(selectedOrder.paid_amount || 0).toLocaleString('vi-VN')} đ
-                  </Text>
+                <Col span={6}>
+                  <Space direction="vertical" size={0}>
+                    <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Đã thu</Text>
+                    <Text strong style={{ color: '#15803d', fontSize: 18, textShadow: '0 1px 2px rgba(21, 128, 61, 0.1)' }}>
+                      {Number(selectedOrder.paid_amount || 0).toLocaleString('vi-VN')} <span style={{fontSize: 14, fontWeight: 500}}>đ</span>
+                    </Text>
+                  </Space>
                 </Col>
-                <Col>
-                  <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>
-                    CÒN NỢ
-                  </Text>
-                  <Text strong style={{ color: selectedOrder.remaining_debt > 0 ? '#dc2626' : '#16a34a', fontSize: 14 }}>
-                    {Number(selectedOrder.remaining_debt || 0).toLocaleString('vi-VN')} đ
-                  </Text>
+                <Col span={6}>
+                  <Space direction="vertical" size={0}>
+                    <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Còn nợ</Text>
+                    <Text strong style={{ color: selectedOrder.remaining_debt > 0 ? '#b91c1c' : '#15803d', fontSize: 18, textShadow: '0 1px 2px rgba(185, 28, 28, 0.1)' }}>
+                      {Number(selectedOrder.remaining_debt || 0).toLocaleString('vi-VN')} <span style={{fontSize: 14, fontWeight: 500}}>đ</span>
+                    </Text>
+                  </Space>
                 </Col>
-                <Col>
+                <Col span={4} style={{ textAlign: 'right' }}>
                   {(hasPermission('finance.create_receipt') || hasPermission('finance.view')) && selectedOrder.remaining_debt > 0 && (
                     <Button
                       type="primary"
-                      style={{ background: '#10b981', borderColor: '#10b981', fontWeight: 600 }}
+                      icon={<PlusOutlined />}
+                      style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderColor: '#059669', fontWeight: 600, borderRadius: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}
                       onClick={openReceiptModal}
                     >
-                      + Lập Phiếu Thu
+                      Thu tiền
                     </Button>
                   )}
                 </Col>
               </Row>
-            </Card>
+            </div>
 
             {/* CỔNG XUẤT KHO (DO GATE) */}
-            <Card
-              size="small"
-              style={{
-                marginTop: 12,
-                background: selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? '#f0fdf4' : '#fff1f2',
-                borderColor: selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? '#86efac' : '#fecdd3',
-                borderRadius: 8,
-              }}
-            >
-              <Row justify="space-between" align="middle" gutter={[8, 8]}>
-                <Col span={15}>
-                  <Text strong style={{ fontSize: 12, color: selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? '#16a34a' : '#e11d48' }}>
-                    {selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved'
-                      ? '🟢 CỔNG XUẤT KHO (DO GATE): ĐÃ MỞ (Đủ điều kiện xuất kho)'
-                      : '🔴 CỔNG XUẤT KHO (DO GATE): KHÓA (Chờ thanh toán đủ hoặc duyệt nợ)'}
-                  </Text>
+            <div style={{ padding: '16px', background: selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' : 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)', borderRadius: '12px', border: selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? '1px solid #bbf7d0' : '1px solid #fecdd3', marginBottom: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <Row align="middle" justify="space-between">
+                <Col span={16}>
+                  <Space align="center" size={12}>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? '#22c55e' : '#f43f5e', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
+                      {selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? <CheckCircleOutlined style={{color: '#fff', fontSize: 20}} /> : <CloseCircleOutlined style={{color: '#fff', fontSize: 20}} />}
+                    </div>
+                    <Space direction="vertical" size={0}>
+                      <Text strong style={{ fontSize: 15, color: selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? '#15803d' : '#be123c' }}>
+                        CỔNG XUẤT KHO (DO GATE): {selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? 'ĐÃ MỞ' : 'ĐÃ KHÓA'}
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: 13, color: selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? '#16a34a' : '#e11d48' }}>
+                        {selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? 'Đơn hàng đủ điều kiện xuất kho an toàn.' : 'Chờ thanh toán đủ hoặc cần Giám đốc phê duyệt nợ.'}
+                      </Text>
+                    </Space>
+                  </Space>
                 </Col>
-                <Col span={9} style={{ textAlign: 'right' }}>
-                  {selectedOrder.financial_status !== 'fully_paid' && selectedOrder.financial_status !== 'credit_approved' && (
+                <Col span={8} style={{ textAlign: 'right' }}>
+                  {selectedOrder.financial_status !== 'fully_paid' && selectedOrder.financial_status !== 'credit_approved' && canRequestCredit && (
                     <Button
-                      danger
-                      type="primary"
-                      size="small"
+                      danger={!selectedOrder.has_pending_credit_request}
+                      type={selectedOrder.has_pending_credit_request ? 'default' : 'primary'}
+                      size="middle"
+                      disabled={selectedOrder.has_pending_credit_request}
                       onClick={() => handleRequestCreditApproval(selectedOrder.id)}
+                      style={{ borderRadius: '8px', fontWeight: 600, boxShadow: selectedOrder.has_pending_credit_request ? 'none' : '0 4px 12px rgba(225, 29, 72, 0.3)' }}
                     >
-                      🛡️ Trình Duyệt Xuất Kho Nợ
+                      {selectedOrder.has_pending_credit_request ? '⏳ Đang chờ duyệt nợ' : '🛡️ Trình Duyệt Nợ'}
                     </Button>
                   )}
                 </Col>
               </Row>
-            </Card>
+            </div>
+
+            {/* LỊCH SỬ THU TIỀN */}
+            {(selectedOrder.payment_milestones?.flatMap(m => m.receipts || []) || []).length > 0 && (
+              <div style={{ marginTop: 16, marginBottom: 16 }}>
+                <Text strong style={{ fontSize: 14, textTransform: 'uppercase', color: '#475569', marginBottom: 8, display: 'block' }}>
+                  Lịch sử thu tiền
+                </Text>
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                  <Table
+                    dataSource={selectedOrder.payment_milestones?.flatMap(m => m.receipts || []) || []}
+                    rowKey="id"
+                    pagination={false}
+                    size="small"
+                    columns={[
+                      { title: 'Ngày thu', dataIndex: 'payment_date', key: 'payment_date', render: d => dayjs(d).format('DD/MM/YYYY') },
+                      { title: 'Số phiếu', dataIndex: 'receipt_code', key: 'receipt_code', render: c => <Text strong>{c}</Text> },
+                      { title: 'Số tiền', dataIndex: 'amount', key: 'amount', render: a => <Text strong style={{color: '#15803d'}}>{Number(a).toLocaleString('vi-VN')} đ</Text> },
+                      { title: 'Hình thức', dataIndex: 'payment_method_display', key: 'payment_method' },
+                      {
+                        title: '',
+                        key: 'action',
+                        render: (_, record) => (
+                          <Space>
+                            <Button type="link" size="small" icon={<PrinterOutlined />} onClick={() => handlePrintReceipt(record)}>
+                              In phiếu
+                            </Button>
+                            {hasPermission('finance.delete') && (
+                              <Popconfirm
+                                title="Xác nhận xóa phiếu thu này?"
+                                description="Thao tác này sẽ cập nhật lại công nợ của đơn hàng. Bạn có chắc chắn?"
+                                onConfirm={() => handleDeleteReceipt(record.id)}
+                                okText="Xóa"
+                                cancelText="Hủy"
+                                okButtonProps={{ danger: true }}
+                              >
+                                <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+                                  Xóa
+                                </Button>
+                              </Popconfirm>
+                            )}
+                          </Space>
+                        )
+                      }
+                    ]}
+                  />
+                </div>
+              </div>
+            )}
 
             {selectedOrder.notes && (
-              <Card size="small" style={{ marginTop: 16, background: '#fffbeb', borderColor: '#fef3c7' }}>
-                <Text strong style={{ color: '#d97706' }}>Ghi chú thi công:</Text>
-                <Paragraph style={{ margin: '4px 0 0', color: '#92400e' }}>
-                  {selectedOrder.notes}
-                </Paragraph>
-              </Card>
+              <div style={{ padding: '16px', background: 'linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)', borderRadius: '12px', border: '1px solid #fde047', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                  <Space align="center">
+                    <div style={{ width: 32, height: 32, borderRadius: '8px', background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(234, 179, 8, 0.3)' }}>
+                      <FileTextOutlined style={{color: '#fff', fontSize: 16}} />
+                    </div>
+                    <Text strong style={{ color: '#854d0e', fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ghi chú thi công / Thanh toán</Text>
+                  </Space>
+                  <Paragraph style={{ margin: '4px 0 0 40px', color: '#713f12', fontSize: 14, lineHeight: '1.6' }}>
+                    {selectedOrder.notes}
+                  </Paragraph>
+                </Space>
+              </div>
             )}
           </div>
         )}
@@ -1644,6 +1812,15 @@ export default function OrderList() {
         okButtonProps={{ style: { background: '#10b981', borderColor: '#10b981' } }}
       >
         <Form form={receiptForm} layout="vertical" onFinish={handleCreateReceipt}>
+          {selectedOrder?.payment_milestones?.length > 0 && (
+            <Form.Item name="milestone" label="Kỳ thanh toán">
+              <Select placeholder="Chọn kỳ thanh toán" onChange={handleMilestoneChange} allowClear>
+                {selectedOrder.payment_milestones.filter(m => m.status !== 'paid').map(m => (
+                  <Option key={m.id} value={m.id}>{m.title} - Cần thu: {Number(Number(m.amount) - Number(m.paid_amount)).toLocaleString('vi-VN')} đ</Option>
+                ))}
+              </Select>
+            </Form.Item>
+          )}
           <Form.Item
             name="amount"
             label="Số tiền thu (VNĐ)"
@@ -1672,6 +1849,15 @@ export default function OrderList() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <div style={{ display: 'none' }}>
+        <ReceiptPrintView
+          ref={receiptPrintRef}
+          receipt={selectedReceiptForPrint}
+          company={selectedOrder?.company_info}
+          order={selectedOrder}
+        />
+      </div>
     </div>
   )
 }

@@ -315,7 +315,7 @@ export default function QuotationList() {
       if (field === 'product') {
         const prod = products.find((p) => p.id === value)
         if (prod) {
-          currentItem.unit_price = Number(prod.price || prod.unit_price || 0)
+          currentItem.unit_price = Number(prod.price || prod.cost_price || 0)
           currentItem.product_name = prod.name || ''
           currentItem.unit = prod.unit || 'cái'
           currentItem.product_image = prod.image_url || prod.image || ''
