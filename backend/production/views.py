@@ -38,6 +38,16 @@ class ProductionOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         company = self.request.user.company
         serializer.save(company=company)
 
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        new_status = serializer.validated_data.get("status", instance.status)
+        if new_status != instance.status and hasattr(instance.order, 'delivery_order'):
+            delivery = instance.order.delivery_order
+            if delivery.status == "delivered":
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({"status": "Không thể thay đổi trạng thái khi Đơn giao hàng đã giao thành công."})
+        serializer.save()
+
 
 class ProductionStepViewSet(viewsets.ModelViewSet):
     """Công đoạn sản xuất — filter qua production_order.company."""
@@ -52,9 +62,9 @@ class ProductionStepViewSet(viewsets.ModelViewSet):
     action_permissions = {
         "list": "production.view",
         "retrieve": "production.view",
-        "create": "production.edit", # step creation requires edit prod order permission
-        "update": "production.edit",
-        "partial_update": "production.edit",
+        "create": ["production.edit", "production.update_step"], # Allow step creation if they have edit prod or update step
+        "update": ["production.edit", "production.update_step"],
+        "partial_update": ["production.edit", "production.update_step"],
         "destroy": "production.edit",
     }
 

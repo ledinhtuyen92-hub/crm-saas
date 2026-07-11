@@ -1,0 +1,2381 @@
+[
+  {
+    "model": "users.company",
+    "pk": 3,
+    "fields": {
+      "name": "Công ty Nhôm Kính Cao Cấp An Phát",
+      "workspace_id": "ANPHAT",
+      "tax_code": "0101246810",
+      "address": "KCN Bắc Thăng Long, Đông Anh, Hà Nội",
+      "phone": "02438889999",
+      "logo": "",
+      "stamp_image": "",
+      "director_signature": "",
+      "director_name": "",
+      "director_title": "Giám đốc",
+      "is_active": true,
+      "user_limit": 15,
+      "quotation_template": null,
+      "created_at": "2026-07-04T03:25:49.912Z"
+    }
+  },
+  {
+    "model": "users.company",
+    "pk": 15,
+    "fields": {
+      "name": "Fujitech Group",
+      "workspace_id": "FUJI",
+      "tax_code": "574545454",
+      "address": "",
+      "phone": "",
+      "logo": "",
+      "stamp_image": "",
+      "director_signature": "",
+      "director_name": "",
+      "director_title": "Giám đốc",
+      "is_active": true,
+      "user_limit": 55,
+      "quotation_template": null,
+      "created_at": "2026-07-04T08:19:15.796Z"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 1,
+    "fields": {
+      "code": "dashboard.view",
+      "name": "Xem Dashboard",
+      "module": "dashboard"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 2,
+    "fields": {
+      "code": "crm.view",
+      "name": "Xem danh sách khách hàng",
+      "module": "crm"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 3,
+    "fields": {
+      "code": "crm.create",
+      "name": "Thêm khách hàng mới",
+      "module": "crm"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 4,
+    "fields": {
+      "code": "crm.edit",
+      "name": "Chỉnh sửa thông tin khách hàng",
+      "module": "crm"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 5,
+    "fields": {
+      "code": "crm.delete",
+      "name": "Xóa khách hàng",
+      "module": "crm"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 6,
+    "fields": {
+      "code": "crm.assign",
+      "name": "Phân công / Gán khách hàng cho nhân viên",
+      "module": "crm"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 7,
+    "fields": {
+      "code": "crm.import",
+      "name": "Import khách hàng từ Excel",
+      "module": "crm"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 8,
+    "fields": {
+      "code": "crm.export",
+      "name": "Xuất danh sách khách hàng",
+      "module": "crm"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 9,
+    "fields": {
+      "code": "crm.view_all",
+      "name": "Xem tất cả khách hàng (không giới hạn bởi phân công)",
+      "module": "crm"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 10,
+    "fields": {
+      "code": "crm.manage_tags",
+      "name": "Quản lý Tags khách hàng",
+      "module": "crm"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 11,
+    "fields": {
+      "code": "sales.view",
+      "name": "Xem danh sách báo giá",
+      "module": "sales"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 12,
+    "fields": {
+      "code": "sales.create",
+      "name": "Tạo báo giá mới",
+      "module": "sales"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 13,
+    "fields": {
+      "code": "sales.edit",
+      "name": "Chỉnh sửa báo giá",
+      "module": "sales"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 14,
+    "fields": {
+      "code": "sales.delete",
+      "name": "Xóa báo giá",
+      "module": "sales"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 15,
+    "fields": {
+      "code": "sales.export_pdf",
+      "name": "Xuất PDF báo giá",
+      "module": "sales"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 16,
+    "fields": {
+      "code": "orders.view",
+      "name": "Xem danh sách đơn hàng",
+      "module": "orders"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 17,
+    "fields": {
+      "code": "orders.create",
+      "name": "Tạo đơn hàng mới",
+      "module": "orders"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 18,
+    "fields": {
+      "code": "orders.edit",
+      "name": "Chỉnh sửa đơn hàng",
+      "module": "orders"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 19,
+    "fields": {
+      "code": "orders.delete",
+      "name": "Xóa đơn hàng",
+      "module": "orders"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 20,
+    "fields": {
+      "code": "orders.approve",
+      "name": "Duyệt / Từ chối đơn hàng",
+      "module": "orders"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 21,
+    "fields": {
+      "code": "orders.export_pdf",
+      "name": "Xuất PDF đơn hàng",
+      "module": "orders"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 22,
+    "fields": {
+      "code": "orders.view_all",
+      "name": "Xem tất cả đơn hàng (không giới hạn bởi người tạo)",
+      "module": "orders"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 23,
+    "fields": {
+      "code": "inventory.view",
+      "name": "Xem danh sách sản phẩm & tồn kho",
+      "module": "inventory"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 24,
+    "fields": {
+      "code": "inventory.create_product",
+      "name": "Thêm sản phẩm mới",
+      "module": "inventory"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 25,
+    "fields": {
+      "code": "inventory.edit_product",
+      "name": "Chỉnh sửa sản phẩm",
+      "module": "inventory"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 26,
+    "fields": {
+      "code": "inventory.delete_product",
+      "name": "Xóa sản phẩm",
+      "module": "inventory"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 27,
+    "fields": {
+      "code": "inventory.import",
+      "name": "Nhập hàng vào kho (tạo phiếu nhập)",
+      "module": "inventory"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 28,
+    "fields": {
+      "code": "inventory.adjust",
+      "name": "Điều chỉnh tồn kho",
+      "module": "inventory"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 29,
+    "fields": {
+      "code": "inventory.export",
+      "name": "Xem phiếu xuất kho",
+      "module": "inventory"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 30,
+    "fields": {
+      "code": "inventory.manage_warehouse",
+      "name": "Quản lý kho hàng",
+      "module": "inventory"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 31,
+    "fields": {
+      "code": "inventory.manage_categories",
+      "name": "Quản lý loại sản phẩm",
+      "module": "inventory"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 32,
+    "fields": {
+      "code": "production.view",
+      "name": "Xem lệnh sản xuất",
+      "module": "production"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 33,
+    "fields": {
+      "code": "production.create",
+      "name": "Tạo lệnh sản xuất",
+      "module": "production"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 34,
+    "fields": {
+      "code": "production.edit",
+      "name": "Cập nhật tiến độ sản xuất",
+      "module": "production"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 35,
+    "fields": {
+      "code": "production.delete",
+      "name": "Xóa lệnh sản xuất",
+      "module": "production"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 36,
+    "fields": {
+      "code": "reports.view",
+      "name": "Xem báo cáo",
+      "module": "reports"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 37,
+    "fields": {
+      "code": "reports.view_all",
+      "name": "Xem báo cáo toàn công ty (tất cả nhân viên)",
+      "module": "reports"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 38,
+    "fields": {
+      "code": "reports.export",
+      "name": "Xuất báo cáo ra Excel/PDF",
+      "module": "reports"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 39,
+    "fields": {
+      "code": "notifications.view",
+      "name": "Xem thông báo",
+      "module": "notifications"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 40,
+    "fields": {
+      "code": "settings.users",
+      "name": "Quản lý tài khoản nhân viên",
+      "module": "settings"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 41,
+    "fields": {
+      "code": "settings.roles",
+      "name": "Quản lý vai trò & phân quyền",
+      "module": "settings"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 42,
+    "fields": {
+      "code": "settings.company",
+      "name": "Cài đặt thông tin công ty",
+      "module": "settings"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 43,
+    "fields": {
+      "code": "crm.auto_assign_self",
+      "name": "Tự động phụ trách khách hàng do mình tạo",
+      "module": "crm"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 44,
+    "fields": {
+      "code": "crm.upload_interaction_files",
+      "name": "Tải file lên Lịch sử chăm sóc (Hình ảnh, PDF...)",
+      "module": "crm"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 45,
+    "fields": {
+      "code": "crm.auto_assign",
+      "name": "Chia khach tu dong (Round-robin)",
+      "module": "crm"
+    }
+  },
+  {
+    "model": "users.role",
+    "pk": 5,
+    "fields": {
+      "company": 3,
+      "name": "Giám đốc Điều hành",
+      "description": "Toàn quyền quản trị hệ thống",
+      "is_auto_assign_target": false,
+      "permissions": [
+        6,
+        3,
+        5,
+        4,
+        8,
+        7,
+        10,
+        2,
+        9,
+        1,
+        28,
+        24,
+        26,
+        25,
+        29,
+        27,
+        31,
+        30,
+        23,
+        39,
+        20,
+        17,
+        19,
+        18,
+        21,
+        16,
+        22,
+        33,
+        35,
+        34,
+        32,
+        38,
+        36,
+        37,
+        12,
+        14,
+        13,
+        15,
+        11,
+        42,
+        41,
+        40
+      ]
+    }
+  },
+  {
+    "model": "users.role",
+    "pk": 6,
+    "fields": {
+      "company": 3,
+      "name": "Nhân viên kinh doanh",
+      "description": "Quản lý khách hàng, báo giá, đơn hàng",
+      "is_auto_assign_target": true,
+      "permissions": [
+        43,
+        3,
+        5,
+        4,
+        8,
+        7,
+        10,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "model": "users.role",
+    "pk": 7,
+    "fields": {
+      "company": 3,
+      "name": "Trưởng phòng kinh doanh",
+      "description": "Quản lý sale",
+      "is_auto_assign_target": true,
+      "permissions": [
+        6,
+        43,
+        3,
+        5,
+        4,
+        8,
+        7,
+        10,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "model": "users.role",
+    "pk": 18,
+    "fields": {
+      "company": 15,
+      "name": "Giám đốc",
+      "description": "Vai trò quản trị cao nhất của công ty.",
+      "is_auto_assign_target": false,
+      "permissions": [
+        6,
+        3,
+        5,
+        4,
+        8,
+        7,
+        10,
+        2,
+        9,
+        1,
+        28,
+        24,
+        26,
+        25,
+        29,
+        27,
+        31,
+        30,
+        23,
+        39,
+        20,
+        17,
+        19,
+        18,
+        21,
+        16,
+        22,
+        33,
+        35,
+        34,
+        32,
+        38,
+        36,
+        37,
+        12,
+        14,
+        13,
+        15,
+        11,
+        42,
+        41,
+        40
+      ]
+    }
+  },
+  {
+    "model": "users.role",
+    "pk": 21,
+    "fields": {
+      "company": 3,
+      "name": "Nhân viên kho và sản xuất",
+      "description": "Kho và sản xuất",
+      "is_auto_assign_target": false,
+      "permissions": [
+        28,
+        24,
+        26,
+        25,
+        29,
+        27,
+        31,
+        30,
+        23,
+        39
+      ]
+    }
+  },
+  {
+    "model": "users.role",
+    "pk": 22,
+    "fields": {
+      "company": 15,
+      "name": "Giám đốc Điều hành",
+      "description": "Toàn quyền quản trị hệ thống",
+      "is_auto_assign_target": false,
+      "permissions": [
+        6,
+        3,
+        5,
+        4,
+        8,
+        7,
+        10,
+        2,
+        9,
+        1,
+        28,
+        24,
+        26,
+        25,
+        29,
+        27,
+        31,
+        30,
+        23,
+        39,
+        20,
+        17,
+        19,
+        18,
+        21,
+        16,
+        22,
+        33,
+        35,
+        34,
+        32,
+        38,
+        36,
+        37,
+        12,
+        14,
+        13,
+        15,
+        11,
+        42,
+        41,
+        40
+      ]
+    }
+  },
+  {
+    "model": "users.user",
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$ZbBZzJXp2R4RGXKexlT1Tj$9JQ0E1HAiAGRUY1Yiuf2o5aAmOb3VooekwMqyuqxm/w=",
+      "last_login": "2026-07-06T05:49:39.495Z",
+      "is_superuser": false,
+      "username": "giamdoc",
+      "first_name": "",
+      "last_name": "",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-07-04T03:38:02.337Z",
+      "email": "director@anphatgroup.vn",
+      "full_name": "Lê Giám Đốc",
+      "phone": "0988565777",
+      "job_title": "Giám đốc công ty",
+      "avatar": "",
+      "company": 3,
+      "role": 5,
+      "is_company_admin": true,
+      "department": null,
+      "created_at": "2026-07-04T03:38:02.338Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "users.user",
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$ECQhi9BHkIsVTlsjgPiIMe$sVQIe5Cfq9ZU7nACy/evbQj0IfRFVVhgCQ1NbKN4NE8=",
+      "last_login": "2026-07-06T05:47:15.836Z",
+      "is_superuser": true,
+      "username": "admin",
+      "first_name": "",
+      "last_name": "",
+      "is_staff": true,
+      "is_active": true,
+      "date_joined": "2026-07-04T04:29:39.556Z",
+      "email": "admin@saas.com",
+      "full_name": "System Administrator",
+      "phone": "",
+      "job_title": "",
+      "avatar": "",
+      "company": null,
+      "role": null,
+      "is_company_admin": false,
+      "department": null,
+      "created_at": "2026-07-04T04:29:39.557Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "users.user",
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$Za645Ub26Hko5kh7FsR40B$Q5uqjpa7YKXvjaXnraKTPODXck+jdZD5qVpL8uv/bcQ=",
+      "last_login": "2026-07-06T05:34:39.316Z",
+      "is_superuser": false,
+      "username": "dinhtuyen",
+      "first_name": "",
+      "last_name": "",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-07-04T04:36:45.100Z",
+      "email": "swebmail.007@gmail.com",
+      "full_name": "Trưởng phòng KD1",
+      "phone": "",
+      "job_title": "Trưởng phòng Kinh Doanh",
+      "avatar": "",
+      "company": 3,
+      "role": 7,
+      "is_company_admin": false,
+      "department": 1,
+      "created_at": "2026-07-04T04:36:45.533Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "users.user",
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$Qi0c7LmbWwqCpHKEdXlZCy$zEl1RRu4hd2rJ8zQ5JmSQ2/a5yiYFNtoEJazfAXgqPM=",
+      "last_login": "2026-07-06T05:40:13.598Z",
+      "is_superuser": false,
+      "username": "dinhtuyen1",
+      "first_name": "",
+      "last_name": "",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-07-04T09:47:45.701Z",
+      "email": "ledinhtuyen1@gmail.com",
+      "full_name": "Trưởng phòng KD2",
+      "phone": "",
+      "job_title": "TP Kinh Doanh",
+      "avatar": "",
+      "company": 3,
+      "role": 7,
+      "is_company_admin": false,
+      "department": 2,
+      "created_at": "2026-07-04T09:47:46.126Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "users.user",
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$G4G95IIt43QV54rXjopQyg$YGgTEhD4QwMGH8vqsdVXa61Z5RdA2o0IQJinCYDV35U=",
+      "last_login": "2026-07-06T05:41:29.673Z",
+      "is_superuser": false,
+      "username": "dinhtuyen2",
+      "first_name": "",
+      "last_name": "",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-07-04T09:48:40.486Z",
+      "email": "ledinhtuyen2@gmail.com",
+      "full_name": "Lê Đình Tuyền 2",
+      "phone": "",
+      "job_title": "Nhân viên kinh doanh",
+      "avatar": "",
+      "company": 3,
+      "role": 6,
+      "is_company_admin": false,
+      "department": 1,
+      "created_at": "2026-07-04T09:48:40.904Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "users.user",
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$E1GLhCu8SZ6mz04JV8xkyg$hfRdtxMqR4Nx1MaGrhXzXKjmA88jiVh+zIH09lKgMIg=",
+      "last_login": "2026-07-06T05:28:53.839Z",
+      "is_superuser": false,
+      "username": "dinhtuyen3",
+      "first_name": "",
+      "last_name": "",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-07-04T09:49:20.101Z",
+      "email": "ledinhtuyen3@gmail.com",
+      "full_name": "Lê Đình Tuyền 3",
+      "phone": "",
+      "job_title": "",
+      "avatar": "",
+      "company": 3,
+      "role": 6,
+      "is_company_admin": false,
+      "department": 2,
+      "created_at": "2026-07-04T09:49:20.567Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "users.user",
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$wbaxvsNzMkwOKxu87juI30$CtJzlRF82zql82kVHV1FFP9O6EXhWixB/haFosqddKk=",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "dinhtuyen4",
+      "first_name": "",
+      "last_name": "",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-07-04T09:50:38.162Z",
+      "email": "ledinhtuyen4@gmail.com",
+      "full_name": "Lê Đình Tuyền 4",
+      "phone": "",
+      "job_title": "Nhân viên kho vận",
+      "avatar": "",
+      "company": 3,
+      "role": 21,
+      "is_company_admin": false,
+      "department": null,
+      "created_at": "2026-07-04T09:50:38.611Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "users.companysettings",
+    "pk": 11,
+    "fields": {
+      "company": 15,
+      "order_prefix": "DH",
+      "lead_routing": "manual",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "active_modules": [
+        "crm",
+        "sales",
+        "orders",
+        "products",
+        "inventory",
+        "production"
+      ],
+      "quotation_template": null,
+      "default_quotation_terms": ""
+    }
+  },
+  {
+    "model": "users.subscriptionplan",
+    "pk": 1,
+    "fields": {
+      "code": "starter",
+      "name": "Gói Khởi nghiệp",
+      "user_limit": 5,
+      "is_default": true,
+      "created_at": "2026-07-04T09:14:37.967Z"
+    }
+  },
+  {
+    "model": "users.subscriptionplan",
+    "pk": 2,
+    "fields": {
+      "code": "standard",
+      "name": "Gói Tiêu chuẩn",
+      "user_limit": 15,
+      "is_default": true,
+      "created_at": "2026-07-04T09:14:37.992Z"
+    }
+  },
+  {
+    "model": "users.subscriptionplan",
+    "pk": 3,
+    "fields": {
+      "code": "pro",
+      "name": "Gói Chuyên nghiệp",
+      "user_limit": 50,
+      "is_default": true,
+      "created_at": "2026-07-04T09:14:37.999Z"
+    }
+  },
+  {
+    "model": "users.subscriptionplan",
+    "pk": 4,
+    "fields": {
+      "code": "enterprise",
+      "name": "Gói Doanh nghiệp",
+      "user_limit": 99999,
+      "is_default": true,
+      "created_at": "2026-07-04T09:14:38.006Z"
+    }
+  },
+  {
+    "model": "users.subscriptionplan",
+    "pk": 5,
+    "fields": {
+      "code": "customer",
+      "name": "Cá nhân",
+      "user_limit": 55,
+      "is_default": false,
+      "created_at": "2026-07-04T09:26:43.146Z"
+    }
+  },
+  {
+    "model": "users.systemsettings",
+    "pk": 1,
+    "fields": {
+      "require_strong_password": false,
+      "enable_public_registration": false,
+      "default_plan": "starter",
+      "default_user_limit": 5,
+      "tenant_isolation_mode": "strict",
+      "jwt_expiration_hours": 24,
+      "max_file_upload_mb": 100,
+      "maintenance_mode": false
+    }
+  },
+  {
+    "model": "crm.customertag",
+    "pk": 1,
+    "fields": {
+      "company": 3,
+      "name": "Khách VIP",
+      "color": "#1649c9"
+    }
+  },
+  {
+    "model": "crm.customer",
+    "pk": 5,
+    "fields": {
+      "company": 3,
+      "name": "Tập đoàn Bất động sản Vingroup",
+      "phone": "0988888888",
+      "email": "vinhomes@vingroup.vn",
+      "address": "KĐT Vinhomes Riverside, Long Biên, Hà Nội",
+      "city": "",
+      "birthday": null,
+      "source": "other",
+      "status": "active",
+      "assigned_to": [
+        "dinhtuyen2"
+      ],
+      "created_by": null,
+      "notes": "Khách hàng VIP - Dự án biệt thự cao cấp",
+      "created_at": "2026-07-04T03:25:50.436Z",
+      "updated_at": "2026-07-06T04:29:17.532Z",
+      "tags": [
+        1
+      ]
+    }
+  },
+  {
+    "model": "crm.customer",
+    "pk": 6,
+    "fields": {
+      "company": 3,
+      "name": "Công ty Cổ phần Xây dựng Coteccons",
+      "phone": "0911223344",
+      "email": "info@coteccons.vn",
+      "address": "Tòa nhà Coteccons, Nam Từ Liêm, Hà Nội",
+      "city": "",
+      "birthday": null,
+      "source": "zalo",
+      "status": "active",
+      "assigned_to": [
+        "dinhtuyen1"
+      ],
+      "created_by": null,
+      "notes": "Không có ghi chú",
+      "created_at": "2026-07-04T03:25:50.524Z",
+      "updated_at": "2026-07-04T10:16:54.698Z",
+      "tags": []
+    }
+  },
+  {
+    "model": "crm.customer",
+    "pk": 7,
+    "fields": {
+      "company": 3,
+      "name": "Biệt thự Sun Grand City",
+      "phone": "0901234567",
+      "email": "sales@sungrand.vn",
+      "address": "Ciputra, Tây Hồ, Hà Nội",
+      "city": "",
+      "birthday": null,
+      "source": "zalo",
+      "status": "potential",
+      "assigned_to": [
+        "dinhtuyen2"
+      ],
+      "created_by": null,
+      "notes": "",
+      "created_at": "2026-07-04T10:38:02.125Z",
+      "updated_at": "2026-07-06T05:09:58.806Z",
+      "tags": []
+    }
+  },
+  {
+    "model": "crm.customer",
+    "pk": 8,
+    "fields": {
+      "company": 3,
+      "name": "Chung cư The Habitat",
+      "phone": "0912345678",
+      "email": "pm@habitat.vn",
+      "address": "Bình Dương",
+      "city": "",
+      "birthday": null,
+      "source": "website",
+      "status": "active",
+      "assigned_to": [
+        "dinhtuyen3"
+      ],
+      "created_by": null,
+      "notes": "",
+      "created_at": "2026-07-04T10:38:02.517Z",
+      "updated_at": "2026-07-06T05:40:37.717Z",
+      "tags": []
+    }
+  },
+  {
+    "model": "crm.customer",
+    "pk": 9,
+    "fields": {
+      "company": 3,
+      "name": "Dự án Sapphire Tower",
+      "phone": "0923456789",
+      "email": "info@sapphire.vn",
+      "address": "Đống Đa, Hà Nội",
+      "city": "",
+      "birthday": null,
+      "source": "facebook",
+      "status": "new",
+      "assigned_to": [
+        "dinhtuyen3"
+      ],
+      "created_by": null,
+      "notes": "",
+      "created_at": "2026-07-04T10:38:02.525Z",
+      "updated_at": "2026-07-06T05:09:58.713Z",
+      "tags": []
+    }
+  },
+  {
+    "model": "crm.customer",
+    "pk": 10,
+    "fields": {
+      "company": 3,
+      "name": "CTCP Nội thất An Gia",
+      "phone": "0934567890",
+      "email": "order@angiafurni.vn",
+      "address": "Hoàng Mai, Hà Nội",
+      "city": "",
+      "birthday": null,
+      "source": "referral",
+      "status": "potential",
+      "assigned_to": [
+        "dinhtuyen2"
+      ],
+      "created_by": null,
+      "notes": "",
+      "created_at": "2026-07-04T10:38:02.533Z",
+      "updated_at": "2026-07-06T05:41:45.225Z",
+      "tags": []
+    }
+  },
+  {
+    "model": "crm.customer",
+    "pk": 11,
+    "fields": {
+      "company": 3,
+      "name": "Khu nghỉ dưỡng Flamingo",
+      "phone": "0945678901",
+      "email": "purchase@flamingo.vn",
+      "address": "Đại Lải, Vĩnh Phúc",
+      "city": "",
+      "birthday": null,
+      "source": "walk_in",
+      "status": "active",
+      "assigned_to": [
+        "dinhtuyen2"
+      ],
+      "created_by": null,
+      "notes": "",
+      "created_at": "2026-07-04T10:38:02.542Z",
+      "updated_at": "2026-07-06T05:09:58.625Z",
+      "tags": []
+    }
+  },
+  {
+    "model": "crm.customer",
+    "pk": 12,
+    "fields": {
+      "company": 3,
+      "name": "Nhà hàng Crystal Jade",
+      "phone": "0956789012",
+      "email": "admin@crystaljade.vn",
+      "address": "Hoàn Kiếm, Hà Nội",
+      "city": "",
+      "birthday": null,
+      "source": "zalo",
+      "status": "new",
+      "assigned_to": [
+        "dinhtuyen1"
+      ],
+      "created_by": null,
+      "notes": "",
+      "created_at": "2026-07-04T10:38:02.549Z",
+      "updated_at": "2026-07-06T05:09:58.595Z",
+      "tags": []
+    }
+  },
+  {
+    "model": "crm.customer",
+    "pk": 13,
+    "fields": {
+      "company": 3,
+      "name": "Công ty CP Đông Á Land",
+      "phone": "0967890123",
+      "email": "info@dongaland.vn",
+      "address": "Long Biên, Hà Nội",
+      "city": "",
+      "birthday": null,
+      "source": "facebook",
+      "status": "potential",
+      "assigned_to": [
+        "dinhtuyen3"
+      ],
+      "created_by": null,
+      "notes": "",
+      "created_at": "2026-07-04T10:38:02.557Z",
+      "updated_at": "2026-07-06T05:09:58.552Z",
+      "tags": []
+    }
+  },
+  {
+    "model": "crm.customer",
+    "pk": 14,
+    "fields": {
+      "company": 3,
+      "name": "Chị Lan (cá nhân)",
+      "phone": "0978901234",
+      "email": "lan.nguyen@gmail.com",
+      "address": "Cầu Giấy, Hà Nội",
+      "city": "",
+      "birthday": null,
+      "source": "referral",
+      "status": "active",
+      "assigned_to": [
+        "dinhtuyen2"
+      ],
+      "created_by": null,
+      "notes": "",
+      "created_at": "2026-07-04T10:38:02.563Z",
+      "updated_at": "2026-07-06T05:35:02.296Z",
+      "tags": []
+    }
+  },
+  {
+    "model": "crm.customercontact",
+    "pk": 1,
+    "fields": {
+      "customer": 14,
+      "name": "Anh An",
+      "phone": "0956264521224",
+      "email": "faasds@gmail.com",
+      "position": "Trường phòng mua hàng"
+    }
+  },
+  {
+    "model": "crm.customercontact",
+    "pk": 2,
+    "fields": {
+      "customer": 9,
+      "name": "Anh A",
+      "phone": "0988565444",
+      "email": "tuyen@gmail.com",
+      "position": "Giám đốc quyết định"
+    }
+  },
+  {
+    "model": "crm.customerinteraction",
+    "pk": 1,
+    "fields": {
+      "customer": 9,
+      "created_by": [
+        "dinhtuyen3"
+      ],
+      "type": "zalo",
+      "content": "Đang xin báo giá",
+      "result": "interested",
+      "next_follow_up": null,
+      "created_at": "2026-07-06T05:14:06.952Z"
+    }
+  },
+  {
+    "model": "crm.customerinteraction",
+    "pk": 2,
+    "fields": {
+      "customer": 9,
+      "created_by": [
+        "dinhtuyen3"
+      ],
+      "type": "care",
+      "content": "Sắp chốt, đã lên báo giá và đơn hàng",
+      "result": "interested",
+      "next_follow_up": null,
+      "created_at": "2026-07-06T05:14:36.669Z"
+    }
+  },
+  {
+    "model": "crm.customerinteraction",
+    "pk": 3,
+    "fields": {
+      "customer": 9,
+      "created_by": [
+        "dinhtuyen3"
+      ],
+      "type": "zalo",
+      "content": "Báo giá mới",
+      "result": "need_follow_up",
+      "next_follow_up": null,
+      "created_at": "2026-07-06T05:23:26.715Z"
+    }
+  },
+  {
+    "model": "crm.interactionattachment",
+    "pk": 1,
+    "fields": {
+      "interaction": 3,
+      "file": "interactions/2026/07/1.pdf",
+      "file_name": "1.pdf",
+      "file_size": 92623,
+      "uploaded_at": "2026-07-06T05:23:26.890Z"
+    }
+  },
+  {
+    "model": "sales.quotation",
+    "pk": 2,
+    "fields": {
+      "company": 3,
+      "quotation_number": "BG-20260704-001",
+      "customer": 5,
+      "created_by": null,
+      "status": "accepted",
+      "installation_date": null,
+      "notes": "Báo giá đợt 1 - Biệt thự Hoa Lan",
+      "discount_total": "1000000.00",
+      "public_token": "4f994e7a-f593-4c86-a1da-f9cb8d2972b1",
+      "signature_image": null,
+      "signed_at": null,
+      "customer_name_signed": null,
+      "total_amount": "66500000.00",
+      "order": null,
+      "template": null,
+      "shipping_fee": "0.00",
+      "installation_fee": "0.00",
+      "delivery_time": "",
+      "payment_terms": "",
+      "validity_days": 30,
+      "custom_data": {},
+      "created_at": "2026-07-04T03:25:50.561Z",
+      "updated_at": "2026-07-04T03:55:25.728Z"
+    }
+  },
+  {
+    "model": "sales.quotationitem",
+    "pk": 19,
+    "fields": {
+      "quotation": 2,
+      "product": 5,
+      "product_name": "Cửa đi 4 cánh mở quay nhôm Xingfa dày 2.0mm",
+      "unit_price": "6500000.00",
+      "width": "2.40",
+      "height": "2.80",
+      "quantity": 10,
+      "discount_percent": "0.00",
+      "line_total": "0.00",
+      "note": "",
+      "length": "0.00",
+      "area": "0.00",
+      "spec": "",
+      "warranty": "",
+      "thickness": "0.00",
+      "product_image": "",
+      "custom_data": {}
+    }
+  },
+  {
+    "model": "sales.quotationitem",
+    "pk": 20,
+    "fields": {
+      "quotation": 2,
+      "product": 6,
+      "product_name": "Cửa sổ trượt 2 cánh nhôm PMI nhập khẩu",
+      "unit_price": "2500000.00",
+      "width": "9.00",
+      "height": "1.00",
+      "quantity": 1,
+      "discount_percent": "0.00",
+      "line_total": "0.00",
+      "note": "",
+      "length": "0.00",
+      "area": "0.00",
+      "spec": "",
+      "warranty": "",
+      "thickness": "0.00",
+      "product_image": "",
+      "custom_data": {}
+    }
+  },
+  {
+    "model": "orders.order",
+    "pk": 2,
+    "fields": {
+      "company": 3,
+      "order_number": "DH-20260704-001",
+      "customer": 5,
+      "quotation": 2,
+      "created_by": null,
+      "approved_by": null,
+      "status": "approved",
+      "financial_status": "unpaid",
+      "payment_term": "Cọc 30% - Giao hàng 70%",
+      "installation_date": null,
+      "notes": "Báo giá đợt 1 - Biệt thự Hoa Lan",
+      "discount_total": "0.00",
+      "total_amount": "64000000.00",
+      "approved_at": "2026-07-04T03:25:50.588Z",
+      "created_at": "2026-07-04T03:25:50.572Z",
+      "updated_at": "2026-07-04T03:25:50.590Z"
+    }
+  },
+  {
+    "model": "orders.order",
+    "pk": 4,
+    "fields": {
+      "company": 3,
+      "order_number": "DH-20260704-003",
+      "customer": 5,
+      "quotation": 2,
+      "created_by": null,
+      "approved_by": null,
+      "status": "approved",
+      "financial_status": "unpaid",
+      "payment_term": "Cọc 30% - Giao hàng 70%",
+      "installation_date": null,
+      "notes": "Báo giá đợt 1 - Biệt thự Hoa Lan",
+      "discount_total": "1000000.00",
+      "total_amount": "66500000.00",
+      "approved_at": "2026-07-04T03:56:03.590Z",
+      "created_at": "2026-07-04T03:55:28.857Z",
+      "updated_at": "2026-07-04T03:56:03.591Z"
+    }
+  },
+  {
+    "model": "orders.order",
+    "pk": 5,
+    "fields": {
+      "company": 3,
+      "order_number": "DH-20260704-004",
+      "customer": 6,
+      "quotation": null,
+      "created_by": null,
+      "approved_by": [
+        "giamdoc"
+      ],
+      "status": "approved",
+      "financial_status": "unpaid",
+      "payment_term": "Cọc 30% - Giao hàng 70%",
+      "installation_date": "2026-07-02",
+      "notes": "",
+      "discount_total": "0.00",
+      "total_amount": "2600.00",
+      "approved_at": "2026-07-04T09:44:15.360Z",
+      "created_at": "2026-07-04T03:57:37.682Z",
+      "updated_at": "2026-07-04T09:44:15.361Z"
+    }
+  },
+  {
+    "model": "orders.orderitem",
+    "pk": 2,
+    "fields": {
+      "order": 2,
+      "product": 5,
+      "product_name": "Cửa đi 4 cánh mở quay nhôm Xingfa dày 2.0mm",
+      "unit_price": "6500000.00",
+      "width": "2.40",
+      "height": "2.80",
+      "quantity": 10,
+      "discount_percent": "0.00",
+      "line_total": "0.00"
+    }
+  },
+  {
+    "model": "orders.orderitem",
+    "pk": 4,
+    "fields": {
+      "order": 4,
+      "product": 5,
+      "product_name": "Cửa đi 4 cánh mở quay nhôm Xingfa dày 2.0mm",
+      "unit_price": "6500000.00",
+      "width": "2.40",
+      "height": "2.80",
+      "quantity": 10,
+      "discount_percent": "0.00",
+      "line_total": "0.00"
+    }
+  },
+  {
+    "model": "orders.orderitem",
+    "pk": 5,
+    "fields": {
+      "order": 4,
+      "product": 6,
+      "product_name": "Cửa sổ trượt 2 cánh nhôm PMI nhập khẩu",
+      "unit_price": "2500000.00",
+      "width": "9.00",
+      "height": "1.00",
+      "quantity": 1,
+      "discount_percent": "0.00",
+      "line_total": "0.00"
+    }
+  },
+  {
+    "model": "orders.orderitem",
+    "pk": 6,
+    "fields": {
+      "order": 5,
+      "product": 6,
+      "product_name": "Cửa sổ trượt 2 cánh nhôm PMI nhập khẩu",
+      "unit_price": "2600.00",
+      "width": "0.00",
+      "height": "0.00",
+      "quantity": 1,
+      "discount_percent": "0.00",
+      "line_total": "0.00"
+    }
+  },
+  {
+    "model": "inventory.productcategory",
+    "pk": 5,
+    "fields": {
+      "company": 3,
+      "name": "Cửa Nhôm Xingfa Hệ 55",
+      "description": "Dòng cửa nhôm cao cấp cách âm cách nhiệt"
+    }
+  },
+  {
+    "model": "inventory.productcategory",
+    "pk": 6,
+    "fields": {
+      "company": 3,
+      "name": "Cửa Nhôm PMI nhập khẩu",
+      "description": "Dòng nhôm cầu cách nhiệt tiêu chuẩn châu Âu"
+    }
+  },
+  {
+    "model": "inventory.product",
+    "pk": 5,
+    "fields": {
+      "company": 3,
+      "template": null,
+      "category": 5,
+      "sku": "XINGFA-4C-01",
+      "name": "Cửa đi 4 cánh mở quay nhôm Xingfa dày 2.0mm",
+      "description": "Kính dán an toàn 8.38mm, phụ kiện Kinlong đồng bộ",
+      "attributes": {},
+      "unit": "bộ",
+      "price": "6500000.00",
+      "cost_price": "4500000.00",
+      "image": "",
+      "is_active": true,
+      "created_at": "2026-07-04T03:25:50.545Z",
+      "updated_at": "2026-07-04T03:25:50.545Z"
+    }
+  },
+  {
+    "model": "inventory.product",
+    "pk": 6,
+    "fields": {
+      "company": 3,
+      "template": null,
+      "category": 6,
+      "sku": "PMI-2C-02",
+      "name": "Cửa sổ trượt 2 cánh nhôm PMI nhập khẩu",
+      "description": "Kính cường lực 10mm, ray trượt êm ái",
+      "attributes": {},
+      "unit": "bộ",
+      "price": "4200000.00",
+      "cost_price": "2800000.00",
+      "image": "",
+      "is_active": true,
+      "created_at": "2026-07-04T03:25:50.548Z",
+      "updated_at": "2026-07-04T03:25:50.549Z"
+    }
+  },
+  {
+    "model": "inventory.warehouse",
+    "pk": 3,
+    "fields": {
+      "company": 3,
+      "name": "Kho Tổng Hà Nội",
+      "location": "KCN Quang Minh, Mê Linh, Hà Nội",
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.stocklevel",
+    "pk": 5,
+    "fields": {
+      "product": 5,
+      "warehouse": 3,
+      "quantity": 80,
+      "min_quantity": 10
+    }
+  },
+  {
+    "model": "inventory.stocklevel",
+    "pk": 6,
+    "fields": {
+      "product": 6,
+      "warehouse": 3,
+      "quantity": 78,
+      "min_quantity": 10
+    }
+  },
+  {
+    "model": "inventory.inventorytransaction",
+    "pk": 2,
+    "fields": {
+      "company": 3,
+      "transaction_code": "EXP-20260704-001",
+      "type": "export",
+      "product": 5,
+      "warehouse": 3,
+      "quantity": 10,
+      "unit_cost": "0.00",
+      "reference_order": 2,
+      "note": "Xuất kho tự động cho đơn hàng DH-20260704-001",
+      "created_by": null,
+      "created_at": "2026-07-04T03:25:50.599Z"
+    }
+  },
+  {
+    "model": "inventory.inventorytransaction",
+    "pk": 3,
+    "fields": {
+      "company": 3,
+      "transaction_code": "EXP-20260704-002",
+      "type": "export",
+      "product": 5,
+      "warehouse": 3,
+      "quantity": 10,
+      "unit_cost": "0.00",
+      "reference_order": 4,
+      "note": "Xuất kho tự động cho đơn hàng DH-20260704-003",
+      "created_by": null,
+      "created_at": "2026-07-04T03:56:03.614Z"
+    }
+  },
+  {
+    "model": "inventory.inventorytransaction",
+    "pk": 4,
+    "fields": {
+      "company": 3,
+      "transaction_code": "EXP-20260704-003",
+      "type": "export",
+      "product": 6,
+      "warehouse": 3,
+      "quantity": 1,
+      "unit_cost": "0.00",
+      "reference_order": 4,
+      "note": "Xuất kho tự động cho đơn hàng DH-20260704-003",
+      "created_by": null,
+      "created_at": "2026-07-04T03:56:03.619Z"
+    }
+  },
+  {
+    "model": "inventory.inventorytransaction",
+    "pk": 5,
+    "fields": {
+      "company": 3,
+      "transaction_code": "EXP-20260704-004",
+      "type": "export",
+      "product": 6,
+      "warehouse": 3,
+      "quantity": 1,
+      "unit_cost": "0.00",
+      "reference_order": 5,
+      "note": "Xuất kho tự động cho đơn hàng DH-20260704-004",
+      "created_by": [
+        "giamdoc"
+      ],
+      "created_at": "2026-07-04T09:44:15.445Z"
+    }
+  },
+  {
+    "model": "production.productionorder",
+    "pk": 2,
+    "fields": {
+      "company": 3,
+      "order": 2,
+      "status": "pending",
+      "start_date": null,
+      "end_date": null,
+      "notes": "",
+      "created_at": "2026-07-04T03:25:50.603Z",
+      "updated_at": "2026-07-04T03:25:50.603Z"
+    }
+  },
+  {
+    "model": "production.productionorder",
+    "pk": 3,
+    "fields": {
+      "company": 3,
+      "order": 4,
+      "status": "pending",
+      "start_date": null,
+      "end_date": null,
+      "notes": "",
+      "created_at": "2026-07-04T03:56:03.624Z",
+      "updated_at": "2026-07-04T03:56:03.624Z"
+    }
+  },
+  {
+    "model": "production.productionorder",
+    "pk": 4,
+    "fields": {
+      "company": 3,
+      "order": 5,
+      "status": "pending",
+      "start_date": null,
+      "end_date": null,
+      "notes": "",
+      "created_at": "2026-07-04T09:44:15.450Z",
+      "updated_at": "2026-07-04T09:44:15.450Z"
+    }
+  },
+  {
+    "model": "production.productionstep",
+    "pk": 4,
+    "fields": {
+      "production_order": 2,
+      "step_name": "1. Đo đạc & Cắt nhôm Xingfa",
+      "sequence": 1,
+      "assigned_to": null,
+      "status": "done",
+      "started_at": null,
+      "completed_at": null,
+      "notes": "Đã cắt chuẩn kích thước 2.4m x 2.8m"
+    }
+  },
+  {
+    "model": "production.productionstep",
+    "pk": 5,
+    "fields": {
+      "production_order": 2,
+      "step_name": "2. Lắp ráp khung & Ghép kính",
+      "sequence": 2,
+      "assigned_to": null,
+      "status": "in_progress",
+      "started_at": null,
+      "completed_at": null,
+      "notes": "Đang tiến hành ép góc và bôi keo"
+    }
+  },
+  {
+    "model": "production.productionstep",
+    "pk": 6,
+    "fields": {
+      "production_order": 2,
+      "step_name": "3. Kiểm tra chất lượng & Bọc lót xuất xưởng",
+      "sequence": 3,
+      "assigned_to": null,
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "notes": ""
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 1,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen2"
+      ],
+      "sender": null,
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Tập đoàn Bất động sản Vingroup (0988888888) đã được phân công cho bạn.",
+      "link": "/customers/5",
+      "is_read": false,
+      "created_at": "2026-07-09T14:23:55.663Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 2,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen1"
+      ],
+      "sender": null,
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Công ty Cổ phần Xây dựng Coteccons (0911223344) đã được phân công cho bạn.",
+      "link": "/customers/6",
+      "is_read": false,
+      "created_at": "2026-07-09T14:23:56.440Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 3,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen2"
+      ],
+      "sender": null,
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Biệt thự Sun Grand City (0901234567) đã được phân công cho bạn.",
+      "link": "/customers/7",
+      "is_read": false,
+      "created_at": "2026-07-09T14:23:56.478Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 4,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen3"
+      ],
+      "sender": null,
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Chung cư The Habitat (0912345678) đã được phân công cho bạn.",
+      "link": "/customers/8",
+      "is_read": false,
+      "created_at": "2026-07-09T14:23:56.517Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 5,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen3"
+      ],
+      "sender": null,
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Dự án Sapphire Tower (0923456789) đã được phân công cho bạn.",
+      "link": "/customers/9",
+      "is_read": false,
+      "created_at": "2026-07-09T14:23:56.554Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 6,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen2"
+      ],
+      "sender": null,
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng CTCP Nội thất An Gia (0934567890) đã được phân công cho bạn.",
+      "link": "/customers/10",
+      "is_read": false,
+      "created_at": "2026-07-09T14:23:56.590Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 7,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen2"
+      ],
+      "sender": null,
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Khu nghỉ dưỡng Flamingo (0945678901) đã được phân công cho bạn.",
+      "link": "/customers/11",
+      "is_read": false,
+      "created_at": "2026-07-09T14:23:56.625Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 8,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen1"
+      ],
+      "sender": null,
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Nhà hàng Crystal Jade (0956789012) đã được phân công cho bạn.",
+      "link": "/customers/12",
+      "is_read": false,
+      "created_at": "2026-07-09T14:23:56.660Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 9,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen3"
+      ],
+      "sender": null,
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Công ty CP Đông Á Land (0967890123) đã được phân công cho bạn.",
+      "link": "/customers/13",
+      "is_read": false,
+      "created_at": "2026-07-09T14:23:56.699Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 10,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen2"
+      ],
+      "sender": null,
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Chị Lan (cá nhân) (0978901234) đã được phân công cho bạn.",
+      "link": "/customers/14",
+      "is_read": false,
+      "created_at": "2026-07-09T14:23:56.736Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 11,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "giamdoc"
+      ],
+      "sender": null,
+      "type": "order_new",
+      "title": "Đơn hàng mới cần duyệt",
+      "message": "Đơn hàng DH-20260704-001 của khách Tập đoàn Bất động sản Vingroup đang chờ duyệt.",
+      "link": "/orders/2",
+      "is_read": false,
+      "created_at": "2026-07-09T14:23:56.892Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 12,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "giamdoc"
+      ],
+      "sender": null,
+      "type": "order_new",
+      "title": "Đơn hàng mới cần duyệt",
+      "message": "Đơn hàng DH-20260704-003 của khách Tập đoàn Bất động sản Vingroup đang chờ duyệt.",
+      "link": "/orders/4",
+      "is_read": false,
+      "created_at": "2026-07-09T14:23:56.942Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 13,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "giamdoc"
+      ],
+      "sender": null,
+      "type": "order_new",
+      "title": "Đơn hàng mới cần duyệt",
+      "message": "Đơn hàng DH-20260704-004 của khách Công ty Cổ phần Xây dựng Coteccons đang chờ duyệt.",
+      "link": "/orders/5",
+      "is_read": false,
+      "created_at": "2026-07-09T14:23:56.982Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 14,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "giamdoc"
+      ],
+      "sender": null,
+      "type": "order_new",
+      "title": "Đơn hàng mới cần duyệt",
+      "message": "Đơn hàng DH-20260704-003 của khách Tập đoàn Bất động sản Vingroup đang chờ duyệt.",
+      "link": "/orders/4",
+      "is_read": true,
+      "created_at": "2026-07-04T03:55:28.871Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 15,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "giamdoc"
+      ],
+      "sender": null,
+      "type": "order_rejected",
+      "title": "Đơn hàng bị từ chối",
+      "message": "Đơn hàng DH-20260704-002 của khách Tập đoàn Bất động sản Vingroup đã bị từ chối.",
+      "link": "/orders/3",
+      "is_read": true,
+      "created_at": "2026-07-04T03:55:56.032Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 18,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "giamdoc"
+      ],
+      "sender": null,
+      "type": "order_new",
+      "title": "Đơn hàng mới cần duyệt",
+      "message": "Đơn hàng DH-20260704-004 của khách Công ty Cổ phần Xây dựng Coteccons đang chờ duyệt.",
+      "link": "/orders/5",
+      "is_read": true,
+      "created_at": "2026-07-04T03:57:37.758Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 19,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen"
+      ],
+      "sender": [
+        "giamdoc"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Công ty Cổ phần Xây dựng Coteccons (0911223344) đã được phân công cho bạn.",
+      "link": "/customers/6",
+      "is_read": true,
+      "created_at": "2026-07-04T09:30:25.619Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 20,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen"
+      ],
+      "sender": [
+        "giamdoc"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Tập đoàn Bất động sản Vingroup (0988888888) đã được phân công cho bạn.",
+      "link": "/customers/5",
+      "is_read": true,
+      "created_at": "2026-07-04T09:30:25.883Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 21,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen1"
+      ],
+      "sender": [
+        "giamdoc"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Công ty Cổ phần Xây dựng Coteccons (0911223344) đã được phân công cho bạn.",
+      "link": "/customers/6",
+      "is_read": true,
+      "created_at": "2026-07-04T09:55:40.195Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 22,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen4"
+      ],
+      "sender": [
+        "giamdoc"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Công ty Cổ phần Xây dựng Coteccons (0911223344) đã được phân công cho bạn.",
+      "link": "/customers/6",
+      "is_read": false,
+      "created_at": "2026-07-04T10:09:01.296Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 23,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen1"
+      ],
+      "sender": [
+        "giamdoc"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Công ty Cổ phần Xây dựng Coteccons (0911223344) đã được phân công cho bạn.",
+      "link": "/customers/6",
+      "is_read": true,
+      "created_at": "2026-07-04T10:09:27.003Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 32,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen2"
+      ],
+      "sender": [
+        "dinhtuyen"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Tập đoàn Bất động sản Vingroup (0988888888) đã được phân công cho bạn.",
+      "link": "/customers/5",
+      "is_read": true,
+      "created_at": "2026-07-06T03:48:26.163Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 33,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen"
+      ],
+      "sender": null,
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Tuyền Lê Đình (0988565777) đã được phân công cho bạn.",
+      "link": "/customers/16",
+      "is_read": true,
+      "created_at": "2026-07-06T04:32:14.470Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 34,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "giamdoc"
+      ],
+      "sender": null,
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Mộc Lê Gia (36123224545) đã được phân công cho bạn.",
+      "link": "/customers/17",
+      "is_read": true,
+      "created_at": "2026-07-06T04:33:42.671Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 35,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen"
+      ],
+      "sender": null,
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Tuyền Lê (0949719204) đã được phân công cho bạn.",
+      "link": "/customers/19",
+      "is_read": true,
+      "created_at": "2026-07-06T04:47:07.210Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 36,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen"
+      ],
+      "sender": [
+        "giamdoc"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Chị Lan (cá nhân) (0978901234) đã được phân công cho bạn.",
+      "link": "/customers/14",
+      "is_read": true,
+      "created_at": "2026-07-06T05:09:58.322Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 37,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen3"
+      ],
+      "sender": [
+        "giamdoc"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Công ty CP Đông Á Land (0967890123) đã được phân công cho bạn.",
+      "link": "/customers/13",
+      "is_read": true,
+      "created_at": "2026-07-06T05:09:58.575Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 38,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen1"
+      ],
+      "sender": [
+        "giamdoc"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Nhà hàng Crystal Jade (0956789012) đã được phân công cho bạn.",
+      "link": "/customers/12",
+      "is_read": true,
+      "created_at": "2026-07-06T05:09:58.613Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 39,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen2"
+      ],
+      "sender": [
+        "giamdoc"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Khu nghỉ dưỡng Flamingo (0945678901) đã được phân công cho bạn.",
+      "link": "/customers/11",
+      "is_read": true,
+      "created_at": "2026-07-06T05:09:58.647Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 40,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen"
+      ],
+      "sender": [
+        "giamdoc"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng CTCP Nội thất An Gia (0934567890) đã được phân công cho bạn.",
+      "link": "/customers/10",
+      "is_read": true,
+      "created_at": "2026-07-06T05:09:58.680Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 41,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen3"
+      ],
+      "sender": [
+        "giamdoc"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Dự án Sapphire Tower (0923456789) đã được phân công cho bạn.",
+      "link": "/customers/9",
+      "is_read": true,
+      "created_at": "2026-07-06T05:09:58.730Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 42,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen1"
+      ],
+      "sender": [
+        "giamdoc"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Chung cư The Habitat (0912345678) đã được phân công cho bạn.",
+      "link": "/customers/8",
+      "is_read": true,
+      "created_at": "2026-07-06T05:09:58.795Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 43,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen2"
+      ],
+      "sender": [
+        "giamdoc"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Biệt thự Sun Grand City (0901234567) đã được phân công cho bạn.",
+      "link": "/customers/7",
+      "is_read": true,
+      "created_at": "2026-07-06T05:09:58.830Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 44,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen2"
+      ],
+      "sender": [
+        "dinhtuyen"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Chị Lan (cá nhân) (0978901234) đã được phân công cho bạn.",
+      "link": "/customers/14",
+      "is_read": true,
+      "created_at": "2026-07-06T05:35:02.356Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 45,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen3"
+      ],
+      "sender": [
+        "dinhtuyen1"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng Chung cư The Habitat (0912345678) đã được phân công cho bạn.",
+      "link": "/customers/8",
+      "is_read": false,
+      "created_at": "2026-07-06T05:40:37.741Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": 46,
+    "fields": {
+      "company": 3,
+      "recipient": [
+        "dinhtuyen2"
+      ],
+      "sender": [
+        "dinhtuyen"
+      ],
+      "type": "crm_assigned",
+      "title": "Bạn có khách hàng mới được phân công",
+      "message": "Khách hàng CTCP Nội thất An Gia (0934567890) đã được phân công cho bạn.",
+      "link": "/customers/10",
+      "is_read": true,
+      "created_at": "2026-07-06T05:41:45.241Z"
+    }
+  },
+  {
+    "model": "users.department",
+    "pk": 1,
+    "fields": {
+      "company": 3,
+      "name": "Phòng Kinh Doanh 1",
+      "description": "PKD1",
+      "manager": [
+        "dinhtuyen"
+      ],
+      "created_at": "2026-07-06T03:09:31.872Z"
+    }
+  },
+  {
+    "model": "users.department",
+    "pk": 2,
+    "fields": {
+      "company": 3,
+      "name": "Phòng Kinh Doanh 2",
+      "description": "PKD2",
+      "manager": [
+        "dinhtuyen1"
+      ],
+      "created_at": "2026-07-06T03:10:07.134Z"
+    }
+  }
+]

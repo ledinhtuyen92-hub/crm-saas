@@ -38,6 +38,7 @@ PERMISSIONS = [
     {"code": "orders.edit", "name": "Chỉnh sửa đơn hàng", "module": "orders"},
     {"code": "orders.delete", "name": "Xóa đơn hàng", "module": "orders"},
     {"code": "orders.approve", "name": "Duyệt / Từ chối đơn hàng", "module": "orders"},
+    {"code": "orders.cancel", "name": "Hủy đơn hàng", "module": "orders"},
     {"code": "orders.export_pdf", "name": "Xuất PDF đơn hàng", "module": "orders"},
     {"code": "orders.view_all", "name": "Xem tất cả đơn hàng (không giới hạn bởi người tạo)", "module": "orders"},
 
@@ -60,8 +61,18 @@ PERMISSIONS = [
     # ── Production (Sản xuất) ─────────────────────────────────────
     {"code": "production.view", "name": "Xem lệnh sản xuất", "module": "production"},
     {"code": "production.create", "name": "Tạo lệnh sản xuất", "module": "production"},
-    {"code": "production.edit", "name": "Cập nhật tiến độ sản xuất", "module": "production"},
+    {"code": "production.edit", "name": "Chỉnh sửa lệnh sản xuất", "module": "production"},
+    {"code": "production.update_step", "name": "Cập nhật tiến độ công đoạn", "module": "production"},
     {"code": "production.delete", "name": "Xóa lệnh sản xuất", "module": "production"},
+
+    # ── Delivery & Warranty (Giao hàng & Bảo hành) ─────────────────
+    {"code": "delivery.view", "name": "Xem lệnh giao hàng", "module": "delivery"},
+    {"code": "delivery.edit", "name": "Cập nhật lệnh giao hàng", "module": "delivery"},
+    {"code": "delivery.delete", "name": "Xoá lệnh giao hàng", "module": "delivery"},
+    {"code": "delivery.assign", "name": "Gán nhân viên giao hàng", "module": "delivery"},
+    {"code": "warranty.view", "name": "Xem phiếu bảo hành", "module": "warranty"},
+    {"code": "warranty.edit", "name": "Cập nhật phiếu bảo hành", "module": "warranty"},
+    {"code": "warranty.delete", "name": "Xoá phiếu bảo hành", "module": "warranty"},
 
     # ── Reports (Báo cáo) ─────────────────────────────────────────
     {"code": "reports.view", "name": "Xem báo cáo", "module": "reports"},

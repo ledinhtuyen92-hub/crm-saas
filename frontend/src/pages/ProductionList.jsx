@@ -81,6 +81,7 @@ export default function ProductionList() {
   // Permissions
   const canCreate = hasPermission('production.create')
   const canEdit = hasPermission('production.edit')
+  const canUpdateStep = hasPermission('production.update_step')
   const canDelete = hasPermission('production.delete')
 
   // ── Fetch data ────────────────────────────────────────────────────────
@@ -176,7 +177,18 @@ export default function ProductionList() {
       fetchProductionOrders()
     } catch (error) {
       if (error.errorFields) return
-      messageApi.error('Lưu lệnh sản xuất thất bại. Vui lòng kiểm tra ngày kết thúc.')
+      const data = error.response?.data
+      let errorMsg = 'Lưu lệnh sản xuất thất bại. Vui lòng kiểm tra dữ liệu.'
+      if (data) {
+        if (Array.isArray(data.status)) errorMsg = data.status[0]
+        else if (typeof data.status === 'string') errorMsg = data.status
+        else if (data.detail) errorMsg = data.detail
+        else if (Array.isArray(data.non_field_errors)) errorMsg = data.non_field_errors[0]
+        else if (Array.isArray(data.order)) errorMsg = data.order[0]
+        else if (Object.values(data).length > 0 && Array.isArray(Object.values(data)[0])) errorMsg = Object.values(data)[0][0]
+        else if (typeof data === 'string') errorMsg = data
+      }
+      messageApi.error(errorMsg)
     } finally {
       setSubmitting(false)
     }
@@ -243,8 +255,19 @@ export default function ProductionList() {
       const res = await api.get(`/production/orders/${selectedPO.id}/`)
       setSelectedPO(res.data)
       fetchProductionOrders()
-    } catch {
-      messageApi.error('Lưu công đoạn thất bại.')
+    } catch (error) {
+      if (error.errorFields) return
+      const data = error.response?.data
+      let errorMsg = 'Lưu công đoạn thất bại.'
+      if (data) {
+        if (Array.isArray(data.status)) errorMsg = data.status[0]
+        else if (typeof data.status === 'string') errorMsg = data.status
+        else if (data.detail) errorMsg = data.detail
+        else if (Array.isArray(data.non_field_errors)) errorMsg = data.non_field_errors[0]
+        else if (Object.values(data).length > 0 && Array.isArray(Object.values(data)[0])) errorMsg = Object.values(data)[0][0]
+        else if (typeof data === 'string') errorMsg = data
+      }
+      messageApi.error(errorMsg)
     } finally {
       setSubmitting(false)
     }
@@ -314,7 +337,7 @@ export default function ProductionList() {
                 setDrawerVisible(true)
               }}
             >
-              LSX-{r.id ? r.id.toString().padStart(4, '0') : '0000'}
+              {r.production_order_code || `LSX-${r.id ? r.id.toString().padStart(4, '0') : '0000'}`}
             </Text>
             <Text type="secondary" style={{ fontSize: 12 }}>
               Đơn hàng: <Tag color="blue">{r.order_number || `DH-${r.order}`}</Tag>
@@ -504,13 +527,18 @@ export default function ProductionList() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="status" label="Trạng thái">
-                <Select>
+                <Select disabled={editingPO?.delivery_status === 'delivered'}>
                   <Option value="pending">Chờ sản xuất</Option>
                   <Option value="in_progress">Đang sản xuất</Option>
                   <Option value="completed">Hoàn thành</Option>
                   <Option value="cancelled">Đã hủy</Option>
                 </Select>
               </Form.Item>
+              {editingPO?.delivery_status === 'delivered' && (
+                <div style={{ color: '#ef4444', fontSize: 12, marginTop: -16, marginBottom: 16 }}>
+                  Đơn hàng đã được giao thành công, không thể thay đổi trạng thái sản xuất.
+                </div>
+              )}
             </Col>
             <Col span={12}>
               <Form.Item name="start_date" label="Ngày bắt đầu">
@@ -534,7 +562,7 @@ export default function ProductionList() {
         title={
           <Space>
             <ToolOutlined style={{ color: '#0284c7' }} />
-            <Text strong>Quản lý Công Đoạn — LSX-{selectedPO ? selectedPO.id.toString().padStart(4, '0') : '0000'}</Text>
+            <Text strong>Quản lý Công Đoạn — {selectedPO?.production_order_code || (selectedPO ? `LSX-${selectedPO.id.toString().padStart(4, '0')}` : 'LSX-0000')}</Text>
           </Space>
         }
         width={750}
@@ -603,6 +631,7 @@ export default function ProductionList() {
                       value={st}
                       style={{ width: 120 }}
                       onChange={(newVal) => handleQuickStepStatus(r, newVal)}
+                      disabled={!canEdit && !canUpdateStep}
                     >
                       <Option value="pending">Chờ làm</Option>
                       <Option value="in_progress">Đang làm</Option>
@@ -626,8 +655,8 @@ export default function ProductionList() {
                   align: 'right',
                   render: (_, r) => (
                     <Space size="small">
-                      {canEdit && <Button type="text" size="small" icon={<EditOutlined />} onClick={() => openStepModal(r)} />}
-                      {canDelete && (
+                      {(canEdit || canUpdateStep) && <Button type="text" size="small" icon={<EditOutlined />} onClick={() => openStepModal(r)} />}
+                      {canEdit && (
                         <Popconfirm title="Xoá bước này?" onConfirm={() => handleDeleteStep(r.id)} okText="Xoá" cancelText="Hủy">
                           <Button type="text" size="small" danger icon={<DeleteOutlined />} />
                         </Popconfirm>

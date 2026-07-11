@@ -41,6 +41,9 @@ import {
   ToolOutlined,
   UserOutlined,
   UsergroupAddOutlined,
+  AppstoreAddOutlined,
+  CarOutlined,
+  SafetyCertificateOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -97,6 +100,11 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           icon: <TeamOutlined />,
           label: <Link to="/customers">Khách hàng</Link>,
         }] : []),
+        ...(isModuleActive('products') && hasPermission('products.view') ? [{
+          key: '/products',
+          icon: <InboxOutlined />,
+          label: <Link to="/products">Sản phẩm & Dịch vụ</Link>,
+        }] : []),
         ...(isModuleActive('sales') && hasPermission('sales.view') ? [{
           key: '/quotations',
           icon: <ShoppingCartOutlined />,
@@ -107,11 +115,6 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           icon: <FileDoneOutlined />,
           label: <Link to="/orders">Đơn hàng</Link>,
         }] : []),
-        ...(isModuleActive('products') && hasPermission('products.view') ? [{
-          key: '/products',
-          icon: <InboxOutlined />,
-          label: <Link to="/products">Sản phẩm & Dịch vụ</Link>,
-        }] : []),
         ...(isModuleActive('inventory') && hasPermission('inventory.view') ? [{
           key: '/inventory',
           icon: <DatabaseOutlined />,
@@ -121,6 +124,16 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           key: '/production',
           icon: <ToolOutlined />,
           label: <Link to="/production">Sản xuất</Link>,
+        }] : []),
+        ...(isModuleActive('delivery') && hasPermission('delivery.view') ? [{
+          key: '/delivery',
+          icon: <CarOutlined />,
+          label: <Link to="/delivery">Giao hàng</Link>,
+        }] : []),
+        ...(isModuleActive('warranty') && hasPermission('warranty.view') ? [{
+          key: '/warranty',
+          icon: <SafetyCertificateOutlined />,
+          label: <Link to="/warranty">Bảo hành</Link>,
         }] : []),
         ...(isCompanyAdmin
           ? [

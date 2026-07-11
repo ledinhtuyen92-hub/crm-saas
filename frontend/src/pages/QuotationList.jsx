@@ -362,6 +362,7 @@ export default function QuotationList() {
         shipping_fee: Number(quotation.shipping_fee || 0),
         installation_fee: Number(quotation.installation_fee || 0),
         delivery_time: quotation.delivery_time || '3-5 ngày làm việc',
+        warranty_months: quotation.warranty_months !== undefined ? quotation.warranty_months : 12,
         payment_terms: quotation.payment_terms || defaultPaymentTerms,
         payment_terms_schedule: quotation.payment_terms_schedule && quotation.payment_terms_schedule.length > 0 
           ? quotation.payment_terms_schedule 
@@ -408,8 +409,8 @@ export default function QuotationList() {
         discount_total: 0,
         shipping_fee: 0,
         installation_fee: 0,
-        vat_rate: 0,
         delivery_time: '3-5 ngày làm việc',
+        warranty_months: 12,
         payment_terms: defaultPaymentTerms,
         payment_terms_schedule: [{ title: 'Thanh toán đợt 1', percentage: 100, type: 'deposit' }],
         validity_days: 15,
@@ -466,6 +467,7 @@ export default function QuotationList() {
         shipping_fee: Number(values.shipping_fee || 0),
         installation_fee: Number(values.installation_fee || 0),
         delivery_time: values.delivery_time || '',
+        warranty_months: Number(values.warranty_months) || 12,
         payment_terms: values.payment_terms || '',
         payment_terms_schedule: values.payment_terms_schedule || [],
         validity_days: Number(values.validity_days || 15),
@@ -936,11 +938,20 @@ export default function QuotationList() {
                 </Tooltip>
               )
             }
-            if (record.order_status === 'approved') {
+            if (record.order_status === 'approved' || record.order_status === 'in_production' || record.order_status === 'shipping' || record.order_status === 'completed') {
               return (
                 <Tooltip title="Đơn hàng đã được duyệt chính thức">
                   <Button size="small" disabled style={{ background: '#dcfce7', color: '#15803d', borderColor: '#86efac' }}>
                     <CheckCircleOutlined /> Đã tạo ĐH
+                  </Button>
+                </Tooltip>
+              )
+            }
+            if (record.order_status === 'rejected') {
+              return (
+                <Tooltip title="Đơn hàng đã bị từ chối. Vui lòng sang phần Đơn hàng để sửa lại.">
+                  <Button size="small" disabled style={{ background: '#fee2e2', color: '#b91c1c', borderColor: '#fca5a5' }}>
+                    <CloseCircleOutlined /> ĐH bị từ chối
                   </Button>
                 </Tooltip>
               )
@@ -1652,13 +1663,18 @@ export default function QuotationList() {
           </Card>
 
           <Row gutter={16}>
-            <Col xs={24} sm={12}>
+            <Col xs={24} sm={8}>
               <Form.Item name="delivery_time" label="Thời gian giao hàng / thi công">
                 <Input placeholder="3-5 ngày làm việc..." />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item name="validity_days" label="Hiệu lực báo giá (số ngày)">
+            <Col xs={24} sm={8}>
+              <Form.Item name="warranty_months" label="Thời hạn bảo hành (tháng)">
+                <InputNumber min={0} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="validity_days" label="Hiệu lực báo giá (ngày)">
                 <InputNumber min={1} style={{ width: '100%' }} />
               </Form.Item>
             </Col>

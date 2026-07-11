@@ -27,11 +27,12 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         "list": "orders.view",
         "retrieve": "orders.view",
         "create": "orders.create",
-        "update": "orders.edit",
-        "partial_update": "orders.edit",
-        "destroy": "orders.delete",
+        "update": ["orders.create", "orders.edit"],
+        "partial_update": ["orders.create", "orders.edit"],
+        "destroy": ["orders.create", "orders.delete"],
         "approve": "orders.approve",
         "reject": "orders.approve",
+        "cancel": "orders.cancel",
     }
 
     def get_queryset(self):
@@ -98,6 +99,18 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             with open("error_approval.txt", "w", encoding="utf-8") as f:
                 f.write(traceback.format_exc())
 
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        new_status = serializer.validated_data.get("status", instance.status)
+        if new_status != instance.status:
+            if hasattr(instance, 'delivery_order') and instance.delivery_order.status == 'delivered':
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({"status": "Không thể thay đổi trạng thái khi Đơn hàng đã được giao thành công."})
+            if hasattr(instance, 'production_order') and instance.production_order.status in ['in_progress', 'completed'] and new_status in ['pending', 'rejected', 'cancelled']:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({"status": "Không thể chuyển về chờ duyệt/hủy khi Lệnh sản xuất đang thực hiện hoặc đã hoàn thành."})
+        serializer.save()
+
     @action(detail=True, methods=["post"], url_path="approve")
     def approve(self, request, pk=None):
         """
@@ -149,6 +162,17 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if hasattr(order, 'production_order') and order.production_order.status != 'cancelled':
+            return Response(
+                {"detail": "Đơn hàng đang có lệnh sản xuất. Cần hủy lệnh sản xuất trước."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if hasattr(order, 'delivery_order') and order.delivery_order.status == 'delivered':
+            return Response(
+                {"detail": "Đơn hàng đã giao thành công, không thể từ chối."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         order.status = Order.STATUS_REJECTED
         order.approved_by = request.user
         order.save(update_fields=["status", "approved_by", "updated_at"])
@@ -163,6 +187,87 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 req.steps.filter(status=ApprovalStep.STATUS_PENDING).update(status=ApprovalStep.STATUS_REJECTED, acted_by=request.user)
         except Exception:
             pass
+        return Response(
+            OrderSerializer(order, context={"request": request}).data,
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="cancel")
+    def cancel(self, request, pk=None):
+        """POST /api/orders/{id}/cancel/ — Hủy đơn hàng."""
+        order = self.get_object()
+        if order.status in [Order.STATUS_COMPLETED, Order.STATUS_CANCELLED]:
+            return Response(
+                {"detail": "Không thể hủy đơn hàng đã hoàn thành hoặc đã bị hủy."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+            
+        if hasattr(order, 'delivery_order') and order.delivery_order.status == 'delivered':
+            return Response(
+                {"detail": "Đơn hàng đã giao thành công, không thể hủy."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if hasattr(order, 'production_order') and order.production_order.status in ['in_progress', 'completed']:
+            return Response(
+                {"detail": "Đơn hàng đang trong quá trình sản xuất hoặc đã xong. Vui lòng hủy Lệnh sản xuất trước."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        order.status = Order.STATUS_CANCELLED
+        order.save(update_fields=["status", "updated_at"])
+        
+        try:
+            from approvals.models import ApprovalRequest, ApprovalStep
+            from django.contrib.contenttypes.models import ContentType
+            ct = ContentType.objects.get_for_model(order)
+            reqs = ApprovalRequest.objects.filter(content_type=ct, object_id=order.id)
+            for req in reqs:
+                req.status = ApprovalRequest.STATUS_REJECTED
+                req.save(update_fields=["status"])
+                req.steps.filter(status=ApprovalStep.STATUS_PENDING).update(status=ApprovalStep.STATUS_REJECTED, acted_by=request.user)
+        except Exception:
+            pass
+
+        return Response(
+            OrderSerializer(order, context={"request": request}).data,
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="resubmit")
+    def resubmit(self, request, pk=None):
+        """POST /api/orders/{id}/resubmit/ — Trình duyệt lại đơn hàng đã bị từ chối."""
+        order = self.get_object()
+        if order.status != Order.STATUS_REJECTED:
+            return Response(
+                {"detail": "Chỉ có thể trình duyệt lại đơn hàng đã bị từ chối."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        order.status = Order.STATUS_PENDING
+        order.approved_by = None
+        order.save(update_fields=["status", "approved_by", "updated_at"])
+
+        try:
+            from approvals.models import ApprovalRequest, ApprovalStep
+            from django.contrib.contenttypes.models import ContentType
+            ct = ContentType.objects.get_for_model(order)
+            
+            req = ApprovalRequest.objects.create(
+                company=order.company,
+                content_type=ct,
+                object_id=order.id,
+                requester=request.user,
+                title=f"Phê duyệt lại Đơn hàng {order.order_number}",
+                description=f"Đơn hàng {order.order_number} — Khách hàng: {order.customer.name if order.customer else 'Khách lẻ'}",
+                status=ApprovalRequest.STATUS_PENDING,
+            )
+            ApprovalStep.objects.create(
+                request=req,
+                step_order=1,
+                status=ApprovalStep.STATUS_PENDING,
+            )
+        except Exception:
+            pass
+
         return Response(
             OrderSerializer(order, context={"request": request}).data,
             status=status.HTTP_200_OK,
@@ -233,12 +338,12 @@ class OrderItemViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
     
     action_permissions = {
-        "list": "orders.view",
-        "retrieve": "orders.view",
-        "create": "orders.edit", # Creating item requires edit order permission
-        "update": "orders.edit",
-        "partial_update": "orders.edit",
-        "destroy": "orders.edit",
+        "list": ["orders.view", "orders.create", "orders.edit"],
+        "retrieve": ["orders.view", "orders.create", "orders.edit"],
+        "create": ["orders.create", "orders.edit"],
+        "update": ["orders.create", "orders.edit"],
+        "partial_update": ["orders.create", "orders.edit"],
+        "destroy": ["orders.create", "orders.edit"],
     }
 
     def get_queryset(self):

@@ -1,0 +1,414 @@
+import React, { useState, useEffect, useCallback } from 'react'
+import {
+  Table,
+  Card,
+  Typography,
+  Space,
+  Button,
+  Tag,
+  Row,
+  Col,
+  Input,
+  Select,
+  Modal,
+  Form,
+  DatePicker,
+  message,
+  Drawer,
+} from 'antd'
+import { SafetyCertificateOutlined, SearchOutlined, EditOutlined, EyeOutlined, PlusOutlined, DeleteOutlined, PrinterOutlined } from '@ant-design/icons'
+import dayjs from 'dayjs'
+
+import api from '../utils/api'
+import { useAuth } from '../contexts/AuthContext'
+import WarrantyPrintView from '../components/WarrantyPrintView'
+
+const { Title, Text } = Typography
+const { Option } = Select
+
+const statusConfig = {
+  active: { label: 'Đang hiệu lực', color: 'green' },
+  expired: { label: 'Hết hạn', color: 'red' },
+  void: { label: 'Đã hủy/Vô hiệu', color: 'default' },
+}
+
+export default function WarrantyList() {
+  const { checkMaintenance, hasPermission } = useAuth()
+  const [warranties, setWarranties] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [searchText, setSearchText] = useState('')
+  const [statusFilter, setStatusFilter] = useState(null)
+
+  const [modalVisible, setModalVisible] = useState(false)
+  const [editingWarranty, setEditingWarranty] = useState(null)
+  const [form] = Form.useForm()
+  const [submitting, setSubmitting] = useState(false)
+  const [availableOrders, setAvailableOrders] = useState([])
+  const [availableCustomers, setAvailableCustomers] = useState([])
+
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false)
+  const [deletingWarranty, setDeletingWarranty] = useState(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+
+  const [printDrawerVisible, setPrintDrawerVisible] = useState(false)
+  const [printingWarranty, setPrintingWarranty] = useState(null)
+  const [companyInfo, setCompanyInfo] = useState(null)
+  const [companySettings, setCompanySettings] = useState(null)
+
+  const canEdit = hasPermission('warranty.edit')
+  const canCreate = hasPermission('warranty.edit')
+  const canDelete = hasPermission('warranty.delete')
+
+  const fetchDataForForm = async () => {
+    try {
+      const resOrders = await api.get('/orders/orders/', { params: { limit: 100 } })
+      setAvailableOrders(Array.isArray(resOrders.data) ? resOrders.data : resOrders.data?.results ?? [])
+      
+      const resCustomers = await api.get('/crm/customers/', { params: { limit: 100 } })
+      setAvailableCustomers(Array.isArray(resCustomers.data) ? resCustomers.data : resCustomers.data?.results ?? [])
+
+      const resCompany = await api.get('/users/my-company/')
+      setCompanyInfo(resCompany.data)
+
+      const resSettings = await api.get('/users/company-settings/')
+      setCompanySettings(resSettings.data)
+    } catch {}
+  }
+
+  const fetchWarranties = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = {}
+      if (statusFilter) params.status = statusFilter
+      if (searchText) params.search = searchText
+      const res = await api.get('/delivery/warranties/', { params })
+      const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
+      setWarranties(data)
+    } catch {
+      message.error('Lỗi khi tải danh sách phiếu bảo hành.')
+    } finally {
+      setLoading(false)
+    }
+  }, [statusFilter, searchText])
+
+  useEffect(() => {
+    fetchWarranties()
+  }, [fetchWarranties])
+
+  useEffect(() => {
+    fetchDataForForm()
+  }, [])
+
+  const openModal = (record = null) => {
+    if (checkMaintenance()) return
+    setEditingWarranty(record)
+    if (record) {
+      form.setFieldsValue({
+        order: record.order,
+        customer: record.customer,
+        status: record.status,
+        start_date: record.start_date ? dayjs(record.start_date) : null,
+        end_date: record.end_date ? dayjs(record.end_date) : null,
+        terms: record.terms,
+        warranty_content: record.warranty_content || companySettings?.default_warranty_content || '',
+        warranty_rules: record.warranty_rules || companySettings?.default_warranty_rules || '',
+      })
+    } else {
+      form.resetFields()
+      form.setFieldsValue({ 
+        status: 'active',
+        start_date: dayjs(),
+        end_date: dayjs().add(1, 'year')
+      })
+    }
+    setModalVisible(true)
+  }
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields()
+      setSubmitting(true)
+      const payload = {
+        order: values.order,
+        customer: values.customer,
+        status: values.status,
+        start_date: values.start_date ? values.start_date.format('YYYY-MM-DD') : null,
+        end_date: values.end_date ? values.end_date.format('YYYY-MM-DD') : null,
+        terms: values.terms,
+      }
+      if (editingWarranty) {
+        await api.patch(`/delivery/warranties/${editingWarranty.id}/`, payload)
+        message.success('Cập nhật phiếu bảo hành thành công!')
+      } else {
+        await api.post(`/delivery/warranties/`, payload)
+        message.success('Tạo phiếu bảo hành thành công!')
+      }
+      setModalVisible(false)
+      fetchWarranties()
+    } catch (error) {
+      message.error(error.response?.data?.order?.[0] || 'Có lỗi xảy ra khi lưu.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDelete = (record) => {
+    if (checkMaintenance()) return
+    setDeletingWarranty(record)
+    setDeleteConfirmText('')
+    setDeleteModalVisible(true)
+  }
+
+  const executeDelete = async () => {
+    if (deleteConfirmText !== 'XOA') {
+      message.error('Vui lòng nhập đúng chữ XOA để xác nhận.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      await api.delete(`/delivery/warranties/${deletingWarranty.id}/`)
+      message.success('Đã xóa phiếu bảo hành!')
+      setDeleteModalVisible(false)
+      fetchWarranties()
+    } catch {
+      message.error('Lỗi khi xóa phiếu bảo hành.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const columns = [
+    {
+      title: 'Mã BH',
+      dataIndex: 'warranty_code',
+      key: 'warranty_code',
+      render: (v, r) => <Text strong style={{ color: '#059669' }}>{v || `BH-${r.id}`}</Text>,
+    },
+    {
+      title: 'Đơn hàng',
+      dataIndex: 'order_number',
+      key: 'order_number',
+      render: (v) => <Tag color="blue">{v}</Tag>,
+    },
+    {
+      title: 'Khách hàng',
+      key: 'customer',
+      render: (_, r) => (
+        <div>
+          <Text strong>{r.customer_name}</Text>
+          <br />
+          <Text type="secondary" style={{ fontSize: 12 }}>{r.customer_phone}</Text>
+        </div>
+      ),
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (st) => {
+        const c = statusConfig[st] || { label: st, color: 'default' }
+        return <Tag color={c.color}>{c.label}</Tag>
+      },
+    },
+    {
+      title: 'Thời hạn',
+      key: 'dates',
+      render: (_, r) => (
+        <div style={{ fontSize: 12 }}>
+          {r.start_date && <div>Từ: {dayjs(r.start_date).format('DD/MM/YYYY')}</div>}
+          {r.end_date && <div style={{ color: '#dc2626' }}>Đến: {dayjs(r.end_date).format('DD/MM/YYYY')}</div>}
+        </div>
+      ),
+    },
+    {
+      title: '',
+      key: 'actions',
+      align: 'right',
+      render: (_, r) => (
+        <Space>
+          <Button
+            type="text"
+            icon={<PrinterOutlined />}
+            onClick={() => { setPrintingWarranty(r); setPrintDrawerVisible(true); }}
+            title="In Phiếu Bảo Hành"
+          />
+          <Button
+            type="text"
+            icon={canEdit ? <EditOutlined /> : <EyeOutlined />}
+            onClick={() => openModal(r)}
+          />
+          {canDelete && (
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDelete(r)}
+            />
+          )}
+        </Space>
+      ),
+    },
+  ]
+
+  return (
+    <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
+      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+        <Title level={3} style={{ margin: 0 }}>
+          <SafetyCertificateOutlined style={{ marginRight: 8, color: '#059669' }} />
+          Quản lý Bảo hành
+        </Title>
+        {canCreate && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()} size="large" style={{ borderRadius: 8 }}>
+            Tạo Phiếu Bảo Hành
+          </Button>
+        )}
+      </Row>
+
+      <Card style={{ marginBottom: 16, borderRadius: 12 }} bodyStyle={{ padding: 16 }}>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} md={8}>
+            <Input
+              placeholder="Tìm kiếm mã BH, khách hàng, SĐT..."
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Select
+              style={{ width: '100%' }}
+              placeholder="Lọc trạng thái"
+              allowClear
+              value={statusFilter}
+              onChange={setStatusFilter}
+            >
+              {Object.entries(statusConfig).map(([key, c]) => (
+                <Option key={key} value={key}>{c.label}</Option>
+              ))}
+            </Select>
+          </Col>
+        </Row>
+      </Card>
+
+      <Table
+        dataSource={warranties}
+        columns={columns}
+        rowKey="id"
+        loading={loading}
+        pagination={{ pageSize: 20 }}
+      />
+
+      <Modal
+        title={editingWarranty ? (canEdit ? "Cập nhật Phiếu Bảo hành" : "Chi tiết Phiếu Bảo hành") : "Tạo Phiếu Bảo Hành Mới"}
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        onOk={handleSubmit}
+        confirmLoading={submitting}
+        okButtonProps={{ disabled: !canEdit }}
+      >
+        <Form form={form} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="order" label="Đơn hàng" rules={[{ required: !editingWarranty, message: 'Vui lòng chọn đơn hàng' }]}>
+                <Select disabled={!!editingWarranty || !canEdit} placeholder="Chọn đơn hàng" showSearch optionFilterProp="children">
+                  {availableOrders.map(o => (
+                    <Option key={o.id} value={o.id}>{o.order_number}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="customer" label="Khách hàng" rules={[{ required: !editingWarranty, message: 'Vui lòng chọn khách hàng' }]}>
+                <Select disabled={!!editingWarranty || !canEdit} placeholder="Chọn khách hàng" showSearch optionFilterProp="children">
+                  {availableCustomers.map(c => (
+                    <Option key={c.id} value={c.id}>{c.full_name} - {c.phone}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="status" label="Trạng thái">
+            <Select disabled={!canEdit}>
+              {Object.entries(statusConfig).map(([key, c]) => (
+                <Option key={key} value={key}>{c.label}</Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="start_date" label="Ngày bắt đầu">
+                <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} disabled={!canEdit} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="end_date" label="Ngày kết thúc">
+                <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} disabled={!canEdit} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="terms" label="Điều khoản/Ghi chú ngắn">
+            <Input.TextArea rows={2} disabled={!canEdit} />
+          </Form.Item>
+          <Form.Item name="warranty_content" label="Nội dung bảo hành (Cột trái mẫu in)">
+            <Input.TextArea rows={4} disabled={!canEdit} />
+          </Form.Item>
+          <Form.Item name="warranty_rules" label="Quy định bảo hành (Cột phải mẫu in)">
+            <Input.TextArea rows={4} disabled={!canEdit} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={<><DeleteOutlined style={{ color: '#ef4444', marginRight: 8 }}/>Xác nhận xóa phiếu bảo hành</>}
+        open={deleteModalVisible}
+        onCancel={() => setDeleteModalVisible(false)}
+        onOk={executeDelete}
+        confirmLoading={submitting}
+        okText="Xóa"
+        okButtonProps={{ danger: true, disabled: deleteConfirmText !== 'XOA' }}
+      >
+        <div style={{ marginBottom: 16 }}>
+          Bạn đang yêu cầu xóa phiếu bảo hành <strong>{deletingWarranty?.warranty_code || 'Chưa rõ'}</strong> của khách hàng <strong>{deletingWarranty?.customer_name}</strong>.
+          <br/><br/>
+          Hành động này <strong style={{ color: '#ef4444' }}>không thể hoàn tác</strong> và sẽ tự động mở khóa (cho phép chỉnh sửa) Lệnh giao hàng có liên quan.
+        </div>
+        <p>Vui lòng nhập chữ <strong>XOA</strong> (viết hoa) vào ô bên dưới để xác nhận:</p>
+        <Input 
+          placeholder="Nhập XOA" 
+          value={deleteConfirmText}
+          onChange={(e) => setDeleteConfirmText(e.target.value)}
+          onPressEnter={() => {
+            if (deleteConfirmText === 'XOA') executeDelete()
+          }}
+        />
+      </Modal>
+
+      <Drawer
+        title={
+          <Space>
+            <PrinterOutlined style={{ color: '#10b981' }} />
+            <Text strong>In Phiếu Bảo Hành: {printingWarranty?.warranty_code}</Text>
+          </Space>
+        }
+        width={1000}
+        open={printDrawerVisible}
+        onClose={() => setPrintDrawerVisible(false)}
+        extra={
+          <Button type="primary" icon={<PrinterOutlined />} onClick={() => {
+            const oldTitle = document.title
+            document.title = printingWarranty?.warranty_code || 'Phieu_Bao_Hanh'
+            window.print()
+            document.title = oldTitle
+          }} style={{ background: '#10b981', borderColor: '#10b981' }}>
+            In Phiếu
+          </Button>
+        }
+      >
+        <div style={{ marginBottom: 24, border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, background: '#fff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+          <WarrantyPrintView warranty={printingWarranty} companyInfo={companyInfo} companySettings={companySettings} />
+        </div>
+      </Drawer>
+    </div>
+  )
+}

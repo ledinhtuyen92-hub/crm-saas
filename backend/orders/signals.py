@@ -55,6 +55,8 @@ def on_order_saved(sender, instance, created, **kwargs):
         _handle_order_approved(instance)
     elif instance.status == Order.STATUS_REJECTED:
         _handle_order_rejected(instance)
+    elif instance.status == Order.STATUS_CANCELLED:
+        _handle_order_cancelled(instance)
 
 
 def _notify_managers_new_order(order):
@@ -137,12 +139,15 @@ def _create_production_order(order):
     """Tự động tạo ProductionOrder sau khi đơn được duyệt."""
     try:
         from production.models import ProductionOrder
+        from core.numbering import derive_code_from_source
 
         # Kiểm tra tránh duplicate
         if not ProductionOrder.objects.filter(order=order).exists():
+            po_code = derive_code_from_source(order.order_number, ProductionOrder, "production_order_code", order.company, "LSX")
             ProductionOrder.objects.create(
                 company=order.company,
                 order=order,
+                production_order_code=po_code,
                 status=ProductionOrder.STATUS_PENDING,
             )
             logger.info("Auto-created ProductionOrder for order %s", order.order_number)
@@ -187,3 +192,32 @@ def _handle_order_rejected(order):
         notify_order_rejected(order)
     except Exception as exc:
         logger.error("Failed to send rejected notification for order %s: %s", order.order_number, exc)
+
+
+def _handle_order_cancelled(order):
+    """
+    Xử lý khi đơn hàng bị HỦY (Cancelled):
+    1. Hủy Lệnh sản xuất (nếu chưa hoàn thành)
+    2. Hủy Lệnh xuất kho (nếu chưa hoàn thành)
+    """
+    try:
+        from production.models import ProductionOrder
+        from inventory.models import InventoryTransaction
+
+        # 1. Hủy lệnh sản xuất chưa hoàn thành
+        ProductionOrder.objects.filter(
+            order=order
+        ).exclude(
+            status=ProductionOrder.STATUS_COMPLETED
+        ).update(status=ProductionOrder.STATUS_CANCELLED)
+        
+        # 2. Hủy các lệnh xuất kho chờ duyệt
+        InventoryTransaction.objects.filter(
+            reference_order=order,
+            status=InventoryTransaction.STATUS_PENDING,
+            type=InventoryTransaction.TYPE_EXPORT
+        ).update(status=InventoryTransaction.STATUS_REJECTED)
+        
+        logger.info("Successfully cancelled related MO and Export transactions for cancelled order %s", order.order_number)
+    except Exception as exc:
+        logger.error("Failed to cancel related transactions for order %s: %s", order.order_number, exc)

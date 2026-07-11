@@ -240,8 +240,9 @@ export default function OrderList() {
 
   // Permissions
   const canCreate = hasPermission('orders.create')
-  const canEdit = hasPermission('orders.edit')
-  const canDelete = hasPermission('orders.delete')
+  const canEdit = hasPermission('orders.edit') || hasPermission('orders.create')
+  const canDelete = hasPermission('orders.delete') || hasPermission('orders.create')
+  const canCancel = hasPermission('orders.cancel')
   const canRequestCredit = hasPermission('finance.request_credit')
   const canApprove = hasPermission('orders.approve')
 
@@ -910,11 +911,12 @@ export default function OrderList() {
         shipping_fee: Number(order.shipping_fee || 0),
         installation_fee: Number(order.installation_fee || 0),
         delivery_time: order.delivery_time || '3-5 ngày làm việc',
+        warranty_months: order.warranty_months !== undefined ? order.warranty_months : 12,
+        validity_days: order.validity_days || 30,
         payment_terms_schedule: order.payment_terms_schedule && order.payment_terms_schedule.length > 0 
           ? order.payment_terms_schedule 
           : [{ title: 'Thanh toán đợt 1', percentage: 100, type: 'deposit' }],
         vat_rate: Number(order.vat_rate || 0),
-        validity_days: Number(order.validity_days || 15),
       })
       if (order.items && order.items.length > 0) {
         setFormItems(
@@ -948,10 +950,11 @@ export default function OrderList() {
       form.setFieldsValue({ status: 'pending', discount_total: 0,
         shipping_fee: 0,
         installation_fee: 0,
-        vat_rate: 0,
         delivery_time: '3-5 ngày làm việc',
+        warranty_months: 12,
+        validity_days: 30,
         payment_terms_schedule: [{ title: 'Thanh toán đợt 1', percentage: 100, type: 'deposit' }],
-        validity_days: 15 })
+        vat_rate: 0 })
       setFormItems([
         { key: Date.now(), product: null, width: 0, height: 0, length: 0, thickness: 0, area: 0, spec: '', warranty: '12 tháng', quantity: 1, unit_price: 0, discount_percent: 0, note: '', product_image: '', unit: 'cái' },
       ])
@@ -999,10 +1002,11 @@ export default function OrderList() {
         installation_date: values.installation_date ? values.installation_date.format('YYYY-MM-DD') : null,
         notes: values.notes || '',
         shipping_fee: Number(values.shipping_fee || 0),
-        installation_fee: Number(values.installation_fee || 0),
+        installation_fee: Number(values.installation_fee) || 0,
         delivery_time: values.delivery_time || '',
+        warranty_months: Number(values.warranty_months) || 12,
+        validity_days: Number(values.validity_days) || 30,
         payment_terms_schedule: values.payment_terms_schedule || [],
-        validity_days: Number(values.validity_days || 15),
         subtotal: subtotal,
         vat_rate: Number(values.vat_rate || 0),
         vat_amount: vatAmount,
@@ -1101,6 +1105,30 @@ export default function OrderList() {
     }
   }
 
+  const handleResubmit = async (id) => {
+    if (checkMaintenance()) return
+    try {
+      await api.post(`/orders/orders/${id}/resubmit/`)
+      messageApi.success('Đã trình duyệt lại đơn hàng.')
+      fetchOrders()
+    } catch (error) {
+      const msg = error.response?.data?.detail || 'Không thể trình duyệt lại đơn hàng này.'
+      messageApi.error(msg)
+    }
+  }
+
+  const handleCancelOrder = async (id) => {
+    if (checkMaintenance()) return
+    try {
+      await api.post(`/orders/orders/${id}/cancel/`)
+      messageApi.success('Đã hủy đơn hàng thành công.')
+      fetchOrders()
+    } catch (error) {
+      const msg = error.response?.data?.detail || 'Không thể hủy đơn hàng này.'
+      messageApi.error(msg)
+    }
+  }
+
   // ── Table Columns ─────────────────────────────────────────────────────
   const columns = [
     {
@@ -1164,7 +1192,11 @@ export default function OrderList() {
             <Tag color={cfg.color} icon={cfg.icon}>{cfg.label}</Tag>
             {r.financial_status && (
               <Tag color={r.financial_status === 'fully_paid' ? 'success' : r.financial_status === 'deposit_paid' ? 'processing' : 'warning'} style={{ fontSize: 11 }}>
-                {r.has_pending_credit_request ? 'Chờ duyệt kho nợ' : r.financial_status_display || 'Chờ cọc'}
+                {r.has_pending_credit_request 
+                  ? 'Chờ duyệt kho nợ' 
+                  : (r.financial_status === 'deposit_paid' && Number(r.paid_amount) > 0 
+                      ? `Đã thu ${r.total_amount ? Math.round((Number(r.paid_amount) / Number(r.total_amount)) * 100) : 0}% (${Number(r.paid_amount).toLocaleString()}đ)` 
+                      : r.financial_status_display || 'Chờ cọc')}
               </Tag>
             )}
           </Space>
@@ -1243,12 +1275,38 @@ export default function OrderList() {
             }}
           />
 
-          {canEdit && (isCompanyAdmin || record.status === 'pending') && (
+          {canEdit && (isCompanyAdmin || record.status === 'pending' || record.status === 'rejected') && (
             <Button
               type="text"
               icon={<EditOutlined style={{ color: '#d97706' }} />}
               onClick={() => openModal(record)}
+              title="Sửa đơn hàng"
             />
+          )}
+
+          {canEdit && record.status === 'rejected' && (
+            <Popconfirm
+              title="Trình duyệt lại?"
+              description="Bạn muốn gửi đơn hàng này để giám đốc duyệt lại?"
+              onConfirm={() => handleResubmit(record.id)}
+              okText="Trình duyệt"
+              cancelText="Hủy"
+            >
+              <Button type="text" title="Trình duyệt lại" icon={<CheckCircleOutlined style={{ color: '#0284c7' }} />} />
+            </Popconfirm>
+          )}
+
+          {canCancel && record.status !== 'cancelled' && record.status !== 'completed' && (
+            <Popconfirm
+              title="Hủy đơn hàng?"
+              description="Bạn có chắc chắn muốn hủy đơn hàng này không? Các lệnh kho và sản xuất liên quan cũng sẽ bị hủy."
+              onConfirm={() => handleCancelOrder(record.id)}
+              okText="Đồng ý hủy"
+              cancelText="Không"
+              okButtonProps={{ danger: true }}
+            >
+              <Button type="text" title="Hủy đơn hàng" icon={<CloseCircleOutlined style={{ color: '#dc2626' }} />} />
+            </Popconfirm>
           )}
 
           {canDelete && (
@@ -1525,13 +1583,18 @@ export default function OrderList() {
           </Card>
 
           <Row gutter={16}>
-            <Col xs={24} sm={12}>
+            <Col xs={24} sm={8}>
               <Form.Item name="delivery_time" label="Thời gian giao hàng / thi công">
                 <Input placeholder="3-5 ngày làm việc..." />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item name="validity_days" label="Hiệu lực báo giá (số ngày)">
+            <Col xs={24} sm={8}>
+              <Form.Item name="warranty_months" label="Thời hạn bảo hành (tháng)">
+                <InputNumber min={0} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="validity_days" label="Hiệu lực báo giá (ngày)">
                 <InputNumber min={1} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
@@ -1658,7 +1721,11 @@ export default function OrderList() {
                   <Space direction="vertical" size={0}>
                     <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tình trạng thanh toán</Text>
                     <Tag color={selectedOrder.financial_status === 'fully_paid' ? 'green' : selectedOrder.financial_status === 'deposit_paid' ? 'blue' : 'orange'} style={{ marginTop: 4, fontWeight: 700, padding: '4px 12px', borderRadius: '6px', fontSize: 13, border: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                      {selectedOrder.has_pending_credit_request ? 'Chờ duyệt kho nợ' : selectedOrder.financial_status_display || 'Chờ cọc'}
+                      {selectedOrder.has_pending_credit_request 
+                        ? 'Chờ duyệt kho nợ' 
+                        : (selectedOrder.financial_status === 'deposit_paid' && Number(selectedOrder.paid_amount) > 0 
+                            ? `Đã thu ${selectedOrder.total_amount ? Math.round((Number(selectedOrder.paid_amount) / Number(selectedOrder.total_amount)) * 100) : 0}% (${Number(selectedOrder.paid_amount).toLocaleString()}đ)` 
+                            : selectedOrder.financial_status_display || 'Chờ cọc')}
                     </Tag>
                   </Space>
                 </Col>

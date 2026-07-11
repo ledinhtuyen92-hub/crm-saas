@@ -323,6 +323,16 @@ class CompanySettings(models.Model):
         null=True,
         verbose_name="Tiêu đề mẫu in Đơn hàng",
     )
+    default_warranty_content = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Nội dung bảo hành mặc định",
+    )
+    default_warranty_rules = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Quy định bảo hành mặc định",
+    )
 
     class Meta:
 

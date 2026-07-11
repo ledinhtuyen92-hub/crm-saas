@@ -21,6 +21,14 @@ class ProductionOrder(models.Model):
         related_name="production_orders",
         verbose_name="Công ty",
     )
+    production_order_code = models.CharField(
+        max_length=50,
+        verbose_name="Mã lệnh sản xuất",
+        help_text="Format: [PREFIX]-LSX-[YYYYMMDD]-[SEQ]",
+        null=True,
+        blank=True,
+        db_index=True,
+    )
     order = models.ForeignKey(
         "orders.Order",
         on_delete=models.PROTECT,
@@ -64,7 +72,8 @@ class ProductionOrder(models.Model):
         ]
 
     def __str__(self):
-        return f"LSX-{self.pk:04d} — {self.order.order_number}"
+        code = self.production_order_code or f"LSX-{self.pk:04d}"
+        return f"{code} — {self.order.order_number}"
 
 
 class ProductionStep(models.Model):
@@ -126,3 +135,27 @@ class ProductionStep(models.Model):
 
     def __str__(self):
         return f"{self.production_order} — Bước {self.sequence}: {self.step_name}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        po = self.production_order
+        
+        # Không tự động thay đổi nếu LSX đã bị hủy
+        if po.status == po.STATUS_CANCELLED:
+            return
+
+        total_steps = po.steps.count()
+        done_steps = po.steps.filter(status=self.STATUS_DONE).count()
+        pending_steps = po.steps.filter(status=self.STATUS_PENDING).count()
+        
+        if total_steps > 0:
+            if done_steps == total_steps:
+                new_status = po.STATUS_COMPLETED
+            elif pending_steps == total_steps:
+                new_status = po.STATUS_PENDING
+            else:
+                new_status = po.STATUS_IN_PROGRESS
+                
+            if po.status != new_status:
+                po.status = new_status
+                po.save(update_fields=["status", "updated_at"])

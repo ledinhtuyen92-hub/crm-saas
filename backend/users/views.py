@@ -506,8 +506,12 @@ class CompanySettingsView(generics.RetrieveUpdateAPIView):
     """
 
     serializer_class = CompanySettingsSerializer
-    permission_classes = [IsCompanyAdmin]
     http_method_names = ["get", "patch"]
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [permissions.IsAuthenticated()]
+        return [IsCompanyAdmin()]
 
     def get_object(self):
         settings_obj, _ = CompanySettings.objects.get_or_create(

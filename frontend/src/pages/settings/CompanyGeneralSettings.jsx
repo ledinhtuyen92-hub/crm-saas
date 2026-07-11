@@ -84,6 +84,8 @@ export default function CompanyGeneralSettings() {
         default_quotation_terms: settingsRes.data.default_quotation_terms || '',
         custom_quotation_title: settingsRes.data.custom_quotation_title || '',
         custom_order_title: settingsRes.data.custom_order_title || '',
+        default_warranty_content: settingsRes.data.default_warranty_content || '',
+        default_warranty_rules: settingsRes.data.default_warranty_rules || '',
       })
     } catch (err) {
       console.error('Failed to fetch company settings:', err)
@@ -397,6 +399,38 @@ export default function CompanyGeneralSettings() {
               placeholder="Nhập ghi chú, điều khoản thanh toán, bảo hành, số tài khoản ngân hàng của công ty bạn..."
             />
           </Form.Item>
+
+          <Divider dashed />
+
+          <Title level={5} style={{ color: '#16a34a', marginTop: 16 }}>🛠 Cấu Hình Phiếu Bảo Hành Mặc Định</Title>
+          <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+            Nội dung ở đây sẽ tự động được sử dụng khi hệ thống sinh ra Phiếu bảo hành mới từ Đơn hàng/Giao hàng.
+          </Paragraph>
+
+          <Row gutter={24}>
+            <Col span={24}>
+              <Form.Item
+                name="default_warranty_content"
+                label={<Text strong>📝 Nội dung bảo hành (Hiển thị bên cột trái)</Text>}
+              >
+                <Input.TextArea
+                  rows={6}
+                  placeholder={`Ví dụ:\n- Thực hiện bảo hành công trình khi sử dụng sản phẩm...\n- Chính sách bảo hành: Bộ cửa Composite bảo hành 36 tháng...\n- Lưu ý: Thời gian xem xét...`}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item
+                name="default_warranty_rules"
+                label={<Text strong>⚖️ Quy định bảo hành (Hiển thị bên cột phải)</Text>}
+              >
+                <Input.TextArea
+                  rows={8}
+                  placeholder={`Ví dụ:\n1. Trường hợp được bảo hành:\n- Sản phẩm còn trong thời hạn bảo hành.\n\n2. Các trường hợp không bảo hành:\n- Lỗi sản phẩm phát sinh do khách hàng...`}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Row gutter={16}>
             <Col span={12}>

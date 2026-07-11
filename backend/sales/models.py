@@ -149,6 +149,10 @@ class Quotation(models.Model):
         blank=True,
         verbose_name="Thời gian giao hàng dự kiến",
     )
+    warranty_months = models.IntegerField(
+        default=12,
+        verbose_name="Số tháng bảo hành",
+    )
     payment_terms = models.TextField(
         blank=True,
         verbose_name="Điều khoản thanh toán (Text)",

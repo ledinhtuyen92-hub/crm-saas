@@ -154,6 +154,7 @@ class QuotationSerializer(serializers.ModelSerializer):
             "shipping_fee",
             "installation_fee",
             "delivery_time",
+            "warranty_months",
             "payment_terms",
             "payment_terms_schedule",
             "validity_days",

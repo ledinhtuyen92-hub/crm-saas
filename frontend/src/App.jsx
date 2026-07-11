@@ -21,6 +21,8 @@ import Products from './pages/Products'
 import Login from './pages/Login'
 import OrderList from './pages/OrderList'
 import ProductionList from './pages/ProductionList'
+import DeliveryList from './pages/DeliveryList'
+import WarrantyList from './pages/WarrantyList'
 import QuotationList from './pages/QuotationList'
 import PublicQuotation from './pages/PublicQuotation'
 import ApprovalList from './pages/ApprovalList'
@@ -127,6 +129,20 @@ function App() {
                 <ModuleRoute moduleCode="production">
                   <PermissionRoute permissionCode="production.view" fallback="/dashboard">
                     <ProductionList />
+                  </PermissionRoute>
+                </ModuleRoute>
+              } />
+              <Route path="/delivery" element={
+                <ModuleRoute moduleCode="delivery">
+                  <PermissionRoute permissionCode="delivery.view" fallback="/dashboard">
+                    <DeliveryList />
+                  </PermissionRoute>
+                </ModuleRoute>
+              } />
+              <Route path="/warranty" element={
+                <ModuleRoute moduleCode="warranty">
+                  <PermissionRoute permissionCode="warranty.view" fallback="/dashboard">
+                    <WarrantyList />
                   </PermissionRoute>
                 </ModuleRoute>
               } />

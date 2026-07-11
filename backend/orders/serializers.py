@@ -38,6 +38,7 @@ class OrderSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     customer_name = serializers.CharField(source="customer.name", read_only=True)
     customer_phone = serializers.CharField(source="customer.phone", read_only=True)
+    customer_address = serializers.CharField(source="customer.address", read_only=True)
     created_by_name = serializers.CharField(source="created_by.full_name", read_only=True)
     approved_by_name = serializers.CharField(source="approved_by.full_name", read_only=True)
     financial_status_display = serializers.CharField(source="get_financial_status_display", read_only=True)
@@ -56,6 +57,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "customer",
             "customer_name",
             "customer_phone",
+            "customer_address",
             "quotation",
             "quotation_detail",
             "created_by",
@@ -75,6 +77,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "shipping_fee",
             "installation_fee",
             "delivery_time",
+            "warranty_months",
             "validity_days",
             "subtotal",
             "vat_rate",
@@ -93,7 +96,7 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id", "company", "order_number", "status_display", "financial_status_display",
             "paid_amount", "remaining_debt",
-            "customer_name", "customer_phone",
+            "customer_name", "customer_phone", "customer_address",
             "created_by_name", "approved_by_name", "approved_at",
             "items", "created_at", "updated_at", "company_info", "quotation_detail",
             "has_pending_credit_request",

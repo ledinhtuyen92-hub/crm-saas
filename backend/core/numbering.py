@@ -42,6 +42,31 @@ def _generate_code(model_class, field_name: str, company, prefix: str) -> str:
         return f"{base_prefix}{next_seq:03d}"
 
 
+def derive_code_from_source(source_code: str, model_class, field_name: str, company, target_doc_code: str) -> str:
+    """
+    Cố gắng tạo mã mới có cùng hậu tố (YYYYMMDD-SEQ) với mã nguồn để dễ theo dõi.
+    Nếu mã đó đã tồn tại, sẽ fallback về _generate_code.
+    """
+    if not source_code:
+        prefix = resolve_doc_prefix(company, target_doc_code)
+        return _generate_code(model_class, field_name, company, prefix)
+        
+    parts = source_code.split("-")
+    if len(parts) >= 2:
+        suffix = f"{parts[-2]}-{parts[-1]}"
+    else:
+        suffix = None
+
+    target_prefix = resolve_doc_prefix(company, target_doc_code)
+    
+    if suffix:
+        candidate_code = f"{target_prefix}-{suffix}"
+        if not model_class.objects.filter(company=company, **{field_name: candidate_code}).exists():
+            return candidate_code
+            
+    return _generate_code(model_class, field_name, company, target_prefix)
+
+
 def resolve_doc_prefix(company, default_doc_code: str) -> str:
     """
     Nếu company có cấu hình order_prefix khác 'DH' và không rỗng (ví dụ 'LEDINH', 'ABC'),
@@ -97,4 +122,11 @@ def generate_receipt_code(company) -> str:
     from finance.models import PaymentReceipt
     prefix = resolve_doc_prefix(company, "PT")
     return _generate_code(PaymentReceipt, "receipt_code", company, prefix)
+
+
+def generate_production_order_code(company) -> str:
+    """Sinh mã lệnh sản xuất: {COMPANY_PREFIX}-LSX-{YYYYMMDD}-{SEQ}."""
+    from production.models import ProductionOrder
+    prefix = resolve_doc_prefix(company, "LSX")
+    return _generate_code(ProductionOrder, "production_order_code", company, prefix)
 

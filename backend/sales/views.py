@@ -66,6 +66,11 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             raise PermissionDenied("Bạn chỉ có quyền chỉnh sửa báo giá do mình tạo hoặc của nhân viên thuộc phòng ban do bạn quản lý.")
             
         instance = serializer.instance
+        
+        if instance.orders.filter(status="completed").exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Không thể chỉnh sửa báo giá vì đơn hàng tương ứng đã hoàn thành.")
+
         old_status = instance.status
         
         if old_status == Quotation.STATUS_ACCEPTED and not (self.request.user.is_superuser or self.request.user.is_company_admin):
@@ -110,7 +115,7 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="create-order")
     def create_order(self, request, pk=None):
         from django.db import transaction
-        from core.numbering import generate_order_number
+        from core.numbering import derive_code_from_source
         from orders.models import Order, OrderItem
         from orders.serializers import OrderSerializer
 
@@ -122,7 +127,7 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             )
 
         with transaction.atomic():
-            order_number = generate_order_number(quotation.company)
+            order_number = derive_code_from_source(quotation.quotation_number, Order, "order_number", quotation.company, "DH")
             order = Order.objects.create(
                 company=quotation.company,
                 order_number=order_number,
@@ -140,6 +145,7 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 shipping_fee=quotation.shipping_fee,
                 installation_fee=quotation.installation_fee,
                 delivery_time=quotation.delivery_time,
+                warranty_months=quotation.warranty_months,
                 validity_days=quotation.validity_days,
                 custom_data=quotation.custom_data,
                 status=Order.STATUS_PENDING,

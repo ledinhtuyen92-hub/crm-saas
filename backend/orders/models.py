@@ -134,6 +134,10 @@ class Order(models.Model):
         blank=True,
         verbose_name="Thời gian giao hàng dự kiến",
     )
+    warranty_months = models.IntegerField(
+        default=12,
+        verbose_name="Số tháng bảo hành",
+    )
     validity_days = models.PositiveIntegerField(
         default=30,
         verbose_name="Hiệu lực (ngày)",
