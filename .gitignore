@@ -14,3 +14,4 @@ postgres_data/
 .DS_Store
 Thumbs.db
 backend/media/
+*.sqlite3
