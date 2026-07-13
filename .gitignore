@@ -13,4 +13,3 @@ postgres_data/
 # Bỏ qua các file cấu hình hệ điều hành
 .DS_Store
 Thumbs.db
-backend/media/
