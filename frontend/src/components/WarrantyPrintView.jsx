@@ -54,13 +54,13 @@ export default function WarrantyPrintView({ warranty, companyInfo, companySettin
               {companyInfo?.name || 'CÔNG TY TNHH ABC'}
             </Title>
           )}
-          <div style={{ fontSize: 13, lineHeight: 1.6, opacity: 0.9 }}>
+          <div style={{ fontSize: 12, lineHeight: 1.5, opacity: 0.9 }}>
             <div>{companyInfo?.address || 'Địa chỉ công ty'}</div>
             <div>Hotline: {companyInfo?.phone || '0988.xxx.xxx'}</div>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <Title level={1} style={{ color: '#fff', margin: 0, fontWeight: 800, fontSize: 36, letterSpacing: 1 }}>
+          <Title level={1} style={{ color: '#fff', margin: 0, fontWeight: 800, fontSize: 32, letterSpacing: 1 }}>
             PHIẾU BẢO HÀNH
           </Title>
           <Text style={{ color: '#bfdbfe', fontSize: 14 }}>
@@ -71,7 +71,7 @@ export default function WarrantyPrintView({ warranty, companyInfo, companySettin
 
       <Row gutter={40}>
         <Col span={12}>
-          <Title level={4} style={{ textAlign: 'center', marginBottom: 20, color: '#1e3a8a', fontWeight: 800 }}>
+          <Title level={4} style={{ textAlign: 'center', marginBottom: 12, color: '#1e3a8a', fontWeight: 800 }}>
             THÔNG TIN
           </Title>
 
@@ -79,7 +79,7 @@ export default function WarrantyPrintView({ warranty, companyInfo, companySettin
             KHÁCH HÀNG
           </div>
           
-          <table style={{ width: '100%', marginBottom: 24, borderCollapse: 'collapse', fontSize: 13, lineHeight: 1.8 }}>
+          <table style={{ width: '100%', marginBottom: 16, borderCollapse: 'collapse', fontSize: 12, lineHeight: 1.6 }}>
             <tbody>
               <tr>
                 <td style={{ width: 100, fontWeight: 600 }}>Họ và tên:</td>
@@ -117,17 +117,44 @@ export default function WarrantyPrintView({ warranty, companyInfo, companySettin
           <div style={{ background: '#1e3a8a', color: '#fff', padding: '4px 12px', borderRadius: 4, display: 'inline-block', fontWeight: 'bold', marginBottom: 12 }}>
             NỘI DUNG BẢO HÀNH
           </div>
-          <div style={{ fontSize: 13, lineHeight: 1.6, textAlign: 'justify', border: '1px solid #e2e8f0', padding: 16, borderRadius: 8, background: '#f8fafc' }}>
+          <div style={{ fontSize: 12, lineHeight: 1.4, textAlign: 'justify', border: '1px solid #e2e8f0', padding: '8px 10px', borderRadius: 8, background: '#f8fafc' }}>
             {renderTextWithNewlines(displayContent)}
           </div>
         </Col>
 
         <Col span={12}>
-          <Title level={4} style={{ textAlign: 'center', marginBottom: 20, color: '#1e3a8a', fontWeight: 800 }}>
+          <Title level={4} style={{ textAlign: 'center', marginBottom: 8, color: '#1e3a8a', fontWeight: 800 }}>
             QUY ĐỊNH BẢO HÀNH
           </Title>
-          <div style={{ fontSize: 13, lineHeight: 1.6, textAlign: 'justify', border: '1px solid #e2e8f0', padding: 16, borderRadius: 8, background: '#fff' }}>
+          <div style={{ fontSize: 12, lineHeight: 1.4, textAlign: 'justify', border: '1px solid #e2e8f0', padding: '8px 10px', borderRadius: 8, background: '#fff' }}>
             {renderTextWithNewlines(displayRules)}
+          </div>
+
+          {/* ── CHỮ KÝ / ĐÓNG DẤU ── */}
+          <div style={{ marginTop: 24, textAlign: 'center', pageBreakInside: 'avoid' }}>
+            <Text strong style={{ fontSize: 16, display: 'block', color: '#1e3a8a' }}>
+              {companyInfo?.director_title || 'ĐẠI DIỆN CÔNG TY'}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 13, fontStyle: 'italic' }}>(Ký, đóng dấu)</Text>
+            <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', marginTop: 8 }}>
+              {companyInfo?.stamp_image && (
+                <img
+                  src={companyInfo.stamp_image}
+                  alt="Stamp"
+                  style={{ height: 110, maxWidth: 150, position: 'absolute', top: 5, left: '50%', transform: 'translateX(-50%)', opacity: 0.88, zIndex: 1, objectFit: 'contain' }}
+                />
+              )}
+              {companyInfo?.director_signature && (
+                <img
+                  src={companyInfo.director_signature}
+                  alt="Signature"
+                  style={{ height: 90, maxWidth: 180, position: 'relative', zIndex: 2, objectFit: 'contain' }}
+                />
+              )}
+            </div>
+            <Text strong style={{ fontSize: 15, display: 'block', marginTop: 8, color: '#1e3a8a' }}>
+              {companyInfo?.director_name || ''}
+            </Text>
           </div>
         </Col>
       </Row>

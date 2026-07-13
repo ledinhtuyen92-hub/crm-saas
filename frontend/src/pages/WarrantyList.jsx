@@ -135,6 +135,8 @@ export default function WarrantyList() {
         start_date: values.start_date ? values.start_date.format('YYYY-MM-DD') : null,
         end_date: values.end_date ? values.end_date.format('YYYY-MM-DD') : null,
         terms: values.terms,
+        warranty_content: values.warranty_content,
+        warranty_rules: values.warranty_rules,
       }
       if (editingWarranty) {
         await api.patch(`/delivery/warranties/${editingWarranty.id}/`, payload)
@@ -175,6 +177,82 @@ export default function WarrantyList() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handlePrint = () => {
+    if (!printingWarranty) return
+    const contentEl = document.querySelector('.warranty-print-container')
+    const dNum = printingWarranty.warranty_code || 'Phieu_Bao_Hanh'
+
+    if (!contentEl) {
+      const oldTitle = document.title
+      document.title = dNum
+      window.print()
+      document.title = oldTitle
+      return
+    }
+
+    const styleTags = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map((el) => el.outerHTML)
+      .join('\n')
+
+    const printWin = window.open('', '_blank', 'width=1180,height=850')
+    if (!printWin) {
+      const oldTitle = document.title
+      document.title = dNum
+      window.print()
+      document.title = oldTitle
+      return
+    }
+
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${dNum}</title>
+        ${styleTags}
+        <style>
+          @media print {
+            body, html, .warranty-print-container {
+              display: block !important;
+              visibility: visible !important;
+              opacity: 1 !important;
+            }
+            .warranty-print-container {
+              width: 100% !important;
+              margin: 0 auto !important;
+              padding: 0 !important;
+              box-shadow: none !important;
+            }
+            @page {
+              size: A4 portrait;
+              margin: 10mm;
+            }
+            body {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .warranty-print-container > div:first-child {
+              box-shadow: none !important;
+              border: none !important;
+              padding: 0 !important;
+              margin: 0 !important;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${contentEl.outerHTML}
+      </body>
+      </html>
+    `)
+    printWin.document.close()
+    printWin.focus()
+    setTimeout(() => {
+      printWin.print()
+      printWin.close()
+    }, 500)
   }
 
   const columns = [
@@ -395,12 +473,7 @@ export default function WarrantyList() {
         open={printDrawerVisible}
         onClose={() => setPrintDrawerVisible(false)}
         extra={
-          <Button type="primary" icon={<PrinterOutlined />} onClick={() => {
-            const oldTitle = document.title
-            document.title = printingWarranty?.warranty_code || 'Phieu_Bao_Hanh'
-            window.print()
-            document.title = oldTitle
-          }} style={{ background: '#10b981', borderColor: '#10b981' }}>
+          <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint} style={{ background: '#10b981', borderColor: '#10b981' }}>
             In Phiếu
           </Button>
         }
