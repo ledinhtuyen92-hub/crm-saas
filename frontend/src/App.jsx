@@ -36,6 +36,8 @@ import RoleManagement from './pages/settings/RoleManagement'
 import UserManagement from './pages/settings/UserManagement'
 import DepartmentManagement from './pages/settings/DepartmentManagement'
 import CompanyGeneralSettings from './pages/settings/CompanyGeneralSettings'
+import ZaloInboxPage from './pages/ZaloInboxPage'
+import ZaloConfigPage from './pages/settings/ZaloConfigPage'
 
 function ApplicationLayout({ isDarkMode, toggleTheme }) {
   return (
@@ -143,6 +145,15 @@ function App() {
                 <ModuleRoute moduleCode="warranty">
                   <PermissionRoute permissionCode="warranty.view" fallback="/dashboard">
                     <WarrantyList />
+                  </PermissionRoute>
+                </ModuleRoute>
+              } />
+
+              {/* Zalo Integration */}
+              <Route path="/zalo/inbox" element={
+                <ModuleRoute moduleCode="zalo">
+                  <PermissionRoute permissionCode="zalo.view" fallback="/dashboard">
+                    <ZaloInboxPage />
                   </PermissionRoute>
                 </ModuleRoute>
               } />

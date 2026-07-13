@@ -114,6 +114,16 @@ class Customer(models.Model):
         verbose_name="Người tạo",
     )
     notes = models.TextField(blank=True, verbose_name="Ghi chú")
+    # ── Liên kết Zalo Social Lead (tùy chọn) ─────────────────────────
+    social_lead = models.OneToOneField(
+        "zalo_integration.SocialLead",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="converted_customer",
+        verbose_name="Social Lead (Zalo)",
+        help_text="Liên kết về SocialLead nếu khách được convert từ Zalo OA.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

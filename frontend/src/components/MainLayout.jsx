@@ -44,6 +44,7 @@ import {
   AppstoreAddOutlined,
   CarOutlined,
   SafetyCertificateOutlined,
+  WechatOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -134,6 +135,11 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           key: '/warranty',
           icon: <SafetyCertificateOutlined />,
           label: <Link to="/warranty">Bảo hành</Link>,
+        }] : []),
+        ...(isModuleActive('zalo') && hasPermission('zalo.view') ? [{
+          key: '/zalo/inbox',
+          icon: <WechatOutlined style={{ color: '#0068ff' }} />,
+          label: <Link to="/zalo/inbox">Zalo Inbox</Link>,
         }] : []),
         ...(isCompanyAdmin
           ? [

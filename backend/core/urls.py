@@ -21,4 +21,6 @@ urlpatterns = [
     path('api/notifications/', include('notifications.urls')),
     # ── Dashboard ─────────────────────────────────────────────
     path('api/dashboard/', include('dashboard.urls')),
+    # ── Zalo Integration (Omnichannel) ─────────────────────────────────
+    path('api/zalo/', include('zalo_integration.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

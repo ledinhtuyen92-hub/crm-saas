@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'approvals',
     'finance',
     'delivery',
+    'zalo_integration',
 ]
 
 MIDDLEWARE = [
@@ -186,12 +187,37 @@ SIMPLE_JWT = {
 }
 
 
-# ── Django Channels (WebSocket / Real-time) ───────────────────────────
+# ── Django Channels (WebSocket / Real-time) ─────────────────────────────────────
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [("redis", 6379)],
         },
+    },
+}
+
+
+# ── Celery (Background Tasks) ──────────────────────────────────────────
+CELERY_BROKER_URL = "redis://redis:6379/1"     # DB 1 — tách khỏi Channels (DB 0)
+CELERY_RESULT_BACKEND = "redis://redis:6379/1"
+CELERY_TIMEZONE = "Asia/Ho_Chi_Minh"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+
+from celery.schedules import crontab  # noqa: E402
+
+CELERY_BEAT_SCHEDULE = {
+    # Refresh tất cả Zalo token mỗi 12 giờ
+    "zalo-refresh-all-tokens": {
+        "task": "zalo.refresh_all_tokens",
+        "schedule": crontab(minute=0, hour="*/12"),
+    },
+    # Dọn rác Social Lead mỗi ngày lúc 3h sáng
+    "zalo-cleanup-stale-leads": {
+        "task": "zalo.cleanup_stale_leads",
+        "schedule": crontab(minute=0, hour=3),
     },
 }
