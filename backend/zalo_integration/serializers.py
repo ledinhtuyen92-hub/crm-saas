@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import SocialLead, ZaloMessageLog, ZaloMessageTemplate, ZaloOaConfig
+from .models import SocialLead, ZaloMessageLog, ZaloMessageTemplate, ZaloOaConfig, ZaloMessage
 
 
 # ── ZaloOaConfig ─────────────────────────────────────────────────────────────
@@ -15,7 +15,9 @@ class ZaloOaConfigSerializer(serializers.ModelSerializer):
             "id", "oa_name", "app_id", "oa_id",
             "access_token", "refresh_token", "token_expires_at",
             "token_expires_at_display", "is_token_near_expiry",
-            "webhook_secret", "is_active", "created_at", "updated_at",
+            "webhook_secret", "auto_send_payment_zns", "auto_send_delivery_zns", 
+            "auto_send_birthday_zns", "lead_cleanup_days", "is_active", 
+            "created_at", "updated_at",
         ]
         read_only_fields = ["id", "company", "created_at", "updated_at",
                             "is_token_near_expiry", "token_expires_at_display"]
@@ -40,7 +42,8 @@ class ZaloOaConfigWriteSerializer(serializers.ModelSerializer):
         fields = [
             "oa_name", "app_id", "secret_key", "oa_id",
             "access_token", "refresh_token", "token_expires_at",
-            "webhook_secret", "is_active",
+            "webhook_secret", "auto_send_payment_zns", "auto_send_delivery_zns", 
+            "lead_cleanup_days", "is_active",
         ]
 
 
@@ -170,3 +173,25 @@ class ZaloMessageLogSerializer(serializers.ModelSerializer):
             "social_lead", "customer",
         ]
         read_only_fields = fields
+
+
+# ── ZaloMessage (Live Chat) ──────────────────────────────────────────────────
+
+class ZaloMessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ZaloMessage
+        fields = [
+            "id", "social_lead", "direction", "content",
+            "attachment_url", "attachment_type", "zalo_msg_id",
+            "sender_user", "sender_name", "created_at",
+        ]
+        read_only_fields = ["id", "social_lead", "direction", "zalo_msg_id", "created_at"]
+
+    def get_sender_name(self, obj):
+        if obj.direction == ZaloMessage.DIRECTION_INBOUND:
+            return obj.social_lead.display_name
+        if obj.sender_user:
+            return obj.sender_user.full_name or obj.sender_user.username
+        return "Hệ thống"

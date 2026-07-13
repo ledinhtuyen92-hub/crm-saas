@@ -1,0 +1,294 @@
+import React, { useState, useEffect } from 'react'
+import {
+  Alert, Button, Card, Col, Form, Input,
+  message, Modal, Row, Select, Space, Switch, Table, Tag, Typography, Tooltip
+} from 'antd'
+import {
+  FileTextOutlined, PlusOutlined, EditOutlined, DeleteOutlined, InfoCircleOutlined
+} from '@ant-design/icons'
+import dayjs from 'dayjs'
+import api from '../../utils/api'
+import { useAuth } from '../../contexts/AuthContext'
+
+const { Title, Text } = Typography
+const { Option } = Select
+
+export default function ZaloTemplatePage() {
+  const { maintenanceMode, hasPermission } = useAuth()
+  const [templates, setTemplates] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [modalVisible, setModalVisible] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState(null)
+  const [form] = Form.useForm()
+
+  const fetchTemplates = async () => {
+    setLoading(true)
+    try {
+      const res = await api.get('/zalo/templates/')
+      const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
+      setTemplates(data)
+    } catch {
+      message.error('Không thể tải danh sách Mẫu ZNS.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTemplates()
+  }, [])
+
+  const handleOpenModal = (template = null) => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
+    setEditingTemplate(template)
+    if (template) {
+      form.setFieldsValue({
+        name: template.name,
+        zalo_template_id: template.zalo_template_id,
+        template_type: template.template_type,
+        content_preview: template.content_preview,
+        params_schema: JSON.stringify(template.params_schema, null, 2),
+        is_active: template.is_active,
+      })
+    } else {
+      form.resetFields()
+      form.setFieldsValue({
+        is_active: true,
+        template_type: 'custom',
+        params_schema: '{\n  "ten_khach_hang": "Tên khách hàng",\n  "ma_don_hang": "Mã đơn hàng"\n}'
+      })
+    }
+    setModalVisible(true)
+  }
+
+  const handleDelete = async (id) => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
+    try {
+      await api.delete(`/zalo/templates/${id}/`)
+      message.success('Đã xóa mẫu ZNS!')
+      fetchTemplates()
+    } catch {
+      message.error('Không thể xóa mẫu ZNS.')
+    }
+  }
+
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields()
+      // Parse JSON for params_schema
+      try {
+        values.params_schema = JSON.parse(values.params_schema)
+      } catch (e) {
+        message.error('Định dạng Cấu trúc tham số (JSON) không hợp lệ!')
+        return
+      }
+
+      setSaving(true)
+      if (editingTemplate) {
+        await api.patch(`/zalo/templates/${editingTemplate.id}/`, values)
+        message.success('Cập nhật mẫu ZNS thành công!')
+      } else {
+        await api.post('/zalo/templates/', values)
+        message.success('Thêm mẫu ZNS thành công!')
+      }
+      setModalVisible(false)
+      fetchTemplates()
+    } catch (err) {
+      if (err.response?.data) {
+        const errors = err.response.data
+        for (const key in errors) {
+          message.error(`${key}: ${errors[key]}`)
+        }
+      } else if (err.errorFields) {
+        return
+      } else {
+        message.error('Lỗi khi lưu mẫu ZNS.')
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const columns = [
+    {
+      title: 'Tên mẫu',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text) => <Text strong>{text}</Text>,
+    },
+    {
+      title: 'Zalo Template ID',
+      dataIndex: 'zalo_template_id',
+      key: 'zalo_template_id',
+      render: (text) => <Tag color="blue">{text}</Tag>,
+    },
+    {
+      title: 'Loại mẫu',
+      dataIndex: 'template_type',
+      key: 'template_type',
+      render: (text) => {
+        const types = {
+          order_confirm: { color: 'green', label: 'Xác nhận Đơn hàng' },
+          appointment: { color: 'cyan', label: 'Nhắc lịch hẹn' },
+          promotion: { color: 'magenta', label: 'Khuyến mãi' },
+          birthday: { color: 'purple', label: 'Chúc mừng sinh nhật' },
+          custom: { color: 'default', label: 'Tùy chỉnh' },
+        }
+        const t = types[text] || types.custom
+        return <Tag color={t.color}>{t.label}</Tag>
+      },
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'is_active',
+      key: 'is_active',
+      render: (isActive) => (
+        <Tag color={isActive ? 'success' : 'default'}>
+          {isActive ? 'Hoạt động' : 'Tạm dừng'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Ngày tạo',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      render: (text) => dayjs(text).format('DD/MM/YYYY'),
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      render: (_, record) => (
+        <Space size="middle">
+          {hasPermission('zalo.config') && (
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => handleOpenModal(record)}
+            />
+          )}
+          {hasPermission('zalo.config') && (
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => {
+                Modal.confirm({
+                  title: 'Xác nhận xóa',
+                  content: `Bạn có chắc chắn muốn xóa mẫu ZNS "${record.name}"?`,
+                  okText: 'Xóa',
+                  okType: 'danger',
+                  cancelText: 'Hủy',
+                  onOk: () => handleDelete(record.id),
+                })
+              }}
+            />
+          )}
+        </Space>
+      ),
+    },
+  ]
+
+  return (
+    <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FileTextOutlined style={{ color: '#0068ff' }} />
+            Quản lý Mẫu ZNS
+          </Title>
+          <Text type="secondary">Đồng bộ các mẫu tin nhắn ZNS đã được Zalo OA xét duyệt để gửi cho khách hàng</Text>
+        </div>
+        {hasPermission('zalo.config') && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => handleOpenModal()}
+            style={{ background: '#0068ff', borderColor: '#0068ff' }}
+          >
+            Thêm Mẫu ZNS
+          </Button>
+        )}
+      </div>
+
+      <Card style={{ borderRadius: 12 }} bodyStyle={{ padding: 0 }}>
+        <Table
+          columns={columns}
+          dataSource={templates}
+          rowKey="id"
+          loading={loading}
+          pagination={false}
+        />
+      </Card>
+
+      <Modal
+        title={
+          <Space>
+            <FileTextOutlined style={{ color: '#0068ff' }} />
+            {editingTemplate ? 'Chỉnh sửa Mẫu ZNS' : 'Thêm Mẫu ZNS mới'}
+          </Space>
+        }
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        onOk={handleSave}
+        okText="Lưu Mẫu ZNS"
+        cancelText="Huỷ"
+        confirmLoading={saving}
+        width={600}
+        okButtonProps={{ style: { background: '#0068ff', borderColor: '#0068ff' } }}
+      >
+        <Alert
+          type="info" showIcon style={{ marginBottom: 20 }}
+          message="Lưu ý: Mẫu ZNS phải được tạo và xét duyệt trên hệ thống Zalo (ZCA) trước khi thêm vào đây. ID Mẫu ZNS phải trùng khớp chính xác."
+        />
+        <Form form={form} layout="vertical">
+          <Row gutter={16}>
+            <Col span={14}>
+              <Form.Item name="name" label="Tên gợi nhớ" rules={[{ required: true, message: 'Vui lòng nhập tên mẫu' }]}>
+                <Input placeholder="VD: Mẫu Xác nhận Đơn hàng" />
+              </Form.Item>
+            </Col>
+            <Col span={10}>
+              <Form.Item name="zalo_template_id" label="Zalo Template ID" rules={[{ required: true, message: 'Bắt buộc' }]}>
+                <Input placeholder="ID từ Zalo (VD: 123456)" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="template_type" label="Loại mẫu (Mục đích)">
+            <Select>
+              <Option value="order_confirm">Xác nhận Đơn hàng</Option>
+              <Option value="appointment">Nhắc lịch hẹn</Option>
+              <Option value="promotion">Khuyến mãi / Marketing</Option>
+              <Option value="birthday">Chúc mừng sinh nhật</Option>
+              <Option value="custom">Tùy chỉnh khác</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item name="content_preview" label="Nội dung mẫu (Chỉ để xem và dễ nhớ)">
+            <Input.TextArea rows={3} placeholder="Ví dụ: Xin chào <ten_khach_hang>, đơn hàng <ma_don_hang> của bạn đã được xác nhận..." />
+          </Form.Item>
+
+          <Form.Item 
+            name="params_schema" 
+            label={
+              <span>
+                Cấu trúc Tham số (JSON)
+                <Tooltip title="Các tham số (biến) mà Zalo yêu cầu truyền vào mẫu này. Định dạng JSON mapping giữa key tham số và mô tả.">
+                  <InfoCircleOutlined style={{ marginLeft: 6, color: '#9ca3af' }} />
+                </Tooltip>
+              </span>
+            }
+            rules={[{ required: true, message: 'Vui lòng nhập cấu trúc JSON' }]}
+          >
+            <Input.TextArea rows={4} style={{ fontFamily: 'monospace' }} />
+          </Form.Item>
+
+          <Form.Item name="is_active" label="Trạng thái" valuePropName="checked">
+            <Switch checkedChildren="Hoạt động" unCheckedChildren="Tạm dừng" />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  )
+}

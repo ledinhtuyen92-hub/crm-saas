@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Avatar, Badge, Button, Col, Divider, Empty, Input, Modal,
-  Row, Select, Space, Spin, Tag, Tooltip, Typography, Form, message
+  Row, Select, Space, Spin, Tag, Tooltip, Typography, Form, message, Upload
 } from 'antd'
 import {
   CheckCircleOutlined, CloseOutlined, MessageOutlined,
   PhoneOutlined, ReloadOutlined, SearchOutlined,
   UserAddOutlined, UserOutlined, WechatOutlined,
-  InfoCircleOutlined, TeamOutlined,
+  InfoCircleOutlined, TeamOutlined, PaperClipOutlined, SendOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/vi'
-import api from '../api/axios'
+import api from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
 
 dayjs.extend(relativeTime)
@@ -88,12 +88,80 @@ function LeadListItem({ lead, selected, onClick }) {
   )
 }
 
-// ── Panel chi tiết bên phải ───────────────────────────────────────────────────
-function LeadDetailPanel({ lead, onRefresh, employees }) {
+// ── Component Panel Chi tiết (Kèm khung Chat) ──────────────────────────────
+function LeadDetailPanel({ lead, employees, onRefresh }) {
   const { maintenanceMode } = useAuth()
   const [convertModalVisible, setConvertModalVisible] = useState(false)
   const [convertForm] = Form.useForm()
   const [convertLoading, setConvertLoading] = useState(false)
+  
+  // Chat state
+  const [messages, setMessages] = useState([])
+  const [loadingMessages, setLoadingMessages] = useState(false)
+  const [messageText, setMessageText] = useState('')
+  const [sending, setSending] = useState(false)
+  const chatContainerRef = useRef(null)
+
+  useEffect(() => {
+    if (lead?.id) {
+      fetchMessages()
+    }
+  }, [lead?.id])
+
+  const fetchMessages = async () => {
+    setLoadingMessages(true)
+    try {
+      const res = await api.get(`/zalo/social-leads/${lead.id}/messages/`)
+      setMessages(res.data || [])
+      scrollToBottom()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoadingMessages(false)
+    }
+  }
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+      }
+    }, 100)
+  }
+
+  const handleSendMessage = async (file = null) => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
+    if (!messageText.trim() && !file) return
+
+    setSending(true)
+    try {
+      const formData = new FormData()
+      if (messageText.trim()) formData.append('text', messageText.trim())
+      if (file) formData.append('file', file)
+
+      const res = await api.post(`/zalo/social-leads/${lead.id}/send-message/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      
+      setMessages([...messages, res.data])
+      setMessageText('')
+      scrollToBottom()
+      onRefresh() // Refresh để update tin nhắn mới nhất bên trái
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Gửi tin nhắn thất bại.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleAssign = async (userId) => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
+    try {
+      await api.post(`/zalo/social-leads/${lead.id}/assign/`, { assigned_to: userId || null })
+      message.success('Phân công thành công!')
+      onRefresh()
+    } catch { message.error('Lỗi khi phân công.') }
+  }
 
   if (!lead) {
     return (
@@ -106,138 +174,93 @@ function LeadDetailPanel({ lead, onRefresh, employees }) {
 
   const cfg = STATUS_CONFIG[lead.status] || STATUS_CONFIG.new
 
-  const handleAssign = async (userId) => {
-    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
-    try {
-      await api.post(`/zalo/social-leads/${lead.id}/assign/`, { assigned_to: userId || null })
-      message.success('Phân công thành công!')
-      onRefresh()
-    } catch { message.error('Lỗi khi phân công.') }
-  }
-
-  const handleConvert = async () => {
-    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
-    try {
-      const values = await convertForm.validateFields()
-      setConvertLoading(true)
-      const res = await api.post(`/zalo/social-leads/${lead.id}/convert/`, values)
-      message.success(`✅ ${res.data.detail}`)
-      setConvertModalVisible(false)
-      convertForm.resetFields()
-      onRefresh()
-    } catch (err) {
-      message.error(err.response?.data?.detail || 'Lỗi khi chuyển đổi.')
-    } finally { setConvertLoading(false) }
-  }
-
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f0f0', background: '#fafafa' }}>
+      <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f0f0', background: '#fafafa', flexShrink: 0 }}>
         <Row align="middle" gutter={16}>
           <Col>
-            <Avatar
-              size={56}
-              src={lead.avatar_url}
-              icon={<UserOutlined />}
-              style={{ background: '#dbeafe', color: '#2563eb' }}
-            />
+            <Avatar size={56} src={lead.avatar_url} icon={<UserOutlined />} style={{ background: '#dbeafe', color: '#2563eb' }} />
           </Col>
           <Col flex="auto">
-            <Title level={5} style={{ margin: 0 }}>
-              {lead.display_name || `Khách Zalo (${lead.social_id?.slice(-4)})`}
-            </Title>
+            <Title level={5} style={{ margin: 0 }}>{lead.display_name || `Khách Zalo (${lead.social_id?.slice(-4)})`}</Title>
             <Space size={6} style={{ marginTop: 4 }}>
-              <Tag style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.color}30`, borderRadius: 10 }}>
-                {cfg.label}
-              </Tag>
+              <Tag style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.color}30`, borderRadius: 10 }}>{cfg.label}</Tag>
               <Text type="secondary" style={{ fontSize: 12 }}>
                 <WechatOutlined style={{ marginRight: 4 }} />Zalo · {lead.oa_name || 'OA'}
               </Text>
             </Space>
           </Col>
-        </Row>
-      </div>
-
-      {/* Body — Thông tin chi tiết */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-        {/* Thông tin Lead */}
-        <div style={{ marginBottom: 20 }}>
-          <Text strong style={{ color: '#6b7280', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            THÔNG TIN LEAD
-          </Text>
-          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Row>
-              <Col span={10}><Text type="secondary" style={{ fontSize: 13 }}>Zalo UID:</Text></Col>
-              <Col span={14}><Text style={{ fontSize: 13, fontFamily: 'monospace' }}>{lead.social_id}</Text></Col>
-            </Row>
-            <Row>
-              <Col span={10}><Text type="secondary" style={{ fontSize: 13 }}>Tương tác cuối:</Text></Col>
-              <Col span={14}><Text style={{ fontSize: 13 }}>{dayjs(lead.last_interaction_date).format('HH:mm DD/MM/YYYY')}</Text></Col>
-            </Row>
-            <Row>
-              <Col span={10}><Text type="secondary" style={{ fontSize: 13 }}>Tin nhắn cuối:</Text></Col>
-              <Col span={14}>
-                <Text style={{ fontSize: 13 }} ellipsis>
-                  {lead.last_message || <Text type="secondary" italic>Chưa có</Text>}
-                </Text>
-              </Col>
-            </Row>
-            {lead.converted_customer_id && (
-              <Row>
-                <Col span={10}><Text type="secondary" style={{ fontSize: 13 }}>Hồ sơ KH:</Text></Col>
-                <Col span={14}>
-                  <Tag icon={<CheckCircleOutlined />} color="purple">
-                    {lead.converted_customer_name}
-                  </Tag>
-                </Col>
-              </Row>
-            )}
-          </div>
-        </div>
-
-        <Divider style={{ margin: '16px 0' }} />
-
-        {/* Phân công nhân viên */}
-        <div style={{ marginBottom: 20 }}>
-          <Text strong style={{ color: '#6b7280', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            <TeamOutlined style={{ marginRight: 4 }} />PHÂN CÔNG
-          </Text>
-          <div style={{ marginTop: 10 }}>
+          <Col>
             <Select
-              placeholder="Chọn nhân viên phụ trách..."
-              style={{ width: '100%' }}
+              placeholder="Nhân viên phụ trách"
+              style={{ width: 160 }}
               value={lead.assigned_to || null}
               allowClear
               onChange={handleAssign}
-              options={[
-                { value: null, label: 'Chưa phân công' },
-                ...employees.map(e => ({ value: e.id, label: e.full_name || e.username }))
-              ]}
+              options={[{ value: null, label: 'Chưa phân công' }, ...employees.map(e => ({ value: e.id, label: e.full_name || e.username }))]}
             />
-          </div>
-        </div>
+          </Col>
+          {lead.status !== 'converted' && lead.status !== 'archived' && (
+            <Col>
+              <Button type="primary" icon={<CheckCircleOutlined />} style={{ background: '#10b981', borderColor: '#10b981' }} onClick={() => setConvertModalVisible(true)}>
+                Tạo KH
+              </Button>
+            </Col>
+          )}
+        </Row>
+      </div>
 
-        <Divider style={{ margin: '16px 0' }} />
-
-        {/* Tin nhắn cuối */}
-        {lead.last_message && (
-          <div style={{ marginBottom: 20 }}>
-            <Text strong style={{ color: '#6b7280', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              <MessageOutlined style={{ marginRight: 4 }} />TIN NHẮN MỚI NHẤT
-            </Text>
-            <div style={{ marginTop: 10, background: '#f8fafc', borderRadius: 8, padding: 12, border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                <Avatar size={28} src={lead.avatar_url} icon={<UserOutlined />} style={{ background: '#dbeafe', flexShrink: 0 }} />
-                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '0 12px 12px 12px', padding: '8px 12px', flex: 1 }}>
-                  <Text style={{ fontSize: 13 }}>{lead.last_message}</Text>
+      {/* Body — Lịch sử Chat */}
+      <div ref={chatContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', background: '#eef2f5' }}>
+        {loadingMessages ? (
+          <div style={{ textAlign: 'center', marginTop: 50 }}><Spin /></div>
+        ) : messages.length === 0 ? (
+          <div style={{ textAlign: 'center', marginTop: 50, color: '#9ca3af' }}>Chưa có tin nhắn nào.</div>
+        ) : (
+          messages.map((msg, idx) => {
+            const isOutbound = msg.direction === 'outbound'
+            return (
+              <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isOutbound ? 'flex-end' : 'flex-start', marginBottom: 16 }}>
+                {!isOutbound && (
+                  <Text type="secondary" style={{ fontSize: 11, marginBottom: 4, marginLeft: 36 }}>{msg.sender_name}</Text>
+                )}
+                {isOutbound && (
+                  <Text type="secondary" style={{ fontSize: 11, marginBottom: 4, marginRight: 8 }}>{msg.sender_name}</Text>
+                )}
+                
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexDirection: isOutbound ? 'row-reverse' : 'row' }}>
+                  {!isOutbound && <Avatar size={28} src={lead.avatar_url} icon={<UserOutlined />} />}
+                  
+                  <div style={{
+                    background: isOutbound ? '#0068ff' : '#fff',
+                    color: isOutbound ? '#fff' : '#000',
+                    border: isOutbound ? 'none' : '1px solid #e2e8f0',
+                    borderRadius: isOutbound ? '12px 0 12px 12px' : '0 12px 12px 12px',
+                    padding: '8px 12px',
+                    maxWidth: 350,
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  }}>
+                    {msg.attachment_url && (
+                      <div style={{ marginBottom: msg.content ? 8 : 0 }}>
+                        {msg.attachment_type === 'image' ? (
+                          <img src={msg.attachment_url} alt="attachment" style={{ maxWidth: '100%', borderRadius: 8 }} />
+                        ) : (
+                          <a href={msg.attachment_url} target="_blank" rel="noreferrer" style={{ color: isOutbound ? '#fff' : '#0068ff', textDecoration: 'underline' }}>
+                            <PaperClipOutlined /> Tệp đính kèm
+                          </a>
+                        )}
+                      </div>
+                    )}
+                    {msg.content && <Text style={{ color: 'inherit', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{msg.content}</Text>}
+                  </div>
                 </div>
+                <Text type="secondary" style={{ fontSize: 11, marginTop: 4, marginRight: isOutbound ? 8 : 0, marginLeft: isOutbound ? 0 : 36 }}>
+                  {dayjs(msg.created_at).format('HH:mm DD/MM/YYYY')}
+                </Text>
               </div>
-              <Text type="secondary" style={{ fontSize: 11, display: 'block', textAlign: 'right', marginTop: 6 }}>
-                {dayjs(lead.last_interaction_date).format('HH:mm DD/MM')}
-              </Text>
-            </div>
-          </div>
+            )
+          })
         )}
       </div>
 

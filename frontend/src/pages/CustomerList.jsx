@@ -44,6 +44,7 @@ import {
   FileAddOutlined,
   FileTextOutlined,
   FileDoneOutlined,
+  MessageOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import api from '../utils/api'
@@ -51,6 +52,7 @@ import { useAuth } from '../contexts/AuthContext'
 import dayjs from 'dayjs'
 
 import TagManagementModal from '../components/TagManagementModal'
+import ZnsSendModal from '../components/ZnsSendModal'
 
 const { Title, Text, Paragraph } = Typography
 const { Option } = Select
@@ -131,6 +133,7 @@ function CustomerList() {
   const [contacts, setContacts] = useState([])
   const [interactions, setInteractions] = useState([])
   const [loadingDetails, setLoadingDetails] = useState(false)
+  const [znsModalVisible, setZnsModalVisible] = useState(false)
 
   // Modal Add Interaction
   const [interactionModalVisible, setInteractionModalVisible] = useState(false)
@@ -403,8 +406,30 @@ function CustomerList() {
         api.get('/crm/contacts/', { params: { customer_id: record.id } }),
         api.get('/crm/interactions/', { params: { customer_id: record.id } }),
       ])
+      
       setContacts(Array.isArray(contactRes.data) ? contactRes.data : contactRes.data?.results ?? [])
-      setInteractions(Array.isArray(interactRes.data) ? interactRes.data : interactRes.data?.results ?? [])
+      
+      let allInteractions = Array.isArray(interactRes.data) ? interactRes.data : interactRes.data?.results ?? []
+
+      // Lấy lịch sử gửi ZNS
+      try {
+        const znsRes = await api.get(`/zalo/logs/?customer_id=${record.id}`)
+        const znsLogs = (Array.isArray(znsRes.data) ? znsRes.data : znsRes.data?.results ?? []).map(log => ({
+          ...log,
+          isZnsLog: true,
+          type: 'zalo',
+          notes: `[ZNS: ${log.template?.name || 'Thông báo'}] Trạng thái: ${log.status === 'sent' ? 'Thành công' : log.status === 'pending' ? 'Đang gửi' : 'Thất bại'}`,
+          created_at: log.sent_at,
+          created_by: null // Hệ thống tự động
+        }))
+        allInteractions = [...allInteractions, ...znsLogs]
+        // Sắp xếp lại theo thời gian mới nhất
+        allInteractions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      } catch (err) {
+        // Module zalo có thể bị disable
+      }
+
+      setInteractions(allInteractions)
     } catch {
       message.error('Không thể tải chi tiết khách hàng.')
     } finally {
@@ -930,13 +955,23 @@ function CustomerList() {
         onClose={() => setDrawerVisible(false)}
         extra={
           currentCustomer && (
-            <Button
-              type="primary"
-              icon={<FileAddOutlined />}
-              onClick={() => handleCreateQuotationFromCustomer(currentCustomer)}
-            >
-              Tạo báo giá
-            </Button>
+            <Space>
+              <Button
+                type="primary"
+                icon={<MessageOutlined />}
+                onClick={() => setZnsModalVisible(true)}
+                style={{ background: '#10b981', borderColor: '#10b981' }}
+              >
+                Gửi ZNS
+              </Button>
+              <Button
+                type="primary"
+                icon={<FileAddOutlined />}
+                onClick={() => handleCreateQuotationFromCustomer(currentCustomer)}
+              >
+                Tạo báo giá
+              </Button>
+            </Space>
           )
         }
       >
@@ -979,22 +1014,30 @@ function CustomerList() {
                       <Timeline
                         mode="left"
                         items={interactions.map((item) => ({
-                          color: INTERACTION_TYPES[item.type]?.color || 'blue',
-                          label: new Date(item.created_at).toLocaleString('vi-VN'),
+                          color: item.isZnsLog ? (item.status === 'sent' ? 'green' : item.status === 'pending' ? 'blue' : 'red') : (INTERACTION_TYPES[item.type]?.color || 'blue'),
+                          label: new Date(item.created_at || item.sent_at).toLocaleString('vi-VN'),
                           children: (
                             <Card size="small" style={{ marginBottom: 10 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                                <Tag color={INTERACTION_TYPES[item.type]?.color}>
-                                  {INTERACTION_TYPES[item.type]?.label || item.type}
+                                <Tag color={item.isZnsLog ? 'purple' : INTERACTION_TYPES[item.type]?.color}>
+                                  {item.isZnsLog ? 'Hệ thống gửi ZNS' : (INTERACTION_TYPES[item.type]?.label || item.type)}
                                 </Tag>
-                                <Tag color={INTERACTION_RESULTS[item.result]?.color}>
-                                  {INTERACTION_RESULTS[item.result]?.label || item.result}
-                                </Tag>
+                                {!item.isZnsLog && item.result && (
+                                  <Tag color={INTERACTION_RESULTS[item.result]?.color}>
+                                    {INTERACTION_RESULTS[item.result]?.label || item.result}
+                                  </Tag>
+                                )}
                               </div>
                               <Paragraph style={{ margin: 0, whiteSpace: 'pre-line', marginBottom: item.attachments?.length > 0 ? 8 : 0 }}>
-                                {item.content}
+                                {item.notes || item.content}
                               </Paragraph>
                               
+                              {item.isZnsLog && item.error_message && (
+                                <Text type="danger" style={{ display: 'block', marginTop: 4 }}>
+                                  Lỗi: {item.error_message}
+                                </Text>
+                              )}
+
                               {item.attachments && item.attachments.length > 0 && (
                                 <div style={{ marginBottom: 8 }}>
                                   <Space direction="vertical" size={2}>
@@ -1245,6 +1288,14 @@ function CustomerList() {
         open={tagModalVisible} 
         onCancel={() => setTagModalVisible(false)} 
       />
+      
+      {currentCustomer && (
+        <ZnsSendModal
+          visible={znsModalVisible}
+          onCancel={() => setZnsModalVisible(false)}
+          customer={currentCustomer}
+        />
+      )}
     </section>
   )
 }

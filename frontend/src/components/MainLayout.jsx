@@ -45,6 +45,7 @@ import {
   CarOutlined,
   SafetyCertificateOutlined,
   WechatOutlined,
+  MessageOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -169,6 +170,15 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                     icon: <KeyOutlined />,
                     label: <Link to="/settings/roles">Vai trò & Quyền</Link>,
                   },
+                  ...(isModuleActive('zalo') && hasPermission('zalo.config') ? [{
+                    key: '/settings/zalo',
+                    icon: <WechatOutlined />,
+                    label: <Link to="/settings/zalo">Cấu hình Zalo OA</Link>,
+                  }, {
+                    key: '/settings/zalo-templates',
+                    icon: <MessageOutlined />,
+                    label: <Link to="/settings/zalo-templates">Mẫu Zalo ZNS</Link>,
+                  }] : []),
                 ],
               },
             ]

@@ -38,6 +38,7 @@ import DepartmentManagement from './pages/settings/DepartmentManagement'
 import CompanyGeneralSettings from './pages/settings/CompanyGeneralSettings'
 import ZaloInboxPage from './pages/ZaloInboxPage'
 import ZaloConfigPage from './pages/settings/ZaloConfigPage'
+import ZaloTemplatePage from './pages/settings/ZaloTemplatePage'
 
 function ApplicationLayout({ isDarkMode, toggleTheme }) {
   return (
@@ -154,6 +155,21 @@ function App() {
                 <ModuleRoute moduleCode="zalo">
                   <PermissionRoute permissionCode="zalo.view" fallback="/dashboard">
                     <ZaloInboxPage />
+                  </PermissionRoute>
+                </ModuleRoute>
+              } />
+
+              <Route path="/settings/zalo" element={
+                <ModuleRoute moduleCode="zalo">
+                  <PermissionRoute permissionCode="zalo.config" fallback="/dashboard">
+                    <ZaloConfigPage />
+                  </PermissionRoute>
+                </ModuleRoute>
+              } />
+              <Route path="/settings/zalo-templates" element={
+                <ModuleRoute moduleCode="zalo">
+                  <PermissionRoute permissionCode="zalo.config" fallback="/dashboard">
+                    <ZaloTemplatePage />
                   </PermissionRoute>
                 </ModuleRoute>
               } />

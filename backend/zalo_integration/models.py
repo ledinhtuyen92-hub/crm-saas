@@ -61,6 +61,29 @@ class ZaloOaConfig(models.Model):
         verbose_name="Webhook Secret",
         help_text="Dùng để xác minh chữ ký request từ Zalo.",
     )
+    
+    # ── Cấu hình tự động & Dọn dẹp ──────────────────────────────────────────
+    auto_send_payment_zns = models.BooleanField(
+        default=False, 
+        verbose_name="Tự động gửi ZNS khi Thu tiền",
+        help_text="Tự động bắn ZNS mẫu payment_receipt khi Phiếu thu được ghi nhận."
+    )
+    auto_send_delivery_zns = models.BooleanField(
+        default=False,
+        verbose_name="Tự động gửi ZNS khi Hoàn thành Đơn",
+        help_text="Tự động bắn ZNS mẫu warranty kèm Phiếu bảo hành khi Đơn hàng hoàn thành."
+    )
+    auto_send_birthday_zns = models.BooleanField(
+        default=False,
+        verbose_name="Tự động gửi ZNS chúc mừng sinh nhật",
+        help_text="Tự động bắn ZNS mẫu birthday vào ngày sinh nhật của Khách hàng."
+    )
+    lead_cleanup_days = models.IntegerField(
+        default=30,
+        verbose_name="Số ngày dọn dẹp Lead rác",
+        help_text="SocialLead không tương tác sau X ngày sẽ tự động bị ẩn (archived)."
+    )
+
     is_active = models.BooleanField(default=True, verbose_name="Đang hoạt động")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -214,12 +237,14 @@ class ZaloMessageTemplate(models.Model):
     TYPE_APPOINTMENT = "appointment"
     TYPE_PROMOTION = "promotion"
     TYPE_CARE = "care"
+    TYPE_BIRTHDAY = "birthday"
     TYPE_CUSTOM = "custom"
     TYPE_CHOICES = [
         (TYPE_ORDER_CONFIRM, "Xác nhận đơn hàng"),
         (TYPE_APPOINTMENT, "Nhắc lịch hẹn"),
         (TYPE_PROMOTION, "Khuyến mãi"),
         (TYPE_CARE, "Chăm sóc khách hàng"),
+        (TYPE_BIRTHDAY, "Chúc mừng sinh nhật"),
         (TYPE_CUSTOM, "Tùy chỉnh"),
     ]
 
@@ -361,8 +386,77 @@ class ZaloMessageLog(models.Model):
 
     class Meta:
         verbose_name = "Lịch sử gửi ZNS"
-        verbose_name_plural = "Lịch sử gửi ZNS"
+        verbose_name_plural = "Lịch sử ZNS"
         ordering = ["-sent_at"]
 
     def __str__(self):
-        return f"ZNS -> {self.recipient_phone} [{self.get_status_display()}]"
+        return f"{self.template.name if self.template else 'ZNS'} -> {self.recipient_phone} ({self.get_status_display()})"
+
+
+# ── Model 5: Tin nhắn Zalo Inbox (Live Chat) ─────────────────────────────────
+
+class ZaloMessage(models.Model):
+    """
+    Lưu trữ lịch sử chat 2 chiều giữa OA và khách hàng trên nền tảng Zalo.
+    """
+
+    DIRECTION_INBOUND = "inbound"
+    DIRECTION_OUTBOUND = "outbound"
+    DIRECTION_CHOICES = [
+        (DIRECTION_INBOUND, "Khách hàng gửi"),
+        (DIRECTION_OUTBOUND, "OA gửi (Sale)"),
+    ]
+
+    company = models.ForeignKey(
+        "users.Company",
+        on_delete=models.CASCADE,
+        related_name="zalo_messages",
+        verbose_name="Công ty",
+    )
+    social_lead = models.ForeignKey(
+        "SocialLead",
+        on_delete=models.CASCADE,
+        related_name="messages",
+        verbose_name="Social Lead",
+    )
+    direction = models.CharField(
+        max_length=20,
+        choices=DIRECTION_CHOICES,
+        verbose_name="Hướng tin nhắn",
+        db_index=True,
+    )
+    content = models.TextField(
+        blank=True,
+        verbose_name="Nội dung tin nhắn",
+    )
+    attachment_url = models.URLField(
+        blank=True,
+        null=True,
+        verbose_name="Link file đính kèm",
+    )
+    attachment_type = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Loại đính kèm",
+    )
+    zalo_msg_id = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Zalo Message ID",
+    )
+    sender_user = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Người gửi (nếu outbound)",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = "Tin nhắn Zalo"
+        verbose_name_plural = "Tin nhắn Zalo"
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"[{self.get_direction_display()}] {self.social_lead.display_name}: {self.content[:30]}"

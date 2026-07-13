@@ -98,6 +98,11 @@ PERMISSIONS = [
     {"code": "finance.edit", "name": "Chỉnh sửa giao dịch", "module": "finance"},
     {"code": "finance.delete", "name": "Xóa giao dịch", "module": "finance"},
     {"code": "finance.request_credit", "name": "Trình duyệt xuất kho nợ", "module": "finance"},
+
+    # ── Zalo Integration (Tích hợp Zalo OA) ───────────────────────
+    {"code": "zalo.view", "name": "Xem danh sách hội thoại (Zalo Inbox)", "module": "zalo"},
+    {"code": "zalo.send_zns", "name": "Gửi tin nhắn ZNS", "module": "zalo"},
+    {"code": "zalo.config", "name": "Cấu hình kết nối Zalo OA", "module": "zalo"},
 ]
 
 

@@ -7,6 +7,7 @@ import {
   EditOutlined,
   FileDoneOutlined,
   FileTextOutlined,
+  MessageOutlined,
   MinusCircleOutlined,
   PlusOutlined,
   PrinterOutlined,
@@ -41,6 +42,7 @@ import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
 import QuotationPrintView from '../components/QuotationPrintView'
 import ReceiptPrintView from '../components/ReceiptPrintView'
+import ZnsSendModal from '../components/ZnsSendModal'
 
 const { Title, Text, Paragraph } = Typography
 const { Option } = Select
@@ -65,6 +67,7 @@ export default function OrderList() {
   const [orders, setOrders] = useState([])
   const [customers, setCustomers] = useState([])
   const [products, setProducts] = useState([])
+  const [znsModalVisible, setZnsModalVisible] = useState(false)
   const [loading, setLoading] = useState(false)
   const [templates, setTemplates] = useState([])
   const [companyTemplate, setCompanyTemplate] = useState(null)
@@ -1698,9 +1701,19 @@ export default function OrderList() {
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
         extra={
-          <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrintOrPDF} style={{ background: '#10b981', borderColor: '#10b981' }}>
-            In Đơn Hàng
-          </Button>
+          <Space>
+            <Button
+              type="primary"
+              icon={<MessageOutlined />}
+              onClick={() => setZnsModalVisible(true)}
+              style={{ background: '#10b981', borderColor: '#10b981' }}
+            >
+              Gửi ZNS
+            </Button>
+            <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrintOrPDF} style={{ background: '#10b981', borderColor: '#10b981' }}>
+              In Đơn Hàng
+            </Button>
+          </Space>
         }
       >
         {selectedOrder && (
@@ -1925,6 +1938,19 @@ export default function OrderList() {
           order={selectedOrder}
         />
       </div>
+
+      {selectedOrder && selectedOrder.customer && (
+        <ZnsSendModal
+          visible={znsModalVisible}
+          onCancel={() => setZnsModalVisible(false)}
+          customer={customers.find(c => c.id === selectedOrder.customer) || { id: selectedOrder.customer, name: selectedOrder.customer_name, phone: selectedOrder.customer_phone }}
+          defaultTemplateType="order_confirm"
+          defaultParams={{
+            ma_don_hang: selectedOrder.order_number,
+            so_tien: selectedOrder.total_amount
+          }}
+        />
+      )}
     </div>
   )
 }

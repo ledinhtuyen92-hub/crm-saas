@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import {
-  Alert, Button, Card, Col, Descriptions, Divider, Form, Input,
+  Alert, Button, Card, Col, Collapse, Descriptions, Divider, Form, Input, InputNumber,
   message, Modal, Row, Space, Switch, Tag, Tooltip, Typography
 } from 'antd'
 import {
@@ -9,7 +9,7 @@ import {
   ReloadOutlined, SettingOutlined, WarningOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
-import api from '../../api/axios'
+import api from '../../utils/api'
 import { useAuth } from '../../contexts/AuthContext'
 
 const { Title, Text, Paragraph } = Typography
@@ -33,7 +33,36 @@ export default function ZaloConfigPage() {
     finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchConfig() }, [])
+  useEffect(() => {
+    fetchConfig()
+
+    const urlParams = new URLSearchParams(window.location.search)
+    const code = urlParams.get('code')
+    if (code) {
+      // Xoá code khỏi URL ngay lập tức để tránh React StrictMode chạy 2 lần
+      window.history.replaceState({}, document.title, window.location.pathname)
+      setLoading(true)
+      api.post('/zalo/config/exchange-oauth-code/', { code })
+        .then(() => {
+          message.success('Đăng nhập và cấp quyền Zalo thành công! Token đã được tự động cập nhật.')
+          fetchConfig()
+        })
+        .catch((err) => {
+          message.error(err.response?.data?.error || 'Lỗi khi đổi mã xác thực Zalo.')
+          fetchConfig()
+        })
+    }
+  }, [])
+
+  const handleZaloOAuthLogin = () => {
+    if (!config || !config.app_id) {
+      message.warning('Vui lòng điền và lưu App ID trước khi bấm Uỷ quyền.')
+      return
+    }
+    const redirectUri = window.location.origin + window.location.pathname
+    const oauthUrl = `https://oauth.zaloapp.com/v4/oa/permission?app_id=${config.app_id}&redirect_uri=${encodeURIComponent(redirectUri)}`
+    window.location.href = oauthUrl
+  }
 
   const handleOpenModal = () => {
     if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
@@ -43,6 +72,12 @@ export default function ZaloConfigPage() {
         app_id: config.app_id,
         oa_id: config.oa_id,
         webhook_secret: '',
+        access_token: config.access_token,
+        refresh_token: config.refresh_token,
+        auto_send_payment_zns: config.auto_send_payment_zns,
+        auto_send_delivery_zns: config.auto_send_delivery_zns,
+        auto_send_birthday_zns: config.auto_send_birthday_zns,
+        lead_cleanup_days: config.lead_cleanup_days,
         is_active: config.is_active,
       })
     }
@@ -144,17 +179,42 @@ export default function ZaloConfigPage() {
                   </div>
                 </Col>
                 <Col>
-                  <Button
-                    icon={<ReloadOutlined />}
-                    loading={refreshing}
-                    onClick={handleRefreshToken}
-                    size="small"
-                  >
-                    Làm mới Token
-                  </Button>
+                  <Space>
+                    <Button
+                      type="primary"
+                      onClick={handleZaloOAuthLogin}
+                      style={{ background: '#0068ff', borderColor: '#0068ff' }}
+                    >
+                      Đăng nhập & Lấy Token tự động
+                    </Button>
+                    <Button
+                      icon={<ReloadOutlined />}
+                      loading={refreshing}
+                      onClick={handleRefreshToken}
+                    >
+                      Làm mới Token
+                    </Button>
+                  </Space>
                 </Col>
               </Row>
             </Card>
+          </Col>
+
+          {/* Thông báo hướng dẫn Callback URL cho Zalo OAuth */}
+          <Col span={24}>
+            <Alert
+              type="info"
+              showIcon
+              message="Cấu hình Callback URL trên Zalo Developers"
+              description={
+                <div>
+                  Để nút <b>Đăng nhập & Lấy Token tự động</b> không bị lỗi <code>Invalid redirect uri (-14003)</code>, bạn hãy vào trang <a href="https://developers.zalo.me" target="_blank" rel="noreferrer">Zalo Developers</a> &gt; App của bạn &gt; <b>Cài đặt (Settings)</b> &gt; điền chính xác đường dẫn sau vào ô <b>Official Account Callback Url</b>:
+                  <div style={{ marginTop: 8, background: '#f3f4f6', padding: '6px 12px', borderRadius: 6, display: 'inline-block', fontWeight: 600, color: '#1f2937' }}>
+                    {window.location.origin + window.location.pathname}
+                  </div>
+                </div>
+              }
+            />
           </Col>
 
           {/* Thông tin chi tiết */}
@@ -238,19 +298,49 @@ export default function ZaloConfigPage() {
           >
             <Input.Password placeholder="Nhập Secret Key..." prefix={<KeyOutlined />} />
           </Form.Item>
-          <Form.Item
-            name="webhook_secret"
-            label={
-              <span>
-                Webhook Secret
-                <Tooltip title="Chuỗi bí mật để xác minh request từ Zalo. Cấu hình trong trang Zalo Developers.">
-                  <InfoCircleOutlined style={{ marginLeft: 6, color: '#9ca3af' }} />
-                </Tooltip>
-              </span>
-            }
-          >
-            <Input.Password placeholder="Webhook secret (tùy chọn)" />
+          <Collapse
+            ghost
+            items={[
+              {
+                key: '1',
+                label: <Text type="secondary" style={{ fontSize: 13 }}>⚙️ Cấu hình nâng cao (Webhook Secret & Token thủ công)</Text>,
+                children: (
+                  <>
+                    <Form.Item name="webhook_secret" label={<span>Webhook Secret <Tooltip title="Dùng để bảo mật Webhook (tuỳ chọn)"><InfoCircleOutlined /></Tooltip></span>}>
+                      <Input.Password placeholder="Webhook secret (tùy chọn)" />
+                    </Form.Item>
+                    <Form.Item name="access_token" label="Access Token thủ công (Nếu không dùng nút Đăng nhập tự động)">
+                      <Input.TextArea rows={2} placeholder="Nhập Access Token (nếu có)" />
+                    </Form.Item>
+                    <Form.Item name="refresh_token" label="Refresh Token thủ công">
+                      <Input.TextArea rows={2} placeholder="Nhập Refresh Token" />
+                    </Form.Item>
+                  </>
+                ),
+              },
+            ]}
+          />
+
+          <Divider orientation="left" plain>Cấu hình Tự động & Dọn dẹp</Divider>
+          <Form.Item name="auto_send_payment_zns" label="Tự động gửi ZNS khi Thu tiền" valuePropName="checked">
+            <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
           </Form.Item>
+          <Form.Item name="auto_send_delivery_zns" label="Tự động gửi ZNS khi Hoàn thành đơn" valuePropName="checked">
+            <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
+          </Form.Item>
+          <Form.Item name="auto_send_birthday_zns" label="Tự động gửi ZNS chúc mừng sinh nhật" valuePropName="checked" help="Chạy tự động lúc 08:00 sáng mỗi ngày.">
+            <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
+          </Form.Item>
+          <Form.Item
+            name="lead_cleanup_days"
+            label="Số ngày dọn dẹp Lead rác"
+            rules={[{ required: true, message: 'Vui lòng nhập số ngày' }]}
+            help="SocialLead không tương tác sau số ngày này sẽ bị ẩn (archived)."
+          >
+            <InputNumber min={1} max={365} style={{ width: '100%' }} suffix="ngày" />
+          </Form.Item>
+
+          <Divider />
           <Form.Item name="is_active" label="Trạng thái" valuePropName="checked">
             <Switch checkedChildren="Hoạt động" unCheckedChildren="Tạm dừng" />
           </Form.Item>

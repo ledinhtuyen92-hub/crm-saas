@@ -65,32 +65,37 @@ def refresh_all_zalo_tokens(self):
 def cleanup_stale_social_leads(self):
     """
     Archive SocialLead ở trạng thái 'new' hoặc 'chatting' mà
-    không có tương tác trong 30 ngày qua.
+    không có tương tác trong X ngày qua (X cấu hình theo công ty).
 
     Dùng soft-delete (đổi status -> 'archived') thay vì xóa cứng
     để giữ audit trail và tránh mất data quan trọng.
 
     Chạy lúc 3 giờ sáng mỗi ngày qua Celery Beat.
     """
-    from zalo_integration.models import SocialLead
+    from zalo_integration.models import SocialLead, ZaloOaConfig
 
-    cutoff_date = timezone.now() - timedelta(days=30)
+    configs = ZaloOaConfig.objects.filter(is_active=True)
+    total_archived = 0
 
-    stale_leads = SocialLead.objects.filter(
-        status__in=[SocialLead.STATUS_NEW, SocialLead.STATUS_CHATTING],
-        last_interaction_date__lt=cutoff_date,
-    )
+    for config in configs:
+        cutoff_date = timezone.now() - timedelta(days=config.lead_cleanup_days)
+        
+        stale_leads = SocialLead.objects.filter(
+            company=config.company,
+            status__in=[SocialLead.STATUS_NEW, SocialLead.STATUS_CHATTING],
+            last_interaction_date__lt=cutoff_date,
+        )
 
-    count = stale_leads.count()
-    logger.info(f"[ZaloTask:CleanupLeads] Tìm thấy {count} SocialLead không hoạt động (> 30 ngày).")
+        count = stale_leads.count()
+        if count > 0:
+            updated = stale_leads.update(status=SocialLead.STATUS_ARCHIVED)
+            total_archived += updated
+            logger.info(f"[ZaloTask:CleanupLeads] Công ty {config.company.name}: Đã archive {updated} SocialLead (> {config.lead_cleanup_days} ngày).")
 
-    if count > 0:
-        updated = stale_leads.update(status=SocialLead.STATUS_ARCHIVED)
-        logger.info(f"[ZaloTask:CleanupLeads] ✅ Đã archive {updated} SocialLead.")
-    else:
-        logger.info("[ZaloTask:CleanupLeads] ✅ Database sạch sẽ, không cần cleanup.")
+    if total_archived == 0:
+        logger.info("[ZaloTask:CleanupLeads] ✅ Database sạch sẽ, không có lead nào cần cleanup.")
 
-    return {"archived_count": count}
+    return {"archived_count": total_archived}
 
 
 # ── Task 3: Gửi ZNS (On-demand) ──────────────────────────────────────────────
@@ -140,3 +145,83 @@ def send_zns_task(self, log_id: int):
             raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
 
     return {"log_id": log_id, "success": success}
+
+
+# ── Task 4: Gửi ZNS Chúc mừng sinh nhật tự động ─────────────────────────────
+
+@shared_task(
+    name="zalo.send_birthday_zns",
+    bind=True,
+    max_retries=1,
+)
+def send_birthday_zns_to_customers(self):
+    """
+    Quét tất cả các Khách hàng có ngày sinh là hôm nay.
+    Nếu công ty của khách hàng có bật `auto_send_birthday_zns`, 
+    sẽ tìm mẫu ZNS loại `birthday` và gửi đi.
+    """
+    from django.utils import timezone
+    from zalo_integration.models import ZaloOaConfig, ZaloMessageTemplate, ZaloMessageLog
+    from crm.models import Customer
+    from zalo_integration.services import send_zns_message
+    
+    logger.info("[ZaloTask:SendBirthdayZNS] Bắt đầu quét khách hàng sinh nhật hôm nay...")
+    
+    today = timezone.now().date()
+    
+    # 1. Tìm các cấu hình OA có bật tự động gửi sinh nhật và đang active
+    configs = ZaloOaConfig.objects.filter(is_active=True, auto_send_birthday_zns=True)
+    if not configs.exists():
+        logger.info("[ZaloTask:SendBirthdayZNS] Không có công ty nào bật tính năng này.")
+        return {"success": True, "sent_count": 0}
+
+    company_ids = configs.values_list('company_id', flat=True)
+    
+    # 2. Tìm các Customer có sinh nhật hôm nay thuộc các công ty đó
+    birthday_customers = Customer.objects.filter(
+        company_id__in=company_ids,
+        birthday__day=today.day,
+        birthday__month=today.month,
+        phone__isnull=False
+    ).exclude(phone="")
+    
+    if not birthday_customers.exists():
+        logger.info("[ZaloTask:SendBirthdayZNS] Không có khách hàng nào sinh nhật hôm nay.")
+        return {"success": True, "sent_count": 0}
+
+    sent_count = 0
+    for customer in birthday_customers:
+        # Tìm template birthday của công ty
+        template = ZaloMessageTemplate.objects.filter(
+            company_id=customer.company_id,
+            template_type=ZaloMessageTemplate.TYPE_BIRTHDAY,
+            is_active=True
+        ).first()
+        
+        if not template:
+            logger.warning(f"[ZaloTask:SendBirthdayZNS] Cty {customer.company_id} chưa có mẫu ZNS sinh nhật.")
+            continue
+            
+        # Tạo ZaloMessageLog
+        log = ZaloMessageLog.objects.create(
+            company_id=customer.company_id,
+            template=template,
+            customer=customer,
+            recipient_phone=customer.phone,
+            params_sent={
+                "customer_name": customer.name or "Quý khách",
+                # Các tham số khác có thể thêm nếu mẫu yêu cầu
+            },
+            status=ZaloMessageLog.STATUS_PENDING
+        )
+        
+        # Gửi ZNS
+        try:
+            success = send_zns_message(log.id)
+            if success:
+                sent_count += 1
+        except Exception as e:
+            logger.error(f"[ZaloTask:SendBirthdayZNS] Lỗi gửi cho {customer.phone}: {str(e)}")
+
+    logger.info(f"[ZaloTask:SendBirthdayZNS] Hoàn thành. Đã gửi {sent_count} ZNS sinh nhật.")
+    return {"success": True, "sent_count": sent_count}

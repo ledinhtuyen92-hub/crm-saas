@@ -207,17 +207,24 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ["json"]
 
-from celery.schedules import crontab  # noqa: E402
-
-CELERY_BEAT_SCHEDULE = {
-    # Refresh tất cả Zalo token mỗi 12 giờ
-    "zalo-refresh-all-tokens": {
-        "task": "zalo.refresh_all_tokens",
-        "schedule": crontab(minute=0, hour="*/12"),
-    },
-    # Dọn rác Social Lead mỗi ngày lúc 3h sáng
-    "zalo-cleanup-stale-leads": {
-        "task": "zalo.cleanup_stale_leads",
-        "schedule": crontab(minute=0, hour=3),
-    },
-}
+try:
+    from celery.schedules import crontab
+    CELERY_BEAT_SCHEDULE = {
+        # Refresh tất cả Zalo token mỗi 12 giờ
+        "zalo-refresh-all-tokens": {
+            "task": "zalo.refresh_all_tokens",
+            "schedule": crontab(minute=0, hour="*/12"),
+        },
+        # Dọn rác Social Lead mỗi ngày lúc 3h sáng
+        "zalo-cleanup-stale-leads": {
+            "task": "zalo.cleanup_stale_leads",
+            "schedule": crontab(minute=0, hour=3),
+        },
+        # Tự động gửi ZNS chúc mừng sinh nhật mỗi ngày lúc 8h sáng
+        "zalo-send-birthday-zns": {
+            "task": "zalo.send_birthday_zns",
+            "schedule": crontab(minute=0, hour=8),
+        },
+    }
+except ImportError:
+    pass  # Celery chưa được cài — bỏ qua, không crash Django

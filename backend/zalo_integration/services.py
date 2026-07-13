@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 ZALO_TOKEN_URL = "https://oauth.zaloapp.com/v4/oa/access_token"
 ZALO_SEND_ZNS_URL = "https://business.openapi.zalo.me/message/template"
 ZALO_USER_PROFILE_URL = "https://openapi.zalo.me/v2.0/oa/getprofile"
+ZALO_SEND_MSG_URL = "https://openapi.zalo.me/v2.0/oa/message"
+ZALO_UPLOAD_FILE_URL = "https://openapi.zalo.me/v2.0/oa/upload/file"
 
 
 # ── Xác thực Webhook ─────────────────────────────────────────────────────────
@@ -226,6 +228,68 @@ def send_zns_message(log_id: int) -> bool:
 
     log.save(update_fields=["status", "zalo_msg_id", "error_message"])
     return log.status == ZaloMessageLog.STATUS_SENT
+
+
+# ── Live Chat (Inbox) ────────────────────────────────────────────────────────
+
+def upload_file_to_zalo(oa_config, file_obj) -> str:
+    """
+    Upload file lên Zalo để lấy File Token.
+    """
+    if oa_config.is_token_near_expiry:
+        refresh_zalo_access_token(oa_config)
+        oa_config.refresh_from_db()
+
+    try:
+        response = requests.post(
+            ZALO_UPLOAD_FILE_URL,
+            headers={"access_token": oa_config.access_token},
+            files={"file": (file_obj.name, file_obj, file_obj.content_type)},
+            timeout=30,
+        )
+        response.raise_for_status()
+        res_data = response.json()
+        if res_data.get("error") == 0:
+            return res_data.get("data", {}).get("token", "")
+        logger.error(f"[ZaloUpload] Error: {res_data}")
+        return ""
+    except Exception as e:
+        logger.error(f"[ZaloUpload] Exception: {e}")
+        return ""
+
+
+def send_zalo_chat_message(oa_config, zalo_uid: str, text: str = "", file_token: str = "") -> dict:
+    """
+    Gửi tin nhắn chat thông thường tới Zalo User (Text hoặc File).
+    """
+    if oa_config.is_token_near_expiry:
+        refresh_zalo_access_token(oa_config)
+        oa_config.refresh_from_db()
+
+    payload = {"recipient": {"user_id": zalo_uid}, "message": {}}
+
+    if file_token:
+        payload["message"]["attachment"] = {
+            "type": "file",
+            "payload": {"token": file_token}
+        }
+    elif text:
+        payload["message"]["text"] = text
+    else:
+        return {"error": -1, "message": "No content to send"}
+
+    try:
+        response = requests.post(
+            ZALO_SEND_MSG_URL,
+            headers={"access_token": oa_config.access_token, "Content-Type": "application/json"},
+            json=payload,
+            timeout=15,
+        )
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"[ZaloChat] Send error: {e}")
+        return {"error": -1, "message": str(e)}
 
 
 # ── Lấy profile user Zalo ─────────────────────────────────────────────────────

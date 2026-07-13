@@ -16,7 +16,6 @@ from rest_framework.views import APIView
 from .models import SocialLead, ZaloMessageLog, ZaloMessageTemplate, ZaloOaConfig
 from .serializers import (
     ConvertLeadSerializer,
-    SendZNSSerializer,
     SocialLeadDetailSerializer,
     SocialLeadListSerializer,
     SocialLeadUpdateSerializer,
@@ -24,12 +23,16 @@ from .serializers import (
     ZaloMessageTemplateSerializer,
     ZaloOaConfigSerializer,
     ZaloOaConfigWriteSerializer,
+    ZaloMessageSerializer,
 )
 from .services import (
     convert_social_lead,
     fetch_zalo_user_profile,
     refresh_zalo_access_token,
+    send_zns_message,
     verify_zalo_webhook_signature,
+    send_zalo_chat_message,
+    upload_file_to_zalo,
 )
 
 logger = logging.getLogger(__name__)
@@ -131,6 +134,35 @@ class ZaloWebhookView(APIView):
             social_lead.status = SocialLead.STATUS_CHATTING
         social_lead.save()
 
+        # Lưu vào ZaloMessage
+        from .models import ZaloMessage
+        
+        message_id = data.get("message", {}).get("msg_id", "")
+        # Zalo webhook gửi text ở 'text', và attachments ở 'attachments'
+        attachments = data.get("message", {}).get("attachments", [])
+        attachment_url = ""
+        attachment_type = ""
+        
+        if attachments and len(attachments) > 0:
+            att = attachments[0]
+            attachment_type = att.get("type", "")
+            if attachment_type == "image":
+                attachment_url = att.get("payload", {}).get("url", "")
+            elif attachment_type == "file":
+                attachment_url = att.get("payload", {}).get("url", "")
+            elif attachment_type == "audio":
+                attachment_url = att.get("payload", {}).get("url", "")
+
+        ZaloMessage.objects.create(
+            company=company,
+            social_lead=social_lead,
+            direction=ZaloMessage.DIRECTION_INBOUND,
+            content=message_text,
+            attachment_url=attachment_url,
+            attachment_type=attachment_type,
+            zalo_msg_id=message_id,
+        )
+
         # Push realtime notification cho nhân viên phụ trách
         if social_lead.assigned_to:
             self._push_notification(social_lead, message_text)
@@ -223,6 +255,68 @@ class ZaloOaConfigViewSet(viewsets.ModelViewSet):
             {"detail": "Không thể làm mới token. Vui lòng kiểm tra lại refresh_token."},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+    @action(detail=False, methods=["post"], url_path="exchange-oauth-code")
+    def exchange_oauth_code(self, request):
+        """
+        Đổi Authorization Code từ Zalo lấy Access Token & Refresh Token.
+        """
+        code = request.data.get("code")
+        if not code:
+            return Response({"error": "Thiếu mã xác thực (code)"}, status=status.HTTP_400_BAD_REQUEST)
+
+        config = ZaloOaConfig.objects.filter(company=request.user.company).first()
+        if not config or not config.app_id or not config.secret_key:
+            return Response(
+                {"error": "Vui lòng lưu thông tin App ID và Secret Key trước khi uỷ quyền."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        url = "https://oauth.zaloapp.com/v4/oa/access_token"
+        headers = {
+            "secret_key": config.secret_key,
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        data = {
+            "app_id": config.app_id,
+            "grant_type": "authorization_code",
+            "code": code,
+        }
+
+        try:
+            import requests
+            from django.utils import timezone
+            from datetime import timedelta
+
+            resp = requests.post(url, headers=headers, data=data, timeout=10)
+            res_json = resp.json()
+
+            if "access_token" in res_json:
+                config.access_token = res_json.get("access_token")
+                config.refresh_token = res_json.get("refresh_token")
+                expires_in = int(res_json.get("expires_in", 90000))
+                config.token_expires_at = timezone.now() + timedelta(seconds=expires_in)
+                config.save()
+
+                serializer = ZaloOaConfigSerializer(config)
+                return Response({
+                    "detail": "Cấp quyền và lấy Token thành công!",
+                    "data": serializer.data,
+                })
+            else:
+                err_msg = res_json.get("error_name") or res_json.get("error_description") or str(res_json)
+                logger.error(f"[ZaloOAuth] Lỗi đổi token: {res_json}")
+                return Response(
+                    {"error": f"Zalo từ chối đổi Token: {err_msg}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except Exception as exc:
+            logger.error(f"[ZaloOAuth] Lỗi kết nối Zalo OAuth: {exc}")
+            return Response(
+                {"error": f"Lỗi kết nối tới Zalo server: {str(exc)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
 
 
 # ── SocialLead ViewSet ────────────────────────────────────────────────────────
@@ -327,6 +421,77 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
         social_lead.assigned_to = user
         social_lead.save(update_fields=["assigned_to"])
         return Response({"detail": f"Đã phân công cho {user.get_full_name()}."})
+
+    @action(detail=True, methods=["get"], url_path="messages")
+    def messages(self, request, pk=None):
+        """Lấy lịch sử tin nhắn của một Lead."""
+        social_lead = self.get_object()
+        from .models import ZaloMessage
+        qs = ZaloMessage.objects.filter(social_lead=social_lead).order_by("created_at")
+        serializer = ZaloMessageSerializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], url_path="send-message")
+    def send_message(self, request, pk=None):
+        """Sale gửi tin nhắn Text hoặc đính kèm File qua Zalo OA."""
+        social_lead = self.get_object()
+        oa_config = social_lead.oa_config
+
+        if not oa_config:
+            return Response({"error": "Không tìm thấy OA config"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not oa_config.is_active:
+            return Response({"error": "OA này đang tạm dừng"}, status=status.HTTP_400_BAD_REQUEST)
+
+        text = request.data.get("text", "")
+        file_obj = request.FILES.get("file")
+
+        if not text and not file_obj:
+            return Response({"error": "Vui lòng nhập nội dung hoặc đính kèm file."}, status=status.HTTP_400_BAD_REQUEST)
+
+        file_token = ""
+        attachment_url = ""
+        attachment_type = ""
+
+        # Nếu có file, upload lên Zalo trước
+        if file_obj:
+            file_token = upload_file_to_zalo(oa_config, file_obj)
+            if not file_token:
+                return Response({"error": "Upload file lên Zalo thất bại."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            attachment_type = "file"
+            
+        # Gửi qua API Zalo
+        res = send_zalo_chat_message(oa_config, social_lead.social_id, text=text, file_token=file_token)
+        
+        if res.get("error", 0) != 0:
+            return Response(
+                {"error": f"Lỗi từ Zalo: {res.get('message', '')}", "details": res},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Ghi vào DB
+        from .models import ZaloMessage
+        from django.utils import timezone
+        
+        msg_id = res.get("data", {}).get("message_id", "")
+        
+        msg = ZaloMessage.objects.create(
+            company=request.user.company,
+            social_lead=social_lead,
+            direction=ZaloMessage.DIRECTION_OUTBOUND,
+            content=text,
+            attachment_url=attachment_url,
+            attachment_type=attachment_type,
+            zalo_msg_id=msg_id,
+            sender_user=request.user,
+        )
+
+        # Cập nhật Lead
+        social_lead.last_message = text[:500] if text else "[File đính kèm]"
+        social_lead.last_interaction_date = timezone.now()
+        social_lead.save(update_fields=["last_message", "last_interaction_date", "updated_at"])
+
+        return Response(ZaloMessageSerializer(msg).data)
 
 
 # ── ZaloMessageTemplate ViewSet ───────────────────────────────────────────────
