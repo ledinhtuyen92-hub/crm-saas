@@ -65,20 +65,25 @@ class ZaloWebhookView(APIView):
         except json.JSONDecodeError:
             return Response({"error": "Invalid JSON"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Tìm OA Config theo app_id
+        # Tìm OA Config theo oa_id (vì 1 app_id có thể dùng cho nhiều OA)
+        oa_id = data.get("oa_id") or data.get("recipient", {}).get("id")
         app_id = data.get("app_id")
+        
         try:
             oa_config = ZaloOaConfig.objects.select_related("company").get(
-                app_id=app_id, is_active=True
+                oa_id=oa_id, is_active=True
             )
         except ZaloOaConfig.DoesNotExist:
-            logger.warning(f"[Webhook] Không tìm thấy OA config cho app_id={app_id}")
-            return Response({"error": "Unknown app_id"}, status=status.HTTP_404_NOT_FOUND)
+            logger.warning(f"[Webhook] Không tìm thấy OA config cho oa_id={oa_id}")
+            return Response({"error": "Unknown oa_id"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Xác thực chữ ký (bỏ qua nếu chưa cấu hình webhook_secret)
-        if oa_config.webhook_secret:
-            if not verify_zalo_webhook_signature(body, received_sig, oa_config.webhook_secret):
-                logger.warning(f"[Webhook] Chữ ký không hợp lệ từ app_id={app_id}")
+        # Xác thực chữ ký
+        webhook_secret = oa_config.get_webhook_secret()
+        if webhook_secret:
+            timestamp_str = str(data.get("timestamp", ""))
+            app_id_str = str(app_id)
+            if not verify_zalo_webhook_signature(body, received_sig, app_id_str, timestamp_str, webhook_secret):
+                logger.warning(f"[Webhook] Chữ ký không hợp lệ từ oa_id={oa_id}")
                 return Response({"error": "Invalid signature"}, status=status.HTTP_403_FORBIDDEN)
 
         # Xử lý event
@@ -132,6 +137,7 @@ class ZaloWebhookView(APIView):
         social_lead.last_interaction_date = timezone.now()
         if social_lead.status == SocialLead.STATUS_NEW:
             social_lead.status = SocialLead.STATUS_CHATTING
+        social_lead.has_unread_message = True
         social_lead.save()
 
         # Lưu vào ZaloMessage
@@ -266,21 +272,20 @@ class ZaloOaConfigViewSet(viewsets.ModelViewSet):
             return Response({"error": "Thiếu mã xác thực (code)"}, status=status.HTTP_400_BAD_REQUEST)
 
         config = ZaloOaConfig.objects.filter(company=request.user.company).first()
-        if not config or not config.app_id or not config.secret_key:
-            return Response(
-                {"error": "Vui lòng lưu thông tin App ID và Secret Key trước khi uỷ quyền."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        
+        # API của Zalo yêu cầu truyền code, app_id, secret_key
+        app_id = config.get_app_id()
+        secret_key = config.get_secret_key()
+        
+        if not config or not app_id or not secret_key:
+            return Response({"error": "Cấu hình App ID/Secret chưa đầy đủ."}, status=status.HTTP_400_BAD_REQUEST)
 
         url = "https://oauth.zaloapp.com/v4/oa/access_token"
-        headers = {
-            "secret_key": config.secret_key,
-            "Content-Type": "application/x-www-form-urlencoded",
-        }
+        headers = {"Content-Type": "application/x-www-form-urlencoded", "secret_key": secret_key}
         data = {
-            "app_id": config.app_id,
+            "app_id": app_id,
             "grant_type": "authorization_code",
-            "code": code,
+            "code": code
         }
 
         try:
@@ -422,12 +427,17 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
         social_lead.save(update_fields=["assigned_to"])
         return Response({"detail": f"Đã phân công cho {user.get_full_name()}."})
 
-    @action(detail=True, methods=["get"], url_path="messages")
+    @action(detail=True, methods=["get"])
     def messages(self, request, pk=None):
-        """Lấy lịch sử tin nhắn của một Lead."""
-        social_lead = self.get_object()
+        """Lấy danh sách tin nhắn của 1 Lead và đánh dấu đã đọc."""
+        lead = self.get_object()
+        
+        if lead.has_unread_message:
+            lead.has_unread_message = False
+            lead.save(update_fields=["has_unread_message"])
+            
         from .models import ZaloMessage
-        qs = ZaloMessage.objects.filter(social_lead=social_lead).order_by("created_at")
+        qs = ZaloMessage.objects.filter(social_lead=lead).order_by("created_at")
         serializer = ZaloMessageSerializer(qs, many=True)
         return Response(serializer.data)
 
@@ -444,24 +454,42 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
             return Response({"error": "OA này đang tạm dừng"}, status=status.HTTP_400_BAD_REQUEST)
 
         text = request.data.get("text", "")
+        request_phone = request.data.get("request_phone") in ["true", "True", True, 1, "1"]
         file_obj = request.FILES.get("file")
 
-        if not text and not file_obj:
-            return Response({"error": "Vui lòng nhập nội dung hoặc đính kèm file."}, status=status.HTTP_400_BAD_REQUEST)
+        if not text and not file_obj and not request_phone:
+            return Response({"error": "Vui lòng nhập nội dung, đính kèm file hoặc yêu cầu SĐT."}, status=status.HTTP_400_BAD_REQUEST)
 
         file_token = ""
+        image_id = ""
         attachment_url = ""
         attachment_type = ""
+        force_as_file = request.data.get("force_as_file") in ["true", "True", True, 1, "1"]
 
         # Nếu có file, upload lên Zalo trước
         if file_obj:
-            file_token = upload_file_to_zalo(oa_config, file_obj)
-            if not file_token:
-                return Response({"error": "Upload file lên Zalo thất bại."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            attachment_type = "file"
+            if file_obj.content_type.startswith("image/") and not force_as_file:
+                from .services import upload_image_to_zalo
+                image_id = upload_image_to_zalo(oa_config, file_obj)
+                if image_id:
+                    attachment_type = "image"
+                else:
+                    return Response({"error": "Upload ảnh lên Zalo thất bại (OA chưa nâng cấp)."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            else:
+                from .services import upload_file_to_zalo
+                file_token = upload_file_to_zalo(oa_config, file_obj)
+                if not file_token:
+                    return Response({"error": "Upload file lên Zalo thất bại."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                attachment_type = "file"
             
         # Gửi qua API Zalo
-        res = send_zalo_chat_message(oa_config, social_lead.social_id, text=text, file_token=file_token)
+        res = send_zalo_chat_message(
+            oa_config, social_lead.social_id, 
+            text=text, 
+            file_token=file_token, 
+            image_id=image_id, 
+            request_phone=request_phone
+        )
         
         if res.get("error", 0) != 0:
             return Response(
@@ -543,14 +571,85 @@ class ZaloMessageTemplateViewSet(viewsets.ModelViewSet):
             status=ZaloMessageLog.STATUS_PENDING,
         )
 
-        # Dispatch Celery task
+        # Đưa vào queue background processing
         from .tasks import send_zns_task
         send_zns_task.delay(log.id)
 
-        return Response({
-            "detail": "Đang gửi ZNS. Kết quả sẽ cập nhật trong giây lát.",
-            "log_id": log.id,
-        }, status=status.HTTP_202_ACCEPTED)
+        return Response(
+            {"detail": "Đã tạo yêu cầu gửi ZNS thành công", "log_id": log.id},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["post"], url_path="bulk-send")
+    def bulk_send(self, request):
+        """Gửi ZNS hàng loạt cho nhiều khách hàng."""
+        from .serializers import BulkSendZNSSerializer
+        from users.models import Customer
+        from .tasks import send_zns_task
+
+        serializer = BulkSendZNSSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        company = request.user.company
+        template_id = data["template_id"]
+        customer_ids = data["customer_ids"]
+        base_params = data.get("params", {})
+
+        # 1. Lấy template
+        try:
+            template = ZaloMessageTemplate.objects.get(
+                id=template_id, company=company, is_active=True
+            )
+        except ZaloMessageTemplate.DoesNotExist:
+            return Response(
+                {"detail": "Mẫu ZNS không hợp lệ hoặc không hoạt động."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # 2. Lấy danh sách khách hàng hợp lệ
+        customers = Customer.objects.filter(id__in=customer_ids, company=company).exclude(phone="")
+        if not customers.exists():
+            return Response(
+                {"detail": "Không tìm thấy khách hàng nào có số điện thoại hợp lệ."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 3. Tạo logs và đẩy vào Celery
+        logs_created = 0
+        schema = template.params_schema or {}
+        needs_name = any(k.endswith("name") or k.endswith("ten") or k.startswith("ten_") for k in schema.keys())
+        
+        for customer in customers:
+            # Tự động map tên khách hàng nếu mẫu yêu cầu
+            params = base_params.copy()
+            if needs_name:
+                for k in schema.keys():
+                    if k.endswith("name") or k.endswith("ten") or k.startswith("ten_"):
+                        if k not in params:
+                            params[k] = customer.name
+
+            # Tạo ZaloMessageLog
+            log = ZaloMessageLog.objects.create(
+                company=company,
+                template=template,
+                recipient_phone=customer.phone,
+                customer=customer,
+                params_sent=params,
+                status=ZaloMessageLog.STATUS_PENDING,
+            )
+            
+            # Gửi task vào Celery
+            send_zns_task.delay(log.id)
+            logs_created += 1
+
+        return Response(
+            {
+                "detail": f"Đã đưa {logs_created} yêu cầu ZNS vào hàng đợi thành công.",
+                "total_queued": logs_created
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 # ── ZaloMessageLog ViewSet (Read Only) ───────────────────────────────────────

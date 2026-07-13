@@ -21,6 +21,8 @@ def track_order_status_change(sender, instance, **kwargs):
     Trước khi save, lưu lại status cũ vào _original_status
     để so sánh sau khi save.
     """
+    if kwargs.get('raw'):
+        return
     if instance.pk:
         try:
             original = sender.objects.get(pk=instance.pk)
@@ -39,6 +41,8 @@ def on_order_saved(sender, instance, created, **kwargs):
     - Nếu STATUS THAY ĐỔI SANG 'approved' → xuất kho + tạo lệnh SX + thông báo
     - Nếu STATUS THAY ĐỔI SANG 'rejected' → thông báo cho người tạo
     """
+    if kwargs.get('raw'):
+        return
     from orders.models import Order
 
     if created:

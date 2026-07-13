@@ -15,6 +15,8 @@ def auto_create_delivery_order(sender, instance, created, **kwargs):
     """
     Tự động tạo lệnh giao hàng khi Lệnh sản xuất chuyển sang Hoàn thành.
     """
+    if kwargs.get('raw'):
+        return
     if instance.status == ProductionOrder.STATUS_COMPLETED:
         # Kiểm tra xem đã có DeliveryOrder cho Order này chưa
         delivery, created_delivery = DeliveryOrder.objects.get_or_create(
@@ -46,6 +48,8 @@ def handle_delivery_order_completed(sender, instance, created, **kwargs):
     """
     Tự động tạo Phiếu bảo hành và đóng Đơn hàng khi Giao hàng thành công.
     """
+    if kwargs.get('raw'):
+        return
     if instance.status == DeliveryOrder.STATUS_DELIVERED:
         import datetime
         months = instance.order.warranty_months if hasattr(instance.order, 'warranty_months') and instance.order.warranty_months else 12

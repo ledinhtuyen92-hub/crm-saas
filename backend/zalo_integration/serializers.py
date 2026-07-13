@@ -8,11 +8,12 @@ from .models import SocialLead, ZaloMessageLog, ZaloMessageTemplate, ZaloOaConfi
 class ZaloOaConfigSerializer(serializers.ModelSerializer):
     is_token_near_expiry = serializers.BooleanField(read_only=True)
     token_expires_at_display = serializers.SerializerMethodField()
+    resolved_app_id = serializers.CharField(source='get_app_id', read_only=True)
 
     class Meta:
         model = ZaloOaConfig
         fields = [
-            "id", "oa_name", "app_id", "oa_id",
+            "id", "oa_name", "use_system_config", "app_id", "resolved_app_id", "oa_id", "secret_key",
             "access_token", "refresh_token", "token_expires_at",
             "token_expires_at_display", "is_token_near_expiry",
             "webhook_secret", "auto_send_payment_zns", "auto_send_delivery_zns", 
@@ -22,7 +23,6 @@ class ZaloOaConfigSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "company", "created_at", "updated_at",
                             "is_token_near_expiry", "token_expires_at_display"]
         extra_kwargs = {
-            "secret_key": {"write_only": True},
             "access_token": {"write_only": True},
             "refresh_token": {"write_only": True},
         }
@@ -40,11 +40,19 @@ class ZaloOaConfigWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = ZaloOaConfig
         fields = [
-            "oa_name", "app_id", "secret_key", "oa_id",
+            "oa_name", "use_system_config", "app_id", "secret_key", "oa_id",
             "access_token", "refresh_token", "token_expires_at",
             "webhook_secret", "auto_send_payment_zns", "auto_send_delivery_zns", 
-            "lead_cleanup_days", "is_active",
+            "auto_send_birthday_zns", "lead_cleanup_days", "is_active",
         ]
+
+    def validate(self, attrs):
+        # Nếu dùng cấu hình hệ thống, xóa trống các trường cấu hình riêng để tránh lộ/nhầm lẫn dữ liệu
+        if attrs.get('use_system_config', False):
+            attrs['app_id'] = ""
+            attrs['secret_key'] = ""
+            attrs['webhook_secret'] = ""
+        return attrs
 
 
 # ── SocialLead ───────────────────────────────────────────────────────────────
@@ -67,7 +75,7 @@ class SocialLeadListSerializer(serializers.ModelSerializer):
             "last_message", "last_interaction_date",
             "status", "status_display",
             "assigned_to", "assigned_to_name",
-            "is_converted", "created_at",
+            "is_converted", "created_at", "has_unread_message"
         ]
 
     def get_is_converted(self, obj):
@@ -94,7 +102,7 @@ class SocialLeadDetailSerializer(serializers.ModelSerializer):
             "status", "status_display",
             "assigned_to", "assigned_to_name",
             "notes",
-            "converted_customer_id", "converted_customer_name",
+            "converted_customer_id", "converted_customer_name", "has_unread_message",
             "created_at", "updated_at",
         ]
 
@@ -156,6 +164,12 @@ class SendZNSSerializer(serializers.Serializer):
     def validate_recipient_phone(self, value):
         from zalo_integration.services import normalize_phone
         return normalize_phone(value)
+
+
+class BulkSendZNSSerializer(serializers.Serializer):
+    template_id = serializers.IntegerField()
+    customer_ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
+    params = serializers.DictField(child=serializers.CharField(), default=dict)
 
 
 # ── ZaloMessageLog ────────────────────────────────────────────────────────────

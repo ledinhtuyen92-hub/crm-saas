@@ -24,13 +24,22 @@ class ZaloOaConfig(models.Model):
         verbose_name="Tên Zalo OA",
         help_text="Tên hiển thị của Official Account trên Zalo.",
     )
+    use_system_config = models.BooleanField(
+        default=True,
+        verbose_name="Sử dụng cấu hình ứng dụng hệ thống",
+        help_text="Nếu bật, hệ thống sẽ dùng App ID, Secret Key từ Cấu hình Hệ thống (SuperAdmin).",
+    )
     app_id = models.CharField(
         max_length=100,
+        blank=True,
+        null=True,
         verbose_name="App ID",
         help_text="App ID lấy từ trang Zalo Developers.",
     )
     secret_key = models.CharField(
         max_length=255,
+        blank=True,
+        null=True,
         verbose_name="App Secret",
         help_text="Secret key lấy từ trang Zalo Developers.",
     )
@@ -58,6 +67,7 @@ class ZaloOaConfig(models.Model):
     webhook_secret = models.CharField(
         max_length=255,
         blank=True,
+        null=True,
         verbose_name="Webhook Secret",
         help_text="Dùng để xác minh chữ ký request từ Zalo.",
     )
@@ -94,6 +104,29 @@ class ZaloOaConfig(models.Model):
 
     def __str__(self):
         return f"{self.oa_name} ({self.company.name})"
+
+    # ── Resolved Properties ────────────────────────────────────────────────
+    
+    def get_app_id(self):
+        from users.models import SystemSettings
+        if self.use_system_config:
+            sys_settings = SystemSettings.load()
+            return sys_settings.zalo_app_id or ""
+        return self.app_id or ""
+
+    def get_secret_key(self):
+        from users.models import SystemSettings
+        if self.use_system_config:
+            sys_settings = SystemSettings.load()
+            return sys_settings.zalo_app_secret or ""
+        return self.secret_key or ""
+
+    def get_webhook_secret(self):
+        from users.models import SystemSettings
+        if self.use_system_config:
+            sys_settings = SystemSettings.load()
+            return sys_settings.zalo_webhook_secret or ""
+        return self.webhook_secret or ""
 
     @property
     def is_token_near_expiry(self):
@@ -187,6 +220,10 @@ class SocialLead(models.Model):
         verbose_name="Trạng thái",
         db_index=True,
     )
+    has_unread_message = models.BooleanField(
+        default=False,
+        verbose_name="Có tin nhắn chưa đọc"
+    )
 
     # ── Phân công nội bộ ───────────────────────────────────────────────
     assigned_to = models.ForeignKey(
@@ -238,6 +275,7 @@ class ZaloMessageTemplate(models.Model):
     TYPE_PROMOTION = "promotion"
     TYPE_CARE = "care"
     TYPE_BIRTHDAY = "birthday"
+    TYPE_DELIVERY_WARRANTY = "delivery_warranty"
     TYPE_CUSTOM = "custom"
     TYPE_CHOICES = [
         (TYPE_ORDER_CONFIRM, "Xác nhận đơn hàng"),
@@ -245,6 +283,7 @@ class ZaloMessageTemplate(models.Model):
         (TYPE_PROMOTION, "Khuyến mãi"),
         (TYPE_CARE, "Chăm sóc khách hàng"),
         (TYPE_BIRTHDAY, "Chúc mừng sinh nhật"),
+        (TYPE_DELIVERY_WARRANTY, "Giao hàng / Bảo hành"),
         (TYPE_CUSTOM, "Tùy chỉnh"),
     ]
 

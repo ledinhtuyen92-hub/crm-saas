@@ -6,7 +6,7 @@ import api from '../utils/api'
 const { Option } = Select
 const { Text, Paragraph } = Typography
 
-export default function ZnsSendModal({ visible, onCancel, customer, defaultTemplateType, defaultParams = {} }) {
+export default function ZnsSendModal({ visible, onCancel, customer, customers, defaultTemplateType, defaultParams = {} }) {
   const [form] = Form.useForm()
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(false)
@@ -48,19 +48,23 @@ export default function ZnsSendModal({ visible, onCancel, customer, defaultTempl
     setSelectedTemplate(tpl)
     if (tpl && tpl.params_schema) {
       const initialParams = { ...defaultParams }
-      Object.keys(tpl.params_schema).forEach(key => {
-        if (!initialParams[key] && customer) {
-          if (key.includes('name') || key.includes('ten')) {
-            initialParams[key] = customer.full_name || customer.name || ''
+      // Chỉ auto-fill nếu gửi 1 người. Nếu gửi bulk, backend sẽ lo.
+      if (customer && !customers) {
+        Object.keys(tpl.params_schema).forEach(key => {
+          if (!initialParams[key]) {
+            if (key.includes('name') || key.includes('ten')) {
+              initialParams[key] = customer.full_name || customer.name || ''
+            }
           }
-        }
-      })
+        })
+      }
       form.setFieldsValue({ dynamic_params: initialParams })
     }
   }
 
   const handleSend = async () => {
-    if (!customer?.phone) {
+    const isBulk = customers && customers.length > 0
+    if (!isBulk && !customer?.phone) {
       message.error('Khách hàng này chưa có số điện thoại để gửi ZNS!')
       return
     }
@@ -69,15 +73,25 @@ export default function ZnsSendModal({ visible, onCancel, customer, defaultTempl
       const values = await form.validateFields()
       setSending(true)
       
-      const payload = {
-        template_id: values.template_id,
-        recipient_phone: customer.phone,
-        customer_id: customer.id,
-        params: values.dynamic_params || {}
+      if (isBulk) {
+        const payload = {
+          template_id: values.template_id,
+          customer_ids: customers.map(c => c.id),
+          params: values.dynamic_params || {}
+        }
+        const res = await api.post('/zalo/templates/bulk-send/', payload)
+        message.success(res.data.detail || 'Đã đưa vào hàng đợi gửi ZNS hàng loạt!')
+      } else {
+        const payload = {
+          template_id: values.template_id,
+          recipient_phone: customer.phone,
+          customer_id: customer.id,
+          params: values.dynamic_params || {}
+        }
+        await api.post('/zalo/templates/send/', payload)
+        message.success('Đã đưa vào hàng đợi gửi ZNS thành công!')
       }
-
-      await api.post('/zalo/templates/send/', payload)
-      message.success('Đã đưa vào hàng đợi gửi ZNS thành công!')
+      
       onCancel()
     } catch (err) {
       if (err.errorFields) return
@@ -92,7 +106,7 @@ export default function ZnsSendModal({ visible, onCancel, customer, defaultTempl
       title={
         <Space>
           <MessageOutlined style={{ color: '#10b981' }} />
-          <span>Gửi thông báo Zalo ZNS</span>
+          <span>{customers && customers.length > 0 ? `Gửi ZNS Hàng loạt (${customers.length} khách hàng)` : 'Gửi thông báo Zalo ZNS'}</span>
         </Space>
       }
       open={visible}

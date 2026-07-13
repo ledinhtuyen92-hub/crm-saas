@@ -399,6 +399,29 @@ class SystemSettings(models.Model):
         verbose_name="Chế độ bảo trì dữ liệu",
         help_text="Khóa toàn bộ chức năng thêm/sửa/xóa dữ liệu của các doanh nghiệp, chỉ cho phép đọc và truy cập hệ thống.",
     )
+    
+    # ── Zalo System-wide Config ──────────────────────────────────────────
+    zalo_app_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="System Zalo App ID",
+        help_text="App ID dùng chung cho các tenant (Lấy từ Zalo Developers).",
+    )
+    zalo_app_secret = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="System Zalo App Secret",
+        help_text="App Secret dùng chung cho các tenant.",
+    )
+    zalo_webhook_secret = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="System Zalo Webhook Secret",
+        help_text="Mac Key dùng chung để xác minh webhook từ Zalo.",
+    )
 
     class Meta:
         verbose_name = "Cấu hình Hệ thống"

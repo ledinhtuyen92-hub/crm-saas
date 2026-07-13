@@ -7,7 +7,7 @@ import {
   CheckCircleOutlined, CloseOutlined, MessageOutlined,
   PhoneOutlined, ReloadOutlined, SearchOutlined,
   UserAddOutlined, UserOutlined, WechatOutlined,
-  InfoCircleOutlined, TeamOutlined, PaperClipOutlined, SendOutlined,
+  InfoCircleOutlined, TeamOutlined, PaperClipOutlined, SendOutlined, PictureOutlined, DeleteOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -50,7 +50,7 @@ function LeadListItem({ lead, selected, onClick }) {
     >
       <Row gutter={10} align="middle" wrap={false}>
         <Col flex="none">
-          <Badge dot={isNew} color="#3b82f6" offset={[-4, 4]}>
+          <Badge dot={lead.has_unread_message || isNew} color={lead.has_unread_message ? "#ef4444" : "#3b82f6"} offset={[-4, 4]}>
             <Avatar
               size={44}
               src={lead.avatar_url}
@@ -102,24 +102,29 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
   const [sending, setSending] = useState(false)
   const chatContainerRef = useRef(null)
 
-  useEffect(() => {
-    if (lead?.id) {
-      fetchMessages()
-    }
-  }, [lead?.id])
-
-  const fetchMessages = async () => {
-    setLoadingMessages(true)
+  const fetchMessages = async (background = false) => {
+    if (!background) setLoadingMessages(true)
     try {
       const res = await api.get(`/zalo/social-leads/${lead.id}/messages/`)
       setMessages(res.data || [])
-      scrollToBottom()
+      if (!background) scrollToBottom()
     } catch (err) {
       console.error(err)
     } finally {
-      setLoadingMessages(false)
+      if (!background) setLoadingMessages(false)
     }
   }
+
+  useEffect(() => {
+    if (lead?.id) {
+      fetchMessages()
+      const interval = setInterval(() => {
+        fetchMessages(true)
+      }, 3000)
+      return () => clearInterval(interval)
+    }
+  }, [lead?.id])
+
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -129,15 +134,19 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
     }, 100)
   }
 
-  const handleSendMessage = async (file = null) => {
+  const handleSendMessage = async (file = null, requestPhone = false, forceAsFile = false) => {
     if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
-    if (!messageText.trim() && !file) return
+    if (!messageText.trim() && !file && !requestPhone) return
 
     setSending(true)
     try {
       const formData = new FormData()
       if (messageText.trim()) formData.append('text', messageText.trim())
-      if (file) formData.append('file', file)
+      if (file) {
+        formData.append('file', file)
+        if (forceAsFile) formData.append('force_as_file', 'true')
+      }
+      if (requestPhone) formData.append('request_phone', 'true')
 
       const res = await api.post(`/zalo/social-leads/${lead.id}/send-message/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -163,6 +172,23 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
     } catch { message.error('Lỗi khi phân công.') }
   }
 
+  const handleConvert = async () => {
+    try {
+      const values = await convertForm.validateFields()
+      setConvertLoading(true)
+      await api.post(`/zalo/social-leads/${lead.id}/convert/`, values)
+      message.success('Chuyển đổi Khách hàng thành công!')
+      setConvertModalVisible(false)
+      convertForm.resetFields()
+      onRefresh()
+    } catch (err) {
+      if (err.name === 'ValidationError') return
+      message.error(err.response?.data?.error || 'Lỗi khi chuyển đổi.')
+    } finally {
+      setConvertLoading(false)
+    }
+  }
+
   if (!lead) {
     return (
       <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, color: '#9ca3af' }}>
@@ -183,8 +209,21 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
             <Avatar size={56} src={lead.avatar_url} icon={<UserOutlined />} style={{ background: '#dbeafe', color: '#2563eb' }} />
           </Col>
           <Col flex="auto">
-            <Title level={5} style={{ margin: 0 }}>{lead.display_name || `Khách Zalo (${lead.social_id?.slice(-4)})`}</Title>
-            <Space size={6} style={{ marginTop: 4 }}>
+            <Space align="center" size={12}>
+              <Title level={5} style={{ margin: 0 }}>{lead.display_name || `Khách Zalo (${lead.social_id?.slice(-4)})`}</Title>
+              {lead.status !== 'converted' && lead.status !== 'archived' && (
+                <Button 
+                  size="small" 
+                  type="primary" 
+                  icon={<UserAddOutlined />} 
+                  style={{ background: '#8b5cf6', borderColor: '#8b5cf6', borderRadius: 16, fontSize: 12 }} 
+                  onClick={() => setConvertModalVisible(true)}
+                >
+                  Tạo KH
+                </Button>
+              )}
+            </Space>
+            <Space size={6} style={{ marginTop: 4, display: 'flex' }}>
               <Tag style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.color}30`, borderRadius: 10 }}>{cfg.label}</Tag>
               <Text type="secondary" style={{ fontSize: 12 }}>
                 <WechatOutlined style={{ marginRight: 4 }} />Zalo · {lead.oa_name || 'OA'}
@@ -201,13 +240,33 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
               options={[{ value: null, label: 'Chưa phân công' }, ...employees.map(e => ({ value: e.id, label: e.full_name || e.username }))]}
             />
           </Col>
-          {lead.status !== 'converted' && lead.status !== 'archived' && (
-            <Col>
-              <Button type="primary" icon={<CheckCircleOutlined />} style={{ background: '#10b981', borderColor: '#10b981' }} onClick={() => setConvertModalVisible(true)}>
-                Tạo KH
-              </Button>
-            </Col>
-          )}
+          <Col>
+            <Tooltip title="Xóa hội thoại">
+              <Button 
+                danger 
+                icon={<DeleteOutlined />} 
+                onClick={() => {
+                  Modal.confirm({
+                    title: 'Xóa hội thoại này?',
+                    content: 'Toàn bộ tin nhắn với khách hàng này sẽ bị xóa vĩnh viễn và không thể khôi phục.',
+                    okText: 'Xóa',
+                    okType: 'danger',
+                    cancelText: 'Hủy',
+                    onOk: async () => {
+                      if (maintenanceMode) { message.warning('Hệ thống bảo trì!'); return }
+                      try {
+                        await api.delete(`/zalo/social-leads/${lead.id}/`)
+                        message.success('Đã xóa hội thoại')
+                        onRefresh()
+                      } catch {
+                        message.error('Lỗi khi xóa hội thoại')
+                      }
+                    }
+                  })
+                }} 
+              />
+            </Tooltip>
+          </Col>
         </Row>
       </div>
 
@@ -264,30 +323,35 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
         )}
       </div>
 
-      {/* Footer — Actions */}
-      {lead.status !== 'converted' && lead.status !== 'archived' && (
-        <div style={{ padding: '16px 24px', borderTop: '1px solid #f0f0f0', background: '#fafafa' }}>
-          <Button
-            type="primary"
-            icon={<UserAddOutlined />}
-            block
-            onClick={() => {
-              if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì!'); return }
-              setConvertModalVisible(true)
-            }}
-            style={{
-              background: 'linear-gradient(135deg, #6d28d9, #4f46e5)',
-              border: 'none', height: 40,
-            }}
-          >
-            Chuyển đổi thành Khách hàng
-          </Button>
-          <Text type="secondary" style={{ fontSize: 11, display: 'block', textAlign: 'center', marginTop: 8 }}>
-            <InfoCircleOutlined style={{ marginRight: 4 }} />
-            Nhập số điện thoại để tạo hồ sơ khách hàng chính thức
-          </Text>
+      {/* Footer — Chat Input */}
+      {lead.status !== 'archived' && (
+        <div style={{ padding: '16px 24px', borderTop: '1px solid #f0f0f0', background: '#fff' }}>
+          <div style={{ marginBottom: 8 }}>
+            <Button size="small" icon={<PhoneOutlined />} onClick={() => handleSendMessage(null, true)} loading={sending}>
+              Yêu cầu chia sẻ SĐT
+            </Button>
+          </div>
+          <Space.Compact style={{ width: '100%' }}>
+            <Input
+              placeholder="Nhập tin nhắn..."
+              value={messageText}
+              onChange={e => setMessageText(e.target.value)}
+              onPressEnter={() => handleSendMessage()}
+              disabled={sending}
+            />
+            <Upload beforeUpload={(file) => { handleSendMessage(file, false, false); return false; }} showUploadList={false} multiple={true} accept="image/*">
+              <Button icon={<PictureOutlined />} disabled={sending} />
+            </Upload>
+            <Upload beforeUpload={(file) => { handleSendMessage(file, false, true); return false; }} showUploadList={false} multiple={true}>
+              <Button icon={<PaperClipOutlined />} disabled={sending} />
+            </Upload>
+            <Button type="primary" icon={<SendOutlined />} loading={sending} onClick={() => handleSendMessage()} style={{ background: '#0068ff' }}>
+              Gửi
+            </Button>
+          </Space.Compact>
         </div>
       )}
+
 
       {/* Modal Convert */}
       <Modal
@@ -333,8 +397,8 @@ export default function ZaloInboxPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [employees, setEmployees] = useState([])
 
-  const fetchLeads = useCallback(async () => {
-    setLoading(true)
+  const fetchLeads = useCallback(async (background = false) => {
+    if (!background) setLoading(true)
     try {
       const params = {}
       if (search) params.search = search
@@ -342,8 +406,10 @@ export default function ZaloInboxPage() {
       const res = await api.get('/zalo/social-leads/', { params })
       const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
       setLeads(data)
-    } catch { message.error('Không thể tải danh sách Social Leads.') }
-    finally { setLoading(false) }
+    } catch { 
+      if (!background) message.error('Không thể tải danh sách Social Leads.') 
+    }
+    finally { if (!background) setLoading(false) }
   }, [search, statusFilter])
 
   const fetchDetail = async (leadId) => {
@@ -357,12 +423,16 @@ export default function ZaloInboxPage() {
 
   const fetchEmployees = async () => {
     try {
-      const res = await api.get('/users/employees/')
+      const res = await api.get('/users/users/')
       setEmployees(Array.isArray(res.data) ? res.data : res.data?.results ?? [])
     } catch {}
   }
 
-  useEffect(() => { fetchLeads() }, [fetchLeads])
+  useEffect(() => { 
+    fetchLeads() 
+    const interval = setInterval(() => { fetchLeads(true) }, 3000)
+    return () => clearInterval(interval)
+  }, [fetchLeads])
   useEffect(() => { fetchEmployees() }, [])
 
   const handleSelectLead = (lead) => {

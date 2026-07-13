@@ -33,3 +33,23 @@ Sau đó bạn gõ 3 lệnh quen thuộc: git add ., git commit -m "Đồng bộ
 Kéo dữ liệu từ máy khác về : 
 Bạn gõ git pull để kéo code và file sync_data.json về. Sau đó, "bơm" dữ liệu vào Docker:
 docker exec -it crm_web python manage.py loaddata sync_data.json
+
+
+Dạ nếu anh thấy số quyền vẫn ít thì em đoán 100% là trên máy công ty, các bạn (hoặc anh) đã tạo thêm các quyền thủ công trực tiếp từ giao diện Admin của Django, thay vì gõ code vào file seed_permissions.py. Vì vậy, dữ liệu đó chỉ nằm chết trong Database của máy công ty chứ không lưu trong Source code (Git) để kéo về máy này được.
+
+Rất may là trong thư mục backend của dự án đã có sẵn 2 công cụ chuyên dụng dùng để đồng bộ toàn bộ Database (bao gồm cả phân quyền, nhân viên, vai trò, dữ liệu công ty...) giữa các máy với nhau mà không sợ lỗi Font tiếng Việt.
+
+Ngày mai lên công ty, anh làm đúng 3 bước này để đồng bộ về máy cá nhân nhé:
+
+Bước 1: Trích xuất (Dump) dữ liệu từ máy công ty
+
+Lên máy công ty, mở Terminal ở thư mục dự án và chạy lệnh: docker exec crm_web python dump_sync_data.py
+Lệnh này sẽ tự động đóng gói toàn bộ Database hiện tại thành một file tên là sync_data.json nằm trong thư mục backend.
+Bước 2: Mang file đó về máy cá nhân
+
+Anh copy file sync_data.json vừa được tạo (qua USB, Zalo, hoặc đẩy lên Git) rồi dán đè vào thư mục backend trên máy cá nhân hiện tại.
+Bước 3: Nạp (Load) dữ liệu vào máy cá nhân
+
+Mở Terminal trên máy cá nhân (chỗ anh đang ngồi) và chạy lệnh: docker exec crm_web python load_sync_data.py
+Lệnh này sẽ tự động xóa sạch dữ liệu cũ ở local và nạp 100% dữ liệu từ file JSON vào.
+Làm xong Bước 3, anh F5 lại web thì toàn bộ danh sách Quyền, Vai trò, Tài khoản... sẽ y xì đúc như máy công ty không sai một chữ nào ạ!

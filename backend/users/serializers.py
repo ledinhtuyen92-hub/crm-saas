@@ -606,5 +606,8 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
             "jwt_expiration_hours",
             "max_file_upload_mb",
             "maintenance_mode",
+            "zalo_app_id",
+            "zalo_app_secret",
+            "zalo_webhook_secret",
         ]
 

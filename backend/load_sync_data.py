@@ -10,7 +10,8 @@ import codecs
 import django
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
-sys.path.insert(0, '/app')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, BASE_DIR)
 django.setup()
 
 from django.core.management import call_command
@@ -29,7 +30,7 @@ print("=" * 60)
 print("📖 Bước 2: Đọc file sync_data.json (UTF-16)...")
 print("=" * 60)
 
-sync_file = '/app/sync_data.json'
+sync_file = os.path.join(BASE_DIR, 'sync_data.json')
 try:
     with codecs.open(sync_file, 'r', encoding='utf-16') as f:
         raw = f.read()

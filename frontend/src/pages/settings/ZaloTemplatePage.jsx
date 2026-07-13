@@ -133,6 +133,8 @@ export default function ZaloTemplatePage() {
           appointment: { color: 'cyan', label: 'Nhắc lịch hẹn' },
           promotion: { color: 'magenta', label: 'Khuyến mãi' },
           birthday: { color: 'purple', label: 'Chúc mừng sinh nhật' },
+          care: { color: 'orange', label: 'Thu tiền / Chăm sóc' },
+          delivery_warranty: { color: 'blue', label: 'Giao hàng / Bảo hành' },
           custom: { color: 'default', label: 'Tùy chỉnh' },
         }
         const t = types[text] || types.custom
@@ -261,6 +263,8 @@ export default function ZaloTemplatePage() {
               <Option value="appointment">Nhắc lịch hẹn</Option>
               <Option value="promotion">Khuyến mãi / Marketing</Option>
               <Option value="birthday">Chúc mừng sinh nhật</Option>
+              <Option value="care">Thu tiền / Chăm sóc</Option>
+              <Option value="delivery_warranty">Giao hàng / Bảo hành</Option>
               <Option value="custom">Tùy chỉnh khác</Option>
             </Select>
           </Form.Item>

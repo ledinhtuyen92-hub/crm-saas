@@ -14,6 +14,7 @@ import {
   Col,
   Divider,
   Form,
+  Input,
   InputNumber,
   Row,
   Select,
@@ -65,6 +66,9 @@ export default function AdminSettings() {
           jwt_expiration_hours: res.data.jwt_expiration_hours,
           max_file_upload_mb: res.data.max_file_upload_mb,
           maintenance_mode: res.data.maintenance_mode,
+          zalo_app_id: res.data.zalo_app_id,
+          zalo_app_secret: res.data.zalo_app_secret,
+          zalo_webhook_secret: res.data.zalo_webhook_secret,
         })
       } catch (err) {
         console.error("Failed to fetch system settings:", err)
@@ -85,6 +89,9 @@ export default function AdminSettings() {
         jwt_expiration_hours: values.jwt_expiration_hours,
         max_file_upload_mb: values.max_file_upload_mb,
         maintenance_mode: values.maintenance_mode,
+        zalo_app_id: values.zalo_app_id,
+        zalo_app_secret: values.zalo_app_secret,
+        zalo_webhook_secret: values.zalo_webhook_secret,
       })
       if (refreshSettings) refreshSettings()
       messageApi.success('Đã lưu cấu hình hệ thống SaaS thành công!')
@@ -175,6 +182,9 @@ export default function AdminSettings() {
           tenant_isolation_mode: 'strict',
           max_file_upload_mb: 25,
           maintenance_mode: false,
+          zalo_app_id: '',
+          zalo_app_secret: '',
+          zalo_webhook_secret: '',
         }}
       >
         <Row gutter={[20, 20]}>
@@ -266,7 +276,37 @@ export default function AdminSettings() {
             </Card>
           </Col>
 
+          {/* Cột phải */}
           <Col xs={24} lg={10}>
+            {/* Cấu hình Zalo App (Global) */}
+            <Card style={cardStyle} title={<Text style={{ fontWeight: 700, fontSize: 16 }}>💬 Cấu hình Ứng dụng Zalo (Global)</Text>}>
+              <Alert
+                message="Ứng dụng Zalo dùng chung"
+                description="Cung cấp App ID của Hệ thống để các công ty con (Tenants) có thể ủy quyền Zalo OA mà không cần tự tạo App riêng. Cần xét duyệt Public App trên Zalo Developers."
+                type="info"
+                showIcon
+                style={{ marginBottom: 20, borderRadius: 8 }}
+              />
+              <Form.Item
+                name="zalo_app_id"
+                label="Zalo App ID"
+              >
+                <Input placeholder="Ví dụ: 123456789012345678" />
+              </Form.Item>
+              <Form.Item
+                name="zalo_app_secret"
+                label="Zalo App Secret"
+              >
+                <Input.Password placeholder="Nhập Secret Key" />
+              </Form.Item>
+              <Form.Item
+                name="zalo_webhook_secret"
+                label="Webhook Secret (Mac Key)"
+              >
+                <Input.Password placeholder="Dùng để xác thực chữ ký Webhook từ Zalo" />
+              </Form.Item>
+            </Card>
+
             <Card style={cardStyle} title={<Text style={{ fontWeight: 700, fontSize: 16 }}>🛡️ Bảo mật & Cô lập Dữ liệu Multi-Tenant</Text>}>
               <Form.Item
                 name="tenant_isolation_mode"

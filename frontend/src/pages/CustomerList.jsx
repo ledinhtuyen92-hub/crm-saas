@@ -134,6 +134,8 @@ function CustomerList() {
   const [interactions, setInteractions] = useState([])
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [znsModalVisible, setZnsModalVisible] = useState(false)
+  const [bulkZnsModalVisible, setBulkZnsModalVisible] = useState(false)
+  const [selectedRowKeys, setSelectedRowKeys] = useState([])
 
   // Modal Add Interaction
   const [interactionModalVisible, setInteractionModalVisible] = useState(false)
@@ -662,16 +664,16 @@ function CustomerList() {
 
   return (
     <section>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <div>
-          <Title level={3} style={{ margin: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
+        <div style={{ flexShrink: 0 }}>
+          <Title level={3} style={{ margin: 0, whiteSpace: 'nowrap' }}>
             <TeamOutlined style={{ marginRight: 10, color: '#1649c9' }} />
             Quản lý Khách hàng & Leads
           </Title>
           <Text type="secondary">Theo dõi hành trình khách hàng từ Lead đến giao dịch</Text>
         </div>
 
-        <Space>
+        <Space wrap style={{ flex: 1, justifyContent: 'flex-end' }}>
           {(hasPermission('crm.auto_assign')) && (
             <Tooltip title="Tự động chia đều khách hàng chưa phân công cho Sale">
               <Button
@@ -682,6 +684,16 @@ function CustomerList() {
               </Button>
             </Tooltip>
           )}
+
+          <Button 
+            type="primary" 
+            style={{ background: '#10b981', borderColor: '#10b981' }}
+            icon={<MessageOutlined />}
+            disabled={selectedRowKeys.length === 0}
+            onClick={() => { if (!checkMaintenance()) setBulkZnsModalVisible(true) }}
+          >
+            Gửi ZNS Hàng loạt {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length})` : ''}
+          </Button>
 
           {(hasPermission('crm.import')) && (
             <Button
@@ -785,6 +797,10 @@ function CustomerList() {
 
       {/* Main Table */}
       <Table
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
+        }}
         columns={columns}
         dataSource={customers}
         loading={loading}
@@ -1296,6 +1312,15 @@ function CustomerList() {
           customer={currentCustomer}
         />
       )}
+      
+      <ZnsSendModal
+        visible={bulkZnsModalVisible}
+        onCancel={() => {
+          setBulkZnsModalVisible(false)
+          setSelectedRowKeys([])
+        }}
+        customers={customers.filter(c => selectedRowKeys.includes(c.id))}
+      />
     </section>
   )
 }

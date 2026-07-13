@@ -85,7 +85,7 @@ def trigger_zns_on_order_completed(sender, instance, **kwargs):
     
     template = ZaloMessageTemplate.objects.filter(
         company=company,
-        template_type__in=[ZaloMessageTemplate.TYPE_CARE, ZaloMessageTemplate.TYPE_ORDER_CONFIRM],
+        template_type__in=[ZaloMessageTemplate.TYPE_DELIVERY_WARRANTY, ZaloMessageTemplate.TYPE_CARE, ZaloMessageTemplate.TYPE_ORDER_CONFIRM],
         is_active=True
     ).first()
 

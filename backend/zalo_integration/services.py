@@ -19,23 +19,31 @@ ZALO_SEND_ZNS_URL = "https://business.openapi.zalo.me/message/template"
 ZALO_USER_PROFILE_URL = "https://openapi.zalo.me/v2.0/oa/getprofile"
 ZALO_SEND_MSG_URL = "https://openapi.zalo.me/v2.0/oa/message"
 ZALO_UPLOAD_FILE_URL = "https://openapi.zalo.me/v2.0/oa/upload/file"
+ZALO_UPLOAD_IMAGE_URL = "https://openapi.zalo.me/v2.0/oa/upload/image"
 
 
 # ── Xác thực Webhook ─────────────────────────────────────────────────────────
 
-def verify_zalo_webhook_signature(request_body: bytes, received_signature: str, app_secret: str) -> bool:
+def verify_zalo_webhook_signature(request_body: bytes, received_signature: str, app_id: str, timestamp: str, mac_key: str) -> bool:
     """
-    Xác thực chữ ký HMAC-SHA256 từ Zalo.
-    Zalo gửi chữ ký trong header: X-ZEvent-Signature: <mac>
+    Xác thực chữ ký từ Zalo OA Webhook.
+    Công thức của Zalo: mac = sha256(appId + data + timestamp + macKey)
     """
-    if not received_signature or not app_secret:
+    if not received_signature or not mac_key:
         return False
-    expected = hmac.new(
-        app_secret.encode("utf-8"),
-        request_body,
-        hashlib.sha256,
-    ).hexdigest()
-    return hmac.compare_digest(expected, received_signature)
+    
+    try:
+        data_str = request_body.decode("utf-8")
+        payload = app_id + data_str + timestamp + mac_key
+        expected = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        
+        if received_signature.startswith("mac="):
+            received_signature = received_signature[4:]
+            
+        return expected == received_signature
+    except Exception as e:
+        logger.error(f"Error verifying signature: {e}")
+        return False
 
 
 # ── Chuẩn hóa số điện thoại ──────────────────────────────────────────────────
@@ -136,11 +144,11 @@ def refresh_zalo_access_token(oa_config):
         response = requests.post(
             ZALO_TOKEN_URL,
             data={
-                "app_id": oa_config.app_id,
+                "app_id": oa_config.get_app_id(),
                 "grant_type": "refresh_token",
                 "refresh_token": oa_config.refresh_token,
             },
-            headers={"secret_key": oa_config.secret_key},
+            headers={"secret_key": oa_config.get_secret_key()},
             timeout=15,
         )
         response.raise_for_status()
@@ -258,9 +266,36 @@ def upload_file_to_zalo(oa_config, file_obj) -> str:
         return ""
 
 
-def send_zalo_chat_message(oa_config, zalo_uid: str, text: str = "", file_token: str = "") -> dict:
+def upload_image_to_zalo(oa_config, file_obj) -> str:
+    """
+    Upload hình ảnh lên Zalo để lấy attachment_id.
+    """
+    if oa_config.is_token_near_expiry:
+        refresh_zalo_access_token(oa_config)
+        oa_config.refresh_from_db()
+
+    try:
+        response = requests.post(
+            ZALO_UPLOAD_IMAGE_URL,
+            headers={"access_token": oa_config.access_token},
+            files={"file": (file_obj.name, file_obj, file_obj.content_type)},
+            timeout=30,
+        )
+        response.raise_for_status()
+        res_data = response.json()
+        if res_data.get("error") == 0:
+            return res_data.get("data", {}).get("attachment_id", "")
+        logger.error(f"[ZaloUploadImage] Error: {res_data}")
+        return ""
+    except Exception as e:
+        logger.error(f"[ZaloUploadImage] Exception: {e}")
+        return ""
+
+
+def send_zalo_chat_message(oa_config, zalo_uid: str, text: str = "", file_token: str = "", image_id: str = "", request_phone: bool = False) -> dict:
     """
     Gửi tin nhắn chat thông thường tới Zalo User (Text hoặc File).
+    Nếu request_phone=True, gửi yêu cầu chia sẻ số điện thoại.
     """
     if oa_config.is_token_near_expiry:
         refresh_zalo_access_token(oa_config)
@@ -268,7 +303,35 @@ def send_zalo_chat_message(oa_config, zalo_uid: str, text: str = "", file_token:
 
     payload = {"recipient": {"user_id": zalo_uid}, "message": {}}
 
-    if file_token:
+    if request_phone:
+        payload["message"] = {
+            "text": text or "Vui lòng chia sẻ số điện thoại để chúng tôi có thể liên hệ hỗ trợ tốt nhất.",
+            "attachment": {
+                "type": "template",
+                "payload": {
+                    "template_type": "request_user_info",
+                    "elements": [{
+                        "title": "Chia sẻ số điện thoại",
+                        "subtitle": "Đồng ý chia sẻ số điện thoại của bạn với OA",
+                        "image_url": ""
+                    }]
+                }
+            }
+        }
+    elif image_id:
+        payload["message"]["attachment"] = {
+            "type": "template",
+            "payload": {
+                "template_type": "media",
+                "elements": [{
+                    "media_type": "image",
+                    "attachment_id": image_id
+                }]
+            }
+        }
+        if text:
+            payload["message"]["text"] = text
+    elif file_token:
         payload["message"]["attachment"] = {
             "type": "file",
             "payload": {"token": file_token}
@@ -300,9 +363,11 @@ def fetch_zalo_user_profile(oa_config, zalo_user_id: str) -> dict:
     Returns dict với keys: display_name, avatar_url, hoặc {} nếu lỗi.
     """
     try:
+        import json
+        data_param = json.dumps({"user_id": zalo_user_id})
         response = requests.get(
             ZALO_USER_PROFILE_URL,
-            params={"user_id": zalo_user_id},
+            params={"data": data_param},
             headers={"access_token": oa_config.access_token},
             timeout=10,
         )

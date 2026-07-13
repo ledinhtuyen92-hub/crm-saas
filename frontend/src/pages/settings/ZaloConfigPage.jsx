@@ -55,12 +55,13 @@ export default function ZaloConfigPage() {
   }, [])
 
   const handleZaloOAuthLogin = () => {
-    if (!config || !config.app_id) {
-      message.warning('Vui lòng điền và lưu App ID trước khi bấm Uỷ quyền.')
+    const appId = config.resolved_app_id || config.app_id
+    if (!appId) {
+      message.warning('Vui lòng lưu cấu hình App ID (hoặc dùng cấu hình hệ thống) trước khi bấm Uỷ quyền.')
       return
     }
     const redirectUri = window.location.origin + window.location.pathname
-    const oauthUrl = `https://oauth.zaloapp.com/v4/oa/permission?app_id=${config.app_id}&redirect_uri=${encodeURIComponent(redirectUri)}`
+    const oauthUrl = `https://oauth.zaloapp.com/v4/oa/permission?app_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}`
     window.location.href = oauthUrl
   }
 
@@ -68,10 +69,12 @@ export default function ZaloConfigPage() {
     if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
     if (config) {
       form.setFieldsValue({
+        use_system_config: config.use_system_config,
         oa_name: config.oa_name,
         app_id: config.app_id,
         oa_id: config.oa_id,
-        webhook_secret: '',
+        secret_key: config.secret_key,
+        webhook_secret: config.webhook_secret,
         access_token: config.access_token,
         refresh_token: config.refresh_token,
         auto_send_payment_zns: config.auto_send_payment_zns,
@@ -80,9 +83,20 @@ export default function ZaloConfigPage() {
         lead_cleanup_days: config.lead_cleanup_days,
         is_active: config.is_active,
       })
+    } else {
+      form.setFieldsValue({
+        use_system_config: true,
+        auto_send_payment_zns: false,
+        auto_send_delivery_zns: false,
+        auto_send_birthday_zns: false,
+        lead_cleanup_days: 30,
+        is_active: true,
+      })
     }
     setModalVisible(true)
   }
+
+  const useSystemConfig = Form.useWatch('use_system_config', form)
 
   const handleSave = async () => {
     try {
@@ -220,9 +234,12 @@ export default function ZaloConfigPage() {
           {/* Thông tin chi tiết */}
           <Col span={24}>
             <Card style={{ borderRadius: 12 }} title={<><InfoCircleOutlined style={{ marginRight: 8 }} />Chi tiết kết nối</>}>
-              <Descriptions column={2} size="small">
+              <Descriptions column={2} size="small" bordered style={{ borderRadius: 8, overflow: 'hidden' }}>
+                <Descriptions.Item label="Sử dụng Cấu hình App">
+                  {config.use_system_config ? <Tag color="blue">Từ Hệ thống SaaS</Tag> : <Tag color="default">Riêng lẻ (Custom)</Tag>}
+                </Descriptions.Item>
                 <Descriptions.Item label="App ID">
-                  <Text code>{config.app_id}</Text>
+                  <Text code>{config.resolved_app_id || config.app_id || '—'}</Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="OA ID">
                   <Text code>{config.oa_id || '—'}</Text>
@@ -272,50 +289,72 @@ export default function ZaloConfigPage() {
         width={560}
         okButtonProps={{ style: { background: '#0068ff', borderColor: '#0068ff' } }}
       >
-        <Alert
-          type="info" showIcon style={{ marginBottom: 20 }}
-          message="Lấy thông tin App ID và Secret Key từ trang Zalo for Developers tại: developers.zalo.me"
-        />
         <Form form={form} layout="vertical">
+          <Alert
+            type={useSystemConfig ? "success" : "info"}
+            showIcon
+            style={{ marginBottom: 20, borderRadius: 8, fontWeight: 500 }}
+            message={useSystemConfig ? "Bạn đang dùng Cấu hình Zalo App dùng chung của hệ thống. Bạn không cần phải tạo Zalo App riêng." : "Bạn đang tự cấu hình App riêng. Hãy lấy App ID và Secret Key từ trang developers.zalo.me"}
+          />
+          <Form.Item name="use_system_config" valuePropName="checked">
+            <Switch 
+              checkedChildren="Dùng cấu hình hệ thống (Khuyên dùng)" 
+              unCheckedChildren="Tự cấu hình App riêng" 
+              style={{ width: '100%' }} 
+              onChange={(checked) => {
+                if (checked) {
+                  form.setFieldsValue({
+                    app_id: '',
+                    secret_key: '',
+                    webhook_secret: '',
+                  })
+                }
+              }}
+            />
+          </Form.Item>
           <Form.Item name="oa_name" label="Tên Zalo OA" rules={[{ required: true, message: 'Vui lòng nhập tên OA' }]}>
-            <Input placeholder="VD: Fujitech Door Official" prefix={<ApiOutlined />} />
+            <Input placeholder="VD: Mộc Lê Gia Official" prefix={<ApiOutlined />} size="large" />
           </Form.Item>
-          <Row gutter={12}>
-            <Col span={12}>
-              <Form.Item name="app_id" label="App ID" rules={[{ required: true, message: 'Bắt buộc' }]}>
-                <Input placeholder="App ID từ Zalo Dev" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="oa_id" label="OA ID">
-                <Input placeholder="Official Account ID" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item
-            name="secret_key"
-            label={<span>App Secret Key <Text type="secondary" style={{ fontSize: 11 }}>(để trống nếu không đổi)</Text></span>}
-          >
-            <Input.Password placeholder="Nhập Secret Key..." prefix={<KeyOutlined />} />
-          </Form.Item>
+          
+          <div style={{ background: useSystemConfig ? '#f3f4f6' : 'transparent', padding: useSystemConfig ? 16 : 0, borderRadius: 8, marginBottom: 16 }}>
+            <Row gutter={12}>
+              <Col span={12}>
+                <Form.Item name="app_id" label="App ID" rules={[{ required: !useSystemConfig, message: 'Bắt buộc' }]}>
+                  <Input placeholder={useSystemConfig ? "Hệ thống tự điền" : "App ID từ Zalo Dev"} disabled={useSystemConfig} />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="oa_id" label="OA ID (Official Account ID)">
+                  <Input placeholder="Nhập để xác thực tin nhắn đúng OA" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item
+              name="secret_key"
+              label={<span>App Secret Key <Text type="secondary" style={{ fontSize: 11 }}>{useSystemConfig ? '(Hệ thống tự điền)' : '(để trống nếu không đổi)'}</Text></span>}
+            >
+              <Input.Password placeholder={useSystemConfig ? "Hệ thống tự điền" : "Nhập Secret Key..."} prefix={<KeyOutlined />} disabled={useSystemConfig} />
+            </Form.Item>
+            <Form.Item name="webhook_secret" label={<span>Webhook Secret <Tooltip title="Dùng để bảo mật Webhook"><InfoCircleOutlined /></Tooltip></span>}>
+              <Input.Password placeholder={useSystemConfig ? "Hệ thống tự điền" : "Webhook secret (tùy chọn)"} disabled={useSystemConfig} />
+            </Form.Item>
+          </div>
+
           <Collapse
             ghost
             items={[
               {
                 key: '1',
-                label: <Text type="secondary" style={{ fontSize: 13 }}>⚙️ Cấu hình nâng cao (Webhook Secret & Token thủ công)</Text>,
+                label: <Text type="secondary" style={{ fontSize: 13, fontWeight: 600 }}>⚙️ Token thủ công (Dành cho Developer)</Text>,
                 children: (
-                  <>
-                    <Form.Item name="webhook_secret" label={<span>Webhook Secret <Tooltip title="Dùng để bảo mật Webhook (tuỳ chọn)"><InfoCircleOutlined /></Tooltip></span>}>
-                      <Input.Password placeholder="Webhook secret (tùy chọn)" />
-                    </Form.Item>
-                    <Form.Item name="access_token" label="Access Token thủ công (Nếu không dùng nút Đăng nhập tự động)">
+                  <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, border: '1px dashed #cbd5e1' }}>
+                    <Form.Item name="access_token" label="Access Token thủ công" style={{ marginBottom: 12 }}>
                       <Input.TextArea rows={2} placeholder="Nhập Access Token (nếu có)" />
                     </Form.Item>
-                    <Form.Item name="refresh_token" label="Refresh Token thủ công">
+                    <Form.Item name="refresh_token" label="Refresh Token thủ công" style={{ marginBottom: 0 }}>
                       <Input.TextArea rows={2} placeholder="Nhập Refresh Token" />
                     </Form.Item>
-                  </>
+                  </div>
                 ),
               },
             ]}
