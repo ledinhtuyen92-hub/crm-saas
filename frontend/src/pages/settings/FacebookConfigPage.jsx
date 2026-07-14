@@ -459,6 +459,13 @@ export default function FacebookConfigPage() {
               >
                 <Input.Password placeholder={editingPage && !isCreatingNew ? 'Để trống nếu không thay đổi' : 'Nhập App Secret...'} />
               </Form.Item>
+              <Form.Item
+                name="webhook_verify_token"
+                label="Webhook Verify Token"
+                tooltip="Chuỗi bí mật tự đặt, khai báo trùng trên Meta Developers"
+              >
+                <Input placeholder="VD: mysecret_2025" />
+              </Form.Item>
             </>
           )}
 
@@ -467,19 +474,13 @@ export default function FacebookConfigPage() {
               type="info"
               showIcon
               style={{ marginBottom: 12, borderRadius: 8 }}
-              message="Sẽ dùng App ID và App Secret do SuperAdmin cấu hình trong Cài đặt Hệ thống."
+              message="Sẽ dùng App ID, App Secret và Webhook Verify Token do SuperAdmin cấu hình trong Cài đặt Hệ thống."
             />
           )}
 
-          <Divider>🔗 Kết nối & Webhook</Divider>
+          <Divider>🔗 Kết nối Webhook</Divider>
 
-          <Form.Item
-            name="webhook_verify_token"
-            label="Webhook Verify Token"
-            tooltip="Chuỗi bí mật tự đặt, khai báo trùng trên Meta Developers"
-          >
-            <Input placeholder="VD: mysecret_2025" />
-          </Form.Item>
+
 
           <Row gutter={16}>
             <Col span={12}>

@@ -360,10 +360,19 @@ class FacebookWebhookView(APIView):
         token = request.query_params.get("hub.verify_token")
 
         if mode == "subscribe" and challenge:
-            # Kiểm tra verify token với tất cả pages đang active
-            valid = FacebookPageConfig.objects.filter(
-                webhook_verify_token=token, is_active=True
-            ).exists()
+            from users.models import SystemSettings
+            sys_settings = SystemSettings.objects.first()
+            
+            # Kiểm tra verify token với config của system HOẶC các pages đang active
+            valid = False
+            if sys_settings and sys_settings.facebook_webhook_secret == token:
+                valid = True
+            
+            if not valid:
+                valid = FacebookPageConfig.objects.filter(
+                    webhook_verify_token=token, is_active=True
+                ).exists()
+
             if valid:
                 logger.info(f"[Facebook Webhook] Verification successful.")
                 return HttpResponse(challenge, content_type="text/plain")

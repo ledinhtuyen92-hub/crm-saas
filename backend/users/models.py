@@ -459,8 +459,15 @@ class SystemSettings(models.Model):
         max_length=255,
         blank=True,
         null=True,
-        verbose_name="System Facebook App Secret",
-        help_text="App Secret dùng chung cho các tenant (Meta Developers).",
+        verbose_name="Facebook App Secret chung",
+        help_text="App Secret mặc định của ứng dụng Facebook hệ thống.",
+    )
+    facebook_webhook_secret = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Facebook Webhook Verify Token chung",
+        help_text="Mã xác thực webhook hệ thống.",
     )
 
     class Meta:

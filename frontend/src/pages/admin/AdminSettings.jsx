@@ -71,6 +71,7 @@ export default function AdminSettings() {
           zalo_webhook_secret: res.data.zalo_webhook_secret,
           facebook_app_id: res.data.facebook_app_id,
           facebook_app_secret: res.data.facebook_app_secret,
+          facebook_webhook_secret: res.data.facebook_webhook_secret,
         })
       } catch (err) {
         console.error("Failed to fetch system settings:", err)
@@ -96,6 +97,7 @@ export default function AdminSettings() {
         zalo_webhook_secret: values.zalo_webhook_secret,
         facebook_app_id: values.facebook_app_id,
         facebook_app_secret: values.facebook_app_secret,
+        facebook_webhook_secret: values.facebook_webhook_secret,
       })
       if (refreshSettings) refreshSettings()
       messageApi.success('Đã lưu cấu hình hệ thống SaaS thành công!')
@@ -330,6 +332,12 @@ export default function AdminSettings() {
                 label="Facebook App Secret"
               >
                 <Input.Password placeholder="Nhập App Secret từ Meta Developers" />
+              </Form.Item>
+              <Form.Item
+                name="facebook_webhook_secret"
+                label="Webhook Verify Token (Tùy chỉnh)"
+              >
+                <Input.Password placeholder="Nhập mã xác thực Webhook tự định nghĩa" />
               </Form.Item>
             </Card>
 
