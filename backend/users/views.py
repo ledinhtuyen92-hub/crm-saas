@@ -7,7 +7,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import Company, CompanySettings, Permission, Role, Department
-from .permissions import IsCompanyAdmin, IsSuperAdmin, IsCompanyAdminOrReadOnly, CanManageCompanySettings
+from .permissions import IsCompanyAdmin, IsSuperAdmin, IsCompanyAdminOrReadOnly, CanManageCompanySettings, ActionBasedPermission
 from .serializers import (
     ChangePasswordSerializer,
     CompanyRegistrationSerializer,

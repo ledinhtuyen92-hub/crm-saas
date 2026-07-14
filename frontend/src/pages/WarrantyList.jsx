@@ -56,7 +56,7 @@ export default function WarrantyList() {
   const [companySettings, setCompanySettings] = useState(null)
 
   const canEdit = hasPermission('warranty.edit')
-  const canCreate = hasPermission('warranty.edit')
+  const canCreate = hasPermission('warranty.create') || hasPermission('warranty.edit')
   const canDelete = hasPermission('warranty.delete')
 
   const fetchDataForForm = async () => {

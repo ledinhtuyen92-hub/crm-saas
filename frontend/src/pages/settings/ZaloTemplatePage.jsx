@@ -15,6 +15,7 @@ const { Option } = Select
 
 export default function ZaloTemplatePage() {
   const { maintenanceMode, hasPermission } = useAuth()
+  const canManageTemplates = hasPermission('zalo.manage_templates') || hasPermission('zalo.config')
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
@@ -162,14 +163,14 @@ export default function ZaloTemplatePage() {
       key: 'action',
       render: (_, record) => (
         <Space size="middle">
-          {hasPermission('zalo.config') && (
+          {canManageTemplates && (
             <Button
               type="text"
               icon={<EditOutlined />}
               onClick={() => handleOpenModal(record)}
             />
           )}
-          {hasPermission('zalo.config') && (
+          {canManageTemplates && (
             <Button
               type="text"
               danger
@@ -201,7 +202,7 @@ export default function ZaloTemplatePage() {
           </Title>
           <Text type="secondary">Đồng bộ các mẫu tin nhắn ZNS đã được Zalo OA xét duyệt để gửi cho khách hàng</Text>
         </div>
-        {hasPermission('zalo.config') && (
+        {canManageTemplates && (
           <Button
             type="primary"
             icon={<PlusOutlined />}
