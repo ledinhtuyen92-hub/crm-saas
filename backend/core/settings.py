@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'finance',
     'delivery',
     'zalo_integration',
+    'facebook_integration',
 ]
 
 MIDDLEWARE = [

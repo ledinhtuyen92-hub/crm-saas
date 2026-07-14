@@ -142,6 +142,11 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           icon: <WechatOutlined style={{ color: '#0068ff' }} />,
           label: <Link to="/zalo/inbox">Zalo Inbox</Link>,
         }] : []),
+        ...(isModuleActive('facebook') && hasPermission('facebook.view_inbox') ? [{
+          key: '/facebook/inbox',
+          icon: <span style={{ color: '#1877f2', fontWeight: 900, fontSize: 14 }}>𝐟</span>,
+          label: <Link to="/facebook/inbox">Facebook Inbox</Link>,
+        }] : []),
         ...(isCompanyAdmin
           ? [
               { type: 'divider' },
@@ -178,6 +183,11 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                     key: '/settings/zalo-templates',
                     icon: <MessageOutlined />,
                     label: <Link to="/settings/zalo-templates">Mẫu Zalo ZNS</Link>,
+                  }] : []),
+                  ...(isModuleActive('facebook') && hasPermission('facebook.manage_config') ? [{
+                    key: '/settings/facebook',
+                    icon: <span style={{ color: '#1877f2', fontWeight: 900 }}>𝐟</span>,
+                    label: <Link to="/settings/facebook">Cấu hình Facebook</Link>,
                   }] : []),
                 ],
               },

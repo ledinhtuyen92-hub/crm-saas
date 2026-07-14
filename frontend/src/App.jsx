@@ -39,6 +39,8 @@ import CompanyGeneralSettings from './pages/settings/CompanyGeneralSettings'
 import ZaloInboxPage from './pages/ZaloInboxPage'
 import ZaloConfigPage from './pages/settings/ZaloConfigPage'
 import ZaloTemplatePage from './pages/settings/ZaloTemplatePage'
+import FacebookInboxPage from './pages/FacebookInboxPage'
+import FacebookConfigPage from './pages/settings/FacebookConfigPage'
 
 function ApplicationLayout({ isDarkMode, toggleTheme }) {
   return (
@@ -174,7 +176,23 @@ function App() {
                 </ModuleRoute>
               } />
 
-              {/* Company Admin routes */}
+              {/* Facebook Multi-Page Integration */}
+              <Route path="/facebook/inbox" element={
+                <ModuleRoute moduleCode="facebook">
+                  <PermissionRoute permissionCode="facebook.view_inbox" fallback="/dashboard">
+                    <FacebookInboxPage />
+                  </PermissionRoute>
+                </ModuleRoute>
+              } />
+
+              <Route path="/settings/facebook" element={
+                <ModuleRoute moduleCode="facebook">
+                  <PermissionRoute permissionCode="facebook.manage_config" fallback="/dashboard">
+                    <FacebookConfigPage />
+                  </PermissionRoute>
+                </ModuleRoute>
+              } />
+
               <Route
                 path="/settings/general"
                 element={

@@ -24,4 +24,6 @@ urlpatterns = [
     path('api/dashboard/', include('dashboard.urls')),
     # ── Zalo Integration (Omnichannel) ─────────────────────────────────
     path('api/zalo/', include('zalo_integration.urls')),
+    # ── Facebook Multi-Page Integration ───────────────────────────────
+    path('api/facebook/', include('facebook_integration.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
