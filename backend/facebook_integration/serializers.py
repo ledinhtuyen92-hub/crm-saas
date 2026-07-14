@@ -80,6 +80,7 @@ class FacebookLeadListSerializer(serializers.ModelSerializer):
     """Serializer nhẹ hơn dùng cho danh sách (không include messages)."""
     status = serializers.CharField(read_only=True)
     page_name = serializers.CharField(source="page_config.page_name", read_only=True)
+    page_id = serializers.CharField(source="page_config.page_id", read_only=True)
     customer_name = serializers.CharField(source="customer.name", read_only=True, default=None)
 
     class Meta:
