@@ -69,6 +69,8 @@ export default function AdminSettings() {
           zalo_app_id: res.data.zalo_app_id,
           zalo_app_secret: res.data.zalo_app_secret,
           zalo_webhook_secret: res.data.zalo_webhook_secret,
+          facebook_app_id: res.data.facebook_app_id,
+          facebook_app_secret: res.data.facebook_app_secret,
         })
       } catch (err) {
         console.error("Failed to fetch system settings:", err)
@@ -92,6 +94,8 @@ export default function AdminSettings() {
         zalo_app_id: values.zalo_app_id,
         zalo_app_secret: values.zalo_app_secret,
         zalo_webhook_secret: values.zalo_webhook_secret,
+        facebook_app_id: values.facebook_app_id,
+        facebook_app_secret: values.facebook_app_secret,
       })
       if (refreshSettings) refreshSettings()
       messageApi.success('Đã lưu cấu hình hệ thống SaaS thành công!')
@@ -304,6 +308,28 @@ export default function AdminSettings() {
                 label="Webhook Secret (Mac Key)"
               >
                 <Input.Password placeholder="Dùng để xác thực chữ ký Webhook từ Zalo" />
+              </Form.Item>
+            </Card>
+
+            <Card style={cardStyle} title={<Text style={{ fontWeight: 700, fontSize: 16 }}>𝐟 Cấu hình Ứng dụng Facebook (Global)</Text>}>
+              <Alert
+                message="Ứng dụng Facebook dùng chung"
+                description="Cung cấp App ID và App Secret của Ứng dụng Meta để các công ty con có thể đăng nhập Facebook OAuth và lấy Page Access Token mà không cần tạo App riêng. App cần được Meta phê duyệt quyền pages_messaging."
+                type="info"
+                showIcon
+                style={{ marginBottom: 20, borderRadius: 8 }}
+              />
+              <Form.Item
+                name="facebook_app_id"
+                label="Facebook App ID"
+              >
+                <Input placeholder="Ví dụ: 123456789012345" />
+              </Form.Item>
+              <Form.Item
+                name="facebook_app_secret"
+                label="Facebook App Secret"
+              >
+                <Input.Password placeholder="Nhập App Secret từ Meta Developers" />
               </Form.Item>
             </Card>
 

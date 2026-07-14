@@ -621,5 +621,7 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
             "zalo_app_id",
             "zalo_app_secret",
             "zalo_webhook_secret",
+            "facebook_app_id",
+            "facebook_app_secret",
         ]
 

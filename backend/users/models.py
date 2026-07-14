@@ -447,6 +447,22 @@ class SystemSettings(models.Model):
         help_text="Mac Key dùng chung để xác minh webhook từ Zalo.",
     )
 
+    # ── Facebook System-wide Config ──────────────────────────────────────────
+    facebook_app_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="System Facebook App ID",
+        help_text="App ID dùng chung cho các tenant (Lấy từ Meta Developers).",
+    )
+    facebook_app_secret = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="System Facebook App Secret",
+        help_text="App Secret dùng chung cho các tenant (Meta Developers).",
+    )
+
     class Meta:
         verbose_name = "Cấu hình Hệ thống"
         verbose_name_plural = "Cấu hình Hệ thống"
