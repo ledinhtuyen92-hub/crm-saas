@@ -477,12 +477,7 @@ export default function FacebookConfigPage() {
               message="Sẽ dùng App ID, App Secret và Webhook Verify Token do SuperAdmin cấu hình trong Cài đặt Hệ thống."
             />
           )}
-
-          <Divider>🔗 Kết nối Webhook</Divider>
-
-
-
-          <Row gutter={16}>
+          <Divider>✅ Trạng thái & Tính năng</Divider>          <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="is_active" label="Trạng thái" valuePropName="checked">
                 <Switch checkedChildren="Hoạt động" unCheckedChildren="Tạm dừng" />
