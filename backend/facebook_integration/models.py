@@ -206,6 +206,10 @@ class FacebookLead(models.Model):
         related_name="facebook_leads_assigned",
         verbose_name="Nhân viên phụ trách",
     )
+    has_unread_message = models.BooleanField(
+        default=False,
+        verbose_name="Có tin nhắn chưa đọc",
+    )
     last_message_at = models.DateTimeField(
         null=True,
         blank=True,

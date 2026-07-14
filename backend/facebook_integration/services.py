@@ -299,6 +299,7 @@ def process_fb_webhook_message(entry: dict):
 
         lead.last_message_at = timezone.now()
         lead.last_message_preview = (msg_text or "[Đính kèm]")[:255]
+        lead.has_unread_message = True
         lead.save()
 
         # Lưu tin nhắn

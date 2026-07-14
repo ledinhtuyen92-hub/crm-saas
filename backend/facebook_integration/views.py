@@ -261,6 +261,14 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
             return FacebookLeadSerializer
         return FacebookLeadListSerializer
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.has_unread_message:
+            instance.has_unread_message = False
+            instance.save(update_fields=["has_unread_message"])
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
     @action(detail=True, methods=["post"], url_path="send-message")
     def send_message(self, request, pk=None):
         """Gửi tin nhắn từ Trang Facebook tới khách hàng."""

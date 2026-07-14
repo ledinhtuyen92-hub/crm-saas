@@ -70,10 +70,10 @@ class FacebookLeadSerializer(serializers.ModelSerializer):
             "customer", "customer_name",
             "assigned_to", "assigned_to_name",
             "last_message_at", "last_message_preview",
-            "messages",
+            "has_unread_message", "messages",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "company", "fb_user_id", "status", "created_at", "updated_at"]
+        read_only_fields = ["id", "company", "fb_user_id", "status", "has_unread_message", "created_at", "updated_at"]
 
 
 class FacebookLeadListSerializer(serializers.ModelSerializer):
@@ -91,5 +91,5 @@ class FacebookLeadListSerializer(serializers.ModelSerializer):
             "detected_phone", "is_customer_converted", "status",
             "customer", "customer_name",
             "last_message_at", "last_message_preview",
-            "created_at",
+            "has_unread_message", "created_at",
         ]

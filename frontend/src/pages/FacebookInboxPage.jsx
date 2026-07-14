@@ -68,17 +68,19 @@ function ConvItem({ lead, selected, onClick }) {
         transition: 'all 0.15s',
       }}
     >
-      <Badge
-        dot
-        style={{ background: lead.is_customer_converted ? '#10b981' : '#f59e0b' }}
-        offset={[-3, 40]}
-      >
-        <Avatar
-          src={lead.fb_user_avatar || null}
-          icon={!lead.fb_user_avatar ? <UserOutlined /> : null}
-          size={44}
-          style={{ background: '#dbeafe', color: '#1877f2', flexShrink: 0 }}
-        />
+      <Badge dot={lead.has_unread_message} color="#ef4444" offset={[-4, 4]}>
+        <Badge
+          dot
+          style={{ background: lead.is_customer_converted ? '#10b981' : '#f59e0b' }}
+          offset={[-3, 40]}
+        >
+          <Avatar
+            src={lead.fb_user_avatar || null}
+            icon={!lead.fb_user_avatar ? <UserOutlined /> : null}
+            size={44}
+            style={{ background: '#dbeafe', color: '#1877f2', flexShrink: 0 }}
+          />
+        </Badge>
       </Badge>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -172,8 +174,8 @@ export default function FacebookInboxPage() {
     } catch { /* silent */ }
   }
 
-  const fetchLeads = async () => {
-    setLoading(true)
+  const fetchLeads = async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
       const params = {}
       if (selectedPage && selectedPage !== 'all') params.page_config = selectedPage
@@ -181,22 +183,37 @@ export default function FacebookInboxPage() {
       if (statusFilter) params.status = statusFilter
       const res = await api.get('/facebook/leads/', { params })
       setLeads(Array.isArray(res.data) ? res.data : res.data?.results ?? [])
-    } catch { message.error('Không thể tải danh sách hội thoại Facebook.') }
-    finally { setLoading(false) }
+    } catch { if (!silent) message.error('Không thể tải danh sách hội thoại Facebook.') }
+    finally { if (!silent) setLoading(false) }
   }
 
-  const fetchMessages = async (lead) => {
-    setMsgLoading(true)
+  const fetchMessages = async (lead, silent = false) => {
+    if (!silent) setMsgLoading(true)
     try {
       const res = await api.get(`/facebook/leads/${lead.id}/`)
       setMessages(res.data.messages || [])
       setSelectedLead(res.data)
-    } catch { message.error('Không thể tải tin nhắn.') }
-    finally { setMsgLoading(false) }
+      if (!silent) fetchLeads(true)
+    } catch { if (!silent) message.error('Không thể tải tin nhắn.') }
+    finally { if (!silent) setMsgLoading(false) }
   }
 
   useEffect(() => { fetchPages() }, [])
-  useEffect(() => { fetchLeads() }, [selectedPage, hasPhoneOnly, statusFilter])
+  useEffect(() => { 
+    fetchLeads() 
+    const interval = setInterval(() => { fetchLeads(true) }, 3000)
+    return () => clearInterval(interval)
+  }, [selectedPage, hasPhoneOnly, statusFilter])
+
+  useEffect(() => {
+    if (selectedLead?.id) {
+      const interval = setInterval(() => {
+        fetchMessages(selectedLead, true)
+      }, 3000)
+      return () => clearInterval(interval)
+    }
+  }, [selectedLead?.id])
+
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
@@ -215,6 +232,7 @@ export default function FacebookInboxPage() {
       const res = await api.post(`/facebook/leads/${selectedLead.id}/send-message/`, { text: msgText })
       setMessages(prev => [...prev, res.data])
       setMsgText('')
+      fetchLeads(true)
     } catch (err) {
       message.error(err.response?.data?.error || 'Không thể gửi tin nhắn.')
     } finally { setSending(false) }
