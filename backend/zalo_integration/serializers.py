@@ -127,6 +127,7 @@ class SocialLeadUpdateSerializer(serializers.ModelSerializer):
 class ConvertLeadSerializer(serializers.Serializer):
     """Dùng cho action convert SocialLead -> Customer."""
     phone_number = serializers.CharField(max_length=20)
+    customer_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     assigned_to = serializers.IntegerField(required=False, allow_null=True)
 
     def validate_phone_number(self, value):

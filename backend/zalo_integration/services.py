@@ -65,7 +65,7 @@ def normalize_phone(phone: str) -> str:
 
 # ── Convert SocialLead -> Customer ───────────────────────────────────────────
 
-def convert_social_lead(social_lead, phone_number: str, assigned_user=None):
+def convert_social_lead(social_lead, phone_number: str, assigned_user=None, customer_name=None):
     """
     Chuyển đổi SocialLead (Tầng 1) thành Customer (Tầng 2 — hồ sơ chuẩn).
 
@@ -85,8 +85,13 @@ def convert_social_lead(social_lead, phone_number: str, assigned_user=None):
 
     phone_number = normalize_phone(phone_number)
     company = social_lead.company
+    final_name = (customer_name or "").strip() or social_lead.display_name or f"Khách Zalo ({social_lead.social_id[-4:]})"
 
     with transaction.atomic():
+        # Cập nhật lại display_name cho social_lead nếu có chỉnh sửa tên
+        if final_name != social_lead.display_name:
+            social_lead.display_name = final_name
+
         # Kiểm tra xem SĐT đã tồn tại chưa
         existing_customer = Customer.objects.filter(
             company=company,
@@ -95,9 +100,14 @@ def convert_social_lead(social_lead, phone_number: str, assigned_user=None):
 
         if existing_customer:
             # MERGE: Gắn social_lead vào customer đã có
+            update_fields = ["updated_at"]
             if existing_customer.social_lead is None:
                 existing_customer.social_lead = social_lead
-                existing_customer.save(update_fields=["social_lead", "updated_at"])
+                update_fields.append("social_lead")
+            if customer_name and customer_name.strip() and existing_customer.name != final_name:
+                existing_customer.name = final_name
+                update_fields.append("name")
+            existing_customer.save(update_fields=update_fields)
             customer = existing_customer
             logger.info(
                 f"[ZaloConvert] Merged SocialLead #{social_lead.id} "
@@ -107,7 +117,7 @@ def convert_social_lead(social_lead, phone_number: str, assigned_user=None):
             # CREATE: Tạo Customer mới từ data của SocialLead
             customer = Customer.objects.create(
                 company=company,
-                name=social_lead.display_name or f"Khách Zalo ({social_lead.social_id[-4:]})",
+                name=final_name,
                 phone=phone_number,
                 source="zalo",
                 status="new",

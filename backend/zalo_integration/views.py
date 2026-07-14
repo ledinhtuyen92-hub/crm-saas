@@ -380,6 +380,7 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         phone_number = serializer.validated_data["phone_number"]
+        customer_name = serializer.validated_data.get("customer_name", "").strip()
         assigned_to_id = serializer.validated_data.get("assigned_to")
 
         assigned_user = None
@@ -393,7 +394,7 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
                 pass
 
         try:
-            customer = convert_social_lead(social_lead, phone_number, assigned_user)
+            customer = convert_social_lead(social_lead, phone_number, assigned_user, customer_name=customer_name)
             return Response({
                 "detail": "Chuyển đổi thành công! Hồ sơ khách hàng đã được tạo.",
                 "customer_id": customer.id,

@@ -173,6 +173,7 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
   }
 
   const handleConvert = async () => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì dữ liệu. Chức năng này tạm thời bị khóa!'); return }
     try {
       const values = await convertForm.validateFields()
       setConvertLoading(true)
@@ -217,7 +218,17 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
                   type="primary" 
                   icon={<UserAddOutlined />} 
                   style={{ background: '#8b5cf6', borderColor: '#8b5cf6', borderRadius: 16, fontSize: 12 }} 
-                  onClick={() => setConvertModalVisible(true)}
+                  onClick={() => {
+                    if (maintenanceMode) {
+                      message.warning('⚠️ Hệ thống đang bảo trì dữ liệu. Chức năng này tạm thời bị khóa!')
+                      return
+                    }
+                    convertForm.setFieldsValue({
+                      customer_name: lead?.display_name || '',
+                      phone_number: ''
+                    })
+                    setConvertModalVisible(true)
+                  }}
                 >
                   Tạo KH
                 </Button>
@@ -369,9 +380,16 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
         okButtonProps={{ style: { background: '#6d28d9', borderColor: '#6d28d9' } }}
       >
         <Paragraph type="secondary" style={{ marginBottom: 16 }}>
-          Nhập số điện thoại của <strong>{lead.display_name}</strong> để tạo hồ sơ Khách hàng chính thức. Nếu số này đã tồn tại, hệ thống sẽ gắn kết Lead vào hồ sơ hiện có.
+          Nhập tên và số điện thoại của <strong>{lead.display_name}</strong> để tạo hồ sơ Khách hàng chính thức. Nếu số điện thoại đã tồn tại, hệ thống sẽ tự động liên kết Lead vào hồ sơ hiện có.
         </Paragraph>
         <Form form={convertForm} layout="vertical">
+          <Form.Item
+            name="customer_name"
+            label="Tên khách hàng"
+            rules={[{ required: true, message: 'Vui lòng nhập tên khách hàng' }]}
+          >
+            <Input prefix={<UserOutlined />} placeholder="VD: Anh Minh (Zalo)" size="large" />
+          </Form.Item>
           <Form.Item
             name="phone_number"
             label="Số điện thoại"
