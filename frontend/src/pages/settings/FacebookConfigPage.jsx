@@ -99,8 +99,10 @@ export default function FacebookConfigPage() {
   const handleExchangeCode = async (code, configId) => {
     setLoading(true)
     try {
+      const redirectUri = window.location.origin + window.location.pathname
       const res = await api.post('/facebook/pages/exchange-oauth-code/', {
-        access_token: code,
+        code: code,
+        redirect_uri: redirectUri,
         config_id: configId,
       })
       if (res.data.pages?.length) {

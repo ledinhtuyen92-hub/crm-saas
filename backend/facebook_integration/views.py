@@ -22,7 +22,7 @@ from .serializers import (
 from .services import (
     convert_facebook_lead,
     debug_facebook_token,
-    exchange_short_lived_token,
+    exchange_oauth_code_for_token,
     extract_and_process_phone_fb,
     get_managed_pages,
     process_fb_webhook_message,
@@ -136,14 +136,16 @@ class FacebookPageConfigViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"], url_path="exchange-oauth-code")
     def exchange_oauth_code(self, request):
         """
-        Nhận short-lived User Token từ Frontend (sau khi đăng nhập Facebook Login),
-        đổi lấy Long-Lived User Token → lấy danh sách Trang Facebook quản lý.
+        Nhận Authorization Code từ Frontend,
+        đổi lấy User Access Token → lấy danh sách Trang Facebook quản lý.
         Trả về list các trang để user chọn trang muốn kết nối.
         """
         config_id = request.data.get("config_id")
-        short_token = request.data.get("access_token")
-        if not short_token:
-            return Response({"error": "Thiếu access_token từ Facebook Login."}, status=status.HTTP_400_BAD_REQUEST)
+        code = request.data.get("code")
+        redirect_uri = request.data.get("redirect_uri")
+        
+        if not code or not redirect_uri:
+            return Response({"error": "Thiếu code hoặc redirect_uri từ Facebook Login."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Lấy config
         if config_id:
@@ -166,8 +168,8 @@ class FacebookPageConfigViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # 1. Đổi short-lived → long-lived user token
-        exchange_result = exchange_short_lived_token(app_id, app_secret, short_token)
+        # 1. Đổi authorization code → user token
+        exchange_result = exchange_oauth_code_for_token(app_id, app_secret, code, redirect_uri)
         if not exchange_result.get("success"):
             return Response({"error": exchange_result.get("error")}, status=status.HTTP_400_BAD_REQUEST)
 

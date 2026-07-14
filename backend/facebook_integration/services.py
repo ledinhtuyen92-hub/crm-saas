@@ -131,16 +131,16 @@ def get_fb_user_profile(page_access_token: str, psid: str) -> dict:
 
 # ── Facebook OAuth Flow ───────────────────────────────────────────────────────
 
-def exchange_short_lived_token(app_id: str, app_secret: str, short_token: str) -> dict:
+def exchange_oauth_code_for_token(app_id: str, app_secret: str, code: str, redirect_uri: str) -> dict:
     """
-    Đổi Short-Lived User Access Token (1 giờ) → Long-Lived User Access Token (60 ngày).
+    Đổi Authorization Code → User Access Token (thường là long-lived nếu app là web app).
     """
     url = f"{FB_GRAPH_API_BASE}/oauth/access_token"
     params = {
-        "grant_type": "fb_exchange_token",
         "client_id": app_id,
         "client_secret": app_secret,
-        "fb_exchange_token": short_token,
+        "redirect_uri": redirect_uri,
+        "code": code,
     }
     try:
         resp = requests.get(url, params=params, timeout=10)
