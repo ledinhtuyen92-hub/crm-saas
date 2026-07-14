@@ -60,6 +60,18 @@ class FacebookLeadSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source="customer.name", read_only=True, default=None)
     assigned_to_name = serializers.CharField(source="assigned_to.full_name", read_only=True, default=None)
     messages = FacebookMessageSerializer(many=True, read_only=True)
+    is_customer_converted = serializers.SerializerMethodField()
+
+    def get_is_customer_converted(self, obj):
+        if obj.customer_id:
+            return True
+        if not obj.detected_phone:
+            return obj.is_customer_converted
+        from crm.models import Customer
+        company_id = getattr(obj, "company_id", None) or (obj.page_config.company_id if hasattr(obj, "page_config") and obj.page_config else None)
+        if not company_id:
+            return obj.is_customer_converted
+        return Customer.objects.filter(company_id=company_id, phone=obj.detected_phone).exists()
 
     class Meta:
         model = FacebookLead
@@ -81,6 +93,18 @@ class FacebookLeadListSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
     page_name = serializers.CharField(source="page_config.page_name", read_only=True)
     customer_name = serializers.CharField(source="customer.name", read_only=True, default=None)
+    is_customer_converted = serializers.SerializerMethodField()
+
+    def get_is_customer_converted(self, obj):
+        if obj.customer_id:
+            return True
+        if not obj.detected_phone:
+            return obj.is_customer_converted
+        from crm.models import Customer
+        company_id = getattr(obj, "company_id", None) or (obj.page_config.company_id if hasattr(obj, "page_config") and obj.page_config else None)
+        if not company_id:
+            return obj.is_customer_converted
+        return Customer.objects.filter(company_id=company_id, phone=obj.detected_phone).exists()
 
     class Meta:
         model = FacebookLead

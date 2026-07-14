@@ -15,11 +15,15 @@ logger = logging.getLogger(__name__)
 def reset_facebook_lead_on_customer_delete(sender, instance, **kwargs):
     """
     Khi một Customer bị xoá, tự động reset tất cả FacebookLead
-    đang liên kết với Customer đó về trạng thái 'Chưa thêm KH'.
+    đang liên kết với Customer hoặc có SĐT tương ứng về trạng thái 'Chưa thêm KH'.
     """
     try:
         from facebook_integration.models import FacebookLead
-        updated = FacebookLead.objects.filter(customer=instance).update(
+        from django.db.models import Q
+        query = Q(customer=instance)
+        if instance.phone:
+            query |= Q(detected_phone=instance.phone)
+        updated = FacebookLead.objects.filter(query).update(
             is_customer_converted=False,
             customer=None,
         )

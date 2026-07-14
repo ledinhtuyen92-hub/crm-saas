@@ -228,8 +228,16 @@ class FacebookLead(models.Model):
 
     @property
     def status(self):
-        if self.is_customer_converted:
+        if self.customer_id:
             return "converted"
+        if self.is_customer_converted:
+            if not self.detected_phone:
+                return "converted"
+            from crm.models import Customer
+            company_id = getattr(self, "company_id", None) or (self.page_config.company_id if hasattr(self, "page_config") and self.page_config else None)
+            if company_id and Customer.objects.filter(company_id=company_id, phone=self.detected_phone).exists():
+                return "converted"
+            return "not_added"
         return "not_added"
 
 
