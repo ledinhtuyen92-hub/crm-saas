@@ -72,16 +72,36 @@ function LeadListItem({ lead, selected, onClick }) {
             <Text type="secondary" ellipsis style={{ fontSize: 12, maxWidth: 140 }}>
               {lead.last_message || 'Chưa có tin nhắn'}
             </Text>
-            <Tag
-              style={{
-                fontSize: 10, padding: '0 6px', lineHeight: '18px',
-                color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.color}30`,
-                borderRadius: 10, marginLeft: 4,
-              }}
-            >
-              {cfg.label}
-            </Tag>
+            <Space size={4}>
+              {lead.oa_name && (
+                <Tag style={{ fontSize: 10, padding: '0 6px', lineHeight: '18px', borderRadius: 10, margin: 0, background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd' }}>
+                  🏢 {lead.oa_name}
+                </Tag>
+              )}
+              <Tag
+                style={{
+                  fontSize: 10, padding: '0 6px', lineHeight: '18px',
+                  color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.color}30`,
+                  borderRadius: 10, margin: 0,
+                }}
+              >
+                {cfg.label}
+              </Tag>
+            </Space>
           </div>
+          {lead.detected_phone && (
+            <div style={{ marginTop: 4 }}>
+              {lead.is_customer_converted ? (
+                <Tag color="success" style={{ fontSize: 10, borderRadius: 10, margin: 0 }}>
+                  ✅ SĐT: {lead.detected_phone} (Đã có trong KH)
+                </Tag>
+              ) : (
+                <Tag color="warning" style={{ fontSize: 10, borderRadius: 10, margin: 0, fontWeight: 600 }}>
+                  📞 SĐT: {lead.detected_phone} (Chưa thêm KH)
+                </Tag>
+              )}
+            </div>
+          )}
         </Col>
       </Row>
     </div>
@@ -212,7 +232,7 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
           <Col flex="auto">
             <Space align="center" size={12}>
               <Title level={5} style={{ margin: 0 }}>{lead.display_name || `Khách Zalo (${lead.social_id?.slice(-4)})`}</Title>
-              {lead.status !== 'converted' && lead.status !== 'archived' && (
+              {!lead.is_customer_converted && lead.status !== 'archived' && (
                 <Button 
                   size="small" 
                   type="primary" 
@@ -225,7 +245,7 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
                     }
                     convertForm.setFieldsValue({
                       customer_name: lead?.display_name || '',
-                      phone_number: ''
+                      phone_number: lead?.detected_phone || ''
                     })
                     setConvertModalVisible(true)
                   }}
@@ -234,11 +254,22 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
                 </Button>
               )}
             </Space>
-            <Space size={6} style={{ marginTop: 4, display: 'flex' }}>
+            <Space size={6} style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap' }}>
               <Tag style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.color}30`, borderRadius: 10 }}>{cfg.label}</Tag>
               <Text type="secondary" style={{ fontSize: 12 }}>
                 <WechatOutlined style={{ marginRight: 4 }} />Zalo · {lead.oa_name || 'OA'}
               </Text>
+              {lead.detected_phone && (
+                lead.is_customer_converted ? (
+                  <Tag color="success" style={{ borderRadius: 10 }}>
+                    ✅ SĐT phát hiện: {lead.detected_phone} (Đã thêm vào Khách hàng)
+                  </Tag>
+                ) : (
+                  <Tag color="warning" style={{ borderRadius: 10, fontWeight: 600 }}>
+                    📞 SĐT phát hiện: {lead.detected_phone} (Chưa thêm vào Khách hàng)
+                  </Tag>
+                )
+              )}
             </Space>
           </Col>
           <Col>
@@ -414,6 +445,10 @@ export default function ZaloInboxPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [employees, setEmployees] = useState([])
+  const [hasPhoneOnly, setHasPhoneOnly] = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const [oaConfigs, setOaConfigs] = useState([])
+  const [selectedOaFilter, setSelectedOaFilter] = useState('all')
 
   const fetchLeads = useCallback(async (background = false) => {
     if (!background) setLoading(true)
@@ -421,6 +456,8 @@ export default function ZaloInboxPage() {
       const params = {}
       if (search) params.search = search
       if (statusFilter) params.status = statusFilter
+      if (hasPhoneOnly) params.has_phone = 'true'
+      if (selectedOaFilter && selectedOaFilter !== 'all') params.oa_config = selectedOaFilter
       const res = await api.get('/zalo/social-leads/', { params })
       const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
       setLeads(data)
@@ -428,7 +465,20 @@ export default function ZaloInboxPage() {
       if (!background) message.error('Không thể tải danh sách Social Leads.') 
     }
     finally { if (!background) setLoading(false) }
-  }, [search, statusFilter])
+  }, [search, statusFilter, hasPhoneOnly, selectedOaFilter])
+
+  const handleScanPhones = async () => {
+    setScanning(true)
+    try {
+      const res = await api.post('/zalo/social-leads/scan-phones/')
+      message.success(res.data?.detail || 'Quét SĐT thành công!')
+      fetchLeads()
+    } catch {
+      message.error('Lỗi khi quét SĐT trong hội thoại.')
+    } finally {
+      setScanning(false)
+    }
+  }
 
   const fetchDetail = async (leadId) => {
     setDetailLoading(true)
@@ -446,12 +496,23 @@ export default function ZaloInboxPage() {
     } catch {}
   }
 
+  const fetchOaConfigs = async () => {
+    try {
+      const res = await api.get('/zalo/config/')
+      const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
+      setOaConfigs(data)
+    } catch {}
+  }
+
   useEffect(() => { 
     fetchLeads() 
     const interval = setInterval(() => { fetchLeads(true) }, 3000)
     return () => clearInterval(interval)
   }, [fetchLeads])
-  useEffect(() => { fetchEmployees() }, [])
+  useEffect(() => { 
+    fetchEmployees()
+    fetchOaConfigs()
+  }, [])
 
   const handleSelectLead = (lead) => {
     setSelectedLead(lead)
@@ -489,6 +550,20 @@ export default function ZaloInboxPage() {
         <div style={{ width: 340, flexShrink: 0, borderRight: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column' }}>
           {/* Search + Filter */}
           <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', background: '#fafafa' }}>
+            {oaConfigs.length > 1 && (
+              <Select
+                style={{ width: '100%', marginBottom: 8 }}
+                value={selectedOaFilter}
+                onChange={v => setSelectedOaFilter(v)}
+                options={[
+                  { value: 'all', label: `🌐 Tất cả Zalo OA (${oaConfigs.length} trang)` },
+                  ...oaConfigs.map(oa => ({
+                    value: oa.id,
+                    label: `🟢 ${oa.oa_name || 'Zalo OA'}`
+                  }))
+                ]}
+              />
+            )}
             <Search
               placeholder="Tìm theo tên, tin nhắn..."
               value={search}
@@ -510,6 +585,36 @@ export default function ZaloInboxPage() {
                 { value: 'archived',  label: '⚫ Lưu trữ' },
               ]}
             />
+            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+              <Tooltip title="Chỉ hiển thị các cuộc hội thoại mà khách đã để lại số điện thoại">
+                <Button
+                  size="small"
+                  type={hasPhoneOnly ? 'primary' : 'default'}
+                  icon={<PhoneOutlined />}
+                  style={{
+                    flex: 1,
+                    borderRadius: 12,
+                    fontSize: 12,
+                    background: hasPhoneOnly ? '#f59e0b' : undefined,
+                    borderColor: hasPhoneOnly ? '#f59e0b' : undefined,
+                  }}
+                  onClick={() => setHasPhoneOnly(!hasPhoneOnly)}
+                >
+                  {hasPhoneOnly ? 'Đang lọc: Có SĐT' : 'Lọc khách có SĐT'}
+                </Button>
+              </Tooltip>
+              <Tooltip title="Đọc lại toàn bộ lịch sử tin nhắn cũ để tìm kiếm số điện thoại và cập nhật danh sách">
+                <Button
+                  size="small"
+                  icon={<ReloadOutlined />}
+                  loading={scanning}
+                  style={{ borderRadius: 12, fontSize: 12 }}
+                  onClick={handleScanPhones}
+                >
+                  Quét lại SĐT cũ
+                </Button>
+              </Tooltip>
+            </div>
           </div>
 
           {/* Lead list */}

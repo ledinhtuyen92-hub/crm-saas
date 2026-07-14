@@ -16,58 +16,73 @@ const { Title, Text, Paragraph } = Typography
 
 export default function ZaloConfigPage() {
   const { maintenanceMode } = useAuth()
+  const [configs, setConfigs] = useState([])
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
   const [saving, setSaving] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [isCreatingNew, setIsCreatingNew] = useState(false)
   const [form] = Form.useForm()
 
-  const fetchConfig = async () => {
+  const fetchConfig = async (preferredId = null) => {
     setLoading(true)
     try {
       const res = await api.get('/zalo/config/')
       const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
-      setConfig(data[0] || null)
+      setConfigs(data)
+      if (data.length > 0) {
+        setConfig(prev => {
+          const targetId = preferredId ? Number(preferredId) : prev?.id
+          return data.find(item => item.id === targetId) || data[0]
+        })
+      } else {
+        setConfig(null)
+      }
     } catch { message.error('Không thể tải cấu hình Zalo.') }
     finally { setLoading(false) }
   }
 
   useEffect(() => {
-    fetchConfig()
-
     const urlParams = new URLSearchParams(window.location.search)
     const code = urlParams.get('code')
+    const stateConfigId = urlParams.get('state') || localStorage.getItem('zalo_oauth_config_id')
     if (code) {
-      // Xoá code khỏi URL ngay lập tức để tránh React StrictMode chạy 2 lần
       window.history.replaceState({}, document.title, window.location.pathname)
+      localStorage.removeItem('zalo_oauth_config_id')
       setLoading(true)
-      api.post('/zalo/config/exchange-oauth-code/', { code })
-        .then(() => {
-          message.success('Đăng nhập và cấp quyền Zalo thành công! Token đã được tự động cập nhật.')
-          fetchConfig()
+      api.post('/zalo/config/exchange-oauth-code/', { code, config_id: stateConfigId })
+        .then((res) => {
+          message.success(res.data?.detail || 'Đăng nhập và cấp quyền Zalo thành công!')
+          fetchConfig(stateConfigId || res.data?.data?.id)
         })
         .catch((err) => {
           message.error(err.response?.data?.error || 'Lỗi khi đổi mã xác thực Zalo.')
-          fetchConfig()
+          fetchConfig(stateConfigId)
         })
+    } else {
+      fetchConfig()
     }
   }, [])
 
   const handleZaloOAuthLogin = () => {
-    const appId = config.resolved_app_id || config.app_id
+    const appId = config?.resolved_app_id || config?.app_id
     if (!appId) {
       message.warning('Vui lòng lưu cấu hình App ID (hoặc dùng cấu hình hệ thống) trước khi bấm Uỷ quyền.')
       return
     }
+    if (config?.id) {
+      localStorage.setItem('zalo_oauth_config_id', config.id)
+    }
     const redirectUri = window.location.origin + window.location.pathname
-    const oauthUrl = `https://oauth.zaloapp.com/v4/oa/permission?app_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}`
+    const oauthUrl = `https://oauth.zaloapp.com/v4/oa/permission?app_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${config?.id || ''}`
     window.location.href = oauthUrl
   }
 
-  const handleOpenModal = () => {
+  const handleOpenModal = (isNew = false) => {
     if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
-    if (config) {
+    setIsCreatingNew(isNew)
+    if (config && !isNew) {
       form.setFieldsValue({
         use_system_config: config.use_system_config,
         oa_name: config.oa_name,
@@ -80,15 +95,18 @@ export default function ZaloConfigPage() {
         auto_send_payment_zns: config.auto_send_payment_zns,
         auto_send_delivery_zns: config.auto_send_delivery_zns,
         auto_send_birthday_zns: config.auto_send_birthday_zns,
+        auto_create_customer_from_phone: config.auto_create_customer_from_phone || false,
         lead_cleanup_days: config.lead_cleanup_days,
         is_active: config.is_active,
       })
     } else {
+      form.resetFields()
       form.setFieldsValue({
         use_system_config: true,
         auto_send_payment_zns: false,
         auto_send_delivery_zns: false,
         auto_send_birthday_zns: false,
+        auto_create_customer_from_phone: false,
         lead_cleanup_days: 30,
         is_active: true,
       })
@@ -102,18 +120,43 @@ export default function ZaloConfigPage() {
     try {
       const values = await form.validateFields()
       setSaving(true)
-      if (config) {
+      if (config && !isCreatingNew) {
         await api.patch(`/zalo/config/${config.id}/`, values)
         message.success('Cập nhật cấu hình Zalo thành công!')
       } else {
         await api.post('/zalo/config/', values)
-        message.success('Kết nối Zalo OA thành công!')
+        message.success('Thêm Zalo OA thành công!')
       }
       setModalVisible(false)
       fetchConfig()
     } catch (err) {
       message.error(err.response?.data?.detail || 'Lỗi khi lưu cấu hình.')
     } finally { setSaving(false) }
+  }
+
+  const [verifying, setVerifying] = useState(false)
+
+  const handleVerifyToken = async () => {
+    if (!config) return
+    setVerifying(true)
+    try {
+      const res = await api.post(`/zalo/config/${config.id}/verify-token/`)
+      Modal.success({
+        title: 'Xác thực chuẩn Token Zalo OA',
+        content: (
+          <div style={{ marginTop: 12 }}>
+            <p><b>Tên OA thực tế từ Zalo:</b> {res.data?.oa_info?.name}</p>
+            <p><b>OA ID trên Zalo:</b> {res.data?.oa_info?.oa_id}</p>
+            <p style={{ color: '#16a34a' }}>✅ Token đang kết nối chuẩn xác với trang Zalo OA này!</p>
+          </div>
+        )
+      })
+      fetchConfig()
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Token không hợp lệ hoặc đã hết hạn trên Zalo.')
+    } finally {
+      setVerifying(false)
+    }
   }
 
   const handleRefreshToken = async () => {
@@ -123,8 +166,8 @@ export default function ZaloConfigPage() {
       await api.post(`/zalo/config/${config.id}/refresh-token/`)
       message.success('Token đã được làm mới!')
       fetchConfig()
-    } catch {
-      message.error('Không thể làm mới token. Vui lòng kiểm tra refresh_token.')
+    } catch (err) {
+      message.error(err.response?.data?.detail || 'Không thể làm mới token. Vui lòng bấm Đăng nhập & Lấy Token tự động.')
     } finally { setRefreshing(false) }
   }
 
@@ -138,15 +181,41 @@ export default function ZaloConfigPage() {
           </Title>
           <Text type="secondary">Kết nối Official Account Zalo để nhận Lead và gửi ZNS tự động</Text>
         </div>
-        <Button
-          type="primary"
-          icon={<SettingOutlined />}
-          onClick={handleOpenModal}
-          style={{ background: '#0068ff', borderColor: '#0068ff' }}
-        >
-          {config ? 'Chỉnh sửa cấu hình' : 'Kết nối Zalo OA'}
-        </Button>
+        <Space>
+          {configs.length > 0 && (
+            <Button
+              onClick={() => handleOpenModal(true)}
+              style={{ borderRadius: 16 }}
+            >
+              + Thêm trang Zalo OA
+            </Button>
+          )}
+          <Button
+            type="primary"
+            icon={<SettingOutlined />}
+            onClick={() => handleOpenModal(false)}
+            style={{ background: '#0068ff', borderColor: '#0068ff' }}
+          >
+            {config ? 'Chỉnh sửa cấu hình' : 'Kết nối Zalo OA'}
+          </Button>
+        </Space>
       </div>
+
+      {configs.length > 1 && (
+        <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Text strong style={{ marginRight: 8 }}>Chọn trang Zalo OA:</Text>
+          {configs.map((item, idx) => (
+            <Button
+              key={item.id}
+              type={config?.id === item.id ? 'primary' : 'default'}
+              onClick={() => setConfig(item)}
+              style={{ borderRadius: 18 }}
+            >
+              🟢 {item.oa_name || `OA #${idx + 1}`}
+            </Button>
+          ))}
+        </div>
+      )}
 
       {!config ? (
         <Card style={{ textAlign: 'center', padding: '40px 20px', borderRadius: 12 }}>
@@ -200,6 +269,13 @@ export default function ZaloConfigPage() {
                       style={{ background: '#0068ff', borderColor: '#0068ff' }}
                     >
                       Đăng nhập & Lấy Token tự động
+                    </Button>
+                    <Button
+                      onClick={handleVerifyToken}
+                      loading={verifying}
+                      icon={<InfoCircleOutlined />}
+                    >
+                      Kiểm tra chuẩn OA
                     </Button>
                     <Button
                       icon={<ReloadOutlined />}
@@ -369,6 +445,14 @@ export default function ZaloConfigPage() {
           </Form.Item>
           <Form.Item name="auto_send_birthday_zns" label="Tự động gửi ZNS chúc mừng sinh nhật" valuePropName="checked" help="Chạy tự động lúc 08:00 sáng mỗi ngày.">
             <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
+          </Form.Item>
+          <Form.Item 
+            name="auto_create_customer_from_phone" 
+            label="Tự động quét & tạo Khách hàng khi phát hiện SĐT" 
+            valuePropName="checked"
+            help="Nếu bật: Khi khách gửi SĐT trong Zalo Inbox sẽ tự động thêm vào Khách hàng hệ thống."
+          >
+            <Switch checkedChildren="Bật tự động" unCheckedChildren="Tắt (Sale thêm thủ công)" />
           </Form.Item>
           <Form.Item
             name="lead_cleanup_days"

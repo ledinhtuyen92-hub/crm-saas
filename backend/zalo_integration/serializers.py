@@ -17,7 +17,7 @@ class ZaloOaConfigSerializer(serializers.ModelSerializer):
             "access_token", "refresh_token", "token_expires_at",
             "token_expires_at_display", "is_token_near_expiry",
             "webhook_secret", "auto_send_payment_zns", "auto_send_delivery_zns", 
-            "auto_send_birthday_zns", "lead_cleanup_days", "is_active", 
+            "auto_send_birthday_zns", "auto_create_customer_from_phone", "lead_cleanup_days", "is_active", 
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "company", "created_at", "updated_at",
@@ -43,7 +43,7 @@ class ZaloOaConfigWriteSerializer(serializers.ModelSerializer):
             "oa_name", "use_system_config", "app_id", "secret_key", "oa_id",
             "access_token", "refresh_token", "token_expires_at",
             "webhook_secret", "auto_send_payment_zns", "auto_send_delivery_zns", 
-            "auto_send_birthday_zns", "lead_cleanup_days", "is_active",
+            "auto_send_birthday_zns", "auto_create_customer_from_phone", "lead_cleanup_days", "is_active",
         ]
 
     def validate(self, attrs):
@@ -52,6 +52,10 @@ class ZaloOaConfigWriteSerializer(serializers.ModelSerializer):
             attrs['app_id'] = ""
             attrs['secret_key'] = ""
             attrs['webhook_secret'] = ""
+        if attrs.get("access_token") and not attrs.get("token_expires_at"):
+            from django.utils import timezone
+            from datetime import timedelta
+            attrs["token_expires_at"] = timezone.now() + timedelta(hours=25)
         return attrs
 
 
@@ -66,20 +70,28 @@ class SocialLeadListSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     platform_display = serializers.CharField(source="get_platform_display", read_only=True)
     is_converted = serializers.SerializerMethodField()
+    is_customer_converted = serializers.SerializerMethodField()
 
     class Meta:
         model = SocialLead
         fields = [
             "id", "social_id", "display_name", "avatar_url",
-            "platform", "platform_display", "oa_name",
+            "platform", "platform_display", "oa_name", "oa_config",
             "last_message", "last_interaction_date",
             "status", "status_display",
             "assigned_to", "assigned_to_name",
-            "is_converted", "created_at", "has_unread_message"
+            "is_converted", "detected_phone", "is_customer_converted",
+            "created_at", "has_unread_message"
         ]
 
     def get_is_converted(self, obj):
         return obj.status == SocialLead.STATUS_CONVERTED
+
+    def get_is_customer_converted(self, obj):
+        if not obj.detected_phone:
+            return obj.is_customer_converted
+        from crm.models import Customer
+        return Customer.objects.filter(company_id=obj.company_id, phone=obj.detected_phone).exists()
 
 
 class SocialLeadDetailSerializer(serializers.ModelSerializer):
@@ -92,19 +104,27 @@ class SocialLeadDetailSerializer(serializers.ModelSerializer):
     platform_display = serializers.CharField(source="get_platform_display", read_only=True)
     converted_customer_id = serializers.SerializerMethodField()
     converted_customer_name = serializers.SerializerMethodField()
+    is_customer_converted = serializers.SerializerMethodField()
 
     class Meta:
         model = SocialLead
         fields = [
             "id", "social_id", "display_name", "avatar_url",
-            "platform", "platform_display", "oa_name",
+            "platform", "platform_display", "oa_name", "oa_config",
             "last_message", "last_interaction_date",
             "status", "status_display",
             "assigned_to", "assigned_to_name",
             "notes",
             "converted_customer_id", "converted_customer_name", "has_unread_message",
+            "detected_phone", "is_customer_converted",
             "created_at", "updated_at",
         ]
+
+    def get_is_customer_converted(self, obj):
+        if not obj.detected_phone:
+            return obj.is_customer_converted
+        from crm.models import Customer
+        return Customer.objects.filter(company_id=obj.company_id, phone=obj.detected_phone).exists()
 
     def get_converted_customer_id(self, obj):
         if hasattr(obj, "converted_customer"):

@@ -7,6 +7,7 @@ Tách khỏi views để dễ test và tái sử dụng.
 import hashlib
 import hmac
 import logging
+import re
 
 import requests
 from django.db import transaction
@@ -131,9 +132,126 @@ def convert_social_lead(social_lead, phone_number: str, assigned_user=None, cust
 
         # Cập nhật trạng thái SocialLead
         social_lead.status = "converted"
-        social_lead.save(update_fields=["status", "updated_at"])
+        social_lead.is_customer_converted = True
+        if phone_number and not social_lead.detected_phone:
+            social_lead.detected_phone = phone_number
+        social_lead.save(update_fields=["status", "is_customer_converted", "detected_phone", "updated_at"])
 
     return customer
+
+
+def smart_extract_vn_phone(text: str):
+    """
+    Thuật toán phát hiện và chuẩn hoá số điện thoại Việt Nam thông minh:
+    1. Nhận diện các định dạng:
+       - Có số 0 ở đầu: 0912345678, 0912 345 678, 0912.345.678, 0912-345-678
+       - Mã vùng quốc tế: +84912345678, +84 912 345 678, 84912345678
+       - Thiếu số 0 ở đầu (9 chữ số): 912345678, 912 345 678 (kèm từ khoá sđt/so/liên hệ hoặc phân cụm)
+    2. Loại trừ false positive (giá tiền, số lượng hàng hoá như 500.000.000 đ).
+    3. Chuẩn hoá về đúng định dạng chuẩn 10 chữ số (03/05/07/08/09xxxxxxxx).
+    """
+    if not text:
+        return None
+
+    # Mẫu 1: Có đầu số rõ ràng (0 hoặc +84 hoặc 84) + đầu số nhà mạng VN [35789] + 8 chữ số (cho phép khoảng trắng, dấu chấm, gạch ngang)
+    pattern_explicit = re.compile(
+        r'(?:(?:\+|00)?84[\s\.\-]?|0)[\s\.\-]?([35789](?:[\s\.\-]?\d){8})\b'
+    )
+    for m in pattern_explicit.finditer(text):
+        digits = re.sub(r'\D', '', m.group(1))
+        if len(digits) == 9:
+            tail_idx = m.end()
+            tail_str = text[tail_idx:tail_idx+15].lower()
+            if not any(curr in tail_str for curr in ['đ', 'vnd', 'k', 'tr', 'triệu', 'ty', 'tỷ']):
+                return '0' + digits
+
+    # Mẫu 2: Trường hợp khách viết thiếu số 0 ở đầu (9 chữ số bắt đầu bằng 3, 5, 7, 8, 9)
+    pattern_implicit = re.compile(
+        r'\b([35789](?:[\s\.\-]?\d){8})\b'
+    )
+    phone_keywords = ['sdt', 'sđt', 'so', 'số', 'phone', 'zalo', 'lh', 'liên hệ', 'gọi', 'alo']
+    text_lower = text.lower()
+    has_keyword = any(kw in text_lower for kw in phone_keywords)
+
+    for m in pattern_implicit.finditer(text):
+        raw = m.group(1)
+        digits = re.sub(r'\D', '', raw)
+        if len(digits) == 9:
+            has_separator = any(sep in raw for sep in [' ', '.', '-'])
+            tail_idx = m.end()
+            tail_str = text[tail_idx:tail_idx+15].lower()
+            is_currency = any(curr in tail_str for curr in ['đ', 'vnd', 'k', 'tr', 'triệu', 'ty', 'tỷ', '000'])
+            if not is_currency and (has_keyword or has_separator):
+                return '0' + digits
+
+    return None
+
+
+def extract_and_process_phone(social_lead, text: str):
+    """
+    Quét SĐT trong tin nhắn Zalo với thuật toán thông minh:
+    - Nhận diện SĐT thiếu 0, có/không có +84, cách khoảng/chấm/gạch ngang
+    - Tự động chuẩn hoá về 10 số (0xxxxxxxxx)
+    """
+    if not text:
+        return None
+
+    norm_phone = smart_extract_vn_phone(text)
+    if not norm_phone:
+        return None
+
+    if not social_lead.detected_phone:
+        social_lead.detected_phone = norm_phone
+
+    from crm.models import Customer
+    company = social_lead.company
+    already_exists = Customer.objects.filter(company=company, phone=norm_phone).exists()
+
+    auto_create = False
+    if social_lead.oa_config and social_lead.oa_config.auto_create_customer_from_phone:
+        auto_create = True
+
+    if already_exists:
+        social_lead.is_customer_converted = True
+        social_lead.save(update_fields=["detected_phone", "is_customer_converted", "updated_at"])
+    elif auto_create and social_lead.status != "converted":
+        try:
+            convert_social_lead(social_lead, norm_phone)
+            logger.info(f"[ZaloAutoScan] Tự động tạo khách hàng từ SĐT {norm_phone} của Lead #{social_lead.id}")
+        except Exception as e:
+            logger.error(f"[ZaloAutoScan] Lỗi tự động tạo khách hàng từ SĐT {norm_phone}: {e}")
+            social_lead.save(update_fields=["detected_phone", "updated_at"])
+    else:
+        social_lead.is_customer_converted = False
+        social_lead.save(update_fields=["detected_phone", "is_customer_converted", "updated_at"])
+
+    return norm_phone
+
+
+# ── Lấy Thông tin Zalo OA từ Open API ─────────────────────────────────────────
+
+def fetch_zalo_oa_info(access_token: str):
+    """
+    Gọi Zalo Open API để lấy thông tin OA hiện tại tương ứng với access_token.
+    Returns: dict {"oa_id": str, "name": str, "avatar": str} hoặc None
+    """
+    if not access_token:
+        return None
+    try:
+        url = "https://openapi.zalo.me/v2.0/oa/getoa"
+        headers = {"access_token": access_token}
+        resp = requests.get(url, headers=headers, timeout=10)
+        data = resp.json()
+        if data.get("error") == 0 and "data" in data:
+            oa_data = data["data"]
+            return {
+                "oa_id": str(oa_data.get("oa_id", "")),
+                "name": oa_data.get("name", ""),
+                "avatar": oa_data.get("avatar", "")
+            }
+    except Exception as e:
+        logger.error(f"Error fetching Zalo OA info: {e}")
+    return None
 
 
 # ── Refresh Token Zalo ────────────────────────────────────────────────────────
@@ -166,12 +284,13 @@ def refresh_zalo_access_token(oa_config):
 
         if "access_token" not in data:
             logger.error(f"[ZaloToken] Refresh failed for '{oa_config.oa_name}': {data}")
+            oa_config._last_refresh_error = data.get("error_name") or data.get("error_description") or str(data)
             return False
 
-        from datetime import timedelta
+        expires_in = int(data.get("expires_in", 86400))
         oa_config.access_token = data["access_token"]
         oa_config.refresh_token = data.get("refresh_token", oa_config.refresh_token)
-        oa_config.token_expires_at = timezone.now() + timedelta(seconds=data.get("expires_in", 86400))
+        oa_config.token_expires_at = timezone.now() + timedelta(seconds=expires_in)
         oa_config.save(update_fields=["access_token", "refresh_token", "token_expires_at"])
 
         logger.info(f"[ZaloToken] ✅ Refreshed token for OA: '{oa_config.oa_name}'")

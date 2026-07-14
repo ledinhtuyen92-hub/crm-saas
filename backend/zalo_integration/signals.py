@@ -1,8 +1,9 @@
 import logging
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
-from .models import ZaloOaConfig, ZaloMessageLog, ZaloMessageTemplate
+from .models import ZaloOaConfig, ZaloMessageLog, ZaloMessageTemplate, SocialLead
+from crm.models import Customer
 from finance.models import PaymentReceipt
 from orders.models import Order
 from .tasks import send_zns_task
@@ -110,3 +111,36 @@ def trigger_zns_on_order_completed(sender, instance, **kwargs):
 
     send_zns_task.delay(log.id)
     logger.info(f"[Zalo Signal] Đã kích hoạt auto ZNS cho Order Completed #{instance.id}")
+
+
+@receiver(post_delete, sender=Customer)
+def sync_social_lead_on_customer_delete(sender, instance, **kwargs):
+    """
+    Khi một Khách hàng bị xóa khỏi hệ thống:
+    Tự động cập nhật lại các SocialLead có SĐT tương ứng về trạng thái Chưa thêm KH (is_customer_converted=False).
+    """
+    if not instance.phone or not instance.company_id:
+        return
+    leads = SocialLead.objects.filter(
+        company_id=instance.company_id,
+        detected_phone=instance.phone
+    )
+    leads.update(
+        is_customer_converted=False,
+        status=SocialLead.STATUS_CHATTING
+    )
+    logger.info(f"[Zalo Signal] Khách hàng {instance.phone} bị xoá -> Đã cập nhật lại {leads.count()} SocialLead về Chưa thêm KH.")
+
+
+@receiver(post_save, sender=Customer)
+def sync_social_lead_on_customer_save(sender, instance, created, **kwargs):
+    """
+    Khi một Khách hàng được tạo mới hoặc cập nhật SĐT:
+    Đồng bộ trạng thái is_customer_converted=True cho các SocialLead có cùng SĐT.
+    """
+    if not instance.phone or not instance.company_id:
+        return
+    SocialLead.objects.filter(
+        company_id=instance.company_id,
+        detected_phone=instance.phone
+    ).update(is_customer_converted=True)

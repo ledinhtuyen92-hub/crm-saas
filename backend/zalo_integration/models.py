@@ -13,10 +13,10 @@ class ZaloOaConfig(models.Model):
     Token được auto-refresh bởi Celery task mỗi 12 giờ.
     """
 
-    company = models.OneToOneField(
+    company = models.ForeignKey(
         "users.Company",
         on_delete=models.CASCADE,
-        related_name="zalo_oa_config",
+        related_name="zalo_oa_configs",
         verbose_name="Công ty",
     )
     oa_name = models.CharField(
@@ -87,6 +87,11 @@ class ZaloOaConfig(models.Model):
         default=False,
         verbose_name="Tự động gửi ZNS chúc mừng sinh nhật",
         help_text="Tự động bắn ZNS mẫu birthday vào ngày sinh nhật của Khách hàng."
+    )
+    auto_create_customer_from_phone = models.BooleanField(
+        default=False,
+        verbose_name="Tự động quét & tạo Khách hàng khi có SĐT trong hội thoại",
+        help_text="Tự động quét tin nhắn Zalo, nếu khách hàng gửi SĐT sẽ tự động chuyển đổi thành Khách hàng hệ thống."
     )
     lead_cleanup_days = models.IntegerField(
         default=30,
@@ -223,6 +228,17 @@ class SocialLead(models.Model):
     has_unread_message = models.BooleanField(
         default=False,
         verbose_name="Có tin nhắn chưa đọc"
+    )
+    detected_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name="Số điện thoại phát hiện",
+        help_text="SĐT phát hiện tự động trong tin nhắn của khách."
+    )
+    is_customer_converted = models.BooleanField(
+        default=False,
+        verbose_name="Đã thêm vào Khách hàng",
+        help_text="Đánh dấu True nếu SĐT này đã có hoặc đã được thêm vào Customer hệ thống."
     )
 
     # ── Phân công nội bộ ───────────────────────────────────────────────

@@ -140,6 +140,10 @@ class ZaloWebhookView(APIView):
         social_lead.has_unread_message = True
         social_lead.save()
 
+        # Quét tự động SĐT & xử lý theo cấu hình
+        from .services import extract_and_process_phone
+        extract_and_process_phone(social_lead, message_text)
+
         # Lưu vào ZaloMessage
         from .models import ZaloMessage
         
@@ -257,10 +261,32 @@ class ZaloOaConfigViewSet(viewsets.ModelViewSet):
                 "detail": "Token đã được làm mới thành công.",
                 "data": serializer.data,
             })
+        err_reason = getattr(config, "_last_refresh_error", None)
+        msg = f"Zalo từ chối gia hạn Token ({err_reason}). Bạn vui lòng bấm nút 'Đăng nhập & Lấy Token tự động' để cấp lại mã refresh mới." if err_reason else "Không thể làm mới token. Vui lòng bấm 'Đăng nhập & Lấy Token tự động' để cấp lại."
         return Response(
-            {"detail": "Không thể làm mới token. Vui lòng kiểm tra lại refresh_token."},
+            {"detail": msg},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+    @action(detail=True, methods=["post"], url_path="verify-token")
+    def verify_token(self, request, pk=None):
+        """Kiểm tra token hiện tại thuộc Zalo OA nào thông qua Zalo Open API."""
+        config = self.get_object()
+        from zalo_integration.services import fetch_zalo_oa_info
+        oa_info = fetch_zalo_oa_info(config.access_token)
+        if not oa_info:
+            return Response({"error": "Token không hợp lệ hoặc đã hết hạn trên Zalo."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        config.oa_id = oa_info["oa_id"]
+        if oa_info["name"]:
+            config.oa_name = oa_info["name"]
+        config.save(update_fields=["oa_id", "oa_name"])
+        serializer = ZaloOaConfigSerializer(config)
+        return Response({
+            "detail": f"Token chuẩn xác của Zalo OA: {oa_info['name']} (ID: {oa_info['oa_id']})",
+            "data": serializer.data,
+            "oa_info": oa_info
+        })
 
     @action(detail=False, methods=["post"], url_path="exchange-oauth-code")
     def exchange_oauth_code(self, request):
@@ -268,10 +294,14 @@ class ZaloOaConfigViewSet(viewsets.ModelViewSet):
         Đổi Authorization Code từ Zalo lấy Access Token & Refresh Token.
         """
         code = request.data.get("code")
+        config_id = request.data.get("config_id")
         if not code:
             return Response({"error": "Thiếu mã xác thực (code)"}, status=status.HTTP_400_BAD_REQUEST)
 
-        config = ZaloOaConfig.objects.filter(company=request.user.company).first()
+        if config_id:
+            config = ZaloOaConfig.objects.filter(company=request.user.company, id=config_id).first()
+        else:
+            config = ZaloOaConfig.objects.filter(company=request.user.company).order_by("-id").first()
         
         # API của Zalo yêu cầu truyền code, app_id, secret_key
         app_id = config.get_app_id()
@@ -292,20 +322,31 @@ class ZaloOaConfigViewSet(viewsets.ModelViewSet):
             import requests
             from django.utils import timezone
             from datetime import timedelta
+            from zalo_integration.services import fetch_zalo_oa_info
 
             resp = requests.post(url, headers=headers, data=data, timeout=10)
             res_json = resp.json()
 
             if "access_token" in res_json:
-                config.access_token = res_json.get("access_token")
+                new_token = res_json.get("access_token")
+                oa_info = fetch_zalo_oa_info(new_token)
+                
+                # Cập nhật chính xác thông tin OA thật từ Zalo vào đúng config đang thao tác
+                if oa_info and oa_info.get("oa_id"):
+                    config.oa_id = oa_info["oa_id"]
+                    if oa_info.get("name"):
+                        config.oa_name = oa_info["name"]
+
+                config.access_token = new_token
                 config.refresh_token = res_json.get("refresh_token")
                 expires_in = int(res_json.get("expires_in", 90000))
                 config.token_expires_at = timezone.now() + timedelta(seconds=expires_in)
                 config.save()
 
                 serializer = ZaloOaConfigSerializer(config)
+                oa_label = f"{config.oa_name} (ID: {config.oa_id})" if config.oa_id else config.oa_name
                 return Response({
-                    "detail": "Cấp quyền và lấy Token thành công!",
+                    "detail": f"Cấp quyền thành công cho Zalo OA: {oa_label}",
                     "data": serializer.data,
                 })
             else:
@@ -357,6 +398,16 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
                 Q(last_message__icontains=search)
             )
 
+        # Filter theo SĐT phát hiện
+        has_phone = self.request.query_params.get("has_phone")
+        if has_phone in ["true", "1", "True"]:
+            qs = qs.exclude(detected_phone="")
+
+        # Filter theo Zalo OA Config (đa trang OA)
+        oa_config_id = self.request.query_params.get("oa_config")
+        if oa_config_id and str(oa_config_id) != "all":
+            qs = qs.filter(oa_config_id=oa_config_id)
+
         return qs.order_by("-last_interaction_date")
 
     def get_serializer_class(self):
@@ -403,6 +454,27 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
             })
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=["post"], url_path="scan-phones")
+    def scan_phones(self, request):
+        """Quét toàn bộ hội thoại Zalo để phát hiện SĐT & tự động thêm khách hàng nếu bật cấu hình."""
+        from .services import extract_and_process_phone
+        from .models import ZaloMessage
+        leads = SocialLead.objects.filter(company=request.user.company)
+        scanned_count = 0
+        detected_count = 0
+        for lead in leads:
+            msgs = ZaloMessage.objects.filter(social_lead=lead).order_by("-created_at")[:20]
+            text_pool = " ".join([m.content for m in msgs] + [lead.last_message or ""])
+            phone = extract_and_process_phone(lead, text_pool)
+            scanned_count += 1
+            if phone:
+                detected_count += 1
+        return Response({
+            "detail": f"Đã quét {scanned_count} cuộc trò chuyện, phát hiện SĐT trong {detected_count} hội thoại.",
+            "scanned_count": scanned_count,
+            "detected_count": detected_count
+        })
 
     @action(detail=True, methods=["post"], url_path="assign")
     def assign(self, request, pk=None):
