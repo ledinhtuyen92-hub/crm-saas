@@ -234,6 +234,17 @@ export default function FacebookInboxPage() {
     } finally { setCreating(false) }
   }
 
+  const handleRescanPhone = async () => {
+    try {
+      const res = await api.post(`/facebook/leads/${selectedLead.id}/rescan-phone/`)
+      message.success(res.data.detail)
+      fetchLeads()
+      setSelectedLead(prev => ({ ...prev, detected_phone: res.data.phone }))
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Không tìm thấy số điện thoại.')
+    }
+  }
+
   const filteredLeads = leads.filter(l =>
     !search || (l.fb_user_name || '').toLowerCase().includes(search.toLowerCase()) ||
     (l.last_message_preview || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -350,6 +361,16 @@ export default function FacebookInboxPage() {
                   {selectedLead.detected_phone && (
                     <Tag color="blue" style={{ margin: 0, lineHeight: '28px' }}>📞 {selectedLead.detected_phone}</Tag>
                   )}
+                  <Tooltip title="Quét lại toàn bộ tin nhắn cũ để tìm số điện thoại">
+                    <Button
+                      size="small"
+                      icon={<ReloadOutlined />}
+                      onClick={handleRescanPhone}
+                      style={{ borderRadius: 16 }}
+                    >
+                      Quét SĐT
+                    </Button>
+                  </Tooltip>
                 </div>
               </div>
 

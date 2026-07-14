@@ -295,6 +295,28 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
         else:
             return Response({"error": result.get("error")}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=["post"], url_path="rescan-phone")
+    def rescan_phone(self, request, pk=None):
+        """Quét lại tất cả tin nhắn cũ để tìm SĐT."""
+        lead = self.get_object()
+        
+        # Nếu đã có SĐT thì có thể bỏ qua hoặc quét lại tuỳ logic, nhưng quét lại sẽ ghi đè
+        messages = lead.messages.filter(sender_type="customer").order_by("-created_at")
+        for msg in messages:
+            phone = smart_extract_vn_phone(msg.text)
+            if phone:
+                lead.detected_phone = phone
+                lead.save(update_fields=["detected_phone"])
+                return Response({
+                    "detail": f"Đã quét và tìm thấy SĐT: {phone}",
+                    "phone": phone
+                })
+        
+        return Response(
+            {"error": "Không tìm thấy số điện thoại nào trong lịch sử tin nhắn của khách hàng này."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
     @action(detail=True, methods=["post"], url_path="create-customer")
     def create_customer(self, request, pk=None):
         """Tạo khách hàng thủ công từ hội thoại Facebook."""
