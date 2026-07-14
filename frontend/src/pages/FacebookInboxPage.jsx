@@ -1,6 +1,9 @@
 import {
+  DownloadOutlined,
   MessageOutlined,
+  PaperClipOutlined,
   PhoneOutlined,
+  PictureOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -15,15 +18,18 @@ import {
   Col,
   Empty,
   Form,
+  Image,
   Input,
   Modal,
   Row,
   Select,
   Skeleton,
+  Space,
   Spin,
   Tag,
   Tooltip,
   Typography,
+  Upload,
   message,
 } from 'antd'
 import { useEffect, useRef, useState } from 'react'
@@ -111,35 +117,84 @@ function ConvItem({ lead, selected, onClick }) {
   )
 }
 
-// Message bubble (Meta Messenger style)
-function MessageBubble({ msg }) {
+// Message bubble (Meta Messenger style & Zalo clean UX)
+function MessageBubble({ msg, lead, showAvatar = true }) {
   const isPage = msg.sender_type === 'page'
+  const isImage = msg.attachment_type === 'image' || (msg.attachment_url && /\.(png|jpg|jpeg|gif|webp)$/i.test(msg.attachment_url))
+  const hasOnlyImage = !msg.text && msg.attachment_url && isImage
+
   return (
     <div style={{
       display: 'flex',
       justifyContent: isPage ? 'flex-end' : 'flex-start',
-      marginBottom: 8,
+      marginBottom: showAvatar ? 12 : 3,
       padding: '0 16px',
     }}>
       {!isPage && (
-        <Avatar size={28} icon={<UserOutlined />}
-          style={{ marginRight: 8, background: '#dbeafe', color: '#1877f2', flexShrink: 0, alignSelf: 'flex-end' }} />
+        <div style={{ width: 28, marginRight: 8, flexShrink: 0, alignSelf: 'flex-end' }}>
+          {showAvatar && (
+            <Avatar
+              size={28}
+              src={lead?.fb_user_avatar || null}
+              icon={!lead?.fb_user_avatar ? <UserOutlined /> : null}
+              style={{ background: '#dbeafe', color: '#1877f2' }}
+            />
+          )}
+        </div>
       )}
       <div style={{
         maxWidth: '68%',
-        padding: '10px 14px',
+        padding: hasOnlyImage ? 0 : '10px 14px',
         borderRadius: isPage ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-        background: isPage ? '#1877f2' : '#f0f0f0',
+        background: hasOnlyImage ? 'transparent' : isPage ? '#1877f2' : '#f0f0f0',
         color: isPage ? '#fff' : '#1a1a1a',
         fontSize: 14,
         lineHeight: 1.5,
-        boxShadow: isPage ? '0 1px 4px rgba(24,119,242,0.25)' : '0 1px 4px rgba(0,0,0,0.08)',
+        boxShadow: hasOnlyImage ? 'none' : isPage ? '0 1px 4px rgba(24,119,242,0.25)' : '0 1px 4px rgba(0,0,0,0.08)',
+        overflow: 'hidden',
       }}>
-        {msg.text && <span>{msg.text}</span>}
-        {msg.attachment_url && msg.attachment_type === 'image' && (
-          <img src={msg.attachment_url} alt="attachment" style={{ maxWidth: 200, borderRadius: 8, display: 'block' }} />
+        {msg.text && <div style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{msg.text}</div>}
+        {msg.attachment_url && (
+          <div style={{ marginTop: msg.text ? 8 : 0 }}>
+            {isImage ? (
+              <Image
+                src={msg.attachment_url}
+                alt="attachment"
+                style={{ maxWidth: 220, maxHeight: 220, borderRadius: 12, objectFit: 'cover', display: 'block' }}
+              />
+            ) : (
+              <a
+                href={msg.attachment_url}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  background: isPage ? 'rgba(255,255,255,0.15)' : '#e5e7eb',
+                  color: isPage ? '#fff' : '#1f2937',
+                  textDecoration: 'none',
+                }}
+              >
+                <PaperClipOutlined style={{ fontSize: 18 }} />
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  Tệp đính kèm
+                </span>
+                <DownloadOutlined />
+              </a>
+            )}
+          </div>
         )}
-        <div style={{ fontSize: 10, marginTop: 4, opacity: 0.65, textAlign: isPage ? 'right' : 'left' }}>
+        <div style={{
+          fontSize: 10,
+          marginTop: 4,
+          opacity: isPage ? 0.8 : 0.6,
+          textAlign: isPage ? 'right' : 'left',
+          textShadow: hasOnlyImage ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
+          color: hasOnlyImage ? '#6b7280' : 'inherit',
+        }}>
           {new Date(msg.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
@@ -161,7 +216,7 @@ export default function FacebookInboxPage() {
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(false)
   const [msgLoading, setMsgLoading] = useState(false)
-  const [createModal, setCreateModal] = useState(false)
+  const [employees, setEmployees] = useState([])
   const [createForm] = Form.useForm()
   const [creating, setCreating] = useState(false)
   const messagesEndRef = useRef(null)
@@ -198,7 +253,10 @@ export default function FacebookInboxPage() {
     finally { if (!silent) setMsgLoading(false) }
   }
 
-  useEffect(() => { fetchPages() }, [])
+  useEffect(() => {
+    fetchPages()
+    api.get('/users/').then(res => setEmployees(res.data?.results || res.data || [])).catch(() => {})
+  }, [])
   useEffect(() => { 
     fetchLeads() 
     const interval = setInterval(() => { fetchLeads(true) }, 3000)
@@ -225,17 +283,35 @@ export default function FacebookInboxPage() {
     fetchMessages(lead)
   }
 
-  const handleSend = async () => {
-    if (!msgText.trim() || !selectedLead) return
+  const handleSend = async (file = null, requestPhone = false) => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
+    if (!msgText.trim() && !file && !requestPhone && !selectedLead) return
     setSending(true)
     try {
-      const res = await api.post(`/facebook/leads/${selectedLead.id}/send-message/`, { text: msgText })
+      const formData = new FormData()
+      if (msgText.trim()) formData.append('text', msgText.trim())
+      if (file) formData.append('file', file)
+      if (requestPhone) formData.append('request_phone', 'true')
+
+      const res = await api.post(`/facebook/leads/${selectedLead.id}/send-message/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
       setMessages(prev => [...prev, res.data])
-      setMsgText('')
+      if (!file && !requestPhone) setMsgText('')
       fetchLeads(true)
     } catch (err) {
       message.error(err.response?.data?.error || 'Không thể gửi tin nhắn.')
     } finally { setSending(false) }
+  }
+
+  const handleAssign = async (userId) => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
+    try {
+      await api.post(`/facebook/leads/${selectedLead.id}/assign/`, { assigned_to: userId || null })
+      message.success('Phân công thành công!')
+      fetchLeads(true)
+      fetchMessages(selectedLead, true)
+    } catch { message.error('Lỗi khi phân công.') }
   }
 
   const handleCreateCustomer = async (values) => {
@@ -415,30 +491,50 @@ export default function FacebookInboxPage() {
                 {msgLoading ? <Spin style={{ display: 'block', margin: 'auto', marginTop: 40 }} /> : (
                   <>
                     {messages.length === 0 && <Empty description="Chưa có tin nhắn" style={{ marginTop: 40 }} />}
-                    {messages.map(msg => <MessageBubble key={msg.id} msg={msg} />)}
+                    <Image.PreviewGroup>
+                      {messages.map((msg, index) => {
+                        const nextMsg = messages[index + 1]
+                        const showAvatar = !nextMsg || nextMsg.sender_type !== msg.sender_type
+                        return <MessageBubble key={msg.id || index} msg={msg} lead={selectedLead} showAvatar={showAvatar} />
+                      })}
+                    </Image.PreviewGroup>
                     <div ref={messagesEndRef} />
                   </>
                 )}
               </div>
 
-              {/* Message input */}
-              <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', background: '#fff', display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                <Input.TextArea
-                  value={msgText}
-                  onChange={e => setMsgText(e.target.value)}
-                  placeholder="Nhập tin nhắn..."
-                  autoSize={{ minRows: 1, maxRows: 4 }}
-                  style={{ borderRadius: 20, resize: 'none', flex: 1 }}
-                  onPressEnter={e => { if (!e.shiftKey) { e.preventDefault(); handleSend() } }}
-                />
-                <Button
-                  type="primary"
-                  icon={<SendOutlined />}
-                  onClick={handleSend}
-                  loading={sending}
-                  disabled={!msgText.trim()}
-                  style={{ background: '#1877f2', borderRadius: '50%', width: 40, height: 40, padding: 0, flexShrink: 0 }}
-                />
+              {/* Message input & toolbar */}
+              <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', background: '#fff' }}>
+                <div style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <Button size="small" icon={<PhoneOutlined />} onClick={() => handleSend(null, true)} loading={sending} style={{ borderRadius: 14 }}>
+                    Yêu cầu chia sẻ SĐT
+                  </Button>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <Input.TextArea
+                    value={msgText}
+                    onChange={e => setMsgText(e.target.value)}
+                    placeholder="Nhập tin nhắn..."
+                    autoSize={{ minRows: 1, maxRows: 4 }}
+                    style={{ borderRadius: 20, resize: 'none', flex: 1 }}
+                    onPressEnter={e => { if (!e.shiftKey) { e.preventDefault(); handleSend() } }}
+                    disabled={sending}
+                  />
+                  <Upload beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={false} accept="image/*">
+                    <Button shape="circle" icon={<PictureOutlined />} disabled={sending} title="Gửi hình ảnh" />
+                  </Upload>
+                  <Upload beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={false}>
+                    <Button shape="circle" icon={<PaperClipOutlined />} disabled={sending} title="Gửi file tài liệu" />
+                  </Upload>
+                  <Button
+                    type="primary"
+                    icon={<SendOutlined />}
+                    onClick={() => handleSend()}
+                    loading={sending}
+                    disabled={!msgText.trim() && !sending}
+                    style={{ background: '#1877f2', borderRadius: '50%', width: 40, height: 40, padding: 0, flexShrink: 0 }}
+                  />
+                </div>
               </div>
             </>
           )}
@@ -475,6 +571,17 @@ export default function FacebookInboxPage() {
                     <div style={{ fontSize: 13, marginBottom: 12 }}>👤 {selectedLead.customer_name}</div>
                   </>
                 )}
+                <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>NHÂN VIÊN PHỤ TRÁCH</Text></div>
+                <div style={{ marginBottom: 16 }}>
+                  <Select
+                    placeholder="Chọn nhân viên"
+                    style={{ width: '100%' }}
+                    value={selectedLead.assigned_to || null}
+                    allowClear
+                    onChange={handleAssign}
+                    options={[{ value: null, label: '-- Chưa phân công --' }, ...employees.map(e => ({ value: e.id, label: e.full_name || e.username }))]}
+                  />
+                </div>
                 {!selectedLead.is_customer_converted && (
                   <Button
                     type="primary"

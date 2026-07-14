@@ -6,6 +6,7 @@ Tái sử dụng thuật toán smart_extract_vn_phone từ zalo_integration.
 
 import logging
 import re
+import json
 
 import requests
 from django.db import transaction
@@ -67,42 +68,98 @@ def smart_extract_vn_phone(text: str):
 
 # ── Gửi tin nhắn qua Facebook Graph API ──────────────────────────────────────
 
-def send_facebook_message(page_access_token: str, recipient_psid: str, message_text: str, attachment_url: str = None) -> dict:
+def send_facebook_message(
+    page_access_token: str,
+    recipient_psid: str,
+    message_text: str = "",
+    attachment_url: str = None,
+    file_obj = None,
+    attachment_type: str = "image"
+) -> dict:
     """
-    Gửi tin nhắn văn bản (hoặc ảnh đính kèm) từ Trang Facebook tới khách hàng.
+    Gửi tin nhắn văn bản (hoặc ảnh/file đính kèm) từ Trang Facebook tới khách hàng.
+    Hỗ trợ gửi trực tiếp file binary qua multipart/form-data.
     """
     if not page_access_token or not recipient_psid:
         return {"success": False, "error": "Thiếu token hoặc recipient_id."}
 
     url = f"{FB_GRAPH_API_BASE}/me/messages"
     params = {"access_token": page_access_token}
+    last_message_id = None
 
-    if attachment_url:
+    # 1. Gửi đính kèm (nếu có file binary hoặc URL)
+    if file_obj:
+        data = {
+            "recipient": json.dumps({"id": recipient_psid}),
+            "message": json.dumps({
+                "attachment": {
+                    "type": attachment_type if attachment_type in ["image", "file", "audio", "video"] else "file",
+                    "payload": {"is_reusable": True}
+                }
+            })
+        }
+        try:
+            if hasattr(file_obj, "seek"):
+                file_obj.seek(0)
+            file_content = file_obj.read() if hasattr(file_obj, "read") else file_obj
+            file_name = getattr(file_obj, "name", "attachment.png")
+            content_type = getattr(file_obj, "content_type", "application/octet-stream")
+            files = {"filedata": (file_name, file_content, content_type)}
+            resp = requests.post(url, params=params, data=data, files=files, timeout=30)
+            resp_data = resp.json()
+            if "error" in resp_data:
+                logger.error(f"[Facebook] Lỗi gửi file binary: {resp_data['error']}")
+                return {"success": False, "error": resp_data["error"].get("message", "Lỗi gửi file lên Meta")}
+            last_message_id = resp_data.get("message_id")
+        except Exception as e:
+            logger.error(f"[Facebook] Exception khi gửi file binary: {e}")
+            return {"success": False, "error": str(e)}
+
+    elif attachment_url:
         payload = {
             "recipient": {"id": recipient_psid},
             "message": {
                 "attachment": {
-                    "type": "image",
+                    "type": attachment_type if attachment_type in ["image", "file", "audio", "video"] else "image",
                     "payload": {"url": attachment_url, "is_reusable": True}
                 }
             }
         }
-    else:
+        try:
+            resp = requests.post(url, params=params, json=payload, timeout=15)
+            resp_data = resp.json()
+            if "error" in resp_data:
+                logger.error(f"[Facebook] Lỗi gửi attachment URL: {resp_data['error']}")
+                return {"success": False, "error": resp_data["error"].get("message", "Lỗi gửi attachment URL")}
+            last_message_id = resp_data.get("message_id")
+        except Exception as e:
+            logger.error(f"[Facebook] Exception khi gửi attachment URL: {e}")
+            return {"success": False, "error": str(e)}
+
+    # 2. Gửi tin nhắn text (nếu có text)
+    if message_text and message_text.strip():
         payload = {
             "recipient": {"id": recipient_psid},
-            "message": {"text": message_text}
+            "message": {"text": message_text.strip()}
         }
+        try:
+            resp = requests.post(url, params=params, json=payload, timeout=10)
+            resp_data = resp.json()
+            if "error" in resp_data:
+                logger.error(f"[Facebook] Lỗi gửi text: {resp_data['error']}")
+                if not last_message_id:
+                    return {"success": False, "error": resp_data["error"].get("message", "Lỗi gửi tin nhắn")}
+            else:
+                last_message_id = resp_data.get("message_id") or last_message_id
+        except Exception as e:
+            logger.error(f"[Facebook] Exception khi gửi text: {e}")
+            if not last_message_id:
+                return {"success": False, "error": str(e)}
 
-    try:
-        resp = requests.post(url, params=params, json=payload, timeout=10)
-        data = resp.json()
-        if "error" in data:
-            logger.error(f"[Facebook] Lỗi gửi tin nhắn: {data['error']}")
-            return {"success": False, "error": data["error"].get("message", "Lỗi không xác định")}
-        return {"success": True, "message_id": data.get("message_id")}
-    except requests.RequestException as e:
-        logger.error(f"[Facebook] Lỗi kết nối Graph API: {e}")
-        return {"success": False, "error": str(e)}
+    if not last_message_id:
+        return {"success": False, "error": "Không có nội dung hoặc đính kèm nào được gửi đi."}
+
+    return {"success": True, "message_id": last_message_id}
 
 
 # ── Lấy thông tin Profile Facebook User ──────────────────────────────────────

@@ -4,6 +4,8 @@ API Views cho module Facebook Multi-Page Inbox.
 """
 
 import logging
+import uuid
+from django.core.files.storage import default_storage
 
 from django.http import HttpResponse
 from rest_framework import status, viewsets
@@ -275,26 +277,49 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
         lead = self.get_object()
         text = request.data.get("text", "").strip()
         attachment_url = request.data.get("attachment_url")
+        file_obj = request.FILES.get("file")
+        request_phone = request.data.get("request_phone") in ["true", "True", True, 1, "1"]
 
-        if not text and not attachment_url:
-            return Response({"error": "Thiếu nội dung tin nhắn."}, status=status.HTTP_400_BAD_REQUEST)
+        if request_phone and not text:
+            text = "Dạ chào bạn, để tiện hỗ trợ và tư vấn chi tiết hơn, bạn cho mình xin số điện thoại liên hệ với ạ ❤️"
+
+        if not text and not attachment_url and not file_obj:
+            return Response({"error": "Vui lòng nhập nội dung hoặc chọn file/ảnh đính kèm."}, status=status.HTTP_400_BAD_REQUEST)
 
         config = lead.page_config
+        saved_file_url = ""
+        attachment_type = "image"
+
+        if file_obj:
+            if file_obj.content_type and file_obj.content_type.startswith("image/"):
+                attachment_type = "image"
+            else:
+                attachment_type = "file"
+
+            try:
+                ext = file_obj.name.split(".")[-1] if "." in file_obj.name else "bin"
+                saved_path = default_storage.save(f"facebook_attachments/{uuid.uuid4().hex}.{ext}", file_obj)
+                saved_file_url = request.build_absolute_uri(default_storage.url(saved_path))
+            except Exception as e:
+                logger.error(f"[Facebook] Lỗi lưu file local: {e}")
+
         result = send_facebook_message(
             page_access_token=config.page_access_token,
             recipient_psid=lead.fb_user_id,
             message_text=text,
             attachment_url=attachment_url,
+            file_obj=file_obj,
+            attachment_type=attachment_type
         )
 
         if result.get("success"):
-            # Lưu tin nhắn vào DB
             msg = FacebookMessage.objects.create(
                 lead=lead,
                 fb_message_id=result.get("message_id"),
                 sender_type="page",
                 text=text,
-                attachment_url=attachment_url or "",
+                attachment_url=saved_file_url or attachment_url or "",
+                attachment_type=attachment_type if (saved_file_url or file_obj) else "image" if attachment_url else "",
             )
             lead.last_message_at = msg.created_at
             lead.last_message_preview = (text or "[Đính kèm]")[:255]
@@ -343,6 +368,30 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
             })
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["post"], url_path="assign")
+    def assign(self, request, pk=None):
+        """Phân công nhân viên cho FacebookLead."""
+        lead = self.get_object()
+        assigned_to_id = request.data.get("assigned_to")
+
+        if not assigned_to_id:
+            lead.assigned_to = None
+            lead.save(update_fields=["assigned_to"])
+            return Response({"detail": "Đã xóa phân công."})
+
+        from users.models import User
+        try:
+            user = User.objects.get(id=assigned_to_id, company=request.user.company)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "Nhân viên không hợp lệ."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        lead.assigned_to = user
+        lead.save(update_fields=["assigned_to"])
+        return Response({"detail": f"Đã phân công cho {user.get_full_name() or user.username}."})
 
     @action(detail=True, methods=["post"], url_path="scan-phone")
     def scan_phone(self, request, pk=None):
