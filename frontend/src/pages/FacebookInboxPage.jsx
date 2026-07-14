@@ -43,7 +43,7 @@ function formatTime(dateStr) {
   const now = new Date()
   const diffMs = now - d
   const diffMin = Math.floor(diffMs / 60000)
-  const diffH = Math.floor(diffH / 3600000)
+  const diffH = Math.floor(diffMs / 3600000)
   if (diffMin < 1) return 'Vừa xong'
   if (diffMin < 60) return `${diffMin} phút`
   if (diffMin < 1440) return `${Math.floor(diffMin / 60)} giờ`
