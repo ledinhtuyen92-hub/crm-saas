@@ -67,6 +67,12 @@ try:
     call_command('loaddata', tmp_file, verbosity=2)
     print()
     print("=" * 60)
+    print("🛠️  Bước 4: Tự động sửa lỗi font Mojibake nếu có...")
+    print("=" * 60)
+    import fix_mojibake
+    fix_mojibake.run()
+    print()
+    print("=" * 60)
     print("🎉 HOÀN TẤT! Dữ liệu từ sync_data.json đã được nạp thành công!")
     print("=" * 60)
 except Exception as e:

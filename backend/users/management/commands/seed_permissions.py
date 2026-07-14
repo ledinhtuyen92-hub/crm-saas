@@ -3,10 +3,13 @@ from django.core.management.base import BaseCommand
 from users.models import Permission, Role, CompanySettings
 
 
-# Bộ permissions chuẩn theo module — đồng bộ với AI_CONTEXT.md
+# Bộ permissions chuẩn theo module — đồng bộ với AGENTS.md / AI_CONTEXT.md
 PERMISSIONS = [
     # ── Dashboard ──────────────────────────────────────────────────
-    {"code": "dashboard.view", "name": "Xem Dashboard", "module": "dashboard"},
+    {"code": "dashboard.view", "name": "Xem Dashboard tổng quan", "module": "dashboard"},
+    {"code": "dashboard.view_revenue", "name": "Xem biểu đồ doanh thu & dòng tiền", "module": "dashboard"},
+    {"code": "dashboard.view_all_stats", "name": "Xem số liệu toàn bộ công ty", "module": "dashboard"},
+    {"code": "dashboard.export_report", "name": "Xuất báo cáo tổng quan Dashboard", "module": "dashboard"},
 
     # ── CRM (Khách hàng & Leads) ───────────────────────────────────
     {"code": "crm.view", "name": "Xem danh sách khách hàng", "module": "crm"},
@@ -21,6 +24,8 @@ PERMISSIONS = [
     {"code": "crm.manage_tags", "name": "Quản lý Tags khách hàng", "module": "crm"},
     {"code": "crm.auto_assign_self", "name": "Tự động phụ trách khách hàng do mình tạo", "module": "crm"},
     {"code": "crm.upload_interaction_files", "name": "Tải file lên Lịch sử chăm sóc (Hình ảnh, PDF...)", "module": "crm"},
+    {"code": "crm.view_phone", "name": "Xem số điện thoại đầy đủ (không bị che/ẩn)", "module": "crm"},
+    {"code": "crm.merge", "name": "Gộp khách hàng trùng lặp", "module": "crm"},
 
     # ── Sales (Báo giá) ───────────────────────────────────────────
     {"code": "sales.view", "name": "Xem danh sách báo giá", "module": "sales"},
@@ -31,6 +36,8 @@ PERMISSIONS = [
     {"code": "sales.require_approval", "name": "Bắt buộc trình duyệt (không cho gửi trực tiếp)", "module": "sales"},
     {"code": "sales.export_pdf", "name": "Xuất PDF báo giá", "module": "sales"},
     {"code": "sales.view_all", "name": "Xem tất cả báo giá (không giới hạn bởi phòng ban/người tạo)", "module": "sales"},
+    {"code": "sales.discount", "name": "Được phép giảm giá vượt hạn mức báo giá", "module": "sales"},
+    {"code": "sales.manage_templates", "name": "Quản lý mẫu in & biểu mẫu Báo giá", "module": "sales"},
 
     # ── Orders (Đơn hàng) ─────────────────────────────────────────
     {"code": "orders.view", "name": "Xem danh sách đơn hàng", "module": "orders"},
@@ -41,6 +48,8 @@ PERMISSIONS = [
     {"code": "orders.cancel", "name": "Hủy đơn hàng", "module": "orders"},
     {"code": "orders.export_pdf", "name": "Xuất PDF đơn hàng", "module": "orders"},
     {"code": "orders.view_all", "name": "Xem tất cả đơn hàng (không giới hạn bởi người tạo)", "module": "orders"},
+    {"code": "orders.change_price", "name": "Sửa giá bán đơn giá trong đơn hàng", "module": "orders"},
+    {"code": "orders.view_cost", "name": "Xem giá vốn & biên lợi nhuận gộp đơn hàng", "module": "orders"},
 
     # ── Products (Sản phẩm & Dịch vụ) ─────────────────────────────
     {"code": "products.view", "name": "Xem danh sách sản phẩm", "module": "products"},
@@ -48,6 +57,8 @@ PERMISSIONS = [
     {"code": "products.edit", "name": "Chỉnh sửa sản phẩm", "module": "products"},
     {"code": "products.delete", "name": "Xóa sản phẩm", "module": "products"},
     {"code": "products.manage_categories", "name": "Quản lý loại sản phẩm", "module": "products"},
+    {"code": "products.view_cost_price", "name": "Xem giá vốn / giá nhập sản phẩm", "module": "products"},
+    {"code": "products.manage_units", "name": "Quản lý đơn vị tính & quy đổi", "module": "products"},
 
     # ── Inventory (Kho vận) ───────────────────────────
     {"code": "inventory.view", "name": "Xem tồn kho & lịch sử giao dịch", "module": "inventory"},
@@ -57,6 +68,8 @@ PERMISSIONS = [
     {"code": "inventory.approve_export", "name": "Duyệt lệnh xuất kho", "module": "inventory"},
     {"code": "inventory.manual_export", "name": "Tạo phiếu xuất kho thủ công", "module": "inventory"},
     {"code": "inventory.manage_warehouse", "name": "Quản lý kho hàng", "module": "inventory"},
+    {"code": "inventory.view_all_warehouses", "name": "Xem số liệu tồn kho tất cả các kho", "module": "inventory"},
+    {"code": "inventory.stock_take", "name": "Tạo & chốt phiếu kiểm kê kho hàng", "module": "inventory"},
 
     # ── Production (Sản xuất) ─────────────────────────────────────
     {"code": "production.view", "name": "Xem lệnh sản xuất", "module": "production"},
@@ -64,31 +77,47 @@ PERMISSIONS = [
     {"code": "production.edit", "name": "Chỉnh sửa lệnh sản xuất", "module": "production"},
     {"code": "production.update_step", "name": "Cập nhật tiến độ công đoạn", "module": "production"},
     {"code": "production.delete", "name": "Xóa lệnh sản xuất", "module": "production"},
+    {"code": "production.assign_worker", "name": "Phân công tổ đội / nhân công sản xuất", "module": "production"},
+    {"code": "production.quality_check", "name": "Kiểm tra chất lượng KCS / QC thành phẩm", "module": "production"},
 
-    # ── Delivery & Warranty (Giao hàng & Bảo hành) ─────────────────
+    # ── Delivery (Giao hàng) ──────────────────────────────────────
     {"code": "delivery.view", "name": "Xem lệnh giao hàng", "module": "delivery"},
+    {"code": "delivery.create", "name": "Tạo lệnh giao hàng mới", "module": "delivery"},
     {"code": "delivery.edit", "name": "Cập nhật lệnh giao hàng", "module": "delivery"},
     {"code": "delivery.delete", "name": "Xoá lệnh giao hàng", "module": "delivery"},
     {"code": "delivery.assign", "name": "Gán nhân viên giao hàng", "module": "delivery"},
+    {"code": "delivery.confirm", "name": "Xác nhận hoàn thành & thu hồi phiếu giao hàng", "module": "delivery"},
+
+    # ── Warranty (Bảo hành) ───────────────────────────────────────
     {"code": "warranty.view", "name": "Xem phiếu bảo hành", "module": "warranty"},
+    {"code": "warranty.create", "name": "Tạo phiếu bảo hành mới", "module": "warranty"},
     {"code": "warranty.edit", "name": "Cập nhật phiếu bảo hành", "module": "warranty"},
     {"code": "warranty.delete", "name": "Xoá phiếu bảo hành", "module": "warranty"},
+    {"code": "warranty.extend", "name": "Gia hạn thời gian bảo hành", "module": "warranty"},
 
     # ── Reports (Báo cáo) ─────────────────────────────────────────
-    {"code": "reports.view", "name": "Xem báo cáo", "module": "reports"},
+    {"code": "reports.view", "name": "Xem báo cáo kinh doanh", "module": "reports"},
     {"code": "reports.view_all", "name": "Xem báo cáo toàn công ty (tất cả nhân viên)", "module": "reports"},
     {"code": "reports.export", "name": "Xuất báo cáo ra Excel/PDF", "module": "reports"},
+    {"code": "reports.view_revenue", "name": "Xem báo cáo doanh thu & chi phí chi tiết", "module": "reports"},
+    {"code": "reports.view_inventory", "name": "Xem báo cáo xuất nhập tồn kho chi tiết", "module": "reports"},
+    {"code": "reports.view_debt", "name": "Xem báo cáo công nợ phải thu / phải trả", "module": "reports"},
 
     # ── Notifications (Thông báo) ─────────────────────────────────
-    {"code": "notifications.view", "name": "Xem thông báo", "module": "notifications"},
+    {"code": "notifications.view", "name": "Xem danh sách thông báo", "module": "notifications"},
+    {"code": "notifications.send_broadcast", "name": "Gửi thông báo toàn công ty", "module": "notifications"},
 
     # ── Settings (Cài đặt công ty) ────────────────────────────────
     {"code": "settings.users", "name": "Quản lý tài khoản nhân viên", "module": "settings"},
     {"code": "settings.roles", "name": "Quản lý vai trò & phân quyền", "module": "settings"},
     {"code": "settings.company", "name": "Cài đặt thông tin công ty", "module": "settings"},
+    {"code": "settings.departments", "name": "Quản lý phòng ban & cơ cấu tổ chức", "module": "settings"},
+    {"code": "settings.system_logs", "name": "Xem nhật ký hoạt động hệ thống (Audit log)", "module": "settings"},
+    {"code": "settings.backup", "name": "Quản lý sao lưu & phục hồi dữ liệu", "module": "settings"},
 
     # ── Approvals (Phê duyệt) ─────────────────────────────────────
     {"code": "approvals.view", "name": "Xem danh sách phê duyệt", "module": "approvals"},
+    {"code": "approvals.create", "name": "Tạo yêu cầu phê duyệt mới", "module": "approvals"},
     {"code": "approvals.approve", "name": "Duyệt/Từ chối yêu cầu", "module": "approvals"},
     {"code": "approvals.manage", "name": "Quản lý luồng phê duyệt", "module": "approvals"},
 
@@ -98,11 +127,16 @@ PERMISSIONS = [
     {"code": "finance.edit", "name": "Chỉnh sửa giao dịch", "module": "finance"},
     {"code": "finance.delete", "name": "Xóa giao dịch", "module": "finance"},
     {"code": "finance.request_credit", "name": "Trình duyệt xuất kho nợ", "module": "finance"},
+    {"code": "finance.view_all", "name": "Xem toàn bộ quỹ công ty & sổ ngân hàng", "module": "finance"},
+    {"code": "finance.export", "name": "Xuất Excel sổ quỹ thu chi & công nợ", "module": "finance"},
+    {"code": "finance.approve_receipt", "name": "Duyệt chính thức phiếu thu / phiếu chi", "module": "finance"},
 
     # ── Zalo Integration (Tích hợp Zalo OA) ───────────────────────
     {"code": "zalo.view", "name": "Xem danh sách hội thoại (Zalo Inbox)", "module": "zalo"},
-    {"code": "zalo.send_zns", "name": "Gửi tin nhắn ZNS", "module": "zalo"},
-    {"code": "zalo.config", "name": "Cấu hình kết nối Zalo OA", "module": "zalo"},
+    {"code": "zalo.send_zns", "name": "Gửi tin nhắn ZNS chăm sóc khách hàng", "module": "zalo"},
+    {"code": "zalo.config", "name": "Cấu hình kết nối Zalo OA & Mẫu ZNS", "module": "zalo"},
+    {"code": "zalo.manage_templates", "name": "Quản lý mẫu in & cấu hình tự động ZNS", "module": "zalo"},
+    {"code": "zalo.view_all_inbox", "name": "Xem tất cả hội thoại Zalo OA của toàn công ty", "module": "zalo"},
 ]
 
 
@@ -159,9 +193,16 @@ class Command(BaseCommand):
             else:
                 updated_count += 1
 
+        # Tự động cấp toàn bộ quyền cho vai trò Giám đốc
+        all_perms = Permission.objects.all()
+        admin_roles = Role.objects.filter(name__icontains="Giám đốc")
+        for role in admin_roles:
+            role.permissions.set(all_perms)
+            self.stdout.write(self.style.SUCCESS(f"👑 Đã cập nhật đủ {all_perms.count()} quyền cho vai trò: {role.name}"))
+
         self.stdout.write(
             self.style.SUCCESS(
                 f"✅ Hoàn thành! Đã tạo mới {created_count} và cập nhật {updated_count} permissions.\n"
-                f"   Tổng cộng: {len(PERMISSIONS)} permissions trong hệ thống."
+                f"   Tổng cộng: {len(PERMISSIONS)} permissions chuẩn trong hệ thống."
             )
         )
