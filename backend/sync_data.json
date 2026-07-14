@@ -273,15 +273,6 @@
   },
   {
     "model": "users.permission",
-    "pk": 29,
-    "fields": {
-      "code": "inventory.export",
-      "name": "Xem phiếu xuất kho",
-      "module": "inventory"
-    }
-  },
-  {
-    "model": "users.permission",
     "pk": 30,
     "fields": {
       "code": "inventory.manage_warehouse",
@@ -350,24 +341,6 @@
       "code": "reports.view_all",
       "name": "Xem báo cáo toàn công ty (tất cả nhân viên)",
       "module": "reports"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 38,
-    "fields": {
-      "code": "reports.export",
-      "name": "Xuất báo cáo ra Excel/PDF",
-      "module": "reports"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 39,
-    "fields": {
-      "code": "notifications.view",
-      "name": "Xem danh sách thông báo",
-      "module": "notifications"
     }
   },
   {
@@ -462,33 +435,6 @@
   },
   {
     "model": "users.permission",
-    "pk": 50,
-    "fields": {
-      "code": "finance.confirm_milestone",
-      "name": "Xác nhận hoàn tất Kỳ thanh toán (mở cổng SX & Xuất kho)",
-      "module": "finance"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 51,
-    "fields": {
-      "code": "finance.approve_credit",
-      "name": "Phê duyệt xuất kho nợ ngoại lệ / vượt hạn mức",
-      "module": "finance"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 52,
-    "fields": {
-      "code": "finance.view_all",
-      "name": "Xem toàn bộ quỹ công ty & sổ ngân hàng",
-      "module": "finance"
-    }
-  },
-  {
-    "model": "users.permission",
     "pk": 53,
     "fields": {
       "code": "products.view",
@@ -507,38 +453,11 @@
   },
   {
     "model": "users.permission",
-    "pk": 55,
-    "fields": {
-      "code": "approvals.view",
-      "name": "Xem danh sách phê duyệt",
-      "module": "approvals"
-    }
-  },
-  {
-    "model": "users.permission",
     "pk": 56,
     "fields": {
       "code": "approvals.approve",
       "name": "Duyệt/Từ chối yêu cầu",
       "module": "approvals"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 57,
-    "fields": {
-      "code": "approvals.manage",
-      "name": "Quản lý luồng phê duyệt",
-      "module": "approvals"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 58,
-    "fields": {
-      "code": "finance.edit",
-      "name": "Chỉnh sửa giao dịch",
-      "module": "finance"
     }
   },
   {
@@ -696,145 +615,10 @@
   },
   {
     "model": "users.permission",
-    "pk": 76,
-    "fields": {
-      "code": "dashboard.view_all_stats",
-      "name": "Xem số liệu toàn bộ công ty",
-      "module": "dashboard"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 77,
-    "fields": {
-      "code": "dashboard.export_report",
-      "name": "Xuất báo cáo tổng quan Dashboard",
-      "module": "dashboard"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 78,
-    "fields": {
-      "code": "crm.view_phone",
-      "name": "Xem số điện thoại đầy đủ (không bị che/ẩn)",
-      "module": "crm"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 79,
-    "fields": {
-      "code": "crm.merge",
-      "name": "Gộp khách hàng trùng lặp",
-      "module": "crm"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 80,
-    "fields": {
-      "code": "sales.discount",
-      "name": "Được phép giảm giá vượt hạn mức báo giá",
-      "module": "sales"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 81,
-    "fields": {
-      "code": "sales.manage_templates",
-      "name": "Quản lý mẫu in & biểu mẫu Báo giá",
-      "module": "sales"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 82,
-    "fields": {
-      "code": "orders.change_price",
-      "name": "Sửa giá bán đơn giá trong đơn hàng",
-      "module": "orders"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 83,
-    "fields": {
-      "code": "orders.view_cost",
-      "name": "Xem giá vốn & biên lợi nhuận gộp đơn hàng",
-      "module": "orders"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 84,
-    "fields": {
-      "code": "products.view_cost_price",
-      "name": "Xem giá vốn / giá nhập sản phẩm",
-      "module": "products"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 85,
-    "fields": {
-      "code": "products.manage_units",
-      "name": "Quản lý đơn vị tính & quy đổi",
-      "module": "products"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 86,
-    "fields": {
-      "code": "inventory.view_all_warehouses",
-      "name": "Xem số liệu tồn kho tất cả các kho",
-      "module": "inventory"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 87,
-    "fields": {
-      "code": "inventory.stock_take",
-      "name": "Tạo & chốt phiếu kiểm kê kho hàng",
-      "module": "inventory"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 88,
-    "fields": {
-      "code": "production.assign_worker",
-      "name": "Phân công tổ đội / nhân công sản xuất",
-      "module": "production"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 89,
-    "fields": {
-      "code": "production.quality_check",
-      "name": "Kiểm tra chất lượng KCS / QC thành phẩm",
-      "module": "production"
-    }
-  },
-  {
-    "model": "users.permission",
     "pk": 90,
     "fields": {
       "code": "delivery.create",
       "name": "Tạo lệnh giao hàng mới",
-      "module": "delivery"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 91,
-    "fields": {
-      "code": "delivery.confirm",
-      "name": "Xác nhận hoàn thành & thu hồi phiếu giao hàng",
       "module": "delivery"
     }
   },
@@ -849,101 +633,11 @@
   },
   {
     "model": "users.permission",
-    "pk": 93,
-    "fields": {
-      "code": "warranty.extend",
-      "name": "Gia hạn thời gian bảo hành",
-      "module": "warranty"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 94,
-    "fields": {
-      "code": "reports.view_revenue",
-      "name": "Xem báo cáo doanh thu & chi phí chi tiết",
-      "module": "reports"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 95,
-    "fields": {
-      "code": "reports.view_inventory",
-      "name": "Xem báo cáo xuất nhập tồn kho chi tiết",
-      "module": "reports"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 96,
-    "fields": {
-      "code": "reports.view_debt",
-      "name": "Xem báo cáo công nợ phải thu / phải trả",
-      "module": "reports"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 97,
-    "fields": {
-      "code": "notifications.send_broadcast",
-      "name": "Gửi thông báo toàn công ty",
-      "module": "notifications"
-    }
-  },
-  {
-    "model": "users.permission",
     "pk": 98,
     "fields": {
       "code": "settings.departments",
       "name": "Quản lý phòng ban & cơ cấu tổ chức",
       "module": "settings"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 99,
-    "fields": {
-      "code": "settings.system_logs",
-      "name": "Xem nhật ký hoạt động hệ thống (Audit log)",
-      "module": "settings"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 100,
-    "fields": {
-      "code": "settings.backup",
-      "name": "Quản lý sao lưu & phục hồi dữ liệu",
-      "module": "settings"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 101,
-    "fields": {
-      "code": "approvals.create",
-      "name": "Tạo yêu cầu phê duyệt mới",
-      "module": "approvals"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 102,
-    "fields": {
-      "code": "finance.export",
-      "name": "Xuất Excel sổ quỹ thu chi & công nợ",
-      "module": "finance"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 103,
-    "fields": {
-      "code": "finance.approve_receipt",
-      "name": "Duyệt chính thức phiếu thu / phiếu chi",
-      "module": "finance"
     }
   },
   {
@@ -957,11 +651,38 @@
   },
   {
     "model": "users.permission",
-    "pk": 105,
+    "pk": 106,
     "fields": {
-      "code": "zalo.view_all_inbox",
-      "name": "Xem tất cả hội thoại Zalo OA của toàn công ty",
-      "module": "zalo"
+      "code": "facebook.view_inbox",
+      "name": "Xem Hộp thư Facebook (Multi-Page Inbox)",
+      "module": "facebook"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 107,
+    "fields": {
+      "code": "facebook.chat",
+      "name": "Chat trực tiếp với khách hàng trên Facebook",
+      "module": "facebook"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 108,
+    "fields": {
+      "code": "facebook.create_customer",
+      "name": "Tạo khách hàng từ hội thoại Facebook",
+      "module": "facebook"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 109,
+    "fields": {
+      "code": "facebook.manage_config",
+      "name": "Quản lý kết nối Trang Facebook & Cấu hình tự động quét SĐT",
+      "module": "facebook"
     }
   },
   {
@@ -974,9 +695,6 @@
       "is_auto_assign_target": false,
       "permissions": [
         56,
-        101,
-        57,
-        55,
         6,
         45,
         43,
@@ -986,93 +704,70 @@
         8,
         7,
         10,
-        79,
         44,
         2,
         9,
-        78,
-        77,
         1,
-        76,
         75,
         71,
-        91,
         90,
         67,
         66,
         65,
-        51,
-        103,
-        50,
+        107,
+        108,
+        109,
+        106,
         49,
         59,
-        58,
-        102,
         63,
         48,
-        52,
         28,
         60,
-        29,
         27,
         30,
         61,
-        87,
         23,
-        86,
-        97,
-        39,
         20,
         62,
-        82,
         17,
         19,
         18,
         21,
         16,
         22,
-        83,
-        88,
         33,
         35,
         34,
-        89,
         64,
         32,
         24,
         26,
         25,
         31,
-        85,
         53,
-        84,
-        38,
         36,
         37,
-        96,
-        95,
-        94,
         46,
         12,
         14,
-        80,
         13,
         15,
-        81,
         54,
         11,
         47,
-        100,
         42,
         98,
         41,
-        99,
         40,
         92,
         70,
         69,
-        93,
-        68
+        68,
+        74,
+        104,
+        73,
+        72
       ]
     }
   },
@@ -1096,7 +791,6 @@
         2,
         9,
         1,
-        39,
         20,
         17,
         19,
@@ -1125,7 +819,6 @@
         44,
         2,
         1,
-        39,
         18,
         21,
         16,
@@ -1153,12 +846,9 @@
         1,
         66,
         65,
-        50,
         49,
         48,
-        52,
         23,
-        39,
         18,
         16,
         22,
@@ -1168,7 +858,6 @@
         64,
         32,
         53,
-        38,
         36,
         37,
         46,
@@ -1195,11 +884,9 @@
         1,
         48,
         28,
-        29,
         27,
         30,
         23,
-        39,
         16,
         22,
         32,
@@ -1219,7 +906,6 @@
       "permissions": [
         1,
         23,
-        39,
         16,
         22,
         64,
@@ -1232,7 +918,7 @@
     "model": "users.user",
     "fields": {
       "password": "pbkdf2_sha256$1000000$ECQhi9BHkIsVTlsjgPiIMe$sVQIe5Cfq9ZU7nACy/evbQj0IfRFVVhgCQ1NbKN4NE8=",
-      "last_login": "2026-07-14T01:40:02.562Z",
+      "last_login": "2026-07-14T09:11:25.518Z",
       "is_superuser": true,
       "username": "admin",
       "first_name": "",
@@ -1258,7 +944,7 @@
     "model": "users.user",
     "fields": {
       "password": "pbkdf2_sha256$1000000$gogv5if640Ve4r5k5DvYiY$Co2C/05RkNJOSvpBH4uiONSzdeTJAZ/vJysA2SrgpDY=",
-      "last_login": "2026-07-14T01:36:12.209Z",
+      "last_login": "2026-07-14T10:39:37.251Z",
       "is_superuser": false,
       "username": "giamdoc",
       "first_name": "",
@@ -1480,7 +1166,9 @@
         "approvals",
         "finance",
         "warranty",
-        "delivery"
+        "delivery",
+        "zalo",
+        "facebook"
       ],
       "quotation_template": 2,
       "default_quotation_terms": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao.",
@@ -1557,9 +1245,12 @@
       "jwt_expiration_hours": 24,
       "max_file_upload_mb": 100,
       "maintenance_mode": false,
-      "zalo_app_id": null,
-      "zalo_app_secret": null,
-      "zalo_webhook_secret": null
+      "zalo_app_id": "4538339528152720439",
+      "zalo_app_secret": "PPhXUI223iu8PXUW5EG3",
+      "zalo_webhook_secret": "RhgtZWnppzgzIH6JzR6v",
+      "facebook_app_id": "1023573895094278",
+      "facebook_app_secret": "4e1e6362c6fd981f118d556e33ccc28d",
+      "facebook_webhook_secret": "tuyen_ldt"
     }
   },
   {
@@ -1577,7 +1268,7 @@
     "fields": {
       "company": 15,
       "name": "Vũ Thị Huế",
-      "phone": "0988565777",
+      "phone": "0988565776",
       "email": "hue@gmail.com",
       "address": "Hạ trường, thanh cường, thanh hà",
       "city": "",
@@ -1593,7 +1284,7 @@
       "notes": "",
       "social_lead": null,
       "created_at": "2026-07-10T10:28:47.919Z",
-      "updated_at": "2026-07-11T07:46:37.960Z",
+      "updated_at": "2026-07-14T10:40:53.006Z",
       "tags": []
     }
   },
@@ -7195,6 +6886,274 @@
       "warranty_rules": "",
       "created_at": "2026-07-11T10:03:53.057Z",
       "updated_at": "2026-07-11T10:03:53.057Z"
+    }
+  },
+  {
+    "model": "zalo_integration.zalooaconfig",
+    "pk": 1,
+    "fields": {
+      "company": 15,
+      "oa_name": "Bất động sản Minh Phúc",
+      "use_system_config": true,
+      "app_id": "",
+      "secret_key": "",
+      "oa_id": "1164593518856973451",
+      "access_token": "-Hol3ch9D0tp4Qu5Oiaq0l0Kg05frqPZfbI6AKxjGttVL8nW2F9y8_9wxI4brYjuxclF31h_ANFWTVG5TUyhLkrLwoa--YTxxK3T1HJlBs7CCie15R0s2TPknb57n3bNXM7tDLte1JA_KPzOLejeHPeAY11GaN1MdpE09mQpSIINDRmiOeTmRkyTdsiUYKqmw1pNTdcwC1QJ5ViVMgy9TfmqoH1cw1Pjb4RmBGBp8KdQTDf0EV8rCzzwmcehq0C2t4JVMJ2S7oFe1iqbVueBPfuMuHC6YWTbYmhCCd-e26EfFT4cSPuLSei9ZnWPYLPTqnE68YkxH4h6Py4uFhmWKkibtouphLf7t2V35KxoAXsARyOOKCjMPwXUb193nN5Gsdoz0bVxTqQ6Hf4lUUTjNEnWhWXvmdHpW5hg1A3jg31jtpCB",
+      "refresh_token": "oMAXEj9hY4p3Rw0nsck8Gy1gfZNHTVyyaYM_0Dr2n3INEvGtr7lj8viym2-APwj7oM7JJT0OW4NF7Eypibwl0l92yY2rCQK3gdFl1F1wdnxe1kmmWm6S1DX9wZ2wEvu5mqx6E9mPb1VRVS0vWdMW6viEmn7WKOOSvGFb5VvMXHk32wuuqm_xBOzmi1_HBjyRgdQoABeKn27N4gy0cq_YS-OHiGwHOVyZunQm7lfWmmwWFhzpxKx1HemWicx-ICqTX2w489zIgoJXCk0ncc2DMOi5-KppGe9vYW30Tjfsj5UdT-P0tH2vS8LlnNt44ArlX7l5JPqkc3oCQ-qxpsguJ8alcchtBl1haogYQVykxak1BP52n2pOTevgiqhIRfmycnRACE92dXUh4CuqwbI1Cgacx3umA34QHTLzZqe",
+      "token_expires_at": "2026-07-15T05:02:04.539Z",
+      "webhook_secret": "",
+      "auto_send_payment_zns": false,
+      "auto_send_delivery_zns": false,
+      "auto_send_birthday_zns": false,
+      "auto_create_customer_from_phone": true,
+      "lead_cleanup_days": 30,
+      "is_active": true,
+      "created_at": "2026-07-14T02:32:51.927Z",
+      "updated_at": "2026-07-14T04:02:04.540Z"
+    }
+  },
+  {
+    "model": "zalo_integration.zalooaconfig",
+    "pk": 7,
+    "fields": {
+      "company": 15,
+      "oa_name": "Nội thất Mộc Lê Gia",
+      "use_system_config": true,
+      "app_id": "",
+      "secret_key": "",
+      "oa_id": "4375101215417069625",
+      "access_token": "jxoY7yPIim6ziQCKpbAp3hwqfH35JDX5uEs2KCzTyqgWtRaoh4NlSO32Z76jLzuJjR342BiMWb21cCKAeWkhH9I4xXoCQg9uk_33FTHyYNoa-vbXecJNEzBJb42aKOCCe-h6SQ05dJACgObrXpVT6f-ukKJiG_KvxAAaKTSDoIMuwxDne7dyFTlWdMVkNzuEwh2g5y4n-GBmbO98Wplg0RctaMwSADaiveYoH-aE_5BYgkP8w2kq4--IyaJvV9ekbjZpK9b3jIA3_yPsZM6JC_dXzrBHQAqh-ulLAu0tkZ2RflTDlIId0i-trspvMAHmwVt36_HRjdJnvzamsLILPFFNmmBOC9OVueJTPlzdiJ_qvQ9vqb_p0DZwbbZL5DOgz9kONUu9p3dKxhTOzrll3E-r-1dS6kXiJqBM8Yt1HBG7",
+      "refresh_token": "5bTrSFOYkrOSMdHx_YAxMHzVSd_rFD00TqbLNjT7yZflNs9xwb-e1bfmOZxzQi1UJnTbBV8Gm5DHEseki1JsJpGtUo_K7VG2KJTPMUvAnpfIKrnv-5_r1MfVUaFDHlCSMaXhCCD6vbz_U4eJzNh2MMnYO2lQ6DXkOML7F_G5qaiUANW8W3FmU1ezNmw70ljY5ID_7gS-rc4-6a4hXIJFJMyVGdNrFiKn43XkGAyxvnew0tDbfdh08WLzINYKGUjR45KxDAnjeab95Wykrp2gJdGp9YB12f1bPXCO6EDhWKC15mmyeI-OJn4X4Z2bFuDiEXKJ9eKyl4KqDm0Kbq-iG2fDV1c0L-PwObvr9jv6m59OQKjomXJuNYXhHZoS5enhBY4h9ejKc54vUbGJeG-VCXqK66uuqqtz5V4ql50",
+      "token_expires_at": "2026-07-15T05:02:57.978Z",
+      "webhook_secret": "",
+      "auto_send_payment_zns": false,
+      "auto_send_delivery_zns": false,
+      "auto_send_birthday_zns": false,
+      "auto_create_customer_from_phone": false,
+      "lead_cleanup_days": 30,
+      "is_active": true,
+      "created_at": "2026-07-14T03:41:37.660Z",
+      "updated_at": "2026-07-14T04:02:57.978Z"
+    }
+  },
+  {
+    "model": "zalo_integration.sociallead",
+    "pk": 10,
+    "fields": {
+      "company": 15,
+      "oa_config": 1,
+      "platform": "zalo",
+      "social_id": "2913065542086180463",
+      "display_name": "",
+      "avatar_url": null,
+      "last_message": ";p ;p",
+      "last_interaction_date": "2026-07-14T10:36:26.896Z",
+      "status": "chatting",
+      "has_unread_message": false,
+      "detected_phone": "",
+      "is_customer_converted": false,
+      "assigned_to": null,
+      "notes": "",
+      "created_at": "2026-07-14T10:36:09.144Z",
+      "updated_at": "2026-07-14T10:36:26.896Z"
+    }
+  },
+  {
+    "model": "zalo_integration.zalomessage",
+    "pk": 13,
+    "fields": {
+      "company": 15,
+      "social_lead": 10,
+      "direction": "inbound",
+      "content": "/-strong",
+      "attachment_url": "",
+      "attachment_type": "",
+      "zalo_msg_id": "e8f7d27bb54a0c13555c",
+      "sender_user": null,
+      "created_at": "2026-07-14T10:36:09.910Z"
+    }
+  },
+  {
+    "model": "zalo_integration.zalomessage",
+    "pk": 14,
+    "fields": {
+      "company": 15,
+      "social_lead": 10,
+      "direction": "inbound",
+      "content": "chào",
+      "attachment_url": "",
+      "attachment_type": "",
+      "zalo_msg_id": "f78503047935c06c9923",
+      "sender_user": null,
+      "created_at": "2026-07-14T10:36:21.577Z"
+    }
+  },
+  {
+    "model": "zalo_integration.zalomessage",
+    "pk": 15,
+    "fields": {
+      "company": 15,
+      "social_lead": 10,
+      "direction": "inbound",
+      "content": ";p ;p",
+      "attachment_url": "",
+      "attachment_type": "",
+      "zalo_msg_id": "9e9d3ccc4afdf3a4aaeb",
+      "sender_user": null,
+      "created_at": "2026-07-14T10:36:26.910Z"
+    }
+  },
+  {
+    "model": "facebook_integration.facebookpageconfig",
+    "pk": 4,
+    "fields": {
+      "company": 15,
+      "page_name": "Mr Bee - Mật ong nguyên chất",
+      "page_id": "243343795792895",
+      "use_system_config": true,
+      "app_id": null,
+      "app_secret": null,
+      "page_access_token": "EAAOi715rIAYBRZBE7y3yW53RSrugDjhEu6ldr2dZCxFuu6xPtVJIc8IQwZAPZBPAovfS7YcMfEpc07g8IZAF7QkQJMQfSwTZCyOKREWYlx3HpHEaC5GVSu2xUZB7eDUoeNJT6w0g4IPBPqMPUzpNqZB5jZBxfwk6WJWBIZBnZC8TiTFWeg6LZAuZABpbSpVHZB4ytBBiBwfdWbldXnhdvVZBDIno7NeKVIZD",
+      "token_expires_at": null,
+      "webhook_verify_token": "",
+      "page_avatar": "https://scontent.fhan18-1.fna.fbcdn.net/v/t39.30808-1/276312741_4809681765825719_8303386643111870120_n.jpg?stp=cp0_dst-jpg_s50x50_tt6&_nc_cat=106&ccb=1-7&_nc_sid=f907e8&_nc_eui2=AeGoo-qRN_yOmup_epa6Thr2qd9-DflCPuyp334N-UI-7EGbl1SZm_NfhczUIxzPqAEJRPdlMLgK098ylQ6mp-DP&_nc_ohc=E5d-kD0KbpQQ7kNvwHLJpRR&_nc_oc=AdrCC2tvOBqogvIhVuWfkjP--O3vXOk2ZPZZ0rPEOfkNXXZvhdX9nwlKP8FrKLsQdkg&_nc_zt=24&_nc_ht=scontent.fhan18-1.fna&edm=AGaHXAAEAAAA&_nc_gid=eltQGwCxdmGvT99B5SBwmQ&_nc_tpa=Q5bMBQGThmhn6vdnrmvaFYDfPu7Mi8vFkb7DCcd8A5UeNDaQb5ndmDf0rHfsdVXCa6SiKQ6XGIoAkr_8yg&oh=00_AQAj2pG9eCA4eTVJus_6F-arKv263oXcRpBtcolv5iwHKQ&oe=6A5BD0E8",
+      "is_active": true,
+      "auto_create_customer_from_phone": false,
+      "assigned_to": null,
+      "created_at": "2026-07-14T09:27:29.962Z",
+      "updated_at": "2026-07-14T09:27:29.962Z"
+    }
+  },
+  {
+    "model": "facebook_integration.facebookpageconfig",
+    "pk": 5,
+    "fields": {
+      "company": 15,
+      "page_name": "Nội Thất Mộc Lê Gia",
+      "page_id": "349132805954703",
+      "use_system_config": true,
+      "app_id": null,
+      "app_secret": null,
+      "page_access_token": "EAAOi715rIAYBRzbjKGm5mZCnlriv2yM7Ak81mX6Ftbr2k6CZBZCB6PQqTRK2qlHnnqomhfkdE5UotjJd0iVuutWLX3CUvkNTlSoZBrNith7s2ZBHDZCz9zHqqpHZA6ZB3WbtO6PmwNgaefozMk1LJgUDeWhUeG8SuVQTycQ8Fw7rSx6XYaI2RfMw2vpg4r1z3DK9r5oIaeACpDsDqjwWNlra",
+      "token_expires_at": null,
+      "webhook_verify_token": "",
+      "page_avatar": "https://scontent.fhan18-1.fna.fbcdn.net/v/t39.30808-1/650656708_936337542085506_4638421148625177150_n.jpg?stp=cp0_dst-jpg_s50x50_tt6&_nc_cat=108&ccb=1-7&_nc_sid=f907e8&_nc_eui2=AeE99abv34S_IvA5E3ZSoxDCUTw9KaxB_rFRPD0prEH-sT1IeifrqUFw67_uMs4g-yHsr-Fl3C1F-lH9wv1hYeyH&_nc_ohc=SLG32pJ9-ygQ7kNvwHMcFuX&_nc_oc=AdpoLFHTpV1A_GZ8m5FHHrVyEn-1ZX6iYmEn7jLzUX__213P-cJQHJ-q1ylGbCFIX9A&_nc_zt=24&_nc_ht=scontent.fhan18-1.fna&edm=AGaHXAAEAAAA&_nc_gid=EgFCizYMGwc5wC0bZ7YBow&_nc_tpa=Q5bMBQFjSSULRae_nmbkuY70lZTVDqIX3_5AXFSIocYQvs-mr6IP2sRyvdCgglI4AAhCVV49YyQWfzOwPg&oh=00_AQBLzCV0wbjV7Fzxr7lOzLQCmwnz_YLqx_vg3JSLSNlKcQ&oe=6A5BEEA4",
+      "is_active": true,
+      "auto_create_customer_from_phone": false,
+      "assigned_to": null,
+      "created_at": "2026-07-14T09:34:00.562Z",
+      "updated_at": "2026-07-14T09:34:00.562Z"
+    }
+  },
+  {
+    "model": "facebook_integration.facebooklead",
+    "pk": 1,
+    "fields": {
+      "company": 15,
+      "page_config": 4,
+      "fb_user_id": "4748159361949508",
+      "fb_user_name": "Lê Đình Tuyền",
+      "fb_user_avatar": "https://platform-lookaside.fbsbx.com/platform/profilepic/?eai=Aa0fY7CYJXnf7cQG7ZrdAeZr0Qy65fbYzljZf12nRwRX4ioJnCSBaeelQs6sUfHRUKNjNdwid22YwA&psid=4748159361949508&width=1024&ext=1786613508&hash=AfsahzrE2xI8CRwgWSgD502S",
+      "detected_phone": "0977515445",
+      "is_customer_converted": false,
+      "customer": null,
+      "assigned_to": null,
+      "has_unread_message": false,
+      "last_message_at": "2026-07-14T10:39:00.454Z",
+      "last_message_preview": "Dạ chào bạn, để tiện hỗ trợ và tư vấn chi tiết hơn, bạn cho mình xin số điện thoại liên hệ với ạ ❤️",
+      "created_at": "2026-07-14T09:31:42.000Z",
+      "updated_at": "2026-07-14T10:49:05.136Z"
+    }
+  },
+  {
+    "model": "facebook_integration.facebookmessage",
+    "pk": 1,
+    "fields": {
+      "lead": 1,
+      "fb_message_id": "m_fBsXAQ0rYJ5IKAjyMmT6ED5XArWXuhqgvcgPG60c2Rx6iWm6Gp34GJcbC2aoAGmiVdmffQrMZGvWiY0GA_iZsg",
+      "sender_type": "customer",
+      "text": "",
+      "attachment_url": "https://scontent.xx.fbcdn.net/v/t39.1997-6/14050190_1775285609378810_498900746_n.png?stp=dst-jpg_s100x100_tt6&_nc_cat=1&ccb=1-7&_nc_sid=8de5d8&_nc_ohc=mtQqK6WFzl0Q7kNvwG90347&_nc_oc=AdrFnbIKf07__LVgDjQjV_4s_pcvXdTBCenUj9rNctiPtakHz27O9Crjye46OctYgVaXu5zSqn8Jj69DLGJveTVh&_nc_ad=z-m&_nc_cid=0&_nc_zt=26&_nc_ht=scontent.xx&_nc_gid=PEPcHOfG1WL_pLdUIMObSw&oh=00_AQDXSl6SUsjzC4hBBw14ZIW0vSRrxCmAYNyVNzxi93n7UQ&oe=6A5BE2D9",
+      "attachment_type": "image",
+      "created_at": "2026-07-14T09:31:42.087Z"
+    }
+  },
+  {
+    "model": "facebook_integration.facebookmessage",
+    "pk": 2,
+    "fields": {
+      "lead": 1,
+      "fb_message_id": "m_-qFvxfVKheboEQbD8hMVlj5XArWXuhqgvcgPG60c2Rw-KuluYMnISFZXPzOeRiOHgvYTYp9TTuUCuH3qeGfMrQ",
+      "sender_type": "customer",
+      "text": "im đê",
+      "attachment_url": null,
+      "attachment_type": "",
+      "created_at": "2026-07-14T09:35:28.043Z"
+    }
+  },
+  {
+    "model": "facebook_integration.facebookmessage",
+    "pk": 3,
+    "fields": {
+      "lead": 1,
+      "fb_message_id": "m_qdRYQ7pP50C5QEFWKum7zD5XArWXuhqgvcgPG60c2RxB2RI-zlbvIkUjrHcYM7wfjoKW7-887l9tLhTHwVaH1g",
+      "sender_type": "customer",
+      "text": "ba đang test cái pm",
+      "attachment_url": null,
+      "attachment_type": "",
+      "created_at": "2026-07-14T09:35:34.148Z"
+    }
+  },
+  {
+    "model": "facebook_integration.facebookmessage",
+    "pk": 4,
+    "fields": {
+      "lead": 1,
+      "fb_message_id": "m_PPAOCA0NYt4lJHhhGPFyUz5XArWXuhqgvcgPG60c2Rwp1qftl8c7YkSF6PW9tPJ7ZMVzOKyUyg0NJsXJl622aw",
+      "sender_type": "customer",
+      "text": "ngon luônnnn",
+      "attachment_url": null,
+      "attachment_type": "",
+      "created_at": "2026-07-14T09:36:36.359Z"
+    }
+  },
+  {
+    "model": "facebook_integration.facebookmessage",
+    "pk": 5,
+    "fields": {
+      "lead": 1,
+      "fb_message_id": "m_u1x2rWnQ48sU5no85Y9RTD5XArWXuhqgvcgPG60c2RwBMgezUpHfYWwpjK0VeC-YW9TSaf0QWbe1EXqhCsmplA",
+      "sender_type": "page",
+      "text": "chào",
+      "attachment_url": "",
+      "attachment_type": "",
+      "created_at": "2026-07-14T09:37:03.627Z"
+    }
+  },
+  {
+    "model": "facebook_integration.facebookmessage",
+    "pk": 6,
+    "fields": {
+      "lead": 1,
+      "fb_message_id": "m_XzTEKtTt060yd5hHnb2KST5XArWXuhqgvcgPG60c2RyKEDVqUmZn0Y_7OV72K-W75UjGs_a80mLsxbS2OAgvug",
+      "sender_type": "customer",
+      "text": "béo bán cho 2 lít mật ong",
+      "attachment_url": null,
+      "attachment_type": "",
+      "created_at": "2026-07-14T09:39:37.401Z"
+    }
+  },
+  {
+    "model": "facebook_integration.facebookmessage",
+    "pk": 7,
+    "fields": {
+      "lead": 1,
+      "fb_message_id": "m_eOn7tkGfgxU1nrpawzzqiT5XArWXuhqgvcgPG60c2Rw0c6dnfiBvLDRPTeZlZLA1djUd52EheDLmSfe-Mp4q3g",
+      "sender_type": "page",
+      "text": "Dạ chào bạn, để tiện hỗ trợ và tư vấn chi tiết hơn, bạn cho mình xin số điện thoại liên hệ với ạ ❤️",
+      "attachment_url": "",
+      "attachment_type": "",
+      "created_at": "2026-07-14T10:39:00.454Z"
     }
   },
   {
