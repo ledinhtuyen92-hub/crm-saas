@@ -45,19 +45,25 @@ const STATUS_CONFIG = {
 
 function formatTime(dateStr) {
   if (!dateStr) return ''
-  const d = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now - d
-  const diffMin = Math.floor(diffMs / 60000)
-  const diffH = Math.floor(diffMs / 3600000)
-  if (diffMin < 1) return 'Vừa xong'
-  if (diffMin < 60) return `${diffMin} phút`
-  if (diffMin < 1440) return `${Math.floor(diffMin / 60)} giờ`
-  return d.toLocaleDateString('vi-VN')
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return ''
+    const now = new Date()
+    const diffMs = now - d
+    const diffMin = Math.floor(diffMs / 60000)
+    const diffH = Math.floor(diffMs / 3600000)
+    if (diffMin < 1) return 'Vừa xong'
+    if (diffMin < 60) return `${diffMin} phút`
+    if (diffMin < 1440) return `${Math.floor(diffMin / 60)} giờ`
+    return d.toLocaleDateString('vi-VN')
+  } catch (e) {
+    return ''
+  }
 }
 
 // Conversation list item
 function ConvItem({ lead, selected, onClick }) {
+  if (!lead) return null
   const cfg = STATUS_CONFIG[lead.status] || STATUS_CONFIG.not_added
   return (
     <div
@@ -74,7 +80,7 @@ function ConvItem({ lead, selected, onClick }) {
         transition: 'all 0.15s',
       }}
     >
-      <Badge dot={lead.has_unread_message} color="#ef4444" offset={[-4, 4]}>
+      <Badge dot={Boolean(lead.has_unread_message)} color="#ef4444" offset={[-4, 4]}>
         <Badge
           dot
           style={{ background: lead.is_customer_converted ? '#10b981' : '#f59e0b' }}
@@ -119,6 +125,7 @@ function ConvItem({ lead, selected, onClick }) {
 
 // Message bubble (Meta Messenger style & Zalo clean UX)
 function MessageBubble({ msg, lead, showAvatar = true }) {
+  if (!msg) return null
   const isPage = msg.sender_type === 'page'
   const isImage = msg.attachment_type === 'image' || (msg.attachment_url && /\.(png|jpg|jpeg|gif|webp)$/i.test(msg.attachment_url))
   const hasOnlyImage = !msg.text && msg.attachment_url && isImage
@@ -195,7 +202,7 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
           textShadow: hasOnlyImage ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
           color: hasOnlyImage ? '#6b7280' : 'inherit',
         }}>
-          {new Date(msg.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+          {formatTime(msg.created_at)}
         </div>
       </div>
     </div>
@@ -218,6 +225,7 @@ export default function FacebookInboxPage() {
   const [msgLoading, setMsgLoading] = useState(false)
   const [employees, setEmployees] = useState([])
   const [createForm] = Form.useForm()
+  const [createModal, setCreateModal] = useState(false)
   const [creating, setCreating] = useState(false)
   const messagesEndRef = useRef(null)
 
@@ -255,7 +263,7 @@ export default function FacebookInboxPage() {
 
   useEffect(() => {
     fetchPages()
-    api.get('/users/').then(res => setEmployees(res.data?.results || res.data || [])).catch(() => {})
+    api.get('/users/').then(res => setEmployees(Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.results) ? res.data.results : []))).catch(() => setEmployees([]))
   }, [])
   useEffect(() => { 
     fetchLeads() 
@@ -339,7 +347,7 @@ export default function FacebookInboxPage() {
     }
   }
 
-  const filteredLeads = leads.filter(l =>
+  const filteredLeads = (leads || []).filter(l =>
     !search || (l.fb_user_name || '').toLowerCase().includes(search.toLowerCase()) ||
     (l.last_message_preview || '').toLowerCase().includes(search.toLowerCase()) ||
     (l.detected_phone || '').includes(search)
@@ -490,14 +498,13 @@ export default function FacebookInboxPage() {
               <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0', background: '#f9fafb' }}>
                 {msgLoading ? <Spin style={{ display: 'block', margin: 'auto', marginTop: 40 }} /> : (
                   <>
-                    {messages.length === 0 && <Empty description="Chưa có tin nhắn" style={{ marginTop: 40 }} />}
-                    <Image.PreviewGroup>
-                      {messages.map((msg, index) => {
-                        const nextMsg = messages[index + 1]
-                        const showAvatar = !nextMsg || nextMsg.sender_type !== msg.sender_type
-                        return <MessageBubble key={msg.id || index} msg={msg} lead={selectedLead} showAvatar={showAvatar} />
-                      })}
-                    </Image.PreviewGroup>
+                    {(messages || []).length === 0 && <Empty description="Chưa có tin nhắn" style={{ marginTop: 40 }} />}
+                    {(messages || []).map((msg, index) => {
+                      if (!msg) return null
+                      const nextMsg = messages[index + 1]
+                      const showAvatar = !nextMsg || nextMsg.sender_type !== msg.sender_type
+                      return <MessageBubble key={msg.id || index} msg={msg} lead={selectedLead} showAvatar={showAvatar} />
+                    })}
                     <div ref={messagesEndRef} />
                   </>
                 )}
@@ -576,10 +583,10 @@ export default function FacebookInboxPage() {
                   <Select
                     placeholder="Chọn nhân viên"
                     style={{ width: '100%' }}
-                    value={selectedLead.assigned_to || null}
+                    value={selectedLead.assigned_to || ''}
                     allowClear
-                    onChange={handleAssign}
-                    options={[{ value: null, label: '-- Chưa phân công --' }, ...employees.map(e => ({ value: e.id, label: e.full_name || e.username }))]}
+                    onChange={val => handleAssign(val || null)}
+                    options={[{ value: '', label: '-- Chưa phân công --' }, ...(employees || []).map(e => ({ value: e.id, label: e.full_name || e.username }))]}
                   />
                 </div>
                 {!selectedLead.is_customer_converted && (
