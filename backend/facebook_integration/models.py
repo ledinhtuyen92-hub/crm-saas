@@ -175,6 +175,7 @@ class FacebookLead(models.Model):
         verbose_name="Tên người dùng Facebook",
     )
     fb_user_avatar = models.URLField(
+        max_length=1000,
         blank=True,
         null=True,
         verbose_name="Avatar Facebook",
@@ -270,6 +271,7 @@ class FacebookMessage(models.Model):
         verbose_name="Nội dung văn bản",
     )
     attachment_url = models.URLField(
+        max_length=1000,
         blank=True,
         null=True,
         verbose_name="Đính kèm (URL ảnh/file)",
