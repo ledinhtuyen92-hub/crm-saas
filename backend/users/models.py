@@ -342,6 +342,30 @@ class CompanySettings(models.Model):
     def __str__(self):
         return f"Settings — {self.company.name}"
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.clean_revoked_module_permissions()
+
+    def clean_revoked_module_permissions(self):
+        """Khi Admin hệ thống thu hồi quyền sử dụng module (ví dụ bỏ Zalo khỏi active_modules),
+        tự động gỡ bỏ các quyền thuộc module đó khỏi tất cả vai trò (Role) trong công ty."""
+        if not self.company_id:
+            return
+        try:
+            core_modules = ["dashboard", "reports", "settings", "notifications"]
+            active = self.active_modules if isinstance(self.active_modules, list) else []
+            allowed = set(core_modules + active)
+
+            revoked_perms = Permission.objects.exclude(module__in=allowed)
+            if not revoked_perms.exists():
+                return
+
+            roles = Role.objects.filter(company_id=self.company_id)
+            for role in roles:
+                role.permissions.remove(*revoked_perms)
+        except Exception:
+            pass
+
 
 class SubscriptionPlan(models.Model):
     code = models.CharField(max_length=50, unique=True, verbose_name="Mã gói")

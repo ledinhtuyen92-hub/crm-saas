@@ -133,6 +133,18 @@ class RoleSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Tên vai trò đã tồn tại trong công ty.")
         return value.strip()
 
+    def validate_permissions(self, value):
+        request = self.context.get("request")
+        if not request or not hasattr(request, "user"):
+            return value
+        company = getattr(request.user, "company", None)
+        if company and hasattr(company, "settings"):
+            core_modules = ["dashboard", "reports", "settings", "notifications"]
+            active_modules = company.settings.active_modules if isinstance(company.settings.active_modules, list) else []
+            allowed_modules = set(core_modules + active_modules)
+            value = [p for p in value if p.module in allowed_modules]
+        return value
+
 
 # ─────────────────────────────────────────────
 # User (Người dùng / Nhân viên)

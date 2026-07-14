@@ -1072,12 +1072,7 @@
         70,
         69,
         93,
-        68,
-        74,
-        104,
-        73,
-        72,
-        105
+        68
       ]
     }
   },
@@ -1485,8 +1480,7 @@
         "approvals",
         "finance",
         "warranty",
-        "delivery",
-        "zalo"
+        "delivery"
       ],
       "quotation_template": 2,
       "default_quotation_terms": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao.",
