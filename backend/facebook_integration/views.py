@@ -28,6 +28,7 @@ from .services import (
     process_fb_webhook_message,
     send_facebook_message,
     smart_extract_vn_phone,
+    subscribe_app_to_page,
 )
 
 logger = logging.getLogger(__name__)
@@ -212,6 +213,11 @@ class FacebookPageConfigViewSet(viewsets.ModelViewSet):
         config.page_avatar = page_avatar or ""
         config.token_expires_at = None  # Page Access Token từ OAuth = vĩnh viễn
         config.save(update_fields=["page_id", "page_name", "page_access_token", "page_avatar", "token_expires_at"])
+
+        # TỰ ĐỘNG ĐĂNG KÝ APP VÀO PAGE (Subscribe)
+        sub_res = subscribe_app_to_page(page_id, page_access_token)
+        if not sub_res.get("success"):
+            logger.warning(f"Could not auto-subscribe app to page {page_id}: {sub_res.get('error')}")
 
         return Response({
             "detail": f"Đã kết nối Trang Facebook: {config.page_name} (ID: {config.page_id}) thành công!",

@@ -216,6 +216,28 @@ def debug_facebook_token(app_id: str, app_secret: str, input_token: str) -> dict
         return {"success": False, "error": str(e)}
 
 
+def subscribe_app_to_page(page_id: str, page_access_token: str) -> dict:
+    """
+    Đăng ký (Subscribe) App hiện tại vào Page để nhận Webhook.
+    Phải có bước này thì Meta mới bắt đầu bắn tin nhắn của Page này về Webhook của App.
+    """
+    url = f"{FB_GRAPH_API_BASE}/{page_id}/subscribed_apps"
+    params = {
+        "access_token": page_access_token,
+        "subscribed_fields": "messages,messaging_postbacks",
+    }
+    try:
+        resp = requests.post(url, params=params, timeout=10)
+        data = resp.json()
+        if "error" in data:
+            logger.error(f"[Facebook] subscribe_app_to_page error for page {page_id}: {data['error']}")
+            return {"success": False, "error": data["error"].get("message", "Lỗi khi đăng ký Webhook với Meta.")}
+        return {"success": data.get("success", False)}
+    except Exception as e:
+        logger.error(f"[Facebook] subscribe_app_to_page exception: {e}")
+        return {"success": False, "error": str(e)}
+
+
 
 # ── Xử lý Webhook Message từ Meta ────────────────────────────────────────────
 
