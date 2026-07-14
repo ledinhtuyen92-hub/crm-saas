@@ -95,7 +95,8 @@ const contractColumns = [
 
 function Dashboard() {
   const { token } = theme.useToken()
-  const { isSuperAdmin } = useAuth()
+  const { isSuperAdmin, hasPermission, isCompanyAdmin } = useAuth()
+  const canViewRevenue = isCompanyAdmin || hasPermission('dashboard.view_revenue')
   const [messageApi, contextHolder] = message.useMessage()
 
   const [loading, setLoading] = useState(true)
@@ -162,8 +163,8 @@ function Dashboard() {
   const statisticCards = [
     {
       title: 'Tổng doanh thu',
-      value: summary?.orders?.total_revenue_all_time || 0,
-      suffix: 'đ',
+      value: canViewRevenue ? (summary?.orders?.total_revenue_all_time || 0) : '***',
+      suffix: canViewRevenue ? 'đ' : '',
       icon: <DollarCircleOutlined />,
       valueStyle: { color: '#2563eb' },
       iconStyle: {

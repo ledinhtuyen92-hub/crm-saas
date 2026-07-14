@@ -100,6 +100,21 @@ class IsCompanyAdmin(BasePermission):
         )
 
 
+class CanManageCompanySettings(BasePermission):
+    """Company Admin hoặc nhân viên có quyền settings.company."""
+
+    message = "Bạn không có quyền thay đổi cấu hình công ty."
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if request.user.is_superuser or request.user.is_company_admin:
+            return True
+        if request.user.role and request.user.role.permissions.filter(code="settings.company").exists():
+            return True
+        return False
+
+
 class IsCompanyAdminOrReadOnly(BasePermission):
     """Company Admin có toàn quyền; nhân viên thường chỉ đọc."""
 

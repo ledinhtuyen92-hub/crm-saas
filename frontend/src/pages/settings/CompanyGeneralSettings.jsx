@@ -37,7 +37,8 @@ const { Option } = Select
 
 export default function CompanyGeneralSettings() {
   const { token } = theme.useToken()
-  const { checkMaintenance } = useAuth()
+  const { checkMaintenance, hasPermission, isCompanyAdmin } = useAuth()
+  const canEditSettings = isCompanyAdmin || hasPermission('settings.company')
   const [messageApi, contextHolder] = message.useMessage()
   const [loading, setLoading] = useState(false)
 
@@ -326,9 +327,11 @@ export default function CompanyGeneralSettings() {
 
           <Divider style={{ margin: '16px 0' }} />
 
-          <Button type="primary" style={{ background: '#16a34a', borderColor: '#16a34a' }} icon={<SaveOutlined />} htmlType="submit" loading={loading}>
-            Lưu Thông Tin, Logo, Con Dấu & Chữ Ký
-          </Button>
+          {canEditSettings && (
+            <Button type="primary" style={{ background: '#16a34a', borderColor: '#16a34a' }} icon={<SaveOutlined />} htmlType="submit" loading={loading}>
+              Lưu Thông Tin, Logo, Con Dấu & Chữ Ký
+            </Button>
+          )}
         </Form>
       </Card>
 
@@ -453,9 +456,11 @@ export default function CompanyGeneralSettings() {
             </Col>
           </Row>
 
-          <Button type="primary" icon={<SaveOutlined />} htmlType="submit" loading={loading}>
-            Lưu cài đặt nghiệp vụ
-          </Button>
+          {canEditSettings && (
+            <Button type="primary" icon={<SaveOutlined />} htmlType="submit" loading={loading}>
+              Lưu cài đặt nghiệp vụ
+            </Button>
+          )}
         </Form>
       </Card>
 

@@ -248,6 +248,7 @@ export default function OrderList() {
   const canCancel = hasPermission('orders.cancel')
   const canRequestCredit = hasPermission('finance.request_credit')
   const canApprove = hasPermission('orders.approve')
+  const canExportPdf = isCompanyAdmin || hasPermission('orders.export_pdf')
 
   // ── Fetch data ────────────────────────────────────────────────────────
   const fetchOrders = useCallback(async () => {
@@ -1710,9 +1711,11 @@ export default function OrderList() {
             >
               Gửi ZNS
             </Button>
-            <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrintOrPDF} style={{ background: '#10b981', borderColor: '#10b981' }}>
-              In Đơn Hàng
-            </Button>
+            {canExportPdf && (
+              <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrintOrPDF} style={{ background: '#10b981', borderColor: '#10b981' }}>
+                In Đơn Hàng
+              </Button>
+            )}
           </Space>
         }
       >

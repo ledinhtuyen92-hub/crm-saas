@@ -7,7 +7,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import Company, CompanySettings, Permission, Role, Department
-from .permissions import IsCompanyAdmin, IsSuperAdmin, IsCompanyAdminOrReadOnly
+from .permissions import IsCompanyAdmin, IsSuperAdmin, IsCompanyAdminOrReadOnly, CanManageCompanySettings
 from .serializers import (
     ChangePasswordSerializer,
     CompanyRegistrationSerializer,
@@ -289,7 +289,15 @@ class DepartmentViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
     queryset = Department.objects.select_related("company", "manager").prefetch_related("users")
     serializer_class = DepartmentSerializer
-    permission_classes = [IsCompanyAdmin]
+    permission_classes = [ActionBasedPermission]
+    action_permissions = {
+        "list": "settings.departments",
+        "retrieve": "settings.departments",
+        "create": "settings.departments",
+        "update": "settings.departments",
+        "partial_update": "settings.departments",
+        "destroy": "settings.departments",
+    }
     pagination_class = None
 
     def perform_create(self, serializer):
@@ -310,7 +318,15 @@ class RoleViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
     queryset = Role.objects.select_related("company").prefetch_related("permissions", "users")
     serializer_class = RoleSerializer
-    permission_classes = [IsCompanyAdmin]
+    permission_classes = [ActionBasedPermission]
+    action_permissions = {
+        "list": "settings.roles",
+        "retrieve": "settings.roles",
+        "create": "settings.roles",
+        "update": "settings.roles",
+        "partial_update": "settings.roles",
+        "destroy": "settings.roles",
+    }
     pagination_class = None
 
 
@@ -485,7 +501,7 @@ class MyCompanyView(generics.RetrieveUpdateAPIView):
     def get_permissions(self):
         if self.request.method in permissions.SAFE_METHODS:
             return [permissions.IsAuthenticated()]
-        return [IsCompanyAdmin()]
+        return [CanManageCompanySettings()]
 
     def get_object(self):
         if not self.request.user.company:
@@ -511,7 +527,7 @@ class CompanySettingsView(generics.RetrieveUpdateAPIView):
     def get_permissions(self):
         if self.request.method == "GET":
             return [permissions.IsAuthenticated()]
-        return [IsCompanyAdmin()]
+        return [CanManageCompanySettings()]
 
     def get_object(self):
         settings_obj, _ = CompanySettings.objects.get_or_create(

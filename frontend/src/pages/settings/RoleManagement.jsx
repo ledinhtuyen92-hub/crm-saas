@@ -46,7 +46,8 @@ const MODULE_ORDER = [
 ]
 export default function RoleManagement() {
   const { token } = theme.useToken()
-  const { checkMaintenance } = useAuth()
+  const { checkMaintenance, hasPermission, isCompanyAdmin } = useAuth()
+  const canManageRoles = isCompanyAdmin || hasPermission('settings.roles')
   const [messageApi, contextHolder] = message.useMessage()
 
   const [roles, setRoles] = useState([])
@@ -212,7 +213,7 @@ export default function RoleManagement() {
       title: 'Thao tác',
       key: 'actions',
       align: 'center',
-      render: (_, record) => (
+      render: (_, record) => canManageRoles ? (
         <Space>
           <Tooltip title="Chỉnh sửa">
             <Button type="text" icon={<EditOutlined />} onClick={() => openModal(record)} />
@@ -226,7 +227,7 @@ export default function RoleManagement() {
             />
           </Tooltip>
         </Space>
-      ),
+      ) : null,
     },
   ]
 
@@ -252,16 +253,18 @@ export default function RoleManagement() {
             Quản lý các chức danh trong công ty và quyền hạn tương ứng
           </Text>
         </div>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          size="large"
-          onClick={() => openModal()}
-          style={{ background: '#1649c9' }}
-          id="btn-add-role"
-        >
-          Tạo vai trò mới
-        </Button>
+        {canManageRoles && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            size="large"
+            onClick={() => openModal()}
+            style={{ background: '#1649c9' }}
+            id="btn-add-role"
+          >
+            Tạo vai trò mới
+          </Button>
+        )}
       </div>
 
       <Card style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(15,23,42,0.08)' }}>

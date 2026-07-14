@@ -103,6 +103,7 @@ export default function QuotationList() {
   const canEdit = hasPermission('sales.edit')
   const canDelete = hasPermission('sales.delete')
   const requireApproval = hasPermission('sales.require_approval') && !isCompanyAdmin
+  const canExportPdf = isCompanyAdmin || hasPermission('sales.export_pdf')
 
   // ── Fetch data ────────────────────────────────────────────────────────
   const fetchQuotations = useCallback(async () => {
@@ -1862,14 +1863,16 @@ export default function QuotationList() {
                 </Button>
               )
             })()}
-            <Button
-              type="primary"
-              icon={<PrinterOutlined />}
-              style={{ background: '#1d4ed8', fontWeight: 600, padding: '0 20px' }}
-              onClick={handlePrintOrPDF}
-            >
-              In / Xuất PDF Báo Giá
-            </Button>
+            {canExportPdf && (
+              <Button
+                type="primary"
+                icon={<PrinterOutlined />}
+                style={{ background: '#1d4ed8', fontWeight: 600, padding: '0 20px' }}
+                onClick={handlePrintOrPDF}
+              >
+                In / Xuất PDF Báo Giá
+              </Button>
+            )}
           </Space>
         }
         width={(() => {
