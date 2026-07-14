@@ -72,6 +72,7 @@ class FacebookPageConfig(models.Model):
         help_text="Mã xác thực webhook tùy chỉnh – khai báo trên Meta Developers.",
     )
     page_avatar = models.URLField(
+        max_length=1000,
         blank=True,
         null=True,
         verbose_name="Avatar Trang Facebook",
