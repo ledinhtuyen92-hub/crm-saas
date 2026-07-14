@@ -296,8 +296,24 @@ export default function FacebookConfigPage() {
             <p style={{ margin: '2px 0' }}>
               • <b>Subscribe Events:</b> <code>messages</code>, <code>messaging_postbacks</code>
             </p>
-            <p style={{ margin: '4px 0 0', color: '#1877f2' }}>
-              💡 Sau khi cấu hình Webhook, bấm <b>"🔐 Đăng nhập Facebook"</b> để tự động lấy Page Access Token.
+            <Divider style={{ margin: '12px 0' }} />
+            <p style={{ margin: '2px 0', fontWeight: 'bold' }}>
+              Cấu hình Đăng nhập Facebook (Facebook Login → Cài đặt)
+            </p>
+            <p style={{ margin: '2px 0' }}>
+              • <b>Miền ứng dụng (App Domains) [Cài đặt cơ bản]:</b>{' '}
+              <code style={{ background: '#e8f4fd', padding: '1px 6px', borderRadius: 4 }}>
+                {window.location.hostname}
+              </code>
+            </p>
+            <p style={{ margin: '2px 0' }}>
+              • <b>URI chuyển hướng OAuth hợp lệ (Valid OAuth Redirect URIs):</b>{' '}
+              <code style={{ background: '#e8f4fd', padding: '1px 6px', borderRadius: 4 }}>
+                {window.location.origin + window.location.pathname}
+              </code>
+            </p>
+            <p style={{ margin: '8px 0 0', color: '#1877f2' }}>
+              💡 Bấm <b>"🔐 Đăng nhập Facebook"</b> sau khi lưu cấu hình App ID/Secret để tự động lấy Page Access Token.
             </p>
           </div>
         }
