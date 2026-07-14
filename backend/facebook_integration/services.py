@@ -13,7 +13,7 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-FB_GRAPH_API_BASE = "https://graph.facebook.com/v20.0"
+FB_GRAPH_API_BASE = "https://graph.facebook.com/v25.0"
 
 
 # ── Tái sử dụng thuật toán quét SĐT thông minh ───────────────────────────────

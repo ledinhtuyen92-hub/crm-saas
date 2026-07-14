@@ -68,7 +68,7 @@ class FacebookPageConfigViewSet(viewsets.ModelViewSet):
             return Response({"error": "Chưa có Page Access Token."}, status=status.HTTP_400_BAD_REQUEST)
 
         import requests as req
-        url = f"https://graph.facebook.com/v20.0/me"
+        url = f"https://graph.facebook.com/v25.0/me"
         params = {"access_token": config.page_access_token, "fields": "id,name"}
         try:
             resp = req.get(url, params=params, timeout=8)
