@@ -128,7 +128,7 @@ export default function FacebookConfigPage() {
     // Dùng Redirect OAuth flow của Facebook
     localStorage.setItem('fb_oauth_config_id', config.id)
     const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname)
-    const scope = encodeURIComponent('pages_messaging,pages_manage_metadata,pages_read_engagement')
+    const scope = encodeURIComponent('pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement')
     const oauthUrl = `https://www.facebook.com/v20.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scope}&state=${config.id}&response_type=code`
     window.location.href = oauthUrl
   }
