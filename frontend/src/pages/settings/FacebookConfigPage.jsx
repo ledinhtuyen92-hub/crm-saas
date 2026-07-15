@@ -3,6 +3,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   DeleteOutlined,
+  DisconnectOutlined,
   InfoCircleOutlined,
   LoginOutlined,
   PlusOutlined,
@@ -238,12 +239,28 @@ export default function FacebookConfigPage() {
     } finally { setSaving(false) }
   }
 
-  const handleDelete = async (id) => {
+  const handleDisconnect = async (id) => {
     try {
       await api.delete(`/facebook/pages/${id}/`)
-      message.success('Đã xoá Trang Facebook.')
+      message.success('Đã ngắt kết nối Trang. Lịch sử hội thoại & tin nhắn được bảo vệ an toàn!')
       fetchPages()
-    } catch { message.error('Không thể xoá trang này.') }
+    } catch { message.error('Không thể ngắt kết nối trang này.') }
+  }
+
+  const handleReconnect = async (id) => {
+    try {
+      await api.post(`/facebook/pages/${id}/reconnect/`)
+      message.success('Đã khôi phục kết nối và kích hoạt lại Trang!')
+      fetchPages()
+    } catch { message.error('Lỗi khi khôi phục kết nối.') }
+  }
+
+  const handlePermanentDelete = async (id) => {
+    try {
+      await api.delete(`/facebook/pages/${id}/permanent-delete/`)
+      message.success('Đã xoá vĩnh viễn Trang cùng toàn bộ dữ liệu hội thoại.')
+      fetchPages()
+    } catch { message.error('Lỗi khi xoá vĩnh viễn.') }
   }
 
   return (
@@ -357,8 +374,8 @@ export default function FacebookConfigPage() {
                       <Text strong style={{ fontSize: 16 }}>{page.page_name}</Text>
                       <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
                         <TokenStatusBadge config={page} />
-                        <Tag color={page.is_active ? 'success' : 'default'}>
-                          {page.is_active ? 'Đang hoạt động' : 'Tạm dừng'}
+                        <Tag color={page.is_active ? 'success' : 'error'}>
+                          {page.is_active ? 'Đang hoạt động' : '⚠️ Đã ngắt kết nối'}
                         </Tag>
                         {page.page_id && <Tag color="blue">ID: {page.page_id}</Tag>}
                         {page.use_system_config
@@ -375,39 +392,64 @@ export default function FacebookConfigPage() {
                 </Col>
                 <Col>
                   <Space wrap>
-                    {/* Đăng nhập Facebook để lấy token */}
-                    <Tooltip title="Đăng nhập Facebook và tự động lấy Page Access Token">
-                      <Button
-                        type="primary"
-                        icon={<LoginOutlined />}
-                        onClick={() => handleFacebookLogin(page)}
-                        style={{ background: FB_BLUE, borderColor: FB_BLUE, borderRadius: 16 }}
-                      >
-                        🔐 Đăng nhập Facebook
-                      </Button>
-                    </Tooltip>
-                    {/* Kiểm tra token chi tiết */}
-                    {page.is_token_valid && (
-                      <Tooltip title="Kiểm tra thời hạn & quyền của Token qua Meta API">
-                        <Button
-                          icon={<SafetyCertificateOutlined />}
-                          loading={debuggingId === page.id}
-                          onClick={() => handleDebugToken(page)}
-                        >
-                          Kiểm tra Token
+                    {page.is_active ? (
+                      <>
+                        <Tooltip title="Đăng nhập Facebook và tự động lấy Page Access Token">
+                          <Button
+                            type="primary"
+                            icon={<LoginOutlined />}
+                            onClick={() => handleFacebookLogin(page)}
+                            style={{ background: FB_BLUE, borderColor: FB_BLUE, borderRadius: 16 }}
+                          >
+                            🔐 Đăng nhập Facebook
+                          </Button>
+                        </Tooltip>
+                        {page.is_token_valid && (
+                          <Tooltip title="Kiểm tra thời hạn & quyền của Token qua Meta API">
+                            <Button
+                              icon={<SafetyCertificateOutlined />}
+                              loading={debuggingId === page.id}
+                              onClick={() => handleDebugToken(page)}
+                            >
+                              Kiểm tra Token
+                            </Button>
+                          </Tooltip>
+                        )}
+                        <Button icon={<SettingOutlined />} onClick={() => handleOpenModal(page)}>
+                          Chỉnh sửa
                         </Button>
-                      </Tooltip>
+                        <Popconfirm
+                          title="Ngắt kết nối Trang này? Toàn bộ hội thoại và tin nhắn sẽ được giữ an toàn 100% trong cơ sở dữ liệu."
+                          onConfirm={() => handleDisconnect(page.id)}
+                          okText="Ngắt kết nối" cancelText="Hủy" okType="warning"
+                        >
+                          <Tooltip title="Ngắt kết nối (Ẩn khỏi Live Inbox nhưng bảo vệ toàn bộ lịch sử)">
+                            <Button danger icon={<DisconnectOutlined />}>Ngắt kết nối</Button>
+                          </Tooltip>
+                        </Popconfirm>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          type="primary"
+                          icon={<ReloadOutlined />}
+                          onClick={() => handleReconnect(page.id)}
+                          style={{ background: '#10b981', borderColor: '#10b981', borderRadius: 16 }}
+                        >
+                          🔄 Khôi phục kết nối
+                        </Button>
+                        <Button icon={<SettingOutlined />} onClick={() => handleOpenModal(page)}>
+                          Chỉnh sửa
+                        </Button>
+                        <Popconfirm
+                          title="⚠️ XÓA VĨNH VIỄN Trang và toàn bộ N hội thoại/tin nhắn? Hành động này KHÔNG THỂ khôi phục!"
+                          onConfirm={() => handlePermanentDelete(page.id)}
+                          okText="Xóa vĩnh viễn" cancelText="Hủy" okType="danger"
+                        >
+                          <Button danger icon={<DeleteOutlined />}>Xóa vĩnh viễn</Button>
+                        </Popconfirm>
+                      </>
                     )}
-                    <Button icon={<SettingOutlined />} onClick={() => handleOpenModal(page)}>
-                      Chỉnh sửa
-                    </Button>
-                    <Popconfirm
-                      title="Xoá Trang Facebook này sẽ mất toàn bộ lịch sử hội thoại!"
-                      onConfirm={() => handleDelete(page.id)}
-                      okText="Xoá" cancelText="Hủy" okType="danger"
-                    >
-                      <Button danger icon={<DeleteOutlined />} />
-                    </Popconfirm>
                   </Space>
                 </Col>
               </Row>

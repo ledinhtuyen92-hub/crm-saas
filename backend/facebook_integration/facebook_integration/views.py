@@ -244,6 +244,34 @@ class FacebookPageConfigViewSet(viewsets.ModelViewSet):
             logger.error(f"[SyncHistory Action] Lỗi: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    def perform_destroy(self, instance):
+        """Soft delete: Ngắt kết nối Trang (is_active=False) để giữ an toàn toàn bộ lịch sử hội thoại/tin nhắn."""
+        instance.is_active = False
+        instance.page_access_token = ""
+        instance.save(update_fields=["is_active", "page_access_token", "updated_at"])
+
+    @action(detail=True, methods=["delete", "post"], url_path="permanent-delete")
+    def permanent_delete(self, request, pk=None):
+        """Xóa vĩnh viễn Trang và toàn bộ hội thoại/tin nhắn liên quan (chỉ dùng khi thực sự cần)."""
+        instance = self.get_object()
+        page_name = instance.page_name
+        leads_count = instance.leads.count()
+        instance.delete()
+        return Response({
+            "detail": f"Đã xóa vĩnh viễn Trang {page_name} và {leads_count} hội thoại liên quan."
+        })
+
+    @action(detail=True, methods=["post"], url_path="reconnect")
+    def reconnect(self, request, pk=None):
+        """Khôi phục trạng thái hoạt động cho Trang (is_active=True)."""
+        instance = self.get_object()
+        instance.is_active = True
+        instance.save(update_fields=["is_active", "updated_at"])
+        return Response({
+            "detail": f"Đã khôi phục kết nối cho Trang {instance.page_name}.",
+            "data": FacebookPageConfigSerializer(instance).data
+        })
+
 
 
 
@@ -260,6 +288,10 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
         qs = FacebookLead.objects.filter(company=self.request.user.company).select_related(
             "page_config", "customer", "assigned_to"
         )
+        show_inactive = self.request.query_params.get("show_inactive")
+        if show_inactive != "true":
+            qs = qs.filter(page_config__is_active=True)
+
         page_config_id = self.request.query_params.get("page_config")
         if page_config_id and page_config_id != "all":
             qs = qs.filter(page_config_id=page_config_id)
