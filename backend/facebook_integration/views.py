@@ -328,7 +328,29 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
         elif conv_status == "converted":
             qs = qs.filter(is_customer_converted=True)
 
-        return qs.order_by("-last_message_at")
+        from django.db.models import Subquery, OuterRef
+        latest_sender_sq = Subquery(
+            FacebookMessage.objects.filter(lead=OuterRef("pk"))
+            .order_by("-created_at")
+            .values("sender_type")[:1]
+        )
+        qs = qs.annotate(latest_sender=latest_sender_sq)
+
+        reply_filter = self.request.query_params.get("reply_filter")
+        if reply_filter == "unanswered":
+            qs = qs.filter(latest_sender="customer")
+        elif reply_filter == "read_unanswered":
+            qs = qs.filter(latest_sender="customer", has_unread_message=False)
+
+        sort_by = self.request.query_params.get("sort_by")
+        if sort_by == "waiting_longest":
+            if not reply_filter:
+                qs = qs.filter(latest_sender="customer")
+            return qs.order_by("last_message_at")
+        elif sort_by == "time_asc":
+            return qs.order_by("last_message_at")
+        else:
+            return qs.order_by("-last_message_at")
 
     def get_serializer_class(self):
         if self.action == "retrieve":

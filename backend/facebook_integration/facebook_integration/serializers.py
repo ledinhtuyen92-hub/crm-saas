@@ -106,6 +106,14 @@ class FacebookLeadListSerializer(serializers.ModelSerializer):
             return obj.is_customer_converted
         return Customer.objects.filter(company_id=company_id, phone=obj.detected_phone).exists()
 
+    latest_sender = serializers.SerializerMethodField()
+
+    def get_latest_sender(self, obj):
+        if hasattr(obj, "latest_sender") and obj.latest_sender is not None:
+            return obj.latest_sender
+        last_m = obj.messages.order_by("-created_at").first()
+        return last_m.sender_type if last_m else ""
+
     class Meta:
         model = FacebookLead
         fields = [
@@ -114,7 +122,7 @@ class FacebookLeadListSerializer(serializers.ModelSerializer):
             "detected_phone", "is_customer_converted", "status", "is_archived",
             "customer", "customer_name",
             "last_message_at", "last_message_preview",
-            "created_at",
+            "created_at", "latest_sender",
         ]
 
 

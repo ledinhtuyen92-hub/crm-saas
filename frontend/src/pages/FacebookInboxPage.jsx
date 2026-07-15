@@ -1,9 +1,12 @@
 import {
+  ClockCircleOutlined,
   DeleteOutlined,
   DownloadOutlined,
   FileOutlined,
   FolderOpenOutlined,
+  FolderOutlined,
   HistoryOutlined,
+  MailOutlined,
   MessageOutlined,
   PaperClipOutlined,
   PhoneOutlined,
@@ -12,6 +15,7 @@ import {
   ReloadOutlined,
   SearchOutlined,
   SendOutlined,
+  TeamOutlined,
   UserAddOutlined,
   UserOutlined,
   VideoCameraOutlined,
@@ -29,6 +33,7 @@ import {
   InputNumber,
   Modal,
   Popconfirm,
+  Popover,
   Radio,
   Row,
   Select,
@@ -140,11 +145,22 @@ function ConvItem({ lead, selected, onClick }) {
         <Text type="secondary" style={{ fontSize: 12, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {lead.last_message_preview || 'Chưa có tin nhắn'}
         </Text>
-        <div style={{ marginTop: 3, display: 'flex', gap: 4 }}>
+        <div style={{ marginTop: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           <Tag style={{ fontSize: 10, padding: '0 5px', lineHeight: '16px', borderRadius: 8, margin: 0,
             color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>
             {cfg.label}
           </Tag>
+          {lead.latest_sender === 'customer' ? (
+            <Tag style={{ fontSize: 10, padding: '0 5px', lineHeight: '16px', borderRadius: 8, margin: 0,
+              color: '#d97706', background: '#fef3c7', border: '1px solid #fde68a' }}>
+              ⏳ Chờ trả lời
+            </Tag>
+          ) : lead.latest_sender === 'page' ? (
+            <Tag style={{ fontSize: 10, padding: '0 5px', lineHeight: '16px', borderRadius: 8, margin: 0,
+              color: '#16a34a', background: '#dcfce7', border: '1px solid #bbf7d0' }}>
+              ✓ Đã trả lời
+            </Tag>
+          ) : null}
           {lead.detected_phone && (
             <Tag style={{ fontSize: 10, padding: '0 5px', lineHeight: '16px', borderRadius: 8, margin: 0,
               color: '#2563eb', background: '#dbeafe', border: '1px solid #93c5fd' }}>
@@ -271,6 +287,9 @@ export default function FacebookInboxPage() {
   const [hasPhoneOnly, setHasPhoneOnly] = useState(false)
   const [hasUnreadOnly, setHasUnreadOnly] = useState(false)
   const [isArchivedOnly, setIsArchivedOnly] = useState(false)
+  const [replyFilter, setReplyFilter] = useState('') // '' | 'unanswered' | 'read_unanswered'
+  const [sortBy, setSortBy] = useState('') // '' | 'waiting_longest' | 'time_asc'
+  const [phoneFilterMode, setPhoneFilterMode] = useState('all') // 'all' | 'has_phone' | 'no_phone'
   const [msgText, setMsgText] = useState('')
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -309,10 +328,13 @@ export default function FacebookInboxPage() {
     try {
       const params = {}
       if (selectedPage && selectedPage !== 'all') params.page_config = selectedPage
-      if (hasPhoneOnly) params.has_phone = 'true'
+      if (phoneFilterMode === 'has_phone' || hasPhoneOnly) params.has_phone = 'true'
+      else if (phoneFilterMode === 'no_phone') params.has_phone = 'false'
       if (statusFilter) params.status = statusFilter
       if (hasUnreadOnly) params.has_unread = 'true'
       if (isArchivedOnly) params.is_archived = 'true'
+      if (replyFilter) params.reply_filter = replyFilter
+      if (sortBy) params.sort_by = sortBy
       const res = await api.get('/facebook/leads/', { params })
       setLeads(Array.isArray(res.data) ? res.data : res.data?.results ?? [])
     } catch { if (!silent) message.error('Không thể tải danh sách hội thoại Facebook.') }
@@ -338,7 +360,7 @@ export default function FacebookInboxPage() {
     fetchLeads() 
     const interval = setInterval(() => { fetchLeads(true) }, 3000)
     return () => clearInterval(interval)
-  }, [selectedPage, hasPhoneOnly, statusFilter, hasUnreadOnly, isArchivedOnly])
+  }, [selectedPage, hasPhoneOnly, phoneFilterMode, statusFilter, hasUnreadOnly, isArchivedOnly, replyFilter, sortBy])
 
   useEffect(() => {
     if (selectedLead?.id) {
@@ -595,10 +617,235 @@ export default function FacebookInboxPage() {
         </div>
       </div>
 
-      {/* Main 3-column layout */}
+      {/* Main 3-column layout + Pancake-style Filter Sidebar */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Pancake-style Vertical Filter Toolbar */}
+        <div style={{
+          width: 52,
+          background: '#0f172a',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          paddingTop: 12,
+          paddingBottom: 12,
+          gap: 16,
+          flexShrink: 0,
+          borderRight: '1px solid #1e293b',
+          zIndex: 10,
+        }}>
+          {/* 1. Tất cả tin nhắn (Reset/Mặc định) */}
+          <Tooltip title="Tất cả hội thoại" placement="right">
+            <div
+              onClick={() => {
+                setReplyFilter('')
+                setSortBy('')
+                setHasUnreadOnly(false)
+                setHasPhoneOnly(false)
+                setPhoneFilterMode('all')
+                setStatusFilter('')
+                setIsArchivedOnly(false)
+              }}
+              style={{
+                width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: (!replyFilter && !sortBy && !hasUnreadOnly && phoneFilterMode === 'all' && !hasPhoneOnly && !statusFilter && !isArchivedOnly) ? '#2563eb' : 'transparent',
+                color: (!replyFilter && !sortBy && !hasUnreadOnly && phoneFilterMode === 'all' && !hasPhoneOnly && !statusFilter && !isArchivedOnly) ? '#fff' : '#94a3b8',
+                transition: 'all 0.2s',
+              }}
+            >
+              <MessageOutlined style={{ fontSize: 18 }} />
+            </div>
+          </Tooltip>
+
+          {/* 2. Lọc chưa trả lời (Pancake Clock popover) */}
+          <Popover
+            placement="rightTop"
+            title={<span style={{ fontWeight: 700, color: '#1e293b' }}>🕒 Lọc chưa trả lời</span>}
+            content={
+              <div style={{ minWidth: 230, padding: 4 }}>
+                <Radio.Group
+                  value={sortBy === 'waiting_longest' ? 'waiting_longest' : (replyFilter || 'all')}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val === 'all') {
+                      setReplyFilter('')
+                      setSortBy('')
+                    } else if (val === 'unanswered') {
+                      setReplyFilter('unanswered')
+                      setSortBy('')
+                    } else if (val === 'waiting_longest') {
+                      setReplyFilter('unanswered')
+                      setSortBy('waiting_longest')
+                    } else if (val === 'read_unanswered') {
+                      setReplyFilter('read_unanswered')
+                      setSortBy('')
+                    }
+                  }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+                >
+                  <Radio value="all" style={{ fontWeight: 500 }}>🌐 Tất cả tin nhắn</Radio>
+                  <Radio value="unanswered" style={{ fontWeight: 500, color: '#2563eb' }}>⏱️ Giảm dần theo thời gian (Khách chờ)</Radio>
+                  <Radio value="waiting_longest" style={{ fontWeight: 600, color: '#d97706' }}>⏳ Đợi phản hồi lâu nhất</Radio>
+                  <Radio value="read_unanswered" style={{ fontWeight: 500, color: '#9333ea' }}>👀 Đã đọc nhưng chưa trả lời</Radio>
+                </Radio.Group>
+              </div>
+            }
+            trigger="click"
+          >
+            <Tooltip title="Lọc chưa trả lời (Theo thời gian / Đợi lâu nhất)" placement="right">
+              <div
+                style={{
+                  width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: (replyFilter || sortBy) ? '#f59e0b' : 'transparent',
+                  color: (replyFilter || sortBy) ? '#fff' : '#94a3b8',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <ClockCircleOutlined style={{ fontSize: 18 }} />
+              </div>
+            </Tooltip>
+          </Popover>
+
+          {/* 3. Tin nhắn chưa đọc */}
+          <Tooltip title="Tin nhắn chưa đọc" placement="right">
+            <div
+              onClick={() => setHasUnreadOnly(!hasUnreadOnly)}
+              style={{
+                width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: hasUnreadOnly ? '#ef4444' : 'transparent',
+                color: hasUnreadOnly ? '#fff' : '#94a3b8',
+                transition: 'all 0.2s',
+              }}
+            >
+              <Badge dot={!hasUnreadOnly} offset={[2, -2]} color="#ef4444">
+                <MailOutlined style={{ fontSize: 18, color: hasUnreadOnly ? '#fff' : '#94a3b8' }} />
+              </Badge>
+            </div>
+          </Tooltip>
+
+          {/* 4. Lọc số điện thoại */}
+          <Popover
+            placement="rightTop"
+            title={<span style={{ fontWeight: 700, color: '#1e293b' }}>📞 Lọc số điện thoại</span>}
+            content={
+              <div style={{ minWidth: 200, padding: 4 }}>
+                <Radio.Group
+                  value={phoneFilterMode !== 'all' ? phoneFilterMode : (hasPhoneOnly ? 'has_phone' : 'all')}
+                  onChange={e => {
+                    const val = e.target.value
+                    setPhoneFilterMode(val)
+                    setHasPhoneOnly(val === 'has_phone')
+                  }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+                >
+                  <Radio value="all" style={{ fontWeight: 500 }}>🌐 Tất cả hội thoại</Radio>
+                  <Radio value="has_phone" style={{ fontWeight: 600, color: '#10b981' }}>📞 Có số điện thoại</Radio>
+                  <Radio value="no_phone" style={{ fontWeight: 500, color: '#ef4444' }}>❌ Chưa có số điện thoại</Radio>
+                </Radio.Group>
+              </div>
+            }
+            trigger="click"
+          >
+            <Tooltip title="Lọc số điện thoại" placement="right">
+              <div
+                style={{
+                  width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: (phoneFilterMode !== 'all' || hasPhoneOnly) ? '#10b981' : 'transparent',
+                  color: (phoneFilterMode !== 'all' || hasPhoneOnly) ? '#fff' : '#94a3b8',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <PhoneOutlined style={{ fontSize: 18 }} />
+              </div>
+            </Tooltip>
+          </Popover>
+
+          {/* 5. Phân loại Khách hàng CRM */}
+          <Popover
+            placement="rightTop"
+            title={<span style={{ fontWeight: 700, color: '#1e293b' }}>👥 Trạng thái CRM</span>}
+            content={
+              <div style={{ minWidth: 200, padding: 4 }}>
+                <Radio.Group
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value)}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+                >
+                  <Radio value="" style={{ fontWeight: 500 }}>🌐 Tất cả</Radio>
+                  <Radio value="not_added" style={{ fontWeight: 500, color: '#f59e0b' }}>⚠️ Chưa thêm vào CRM</Radio>
+                  <Radio value="converted" style={{ fontWeight: 600, color: '#10b981' }}>✓ Đã có trong CRM</Radio>
+                </Radio.Group>
+              </div>
+            }
+            trigger="click"
+          >
+            <Tooltip title="Lọc theo trạng thái CRM" placement="right">
+              <div
+                style={{
+                  width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: statusFilter ? '#8b5cf6' : 'transparent',
+                  color: statusFilter ? '#fff' : '#94a3b8',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <TeamOutlined style={{ fontSize: 18 }} />
+              </div>
+            </Tooltip>
+          </Popover>
+
+          {/* 6. Kho rác / Đã ẩn */}
+          <Tooltip title="Kho rác / Hội thoại đã ẩn" placement="right">
+            <div
+              onClick={() => setIsArchivedOnly(!isArchivedOnly)}
+              style={{
+                width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: isArchivedOnly ? '#f97316' : 'transparent',
+                color: isArchivedOnly ? '#fff' : '#94a3b8',
+                marginTop: 'auto',
+                transition: 'all 0.2s',
+              }}
+            >
+              <FolderOutlined style={{ fontSize: 18 }} />
+            </div>
+          </Tooltip>
+        </div>
+
         {/* Left: Conversation List */}
         <div style={{ width: 300, flexShrink: 0, borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', background: '#fff' }}>
+          {/* Active Filter Banner */}
+          {(replyFilter || sortBy || hasUnreadOnly || (phoneFilterMode !== 'all' && phoneFilterMode !== '') || hasPhoneOnly || statusFilter || isArchivedOnly) && (
+            <div style={{ padding: '6px 10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Lọc:</span>
+              {replyFilter === 'unanswered' && sortBy !== 'waiting_longest' && <Tag color="blue" closable onClose={() => setReplyFilter('')} style={{ fontSize: 11, margin: 1 }}>⏱️ Khách chờ</Tag>}
+              {sortBy === 'waiting_longest' && <Tag color="orange" closable onClose={() => { setSortBy(''); setReplyFilter(''); }} style={{ fontSize: 11, margin: 1 }}>⏳ Đợi lâu nhất</Tag>}
+              {replyFilter === 'read_unanswered' && <Tag color="purple" closable onClose={() => setReplyFilter('')} style={{ fontSize: 11, margin: 1 }}>👀 Đã đọc</Tag>}
+              {hasUnreadOnly && <Tag color="red" closable onClose={() => setHasUnreadOnly(false)} style={{ fontSize: 11, margin: 1 }}>🔴 Chưa đọc</Tag>}
+              {(phoneFilterMode === 'has_phone' || hasPhoneOnly) && <Tag color="green" closable onClose={() => { setPhoneFilterMode('all'); setHasPhoneOnly(false); }} style={{ fontSize: 11, margin: 1 }}>📞 Có SĐT</Tag>}
+              {phoneFilterMode === 'no_phone' && <Tag color="default" closable onClose={() => setPhoneFilterMode('all')} style={{ fontSize: 11, margin: 1 }}>❌ Không SĐT</Tag>}
+              {statusFilter === 'not_added' && <Tag color="warning" closable onClose={() => setStatusFilter('')} style={{ fontSize: 11, margin: 1 }}>Chưa vào CRM</Tag>}
+              {statusFilter === 'converted' && <Tag color="success" closable onClose={() => setStatusFilter('')} style={{ fontSize: 11, margin: 1 }}>Đã vào CRM</Tag>}
+              {isArchivedOnly && <Tag color="orange" closable onClose={() => setIsArchivedOnly(false)} style={{ fontSize: 11, margin: 1 }}>🗑️ Kho rác</Tag>}
+              <span
+                style={{ fontSize: 11, color: '#2563eb', cursor: 'pointer', marginLeft: 'auto', fontWeight: 600 }}
+                onClick={() => {
+                  setReplyFilter('')
+                  setSortBy('')
+                  setHasUnreadOnly(false)
+                  setHasPhoneOnly(false)
+                  setPhoneFilterMode('all')
+                  setStatusFilter('')
+                  setIsArchivedOnly(false)
+                }}
+              >
+                Xóa lọc
+              </span>
+            </div>
+          )}
           <div style={{ padding: '10px 12px', borderBottom: '1px solid #f0f0f0', background: '#fafafa' }}>
             <Input
               prefix={<SearchOutlined style={{ color: '#9ca3af' }} />}
