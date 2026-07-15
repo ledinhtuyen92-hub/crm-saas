@@ -382,9 +382,10 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        if instance.has_unread_message:
+        if instance.has_unread_message or (instance.unread_count and instance.unread_count > 0):
             instance.has_unread_message = False
-            instance.save(update_fields=["has_unread_message"])
+            instance.unread_count = 0
+            instance.save(update_fields=["has_unread_message", "unread_count"])
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
@@ -396,14 +397,28 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
         attachment_url = request.data.get("attachment_url")
         file_obj = request.FILES.get("file")
         request_phone = request.data.get("request_phone") in ["true", "True", True, 1, "1"]
-
-        if request_phone and not text:
-            text = "Dạ chào bạn, để tiện hỗ trợ và tư vấn chi tiết hơn, bạn cho mình xin số điện thoại liên hệ với ạ ❤️"
-
-        if not text and not attachment_url and not file_obj:
-            return Response({"error": "Vui lòng nhập nội dung hoặc chọn file/ảnh đính kèm."}, status=status.HTTP_400_BAD_REQUEST)
+        request_email = request.data.get("request_email") in ["true", "True", True, 1, "1"]
 
         config = lead.page_config
+        quick_replies = []
+
+        if request_phone and request_email and not text:
+            p_tpl = config.request_phone_template if config and config.request_phone_template else "Dạ chào bạn, bạn cho mình xin số điện thoại liên hệ với ạ ❤️"
+            e_tpl = config.request_email_template if config and config.request_email_template else "Dạ bạn cho mình xin địa chỉ Email để bên em gửi catalogue và thông tin cho mình nhé 📧"
+            text = f"{p_tpl.strip()}\n{e_tpl.strip()}"
+            quick_replies = [{"content_type": "user_phone_number"}, {"content_type": "user_email"}]
+        elif request_phone:
+            if not text:
+                text = config.request_phone_template if config and config.request_phone_template else "Dạ chào bạn, bạn cho mình xin số điện thoại liên hệ với ạ ❤️"
+            quick_replies = [{"content_type": "user_phone_number"}]
+        elif request_email:
+            if not text:
+                text = config.request_email_template if config and config.request_email_template else "Dạ bạn cho mình xin địa chỉ Email để bên em gửi catalogue và thông tin cho mình nhé 📧"
+            quick_replies = [{"content_type": "user_email"}]
+
+        if not text and not attachment_url and not file_obj and not quick_replies:
+            return Response({"error": "Vui lòng nhập nội dung hoặc chọn file/ảnh đính kèm."}, status=status.HTTP_400_BAD_REQUEST)
+
         saved_file_url = ""
         attachment_type = request.data.get("attachment_type") or "image"
 
@@ -420,13 +435,24 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
             except Exception as e:
                 logger.error(f"[Facebook] Lỗi lưu file local: {e}")
 
+        if not file_obj and attachment_url and ("/media/" in attachment_url or attachment_url.startswith("/media/")):
+            try:
+                rel_path = attachment_url.split("/media/")[-1]
+                if default_storage.exists(rel_path):
+                    file_obj = default_storage.open(rel_path, "rb")
+                    if not getattr(file_obj, "name", None):
+                        file_obj.name = rel_path.split("/")[-1]
+            except Exception as e:
+                logger.error(f"[Facebook] Lỗi mở local file từ attachment_url: {e}")
+
         result = send_facebook_message(
             page_access_token=config.page_access_token,
             recipient_psid=lead.fb_user_id,
             message_text=text,
-            attachment_url=attachment_url,
+            attachment_url=attachment_url if not file_obj else None,
             file_obj=file_obj,
-            attachment_type=attachment_type
+            attachment_type=attachment_type,
+            quick_replies=quick_replies or None,
         )
 
         if result.get("success"):
@@ -447,25 +473,44 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="rescan-phone")
     def rescan_phone(self, request, pk=None):
-        """Quét lại tất cả tin nhắn cũ để tìm SĐT."""
+        """Quét lại tất cả tin nhắn cũ để tìm SĐT, Email, Địa chỉ."""
         lead = self.get_object()
         
-        # Nếu đã có SĐT thì có thể bỏ qua hoặc quét lại tuỳ logic, nhưng quét lại sẽ ghi đè
         messages = lead.messages.filter(sender_type="customer").order_by("-created_at")
-        for msg in messages:
-            phone = smart_extract_vn_phone(msg.text)
-            if phone:
-                lead.detected_phone = phone
-                lead.save(update_fields=["detected_phone"])
-                return Response({
-                    "detail": f"Đã quét và tìm thấy SĐT: {phone}",
-                    "phone": phone
-                })
+        text_pool = "\n".join([m.text for m in messages if m.text] + [lead.last_message_preview or ""])
+        phone = extract_and_process_phone_fb(lead, text_pool)
+        
+        if phone or lead.detected_email or lead.detected_address:
+            return Response({
+                "detail": f"Đã quét thành công. SĐT: {lead.detected_phone or '---'}, Email: {lead.detected_email or '---'}, Địa chỉ: {lead.detected_address or '---'}",
+                "phone": lead.detected_phone,
+                "email": lead.detected_email,
+                "address": lead.detected_address
+            })
         
         return Response(
-            {"error": "Không tìm thấy số điện thoại nào trong lịch sử tin nhắn của khách hàng này."},
+            {"error": "Không tìm thấy thông tin liên hệ nào trong lịch sử tin nhắn của hội thoại này."},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+    @action(detail=False, methods=["post"], url_path="scan-phones")
+    def scan_phones(self, request):
+        """Quét toàn bộ hội thoại Facebook để phát hiện SĐT, Email, Địa chỉ & tự động cập nhật khách hàng."""
+        leads = FacebookLead.objects.filter(company=request.user.company)
+        scanned_count = 0
+        detected_count = 0
+        for lead in leads:
+            msgs = lead.messages.filter(sender_type="customer").order_by("-created_at")[:30]
+            text_pool = "\n".join([m.text for m in msgs if m.text] + [lead.last_message_preview or ""])
+            phone = extract_and_process_phone_fb(lead, text_pool)
+            scanned_count += 1
+            if phone or lead.detected_email or lead.detected_address:
+                detected_count += 1
+        return Response({
+            "detail": f"Đã quét {scanned_count} hội thoại, phát hiện thông tin liên hệ trong {detected_count} hội thoại.",
+            "scanned_count": scanned_count,
+            "detected_count": detected_count
+        })
 
     @action(detail=True, methods=["post"], url_path="toggle-star")
     def toggle_star(self, request, pk=None):
@@ -531,12 +576,14 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
         lead = self.get_object()
         phone = request.data.get("phone", lead.detected_phone or "")
         name = request.data.get("name", lead.fb_user_name or "")
+        email = request.data.get("email", lead.detected_email or "")
+        address = request.data.get("address", lead.detected_address or "")
 
         if not phone:
             return Response({"error": "Vui lòng nhập số điện thoại."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            customer = convert_facebook_lead(lead, phone, customer_name=name)
+            customer = convert_facebook_lead(lead, phone, customer_name=name, email=email, address=address)
             return Response({
                 "detail": f"Đã tạo khách hàng '{customer.name}' thành công!",
                 "customer_id": customer.id,
@@ -678,11 +725,13 @@ class QuickMediaAssetViewSet(viewsets.ModelViewSet):
             saved_path = default_storage.save(filename, file_obj)
             file_url = f"/media/{saved_path}"
 
+        folder = self.request.data.get("folder", "Chung").strip() or "Chung"
         serializer.save(
             company=self.request.user.company,
             created_by=self.request.user,
             file_url=file_url,
             media_type=media_type,
+            folder=folder,
         )
 
 

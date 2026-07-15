@@ -27,10 +27,12 @@ import {
   VideoCameraOutlined,
 } from '@ant-design/icons'
 import {
+  AutoComplete,
   Avatar,
   Badge,
   Button,
   Card,
+  Checkbox,
   Col,
   Empty,
   Form,
@@ -115,6 +117,9 @@ function formatTime(dateStr) {
 function ConvItem({ lead, selected, onClick }) {
   if (!lead) return null
   const cfg = STATUS_CONFIG[lead.status] || STATUS_CONFIG.not_added
+  const unreadNum = lead.unread_count || (lead.has_unread_message ? 1 : 0)
+  const isUnread = unreadNum > 0
+
   return (
     <div
       onClick={onClick}
@@ -124,13 +129,23 @@ function ConvItem({ lead, selected, onClick }) {
         gap: 10,
         padding: '10px 14px',
         cursor: 'pointer',
-        borderBottom: '1px solid #f0f0f0',
-        background: selected ? '#e8f0fe' : 'transparent',
-        borderLeft: selected ? '3px solid #1877f2' : '3px solid transparent',
+        borderBottom: '1px solid #e5e7eb',
+        background: selected ? '#e8f0fe' : isUnread ? '#f0f9ff' : 'transparent',
+        borderLeft: selected ? '3px solid #1877f2' : isUnread ? '3px solid #3b82f6' : '3px solid transparent',
         transition: 'all 0.15s',
       }}
     >
-      <Badge dot={Boolean(lead.has_unread_message)} color="#ef4444" offset={[-4, 4]}>
+      <Badge
+        count={isUnread ? unreadNum : 0}
+        overflowCount={99}
+        offset={[-4, 4]}
+        style={{
+          background: '#ef4444',
+          color: '#fff',
+          fontWeight: 700,
+          boxShadow: '0 0 0 2px #fff',
+        }}
+      >
         <Badge
           dot
           style={{ background: lead.is_customer_converted ? '#10b981' : '#f59e0b' }}
@@ -140,16 +155,46 @@ function ConvItem({ lead, selected, onClick }) {
         </Badge>
       </Badge>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text strong style={{ fontSize: 13, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4, minWidth: 0 }}>
+          <Text
+            style={{
+              fontSize: 13,
+              display: 'block',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              flex: 1,
+              minWidth: 0,
+              fontWeight: isUnread ? 800 : 600,
+              color: isUnread ? '#0f172a' : '#1f2937',
+            }}
+          >
             {lead.is_starred && <StarFilled style={{ color: '#f59e0b', marginRight: 4 }} />}
             {lead.fb_user_name || 'Khách hàng'}
           </Text>
-          <Text type="secondary" style={{ fontSize: 11, flexShrink: 0, marginLeft: 4 }}>
+          <Text
+            style={{
+              fontSize: 11,
+              flexShrink: 0,
+              marginLeft: 4,
+              fontWeight: isUnread ? 700 : 400,
+              color: isUnread ? '#2563eb' : '#9ca3af',
+            }}
+          >
             {formatTime(lead.last_message_at)}
           </Text>
         </div>
-        <Text type="secondary" style={{ fontSize: 12, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <Text
+          style={{
+            fontSize: 12,
+            display: 'block',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            fontWeight: isUnread ? 700 : 400,
+            color: isUnread ? '#1e293b' : '#6b7280',
+          }}
+        >
           {lead.last_message_preview || 'Chưa có tin nhắn'}
         </Text>
         <div style={{ marginTop: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -184,6 +229,12 @@ function ConvItem({ lead, selected, onClick }) {
               📞 {lead.detected_phone}
             </Tag>
           )}
+          {lead.detected_email && (
+            <Tag style={{ fontSize: 10, padding: '0 5px', lineHeight: '16px', borderRadius: 8, margin: 0,
+              color: '#059669', background: '#d1fae5', border: '1px solid #6ee7b7' }}>
+              📧 {lead.detected_email}
+            </Tag>
+          )}
         </div>
       </div>
     </div>
@@ -195,20 +246,31 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
   if (!msg) return null
   const isPage = msg.sender_type === 'page'
   const urlLower = (msg.attachment_url || '').toLowerCase()
-  const isImage = msg.attachment_type === 'image' ||
+  const attachType = (msg.attachment_type || '').toLowerCase()
+
+  // Ưu tiên attachment_type từ backend trước, rồi mới đoán qua URL
+  const isVideo = attachType === 'video' ||
+    /\.(mp4|mov|avi|webm|mkv)(\?.*)?$/i.test(urlLower) ||
+    urlLower.includes('/videos/') ||
+    urlLower.includes('video_redirect') ||
+    urlLower.includes('attachment_type=video')
+
+  // isImage chỉ khi KHÔNG phải video
+  const isImage = !isVideo && (
+    attachType === 'image' ||
     /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(urlLower) ||
     urlLower.includes('fbcdn.net/v/') ||
     urlLower.includes('scontent.') ||
     urlLower.includes('/images/')
+  )
 
-  const isVideo = msg.attachment_type === 'video' ||
-    /\.(mp4|mov|avi|webm|mkv)(\?.*)?$/i.test(urlLower) ||
-    urlLower.includes('/videos/')
-
-  const isAudio = msg.attachment_type === 'audio' ||
+  const isAudio = !isVideo && !isImage && (
+    attachType === 'audio' ||
     /\.(mp3|wav|ogg|m4a)(\?.*)?$/i.test(urlLower)
+  )
 
   const hasOnlyMedia = !msg.text && msg.attachment_url && (isImage || isVideo)
+
 
   return (
     <div style={{
@@ -245,11 +307,39 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
                 style={{ maxWidth: 260, maxHeight: 260, borderRadius: 12, objectFit: 'cover', display: 'block' }}
               />
             ) : isVideo ? (
-              <video
-                controls
-                src={msg.attachment_url}
-                style={{ maxWidth: 280, maxHeight: 260, borderRadius: 12, display: 'block', background: '#000' }}
-              />
+              <div style={{ maxWidth: 280 }}>
+                <video
+                  controls
+                  src={msg.attachment_url}
+                  style={{ maxWidth: '100%', maxHeight: 260, borderRadius: 12, display: 'block', background: '#000' }}
+                  onError={(e) => {
+                    // Nếu video không load được (URL hết hạn), hiển thị nút tải thay thế
+                    e.target.style.display = 'none'
+                    e.target.nextSibling && (e.target.nextSibling.style.display = 'flex')
+                  }}
+                />
+                <a
+                  href={msg.attachment_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'none',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '10px 14px',
+                    borderRadius: 10,
+                    background: isPage ? 'rgba(255,255,255,0.15)' : '#e5e7eb',
+                    color: isPage ? '#fff' : '#1f2937',
+                    textDecoration: 'none',
+                    fontSize: 13,
+                    fontWeight: 500,
+                  }}
+                >
+                  <VideoCameraOutlined style={{ fontSize: 20, color: '#6b7280' }} />
+                  <span>Video (nhấn để mở)</span>
+                  <DownloadOutlined />
+                </a>
+              </div>
             ) : isAudio ? (
               <audio controls src={msg.attachment_url} style={{ maxWidth: 240 }} />
             ) : (
@@ -294,6 +384,50 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
 
 export default function FacebookInboxPage() {
   const { maintenanceMode } = useAuth()
+  // Resizable columns
+  const [leftColWidth, setLeftColWidth] = useState(270)
+  const [rightColWidth, setRightColWidth] = useState(260)
+  const isDraggingLeft = useRef(false)
+  const isDraggingRight = useRef(false)
+  const dragStartX = useRef(0)
+  const dragStartWidth = useRef(0)
+
+  const startDragLeft = (e) => {
+    isDraggingLeft.current = true
+    dragStartX.current = e.clientX
+    dragStartWidth.current = leftColWidth
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }
+  const startDragRight = (e) => {
+    isDraggingRight.current = true
+    dragStartX.current = e.clientX
+    dragStartWidth.current = rightColWidth
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }
+  useEffect(() => {
+    const onMove = (e) => {
+      if (isDraggingLeft.current) {
+        const delta = e.clientX - dragStartX.current
+        setLeftColWidth(Math.min(420, Math.max(180, dragStartWidth.current + delta)))
+      }
+      if (isDraggingRight.current) {
+        const delta = dragStartX.current - e.clientX
+        setRightColWidth(Math.min(380, Math.max(180, dragStartWidth.current + delta)))
+      }
+    }
+    const onUp = () => {
+      isDraggingLeft.current = false
+      isDraggingRight.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [])
+
   const [pages, setPages] = useState([])
   const [selectedPage, setSelectedPage] = useState('all')
   const [leads, setLeads] = useState([])
@@ -316,6 +450,9 @@ export default function FacebookInboxPage() {
   const [createModal, setCreateModal] = useState(false)
   const [creating, setCreating] = useState(false)
   const messagesEndRef = useRef(null)
+  const messagesContainerRef = useRef(null)
+  const isUserScrollingUp = useRef(false)  // true khi người dùng đang kéo lên xem tin cũ
+  const prevLeadId = useRef(null)           // theo dõi lần đầu mở hội thoại
 
   // Sync History
   const [syncModal, setSyncModal] = useState(false)
@@ -331,6 +468,9 @@ export default function FacebookInboxPage() {
   const [quickMediaUploading, setQuickMediaUploading] = useState(false)
   const [quickMediaTitle, setQuickMediaTitle] = useState('')
   const [quickMediaType, setQuickMediaType] = useState('image')
+  const [quickMediaFolder, setQuickMediaFolder] = useState('Chung')
+  const [activeMediaFolderTab, setActiveMediaFolderTab] = useState('all')
+  const [selectedMediaIds, setSelectedMediaIds] = useState(new Set())
 
   // Pancake filters state
   const [isStarredOnly, setIsStarredOnly] = useState(false)
@@ -409,7 +549,18 @@ export default function FacebookInboxPage() {
     fetchPages()
     fetchTags()
     fetchQuickReplies()
-    api.get('/users/').then(res => setEmployees(Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.results) ? res.data.results : []))).catch(() => setEmployees([]))
+    // Gọi /users/users/ để lấy danh sách nhân viên trong công ty (lọc đúng theo tenant)
+    api.get('/users/users/').then(res => {
+      const data = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.results) ? res.data.results : [])
+      const active = data.filter(e => e.is_active !== false)
+      // Chỉ giữ nhân viên có quyền liên quan đến module Facebook
+      const withFb = active.filter(e => {
+        const perms = e.permissions || []
+        return perms.some(p => typeof p === 'string' ? p.startsWith('facebook.') : (p.codename || '').startsWith('facebook.'))
+      })
+      // Nếu không ai có quyền cụ thể (VD: Giám đốc dùng quyền tổng hợp), fallback hiển thị tất cả
+      setEmployees(withFb.length > 0 ? withFb : active)
+    }).catch(() => setEmployees([]))
   }, [])
   useEffect(() => { 
     fetchLeads() 
@@ -426,9 +577,35 @@ export default function FacebookInboxPage() {
     }
   }, [selectedLead?.id])
 
-  useEffect(() => {
+  // Hàm scroll xuống cuối — chỉ gọi khi cần thiết
+  const scrollToBottom = (smooth = true) => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+      messagesEndRef.current.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant' })
+    }
+  }
+
+  // Theo dõi người dùng đang cuộn lên không
+  const handleMessagesScroll = () => {
+    const container = messagesContainerRef.current
+    if (!container) return
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+    // Nếu cách đáy > 120px thì coi như đang xem tin cũ
+    isUserScrollingUp.current = distanceFromBottom > 120
+  }
+
+  useEffect(() => {
+    if (!messages || messages.length === 0) return
+    const leadChanged = prevLeadId.current !== selectedLead?.id
+    if (leadChanged) {
+      // Mới mở hội thoại: scroll xuống ngay (không có animation)
+      prevLeadId.current = selectedLead?.id
+      isUserScrollingUp.current = false
+      setTimeout(() => scrollToBottom(false), 50)
+      return
+    }
+    // Khi có tin nhắn mới (polling): chỉ scroll nếu người dùng đang ở gần cuối
+    if (!isUserScrollingUp.current) {
+      scrollToBottom(true)
     }
   }, [messages])
 
@@ -437,21 +614,24 @@ export default function FacebookInboxPage() {
     fetchMessages(lead)
   }
 
-  const handleSend = async (file = null, requestPhone = false) => {
+  const handleSend = async (file = null, requestPhone = false, requestEmail = false) => {
     if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
-    if (!msgText.trim() && !file && !requestPhone && !selectedLead) return
+    if (!msgText.trim() && !file && !requestPhone && !requestEmail && !selectedLead) return
     setSending(true)
     try {
       const formData = new FormData()
       if (msgText.trim()) formData.append('text', msgText.trim())
       if (file) formData.append('file', file)
       if (requestPhone) formData.append('request_phone', 'true')
+      if (requestEmail) formData.append('request_email', 'true')
 
       const res = await api.post(`/facebook/leads/${selectedLead.id}/send-message/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       setMessages(prev => [...prev, res.data])
-      if (!file && !requestPhone) setMsgText('')
+      if (!file && !requestPhone && !requestEmail) setMsgText('')
+      // Sau khi gửi: reset cờ để scroll xuống xem tin vừa gửi
+      isUserScrollingUp.current = false
       fetchLeads(true)
     } catch (err) {
       message.error(err.response?.data?.error || 'Không thể gửi tin nhắn.')
@@ -487,9 +667,24 @@ export default function FacebookInboxPage() {
       const res = await api.post(`/facebook/leads/${selectedLead.id}/rescan-phone/`)
       message.success(res.data.detail)
       fetchLeads()
-      setSelectedLead(prev => ({ ...prev, detected_phone: res.data.phone }))
+      setSelectedLead(prev => ({
+        ...prev,
+        detected_phone: res.data.phone,
+        detected_email: res.data.email,
+        detected_address: res.data.address
+      }))
     } catch (err) {
-      message.error(err.response?.data?.error || 'Không tìm thấy số điện thoại.')
+      message.error(err.response?.data?.error || 'Không tìm thấy thông tin liên hệ.')
+    }
+  }
+
+  const handleScanAllPhones = async () => {
+    try {
+      const res = await api.post('/facebook/leads/scan-phones/')
+      message.success(res.data.detail)
+      fetchLeads()
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Lỗi khi quét thông tin liên hệ.')
     }
   }
 
@@ -511,12 +706,13 @@ export default function FacebookInboxPage() {
       formData.append('file', file)
       formData.append('title', quickMediaTitle || file.name)
       formData.append('media_type', quickMediaType)
+      formData.append('folder', quickMediaFolder || 'Chung')
       await api.post('/facebook/quick-media/', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-      message.success('Đã tải lên thư viện mẫu!')
+      message.success(`Đã tải lên "${file.name}"!`)
       setQuickMediaTitle('')
       fetchQuickMedia()
     } catch (err) {
-      message.error(err.response?.data?.error || 'Không thể tải file lên.')
+      message.error(err.response?.data?.error || `Không thể tải file "${file.name}" lên.`)
     } finally { setQuickMediaUploading(false) }
     return false
   }
@@ -551,6 +747,48 @@ export default function FacebookInboxPage() {
     } catch (err) {
       message.error(err.response?.data?.error || 'Không thể gửi mẫu.')
     } finally { setSending(false) }
+  }
+
+  const toggleSelectMediaItem = (id) => {
+    setSelectedMediaIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleSendBulkQuickMedia = async () => {
+    if (!selectedLead) {
+      message.warning('Vui lòng chọn một hội thoại trước khi gửi!')
+      setQuickMediaModal(false)
+      return
+    }
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì!'); return }
+    const selectedList = quickMediaList.filter(item => selectedMediaIds.has(item.id))
+    if (selectedList.length === 0) return
+    setSending(true)
+    setQuickMediaModal(false)
+    let count = 0
+    for (const asset of selectedList) {
+      try {
+        const res = await api.post(`/facebook/leads/${selectedLead.id}/send-message/`, {
+          text: '',
+          attachment_url: asset.file_url,
+          attachment_type: asset.media_type || 'image'
+        })
+        setMessages(prev => [...prev, res.data])
+        count++
+      } catch (err) {
+        message.error(`Lỗi khi gửi mẫu "${asset.title}".`)
+      }
+    }
+    if (count > 0) {
+      message.success(`Đã gửi thành công ${count}/${selectedList.length} mẫu đã chọn tới khách hàng!`)
+      fetchLeads(true)
+      setSelectedMediaIds(new Set())
+    }
+    setSending(false)
   }
 
   const handleSyncHistory = async () => {
@@ -696,20 +934,22 @@ export default function FacebookInboxPage() {
   const filteredLeads = (leads || []).filter(l =>
     !search || (l.fb_user_name || '').toLowerCase().includes(search.toLowerCase()) ||
     (l.last_message_preview || '').toLowerCase().includes(search.toLowerCase()) ||
-    (l.detected_phone || '').includes(search)
+    (l.detected_phone || '').includes(search) ||
+    (l.detected_email || '').toLowerCase().includes(search.toLowerCase()) ||
+    (l.detected_address || '').toLowerCase().includes(search.toLowerCase())
   )
 
   return (
-    <div style={{ height: 'calc(100vh - 128px)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: 'calc(100vh - 128px)', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
       {/* Header */}
-      <div style={{ padding: '12px 20px', background: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span style={{ fontSize: 22, color: '#1877f2', fontWeight: 900 }}>𝐟</span>
-        <span style={{ fontWeight: 700, fontSize: 16 }}>Facebook Inbox</span>
+      <div style={{ padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 22, color: '#1877f2', fontWeight: 900, flexShrink: 0 }}>𝐟</span>
+        <span style={{ fontWeight: 700, fontSize: 15, flexShrink: 0 }}>Facebook Inbox</span>
         {pages.length > 1 && (
           <Select
             value={selectedPage}
             onChange={setSelectedPage}
-            style={{ width: 200, marginLeft: 8 }}
+            style={{ width: 170, flexShrink: 0 }}
             size="small"
           >
             <Select.Option value="all">🔀 Tất cả Trang</Select.Option>
@@ -718,7 +958,15 @@ export default function FacebookInboxPage() {
             ))}
           </Select>
         )}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Button
+            size="small"
+            style={{ background: '#3b82f6', color: '#fff', borderColor: '#3b82f6' }}
+            icon={<ReloadOutlined />}
+            onClick={handleScanAllPhones}
+          >
+            Quét tất cả liên hệ
+          </Button>
           <Button
             size="small"
             type="primary"
@@ -729,7 +977,7 @@ export default function FacebookInboxPage() {
               setSyncModal(true)
             }}
           >
-            🔄 Đồng bộ lịch sử
+            Đồng bộ lịch sử
           </Button>
           <Button
             size="small"
@@ -740,7 +988,7 @@ export default function FacebookInboxPage() {
               setQuickMediaModal(true)
             }}
           >
-            📁 Thư viện mẫu
+            Thư viện mẫu
           </Button>
           <Button
             size="small"
@@ -756,13 +1004,13 @@ export default function FacebookInboxPage() {
             icon={<PhoneOutlined />}
             onClick={() => setHasPhoneOnly(!hasPhoneOnly)}
           >
-            {hasPhoneOnly ? '📞 Có SĐT' : 'Lọc SĐT'}
+            {hasPhoneOnly ? 'Có SĐT' : 'Lọc SĐT'}
           </Button>
           <Select
             value={statusFilter}
             onChange={setStatusFilter}
             size="small"
-            style={{ width: 140 }}
+            style={{ width: 130 }}
             placeholder="Lọc trạng thái"
           >
             <Select.Option value="">Tất cả trạng thái</Select.Option>
@@ -775,7 +1023,7 @@ export default function FacebookInboxPage() {
             onClick={() => setIsArchivedOnly(!isArchivedOnly)}
             style={isArchivedOnly ? { background: '#f97316', borderColor: '#f97316' } : {}}
           >
-            {isArchivedOnly ? '🗑️ Lead rác (đã ẩn)' : '🗑️ Kho rác'}
+            {isArchivedOnly ? 'Lead rác (đã ẩn)' : '🗑️ Kho rác'}
           </Button>
           <Button size="small" icon={<ReloadOutlined />} onClick={() => fetchLeads()} title="Làm mới" />
         </div>
@@ -1076,7 +1324,8 @@ export default function FacebookInboxPage() {
         </div>
 
         {/* Left: Conversation List */}
-        <div style={{ width: 300, flexShrink: 0, borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', background: '#fff' }}>
+        {/* Drag handle between filter sidebar and left column — unused, left col already flex */}
+        <div style={{ width: leftColWidth, flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#fff', minWidth: 0, borderRight: 'none' }}>
           {/* Active Filter Banner */}
           {(replyFilter || sortBy || hasUnreadOnly || (phoneFilterMode !== 'all' && phoneFilterMode !== '') || hasPhoneOnly || statusFilter || isArchivedOnly || isStarredOnly || tagFilter !== 'all' || assignedToFilter !== 'all') && (
             <div style={{ padding: '6px 10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
@@ -1140,8 +1389,19 @@ export default function FacebookInboxPage() {
           </div>
         </div>
 
+        {/* Drag handle: Left | Mid */}
+        <div
+          onMouseDown={startDragLeft}
+          style={{
+            width: 5, flexShrink: 0, cursor: 'col-resize', background: 'transparent',
+            borderLeft: '1px solid #e5e7eb', transition: 'background 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = '#dbeafe'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        />
+
         {/* Middle: Chat */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', minWidth: 0 }}>
           {!selectedLead ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', flexDirection: 'column', gap: 12 }}>
               <MessageOutlined style={{ fontSize: 48, color: '#d1d5db' }} />
@@ -1150,13 +1410,15 @@ export default function FacebookInboxPage() {
           ) : (
             <>
               {/* Chat header */}
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb', background: '#fff', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ padding: '10px 14px', borderBottom: '1px solid #e5e7eb', background: '#fff', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
                 <LeadAvatar lead={selectedLead} size={36} />
-                <div>
-                  <Text strong>{selectedLead.fb_user_name || 'Khách hàng'}</Text>
-                  <div style={{ fontSize: 12, color: '#9ca3af' }}>{selectedLead.page_name}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text strong style={{ fontSize: 14, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {selectedLead.fb_user_name || 'Khách hàng'}
+                  </Text>
+                  <div style={{ fontSize: 12, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedLead.page_name}</div>
                 </div>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
                   {!selectedLead.is_customer_converted && (
                     <Button
                       type="primary"
@@ -1164,36 +1426,47 @@ export default function FacebookInboxPage() {
                       icon={<UserAddOutlined />}
                       onClick={() => {
                         if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì!'); return }
-                        createForm.setFieldsValue({ phone: selectedLead.detected_phone || '', name: selectedLead.fb_user_name || '' })
+                        createForm.setFieldsValue({
+                          phone: selectedLead.detected_phone || '',
+                          name: selectedLead.fb_user_name || '',
+                          email: selectedLead.detected_email || '',
+                          address: selectedLead.detected_address || ''
+                        })
                         setCreateModal(true)
                       }}
                       style={{ background: '#1877f2', borderRadius: 16 }}
                     >
-                      Tạo khách hàng
+                      Tạo KH
                     </Button>
                   )}
                   {selectedLead.detected_phone && (
-                    <Tag color="blue" style={{ margin: 0, lineHeight: '28px' }}>📞 {selectedLead.detected_phone}</Tag>
+                    <Tag color="blue" style={{ margin: 0, lineHeight: '26px', fontSize: 12 }}>📞 {selectedLead.detected_phone}</Tag>
                   )}
-                  <Tooltip title="Quét lại toàn bộ tin nhắn cũ để tìm số điện thoại">
+                  {selectedLead.detected_email && (
+                    <Tag color="green" style={{ margin: 0, lineHeight: '26px', fontSize: 12 }}>📧 {selectedLead.detected_email}</Tag>
+                  )}
+                  {selectedLead.detected_address && (
+                    <Tag color="orange" style={{ margin: 0, lineHeight: '26px', fontSize: 12 }} title={selectedLead.detected_address}>📍 {selectedLead.detected_address.length > 25 ? selectedLead.detected_address.substring(0, 25) + '...' : selectedLead.detected_address}</Tag>
+                  )}
+                  <Tooltip title="Quét lại toàn bộ tin nhắn cũ để tìm SĐT, Email, Địa chỉ">
                     <Button
                       size="small"
                       icon={<ReloadOutlined />}
                       onClick={handleRescanPhone}
                       style={{ borderRadius: 16 }}
                     >
-                      Quét SĐT
+                      Quét liên hệ
                     </Button>
                   </Tooltip>
                 </div>
               </div>
 
-              {/* Phone detected banner */}
-              {selectedLead.detected_phone && !selectedLead.is_customer_converted && (
+              {/* Contact detected banner */}
+              {(selectedLead.detected_phone || selectedLead.detected_email || selectedLead.detected_address) && !selectedLead.is_customer_converted && (
                 <div style={{ padding: '8px 16px', background: '#fffbeb', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <PhoneOutlined style={{ color: '#f59e0b' }} />
                   <Text style={{ color: '#92400e', fontSize: 13 }}>
-                    Phát hiện số điện thoại <b>{selectedLead.detected_phone}</b> — Bấm <b>"Tạo khách hàng"</b> để thêm vào CRM
+                    Phát hiện liên hệ: <b>{selectedLead.detected_phone || '---'}</b> | 📧 <b>{selectedLead.detected_email || '---'}</b> | 📍 <b>{selectedLead.detected_address || '---'}</b> — Bấm <b>"Tạo khách hàng"</b> để thêm vào CRM
                   </Text>
                 </div>
               )}
@@ -1201,13 +1474,17 @@ export default function FacebookInboxPage() {
                 <div style={{ padding: '8px 16px', background: '#ecfdf5', borderBottom: '1px solid #6ee7b7', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ color: '#10b981' }}>✅</span>
                   <Text style={{ color: '#065f46', fontSize: 13 }}>
-                    Khách hàng đã có trong hệ thống CRM: <b>{selectedLead.customer_name}</b>
+                    Khách hàng đã có trong hệ thống CRM: <b>{selectedLead.customer_name || selectedLead.fb_user_name || 'Khách hàng CRM'}</b>
                   </Text>
                 </div>
               )}
 
               {/* Messages */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0', background: '#f9fafb' }}>
+              <div
+                ref={messagesContainerRef}
+                onScroll={handleMessagesScroll}
+                style={{ flex: 1, overflowY: 'auto', padding: '16px 0', background: '#f9fafb' }}
+              >
                 {msgLoading ? <Spin style={{ display: 'block', margin: 'auto', marginTop: 40 }} /> : (
                   <>
                     {(messages || []).length === 0 && <Empty description="Chưa có tin nhắn" style={{ marginTop: 40 }} />}
@@ -1223,38 +1500,63 @@ export default function FacebookInboxPage() {
               </div>
 
               {/* Message input & toolbar */}
-              <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', background: '#fff' }}>
-                <div style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Button size="small" icon={<PhoneOutlined />} onClick={() => handleSend(null, true)} loading={sending} style={{ borderRadius: 14 }}>
-                    Yêu cầu chia sẻ SĐT
-                  </Button>
-                  <Button size="small" icon={<ThunderboltOutlined />} onClick={() => setQuickReplyModal(true)} style={{ borderRadius: 14, background: '#fff7ed', borderColor: '#fdba74', color: '#c2410c', fontWeight: 600 }}>
-                    ⚡ Văn bản mẫu (/gõ tắt)
-                  </Button>
-                </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div style={{ padding: '8px 12px', borderTop: '1px solid #e5e7eb', background: '#fff' }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <Tooltip title="Yêu cầu khách chia sẻ số điện thoại" placement="top">
+                      <Button
+                        size="small"
+                        shape="circle"
+                        icon={<PhoneOutlined />}
+                        onClick={() => handleSend(null, true, false)}
+                        loading={sending}
+                        style={{ color: '#1877f2', borderColor: '#1877f2' }}
+                      />
+                    </Tooltip>
+                    <Tooltip title="Yêu cầu khách chia sẻ Email" placement="top">
+                      <Button
+                        size="small"
+                        shape="circle"
+                        icon={<MailOutlined />}
+                        onClick={() => handleSend(null, false, true)}
+                        loading={sending}
+                        style={{ color: '#10b981', borderColor: '#10b981' }}
+                      />
+                    </Tooltip>
+                    <Tooltip title="⚡ Văn bản mẫu — gõ /phimtat để dùng nhanh" placement="top">
+                      <Button
+                        size="small"
+                        shape="circle"
+                        icon={<ThunderboltOutlined />}
+                        onClick={() => setQuickReplyModal(true)}
+                        style={{ color: '#c2410c', borderColor: '#fdba74', background: '#fff7ed' }}
+                      />
+                    </Tooltip>
+                  </div>
                   <Input.TextArea
                     value={msgText}
                     onChange={handleMsgTextChange}
-                    placeholder="Nhập tin nhắn (hoặc gõ phím tắt VD: /hello)..."
+                    placeholder="Nhập tin nhắn (hoặc gõ /phimtat)..."
                     autoSize={{ minRows: 1, maxRows: 4 }}
-                    style={{ borderRadius: 20, resize: 'none', flex: 1 }}
+                    style={{ borderRadius: 16, resize: 'none', flex: 1 }}
                     onPressEnter={e => { if (!e.shiftKey) { e.preventDefault(); handleSend() } }}
                     disabled={sending}
                   />
-                  <Upload beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={false} accept="image/*">
-                    <Button shape="circle" icon={<PictureOutlined />} disabled={sending} title="Gửi hình ảnh" />
-                  </Upload>
-                  <Upload beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={false}>
-                    <Button shape="circle" icon={<PaperClipOutlined />} disabled={sending} title="Gửi file tài liệu" />
-                  </Upload>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <Upload beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={true} accept="image/*">
+                      <Button size="small" shape="circle" icon={<PictureOutlined />} disabled={sending} title="Gửi hình ảnh (Chọn nhiều được)" />
+                    </Upload>
+                    <Upload beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={true}>
+                      <Button size="small" shape="circle" icon={<PaperClipOutlined />} disabled={sending} title="Gửi file (Chọn nhiều được)" />
+                    </Upload>
+                  </div>
                   <Button
                     type="primary"
                     icon={<SendOutlined />}
                     onClick={() => handleSend()}
                     loading={sending}
                     disabled={!msgText.trim() && !sending}
-                    style={{ background: '#1877f2', borderRadius: '50%', width: 40, height: 40, padding: 0, flexShrink: 0 }}
+                    style={{ background: '#1877f2', borderRadius: '50%', width: 36, height: 36, padding: 0, flexShrink: 0, alignSelf: 'flex-end' }}
                   />
                 </div>
               </div>
@@ -1262,8 +1564,18 @@ export default function FacebookInboxPage() {
           )}
         </div>
 
+        {/* Drag handle: Mid | Right */}
+        <div
+          onMouseDown={startDragRight}
+          style={{
+            width: 5, flexShrink: 0, cursor: 'col-resize', background: 'transparent',
+            borderLeft: '1px solid #e5e7eb', transition: 'background 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = '#dbeafe'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        />
         {/* Right: CRM Customer Profile */}
-        <div style={{ width: 285, flexShrink: 0, borderLeft: '1px solid #e5e7eb', background: '#fafafa', overflowY: 'auto', padding: 14 }}>
+        <div style={{ width: rightColWidth, flexShrink: 0, background: '#fafafa', overflowY: 'auto', padding: 12, minWidth: 0 }}>
           {selectedLead ? (
             <>
               <div style={{ textAlign: 'center', marginBottom: 12 }}>
@@ -1272,7 +1584,7 @@ export default function FacebookInboxPage() {
                   size={64}
                   style={{ margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 />
-                <div style={{ fontWeight: 700, fontSize: 15, marginTop: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginTop: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 4px' }}>
                   {selectedLead.is_starred && <StarFilled style={{ color: '#f59e0b', marginRight: 4 }} />}
                   {selectedLead.fb_user_name || 'Khách hàng'}
                 </div>
@@ -1327,6 +1639,18 @@ export default function FacebookInboxPage() {
                               <div style={{ fontSize: 13, marginBottom: 12, color: '#1877f2', fontWeight: 600 }}>📞 {selectedLead.detected_phone}</div>
                             </>
                           )}
+                          {selectedLead.detected_email && (
+                            <>
+                              <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>EMAIL PHÁT HIỆN</Text></div>
+                              <div style={{ fontSize: 13, marginBottom: 12, color: '#059669', fontWeight: 600 }}>📧 {selectedLead.detected_email}</div>
+                            </>
+                          )}
+                          {selectedLead.detected_address && (
+                            <>
+                              <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>ĐỊA CHỈ PHÁT HIỆN</Text></div>
+                              <div style={{ fontSize: 13, marginBottom: 12, color: '#d97706' }}>📍 {selectedLead.detected_address}</div>
+                            </>
+                          )}
                           {selectedLead.customer_name && (
                             <>
                               <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>KHÁCH HÀNG CRM</Text></div>
@@ -1351,7 +1675,12 @@ export default function FacebookInboxPage() {
                               icon={<UserAddOutlined />}
                               onClick={() => {
                                 if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì!'); return }
-                                createForm.setFieldsValue({ phone: selectedLead.detected_phone || '', name: selectedLead.fb_user_name || '' })
+                                createForm.setFieldsValue({
+                                  phone: selectedLead.detected_phone || '',
+                                  name: selectedLead.fb_user_name || '',
+                                  email: selectedLead.detected_email || '',
+                                  address: selectedLead.detected_address || ''
+                                })
                                 setCreateModal(true)
                               }}
                               style={{ background: '#1877f2', marginTop: 8, borderRadius: 20 }}
@@ -1418,7 +1747,7 @@ export default function FacebookInboxPage() {
       {/* Sync History Modal */}
       <Modal
         open={syncModal}
-        title="🔄 Đồng bộ lịch sử hội thoại từ Facebook (chuẩn Pancake)"
+        title="🔄 Đồng bộ lịch sử hội thoại từ Facebook"
         onCancel={() => setSyncModal(false)}
         onOk={handleSyncHistory}
         confirmLoading={syncing}
@@ -1478,39 +1807,55 @@ export default function FacebookInboxPage() {
       {/* Quick Media Library Modal */}
       <Modal
         open={quickMediaModal}
-        title="📁 Thư viện mẫu & gửi nhanh (Pancake style)"
+        title="📁 Thư viện mẫu & gửi nhanh"
         onCancel={() => setQuickMediaModal(false)}
         footer={[
+          selectedMediaIds.size > 0 && (
+            <Button key="bulk-send" type="primary" icon={<SendOutlined />} onClick={handleSendBulkQuickMedia} loading={sending} style={{ background: '#10b981', marginRight: 8 }}>
+              Gửi {selectedMediaIds.size} mẫu đã chọn
+            </Button>
+          ),
           <Button key="close" onClick={() => setQuickMediaModal(false)}>Đóng</Button>
-        ]}
-        width={720}
+        ].filter(Boolean)}
+        width={760}
       >
         <div style={{ padding: '8px 0' }}>
           <Card size="small" style={{ marginBottom: 16, background: '#f8fafc', borderColor: '#e2e8f0' }}>
-            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>⬆️ Tải lên mẫu mới (Hình ảnh, Video, Báo giá...)</div>
-            <Row gutter={12} align="middle">
-              <Col span={10}>
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>⬆️ Tải lên mẫu mới (Hình ảnh, Video, Báo giá... có thể chọn cùng lúc nhiều ảnh)</div>
+            <Row gutter={[12, 8]} align="middle">
+              <Col span={8}>
                 <Input
                   size="small"
-                  placeholder="Tên gợi nhớ (VD: Báo giá 2026, Banner khuyến mãi)..."
+                  placeholder="Tên gợi nhớ (VD: Báo giá 2026)..."
                   value={quickMediaTitle}
                   onChange={e => setQuickMediaTitle(e.target.value)}
                 />
               </Col>
-              <Col span={6}>
+              <Col span={5}>
                 <Select size="small" value={quickMediaType} onChange={setQuickMediaType} style={{ width: '100%' }}>
                   <Select.Option value="image">🖼️ Hình ảnh</Select.Option>
                   <Select.Option value="video">🎬 Video</Select.Option>
                   <Select.Option value="file">📄 Tài liệu / File</Select.Option>
                 </Select>
               </Col>
-              <Col span={8}>
+              <Col span={6}>
+                <AutoComplete
+                  size="small"
+                  style={{ width: '100%' }}
+                  placeholder="Thư mục (VD: Báo giá...)"
+                  value={quickMediaFolder}
+                  onChange={setQuickMediaFolder}
+                  options={Array.from(new Set(['Chung', ...quickMediaList.map(i => i.folder || 'Chung')])).map(f => ({ value: f }))}
+                />
+              </Col>
+              <Col span={5}>
                 <Upload
+                  multiple={true}
                   beforeUpload={handleUploadQuickMedia}
                   showUploadList={false}
                   accept={quickMediaType === 'image' ? 'image/*' : quickMediaType === 'video' ? 'video/*' : '*/*'}
                 >
-                  <Button size="small" type="primary" icon={<PlusOutlined />} loading={quickMediaUploading} style={{ background: '#10b981' }}>
+                  <Button size="small" type="primary" icon={<PlusOutlined />} loading={quickMediaUploading} style={{ background: '#10b981', width: '100%' }}>
                     Chọn file tải lên
                   </Button>
                 </Upload>
@@ -1519,72 +1864,108 @@ export default function FacebookInboxPage() {
           </Card>
 
           {quickMediaLoading ? <Spin style={{ display: 'block', margin: '30px auto' }} /> : (
-            <Tabs
-              defaultActiveKey="all"
-              items={[
-                {
-                  key: 'all',
-                  label: `Tất cả (${quickMediaList.length})`,
-                  children: (
-                    <Row gutter={[12, 12]} style={{ maxHeight: 380, overflowY: 'auto', marginTop: 8 }}>
-                      {quickMediaList.length === 0 && <Empty description="Chưa có mẫu nào trong thư viện" style={{ margin: '30px auto', width: '100%' }} />}
-                      {quickMediaList.map(item => (
-                        <Col span={8} key={item.id}>
-                          <Card
-                            size="small"
-                            hoverable
-                            style={{ borderRadius: 8, overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}
-                            bodyStyle={{ padding: 10, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
-                          >
-                            <div>
-                              {item.media_type === 'image' ? (
-                                <Image
-                                  src={item.file_url}
-                                  alt={item.title}
-                                  style={{ height: 110, width: '100%', objectFit: 'cover', borderRadius: 6 }}
-                                  preview={false}
-                                />
-                              ) : (
-                                <div style={{ height: 110, background: '#e2e8f0', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 6 }}>
-                                  {item.media_type === 'video' ? <VideoCameraOutlined style={{ fontSize: 32, color: '#3b82f6' }} /> : <FileOutlined style={{ fontSize: 32, color: '#64748b' }} />}
-                                  <span style={{ fontSize: 11, color: '#475569', padding: '0 8px', textAlign: 'center', wordBreak: 'break-all' }}>
-                                    {item.file_url.split('/').pop()}
-                                  </span>
-                                </div>
-                              )}
-                              <div style={{ fontWeight: 600, fontSize: 13, marginTop: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.title}>
-                                {item.title}
+            <>
+              {selectedMediaIds.size > 0 && (
+                <div style={{ background: '#ecfdf5', border: '1px solid #10b981', padding: '8px 12px', borderRadius: 8, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#047857', fontWeight: 600, fontSize: 13 }}>
+                    🎉 Đã chọn {selectedMediaIds.size} mẫu
+                  </span>
+                  <div>
+                    <Button size="small" onClick={() => setSelectedMediaIds(new Set())} style={{ marginRight: 8 }}>Bỏ chọn</Button>
+                    <Button size="small" type="primary" icon={<SendOutlined />} onClick={handleSendBulkQuickMedia} loading={sending} style={{ background: '#10b981' }}>
+                      Gửi {selectedMediaIds.size} mẫu đã chọn
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <Tabs
+                activeKey={activeMediaFolderTab}
+                onChange={setActiveMediaFolderTab}
+                items={[
+                  {
+                    key: 'all',
+                    label: `📁 Tất cả (${quickMediaList.length})`
+                  },
+                  ...Array.from(new Set(['Chung', ...quickMediaList.map(i => i.folder || 'Chung')])).map(f => ({
+                    key: f,
+                    label: `📁 ${f} (${quickMediaList.filter(i => (i.folder || 'Chung') === f).length})`
+                  }))
+                ]}
+              />
+              <Row gutter={[12, 12]} style={{ maxHeight: 380, overflowY: 'auto', marginTop: 4 }}>
+                {quickMediaList.filter(item => activeMediaFolderTab === 'all' || (item.folder || 'Chung') === activeMediaFolderTab).length === 0 && (
+                  <Empty description="Chưa có mẫu nào trong thư mục này" style={{ margin: '30px auto', width: '100%' }} />
+                )}
+                {quickMediaList
+                  .filter(item => activeMediaFolderTab === 'all' || (item.folder || 'Chung') === activeMediaFolderTab)
+                  .map(item => (
+                    <Col span={8} key={item.id}>
+                      <Card
+                        size="small"
+                        hoverable
+                        style={{
+                          borderRadius: 8,
+                          overflow: 'hidden',
+                          height: '100%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          border: selectedMediaIds.has(item.id) ? '2px solid #10b981' : undefined,
+                          background: selectedMediaIds.has(item.id) ? '#f0fdf4' : undefined
+                        }}
+                        bodyStyle={{ padding: 10, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                            <Tag color="blue" style={{ fontSize: 10, margin: 0 }}>📁 {item.folder || 'Chung'}</Tag>
+                            <Checkbox checked={selectedMediaIds.has(item.id)} onChange={() => toggleSelectMediaItem(item.id)} />
+                          </div>
+                          <div onClick={() => toggleSelectMediaItem(item.id)} style={{ cursor: 'pointer' }}>
+                            {item.media_type === 'image' ? (
+                              <Image
+                                src={item.file_url}
+                                alt={item.title}
+                                style={{ height: 100, width: '100%', objectFit: 'cover', borderRadius: 6 }}
+                                preview={false}
+                              />
+                            ) : (
+                              <div style={{ height: 100, background: '#e2e8f0', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 6 }}>
+                                {item.media_type === 'video' ? <VideoCameraOutlined style={{ fontSize: 32, color: '#3b82f6' }} /> : <FileOutlined style={{ fontSize: 32, color: '#64748b' }} />}
+                                <span style={{ fontSize: 11, color: '#475569', padding: '0 8px', textAlign: 'center', wordBreak: 'break-all' }}>
+                                  {item.file_url?.split('/').pop()}
+                                </span>
                               </div>
-                              <div style={{ fontSize: 11, color: '#94a3b8' }}>Bởi: {item.created_by_name || 'Admin'}</div>
+                            )}
+                            <div style={{ fontWeight: 600, fontSize: 13, marginTop: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.title}>
+                              {item.title}
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, borderTop: '1px solid #f1f5f9', paddingTop: 8 }}>
-                              <Button
-                                type="primary"
-                                size="small"
-                                icon={<SendOutlined />}
-                                onClick={() => handleSendQuickMedia(item)}
-                                disabled={!selectedLead}
-                                style={{ background: '#1877f2', fontSize: 11, padding: '0 8px' }}
-                              >
-                                Gửi ngay
-                              </Button>
-                              <Popconfirm
-                                title="Xóa mẫu này?"
-                                onConfirm={() => handleDeleteQuickMedia(item.id)}
-                                okText="Xóa"
-                                cancelText="Hủy"
-                              >
-                                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-                              </Popconfirm>
-                            </div>
-                          </Card>
-                        </Col>
-                      ))}
-                    </Row>
-                  )
-                }
-              ]}
-            />
+                            <div style={{ fontSize: 11, color: '#94a3b8' }}>Bởi: {item.created_by_name || 'Admin'}</div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, borderTop: '1px solid #f1f5f9', paddingTop: 8 }}>
+                          <Button
+                            type="primary"
+                            size="small"
+                            icon={<SendOutlined />}
+                            onClick={() => handleSendQuickMedia(item)}
+                            disabled={!selectedLead}
+                            style={{ background: '#1877f2', fontSize: 11, padding: '0 8px' }}
+                          >
+                            Gửi ngay
+                          </Button>
+                          <Popconfirm
+                            title="Xóa mẫu này?"
+                            onConfirm={() => handleDeleteQuickMedia(item.id)}
+                            okText="Xóa"
+                            cancelText="Hủy"
+                          >
+                            <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                          </Popconfirm>
+                        </div>
+                      </Card>
+                    </Col>
+                  ))}
+              </Row>
+            </>
           )}
         </div>
       </Modal>
@@ -1602,6 +1983,12 @@ export default function FacebookInboxPage() {
           </Form.Item>
           <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, message: 'Vui lòng nhập SĐT' }]}>
             <Input placeholder="0912345678" prefix={<PhoneOutlined />} />
+          </Form.Item>
+          <Form.Item name="email" label="Email">
+            <Input placeholder="email@example.com" prefix={<MailOutlined />} />
+          </Form.Item>
+          <Form.Item name="address" label="Địa chỉ">
+            <Input placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/TP..." />
           </Form.Item>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             <Button onClick={() => setCreateModal(false)}>Hủy</Button>

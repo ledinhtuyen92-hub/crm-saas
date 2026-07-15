@@ -33,6 +33,8 @@ const STATUS_CONFIG = {
 function LeadListItem({ lead, selected, onClick }) {
   const cfg = STATUS_CONFIG[lead.status] || STATUS_CONFIG.new
   const isNew = lead.status === 'new'
+  const unreadNum = lead.unread_count || (lead.has_unread_message ? 1 : 0)
+  const isUnread = unreadNum > 0
 
   return (
     <div
@@ -40,17 +42,29 @@ function LeadListItem({ lead, selected, onClick }) {
       style={{
         padding: '12px 16px',
         cursor: 'pointer',
-        borderBottom: '1px solid #f0f0f0',
-        background: selected ? '#eff6ff' : 'transparent',
-        borderLeft: selected ? '3px solid #2563eb' : '3px solid transparent',
+        borderBottom: '1px solid #e5e7eb',
+        background: selected ? '#eff6ff' : isUnread ? '#f0f9ff' : 'transparent',
+        borderLeft: selected ? '3px solid #2563eb' : isUnread ? '3px solid #3b82f6' : '3px solid transparent',
         transition: 'all 0.15s',
       }}
-      onMouseEnter={e => { if (!selected) e.currentTarget.style.background = '#f8fafc' }}
-      onMouseLeave={e => { if (!selected) e.currentTarget.style.background = 'transparent' }}
+      onMouseEnter={e => { if (!selected && !isUnread) e.currentTarget.style.background = '#f8fafc' }}
+      onMouseLeave={e => { if (!selected) e.currentTarget.style.background = isUnread ? '#f0f9ff' : 'transparent' }}
     >
       <Row gutter={10} align="middle" wrap={false}>
         <Col flex="none">
-          <Badge dot={lead.has_unread_message || isNew} color={lead.has_unread_message ? "#ef4444" : "#3b82f6"} offset={[-4, 4]}>
+          <Badge
+            count={isUnread ? unreadNum : 0}
+            dot={!isUnread && isNew}
+            overflowCount={99}
+            color={!isUnread && isNew ? "#3b82f6" : undefined}
+            offset={[-4, 4]}
+            style={{
+              background: '#ef4444',
+              color: '#fff',
+              fontWeight: 700,
+              boxShadow: '0 0 0 2px #fff',
+            }}
+          >
             <Avatar
               size={44}
               src={lead.avatar_url}
@@ -61,15 +75,38 @@ function LeadListItem({ lead, selected, onClick }) {
         </Col>
         <Col flex="auto" style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text strong ellipsis style={{ fontSize: 14, maxWidth: 140 }}>
+            <Text
+              ellipsis
+              style={{
+                fontSize: 14,
+                maxWidth: 140,
+                fontWeight: isUnread ? 800 : 600,
+                color: isUnread ? '#0f172a' : '#1f2937',
+              }}
+            >
               {lead.display_name || `Zalo ${lead.social_id?.slice(-4)}`}
             </Text>
-            <Text type="secondary" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+            <Text
+              style={{
+                fontSize: 11,
+                whiteSpace: 'nowrap',
+                fontWeight: isUnread ? 700 : 400,
+                color: isUnread ? '#2563eb' : '#9ca3af',
+              }}
+            >
               {dayjs(lead.last_interaction_date).fromNow()}
             </Text>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
-            <Text type="secondary" ellipsis style={{ fontSize: 12, maxWidth: 140 }}>
+            <Text
+              ellipsis
+              style={{
+                fontSize: 12,
+                maxWidth: 140,
+                fontWeight: isUnread ? 700 : 400,
+                color: isUnread ? '#1e293b' : '#6b7280',
+              }}
+            >
               {lead.last_message || 'Chưa có tin nhắn'}
             </Text>
             <Space size={4}>
@@ -89,15 +126,22 @@ function LeadListItem({ lead, selected, onClick }) {
               </Tag>
             </Space>
           </div>
-          {lead.detected_phone && (
-            <div style={{ marginTop: 4 }}>
-              {lead.is_customer_converted ? (
-                <Tag color="success" style={{ fontSize: 10, borderRadius: 10, margin: 0 }}>
-                  ✅ SĐT: {lead.detected_phone} (Đã có trong KH)
-                </Tag>
-              ) : (
-                <Tag color="warning" style={{ fontSize: 10, borderRadius: 10, margin: 0, fontWeight: 600 }}>
-                  📞 SĐT: {lead.detected_phone} (Chưa thêm KH)
+          {(lead.detected_phone || lead.detected_email) && (
+            <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {lead.detected_phone && (
+                lead.is_customer_converted ? (
+                  <Tag color="success" style={{ fontSize: 10, borderRadius: 10, margin: 0 }}>
+                    ✅ SĐT: {lead.detected_phone}
+                  </Tag>
+                ) : (
+                  <Tag color="warning" style={{ fontSize: 10, borderRadius: 10, margin: 0, fontWeight: 600 }}>
+                    📞 SĐT: {lead.detected_phone}
+                  </Tag>
+                )
+              )}
+              {lead.detected_email && (
+                <Tag color="green" style={{ fontSize: 10, borderRadius: 10, margin: 0 }}>
+                  📧 {lead.detected_email}
                 </Tag>
               )}
             </div>
@@ -245,7 +289,9 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
                     }
                     convertForm.setFieldsValue({
                       customer_name: lead?.display_name || '',
-                      phone_number: lead?.detected_phone || ''
+                      phone_number: lead?.detected_phone || '',
+                      email: lead?.detected_email || '',
+                      address: lead?.detected_address || ''
                     })
                     setConvertModalVisible(true)
                   }}
@@ -253,6 +299,24 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
                   Tạo KH
                 </Button>
               )}
+              <Tooltip title="Quét lại tin nhắn của hội thoại này để tìm SĐT, Email, Địa chỉ">
+                <Button
+                  size="small"
+                  icon={<ReloadOutlined />}
+                  style={{ borderRadius: 6 }}
+                  onClick={async () => {
+                    try {
+                      const res = await api.post(`/zalo/social-leads/${lead.id}/rescan-phone/`)
+                      message.success(res.data.detail)
+                      onRefresh()
+                    } catch (err) {
+                      message.error(err.response?.data?.error || 'Không tìm thấy thông tin liên hệ.')
+                    }
+                  }}
+                >
+                  Quét liên hệ
+                </Button>
+              </Tooltip>
             </Space>
             <Space size={6} style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap' }}>
               <Tag style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.color}30`, borderRadius: 10 }}>{cfg.label}</Tag>
@@ -262,13 +326,23 @@ function LeadDetailPanel({ lead, employees, onRefresh }) {
               {lead.detected_phone && (
                 lead.is_customer_converted ? (
                   <Tag color="success" style={{ borderRadius: 10 }}>
-                    ✅ SĐT phát hiện: {lead.detected_phone} (Đã thêm vào Khách hàng)
+                    ✅ SĐT: {lead.detected_phone}
                   </Tag>
                 ) : (
                   <Tag color="warning" style={{ borderRadius: 10, fontWeight: 600 }}>
-                    📞 SĐT phát hiện: {lead.detected_phone} (Chưa thêm vào Khách hàng)
+                    📞 SĐT: {lead.detected_phone}
                   </Tag>
                 )
+              )}
+              {lead.detected_email && (
+                <Tag color="green" style={{ borderRadius: 10 }}>
+                  📧 Email: {lead.detected_email}
+                </Tag>
+              )}
+              {lead.detected_address && (
+                <Tag color="orange" style={{ borderRadius: 10 }} title={lead.detected_address}>
+                  📍 Địa chỉ: {lead.detected_address.length > 25 ? lead.detected_address.substring(0, 25) + '...' : lead.detected_address}
+                </Tag>
               )}
             </Space>
           </Col>
@@ -603,7 +677,7 @@ export default function ZaloInboxPage() {
                   {hasPhoneOnly ? 'Đang lọc: Có SĐT' : 'Lọc khách có SĐT'}
                 </Button>
               </Tooltip>
-              <Tooltip title="Đọc lại toàn bộ lịch sử tin nhắn cũ để tìm kiếm số điện thoại và cập nhật danh sách">
+              <Tooltip title="Đọc lại toàn bộ lịch sử tin nhắn Zalo để tìm kiếm SĐT, Email và Địa chỉ">
                 <Button
                   size="small"
                   icon={<ReloadOutlined />}
@@ -611,7 +685,7 @@ export default function ZaloInboxPage() {
                   style={{ borderRadius: 12, fontSize: 12 }}
                   onClick={handleScanPhones}
                 >
-                  Quét lại SĐT cũ
+                  Quét tất cả liên hệ
                 </Button>
               </Tooltip>
             </div>

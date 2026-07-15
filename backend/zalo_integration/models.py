@@ -229,11 +229,27 @@ class SocialLead(models.Model):
         default=False,
         verbose_name="Có tin nhắn chưa đọc"
     )
+    unread_count = models.IntegerField(
+        default=0,
+        verbose_name="Số tin nhắn chưa đọc"
+    )
     detected_phone = models.CharField(
         max_length=20,
         blank=True,
         verbose_name="Số điện thoại phát hiện",
         help_text="SĐT phát hiện tự động trong tin nhắn của khách."
+    )
+    detected_email = models.EmailField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Email tự động quét",
+    )
+    detected_address = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name="Địa chỉ tự động quét",
     )
     is_customer_converted = models.BooleanField(
         default=False,

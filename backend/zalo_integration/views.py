@@ -138,6 +138,7 @@ class ZaloWebhookView(APIView):
         if social_lead.status == SocialLead.STATUS_NEW:
             social_lead.status = SocialLead.STATUS_CHATTING
         social_lead.has_unread_message = True
+        social_lead.unread_count = (social_lead.unread_count or 0) + 1
         social_lead.save()
 
         # Quét tự động SĐT & xử lý theo cấu hình
@@ -433,6 +434,8 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
         phone_number = serializer.validated_data["phone_number"]
         customer_name = serializer.validated_data.get("customer_name", "").strip()
         assigned_to_id = serializer.validated_data.get("assigned_to")
+        email = serializer.validated_data.get("email", "").strip()
+        address = serializer.validated_data.get("address", "").strip()
 
         assigned_user = None
         if assigned_to_id:
@@ -445,7 +448,7 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
                 pass
 
         try:
-            customer = convert_social_lead(social_lead, phone_number, assigned_user, customer_name=customer_name)
+            customer = convert_social_lead(social_lead, phone_number, assigned_user, customer_name=customer_name, email=email, address=address)
             return Response({
                 "detail": "Chuyển đổi thành công! Hồ sơ khách hàng đã được tạo.",
                 "customer_id": customer.id,
@@ -457,24 +460,45 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="scan-phones")
     def scan_phones(self, request):
-        """Quét toàn bộ hội thoại Zalo để phát hiện SĐT & tự động thêm khách hàng nếu bật cấu hình."""
+        """Quét toàn bộ hội thoại Zalo để phát hiện SĐT, Email, Địa chỉ & tự động thêm khách hàng nếu bật cấu hình."""
         from .services import extract_and_process_phone
         from .models import ZaloMessage
         leads = SocialLead.objects.filter(company=request.user.company)
         scanned_count = 0
         detected_count = 0
         for lead in leads:
-            msgs = ZaloMessage.objects.filter(social_lead=lead).order_by("-created_at")[:20]
-            text_pool = " ".join([m.content for m in msgs] + [lead.last_message or ""])
+            msgs = ZaloMessage.objects.filter(social_lead=lead).order_by("-created_at")[:30]
+            text_pool = "\n".join([m.content for m in msgs if m.content] + [lead.last_message or ""])
             phone = extract_and_process_phone(lead, text_pool)
             scanned_count += 1
-            if phone:
+            if phone or lead.detected_email or lead.detected_address:
                 detected_count += 1
         return Response({
-            "detail": f"Đã quét {scanned_count} cuộc trò chuyện, phát hiện SĐT trong {detected_count} hội thoại.",
+            "detail": f"Đã quét {scanned_count} cuộc trò chuyện, phát hiện thông tin liên hệ trong {detected_count} hội thoại.",
             "scanned_count": scanned_count,
             "detected_count": detected_count
         })
+
+    @action(detail=True, methods=["post"], url_path="rescan-phone")
+    def rescan_phone(self, request, pk=None):
+        """Quét lại tất cả tin nhắn cũ của một hội thoại Zalo để tìm SĐT, Email, Địa chỉ."""
+        from .services import extract_and_process_phone
+        from .models import ZaloMessage
+        lead = self.get_object()
+        msgs = ZaloMessage.objects.filter(social_lead=lead).order_by("-created_at")
+        text_pool = "\n".join([m.content for m in msgs if m.content] + [lead.last_message or ""])
+        phone = extract_and_process_phone(lead, text_pool)
+        if phone or lead.detected_email or lead.detected_address:
+            return Response({
+                "detail": f"Đã quét thành công. SĐT: {lead.detected_phone or '---'}, Email: {lead.detected_email or '---'}, Địa chỉ: {lead.detected_address or '---'}",
+                "phone": lead.detected_phone,
+                "email": lead.detected_email,
+                "address": lead.detected_address
+            })
+        return Response(
+            {"error": "Không tìm thấy thông tin liên hệ nào trong lịch sử tin nhắn của hội thoại này."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     @action(detail=True, methods=["post"], url_path="assign")
     def assign(self, request, pk=None):
@@ -505,9 +529,10 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
         """Lấy danh sách tin nhắn của 1 Lead và đánh dấu đã đọc."""
         lead = self.get_object()
         
-        if lead.has_unread_message:
+        if lead.has_unread_message or (lead.unread_count and lead.unread_count > 0):
             lead.has_unread_message = False
-            lead.save(update_fields=["has_unread_message"])
+            lead.unread_count = 0
+            lead.save(update_fields=["has_unread_message", "unread_count"])
             
         from .models import ZaloMessage
         qs = ZaloMessage.objects.filter(social_lead=lead).order_by("created_at")

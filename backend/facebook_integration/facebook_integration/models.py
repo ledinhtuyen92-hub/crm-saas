@@ -91,6 +91,14 @@ class FacebookPageConfig(models.Model):
         verbose_name="Số ngày dọn dẹp Lead rác",
         help_text="Hội thoại không tương tác sau X ngày sẽ tự động bị ẩn (archived).",
     )
+    request_phone_template = models.TextField(
+        default="Dạ chào bạn, để tiện chuyên viên tư vấn chi tiết và gửi bảng giá ưu đãi, bạn cho mình xin số điện thoại liên hệ với ạ ❤️",
+        verbose_name="Mẫu tin nhắn xin SĐT",
+    )
+    request_email_template = models.TextField(
+        default="Dạ bạn cho mình xin địa chỉ Email để bên em gửi catalogue và thông tin chi tiết qua email cho mình nhé 📧",
+        verbose_name="Mẫu tin nhắn xin Email",
+    )
     assigned_to = models.ForeignKey(
         "users.User",
         on_delete=models.SET_NULL,
@@ -207,6 +215,18 @@ class FacebookLead(models.Model):
         null=True,
         verbose_name="SĐT đã phát hiện",
     )
+    detected_email = models.EmailField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Email tự động quét",
+    )
+    detected_address = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name="Địa chỉ tự động quét",
+    )
     is_customer_converted = models.BooleanField(
         default=False,
         verbose_name="Đã có trong hệ thống KH",
@@ -240,6 +260,10 @@ class FacebookLead(models.Model):
     has_unread_message = models.BooleanField(
         default=False,
         verbose_name="Có tin nhắn chưa đọc",
+    )
+    unread_count = models.IntegerField(
+        default=0,
+        verbose_name="Số tin nhắn chưa đọc",
     )
     is_archived = models.BooleanField(
         default=False,
@@ -365,15 +389,21 @@ class QuickMediaAsset(models.Model):
         verbose_name="Tiêu đề / Tên mẫu",
         help_text="Ví dụ: Bảng báo giá sỉ 2026, Hình Sâm VIP...",
     )
+    folder = models.CharField(
+        max_length=100,
+        default="Chung",
+        verbose_name="Thư mục/Nhóm",
+    )
     media_type = models.CharField(
         max_length=20,
         choices=MEDIA_TYPES,
         default="image",
         verbose_name="Loại file",
     )
-    file_url = models.URLField(
+    file_url = models.CharField(
         max_length=1000,
         verbose_name="URL file/ảnh",
+        blank=True,
     )
     created_by = models.ForeignKey(
         "users.User",

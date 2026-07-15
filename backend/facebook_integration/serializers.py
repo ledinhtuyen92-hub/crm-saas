@@ -56,6 +56,7 @@ class FacebookPageConfigSerializer(serializers.ModelSerializer):
             "is_token_valid", "is_token_near_expiry",
             "webhook_verify_token", "page_avatar", "is_active",
             "auto_create_customer_from_phone", "lead_cleanup_days",
+            "request_phone_template", "request_email_template",
             "assigned_to", "assigned_to_name",
             "created_at", "updated_at",
         ]
@@ -85,42 +86,80 @@ class FacebookMessageSerializer(serializers.ModelSerializer):
 
 # ── FacebookLead ──────────────────────────────────────────────────────────────
 
+def check_and_sync_converted_fb(obj):
+    from crm.models import Customer
+    company_id = getattr(obj, "company_id", None) or (obj.page_config.company_id if hasattr(obj, "page_config") and obj.page_config else None)
+    
+    # 1. Kiểm tra nếu có customer_id, xem Customer đó có thực sự tồn tại trong DB không
+    if obj.customer_id:
+        cust = Customer.objects.filter(id=obj.customer_id).first()
+        if cust:
+            return True, cust.name
+        else:
+            obj.customer = None
+            obj.is_customer_converted = False
+            obj.save(update_fields=["customer", "is_customer_converted", "updated_at"])
+            return False, None
+
+    # 2. Nếu không có customer_id nhưng có detected_phone, kiểm tra xem SĐT đã tồn tại trong CRM chưa
+    if company_id and obj.detected_phone:
+        cust = Customer.objects.filter(company_id=company_id, phone=obj.detected_phone).first()
+        if cust:
+            if not obj.is_customer_converted or obj.customer_id != cust.id:
+                obj.customer = cust
+                obj.is_customer_converted = True
+                obj.save(update_fields=["customer", "is_customer_converted", "updated_at"])
+            return True, cust.name
+
+    # 3. Nếu không có customer và cũng không khớp SĐT, clear trạng thái nếu đang bị True giả
+    if obj.is_customer_converted:
+        obj.is_customer_converted = False
+        obj.customer = None
+        obj.save(update_fields=["customer", "is_customer_converted", "updated_at"])
+    return False, None
+
+
 class FacebookLeadSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
     page_name = serializers.CharField(source="page_config.page_name", read_only=True)
     page_id = serializers.CharField(source="page_config.page_id", read_only=True)
-    customer_name = serializers.CharField(source="customer.name", read_only=True, default=None)
+    customer_name = serializers.SerializerMethodField()
     assigned_to_name = serializers.CharField(source="assigned_to.full_name", read_only=True, default=None)
     messages = FacebookMessageSerializer(many=True, read_only=True)
     tags = FacebookLeadTagSerializer(many=True, read_only=True)
     internal_notes = FacebookLeadNoteSerializer(many=True, read_only=True)
     is_customer_converted = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
 
     def get_is_customer_converted(self, obj):
-        if obj.customer_id:
-            return True
-        if not obj.detected_phone:
-            return obj.is_customer_converted
-        from crm.models import Customer
-        company_id = getattr(obj, "company_id", None) or (obj.page_config.company_id if hasattr(obj, "page_config") and obj.page_config else None)
-        if not company_id:
-            return obj.is_customer_converted
-        return Customer.objects.filter(company_id=company_id, phone=obj.detected_phone).exists()
+        converted, _ = check_and_sync_converted_fb(obj)
+        return converted
+
+    def get_customer_name(self, obj):
+        _, name = check_and_sync_converted_fb(obj)
+        return name
+
+    def get_unread_count(self, obj):
+        count = getattr(obj, "unread_count", 0) or 0
+        if count == 0 and getattr(obj, "has_unread_message", False):
+            return 1
+        return count
 
     class Meta:
         model = FacebookLead
         fields = [
             "id", "fb_user_id", "fb_user_name", "fb_user_avatar",
             "page_id", "page_name", "page_config",
-            "detected_phone", "is_customer_converted", "status", "is_archived",
+            "detected_phone", "detected_email", "detected_address",
+            "is_customer_converted", "status", "is_archived",
             "customer", "customer_name",
             "assigned_to", "assigned_to_name",
             "is_starred", "tags", "internal_notes",
             "last_message_at", "last_message_preview",
-            "has_unread_message", "messages",
+            "has_unread_message", "unread_count", "messages",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "company", "fb_user_id", "status", "has_unread_message", "created_at", "updated_at"]
+        read_only_fields = ["id", "company", "fb_user_id", "status", "has_unread_message", "unread_count", "created_at", "updated_at"]
 
 
 class FacebookLeadListSerializer(serializers.ModelSerializer):
@@ -128,21 +167,25 @@ class FacebookLeadListSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
     page_name = serializers.CharField(source="page_config.page_name", read_only=True)
     page_id = serializers.CharField(source="page_config.page_id", read_only=True)
-    customer_name = serializers.CharField(source="customer.name", read_only=True, default=None)
+    customer_name = serializers.SerializerMethodField()
     assigned_to_name = serializers.CharField(source="assigned_to.full_name", read_only=True, default=None)
     tags = FacebookLeadTagSerializer(many=True, read_only=True)
     is_customer_converted = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
 
     def get_is_customer_converted(self, obj):
-        if obj.customer_id:
-            return True
-        if not obj.detected_phone:
-            return obj.is_customer_converted
-        from crm.models import Customer
-        company_id = getattr(obj, "company_id", None) or (obj.page_config.company_id if hasattr(obj, "page_config") and obj.page_config else None)
-        if not company_id:
-            return obj.is_customer_converted
-        return Customer.objects.filter(company_id=company_id, phone=obj.detected_phone).exists()
+        converted, _ = check_and_sync_converted_fb(obj)
+        return converted
+
+    def get_customer_name(self, obj):
+        _, name = check_and_sync_converted_fb(obj)
+        return name
+
+    def get_unread_count(self, obj):
+        count = getattr(obj, "unread_count", 0) or 0
+        if count == 0 and getattr(obj, "has_unread_message", False):
+            return 1
+        return count
 
     latest_sender = serializers.SerializerMethodField()
 
@@ -157,12 +200,13 @@ class FacebookLeadListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "fb_user_id", "fb_user_name", "fb_user_avatar",
             "page_id", "page_name", "page_config",
-            "detected_phone", "is_customer_converted", "status", "is_archived",
+            "detected_phone", "detected_email", "detected_address",
+            "is_customer_converted", "status", "is_archived",
             "customer", "customer_name",
             "assigned_to", "assigned_to_name",
             "is_starred", "tags",
             "last_message_at", "last_message_preview",
-            "has_unread_message", "created_at", "latest_sender",
+            "has_unread_message", "unread_count", "created_at", "latest_sender",
         ]
 
 
@@ -171,11 +215,23 @@ class FacebookLeadListSerializer(serializers.ModelSerializer):
 class QuickMediaAssetSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source="created_by.full_name", read_only=True, default="")
     media_type_display = serializers.CharField(source="get_media_type_display", read_only=True)
+    file_url = serializers.SerializerMethodField()
 
     class Meta:
         model = QuickMediaAsset
         fields = [
-            "id", "company", "title", "media_type", "media_type_display",
+            "id", "company", "title", "folder", "media_type", "media_type_display",
             "file_url", "created_by", "created_by_name", "created_at",
         ]
         read_only_fields = ["id", "company", "created_by", "created_at", "media_type_display"]
+
+    def get_file_url(self, obj):
+        if not obj.file_url:
+            return ""
+        if obj.file_url.startswith("http://") or obj.file_url.startswith("https://"):
+            return obj.file_url
+        request = self.context.get("request")
+        if request and obj.file_url.startswith("/"):
+            return request.build_absolute_uri(obj.file_url)
+        return obj.file_url
+

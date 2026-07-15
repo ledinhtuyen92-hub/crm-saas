@@ -71,6 +71,10 @@ export default function FacebookConfigPage() {
   const [oauthTargetConfigId, setOauthTargetConfigId] = useState(null)
   const [form] = Form.useForm()
   const useSystemConfig = Form.useWatch('use_system_config', form)
+  // Safe Delete Modal
+  const [deleteModal, setDeleteModal] = useState({ open: false, page: null })
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   const fetchPages = async () => {
     setLoading(true)
@@ -210,16 +214,25 @@ export default function FacebookConfigPage() {
         webhook_verify_token: page.webhook_verify_token,
         auto_create_customer_from_phone: page.auto_create_customer_from_phone,
         lead_cleanup_days: page.lead_cleanup_days || 30,
+        request_phone_template: page.request_phone_template,
+        request_email_template: page.request_email_template,
         is_active: page.is_active,
       })
     } else {
       form.resetFields()
-      form.setFieldsValue({ use_system_config: true, is_active: true, lead_cleanup_days: 30 })
+      form.setFieldsValue({
+        use_system_config: true,
+        is_active: true,
+        lead_cleanup_days: 30,
+        request_phone_template: "Dạ chào bạn, để tiện chuyên viên tư vấn chi tiết và gửi bảng giá ưu đãi, bạn cho mình xin số điện thoại liên hệ với ạ ❤️",
+        request_email_template: "Dạ bạn cho mình xin địa chỉ Email để bên em gửi catalogue và thông tin chi tiết qua email cho mình nhé 📧"
+      })
     }
     setModalVisible(true)
   }
 
   const handleSave = async () => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
     try {
       const values = await form.validateFields()
       setSaving(true)
@@ -255,12 +268,22 @@ export default function FacebookConfigPage() {
     } catch { message.error('Lỗi khi khôi phục kết nối.') }
   }
 
-  const handlePermanentDelete = async (id) => {
+  const openDeleteModal = (page) => {
+    setDeleteModal({ open: true, page })
+    setDeleteConfirmText('')
+  }
+
+  const handlePermanentDelete = async () => {
+    const { page } = deleteModal
+    if (!page) return
+    setDeleting(true)
     try {
-      await api.delete(`/facebook/pages/${id}/permanent-delete/`)
-      message.success('Đã xoá vĩnh viễn Trang cùng toàn bộ dữ liệu hội thoại.')
+      await api.delete(`/facebook/pages/${page.id}/permanent-delete/`)
+      message.success(`Đã xoá vĩnh viễn Trang "${page.page_name}" và toàn bộ dữ liệu liên quan.`)
+      setDeleteModal({ open: false, page: null })
       fetchPages()
-    } catch { message.error('Lỗi khi xoá vĩnh viễn.') }
+    } catch { message.error('Lỗi khi xoá vĩnh viễn. Vui lòng thử lại.') }
+    finally { setDeleting(false) }
   }
 
   return (
@@ -419,11 +442,19 @@ export default function FacebookConfigPage() {
                           Chỉnh sửa
                         </Button>
                         <Popconfirm
-                          title="Ngắt kết nối Trang này? Toàn bộ hội thoại và tin nhắn sẽ được giữ an toàn 100% trong cơ sở dữ liệu."
+                          title={
+                            <div style={{ maxWidth: 280 }}>
+                              <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠️ Xác nhận ngắt kết nối?</div>
+                              <div style={{ fontSize: 13, color: '#555' }}>
+                                Trang sẽ bị <b>tạm dừng nhận tin nhắn mới</b>, nhưng <b style={{ color: '#10b981' }}>toàn bộ lịch sử hội thoại và tin nhắn được giữ nguyên hoàn toàn</b>. Bạn có thể khôi phục lại bất cứ lúc nào.
+                              </div>
+                            </div>
+                          }
                           onConfirm={() => handleDisconnect(page.id)}
                           okText="Ngắt kết nối" cancelText="Hủy" okType="warning"
+                          icon={null}
                         >
-                          <Tooltip title="Ngắt kết nối (Ẩn khỏi Live Inbox nhưng bảo vệ toàn bộ lịch sử)">
+                          <Tooltip title="Tạm ngắt kết nối — lịch sử tin nhắn được bảo toàn, khôi phục được">
                             <Button danger icon={<DisconnectOutlined />}>Ngắt kết nối</Button>
                           </Tooltip>
                         </Popconfirm>
@@ -441,13 +472,11 @@ export default function FacebookConfigPage() {
                         <Button icon={<SettingOutlined />} onClick={() => handleOpenModal(page)}>
                           Chỉnh sửa
                         </Button>
-                        <Popconfirm
-                          title="⚠️ XÓA VĨNH VIỄN Trang và toàn bộ N hội thoại/tin nhắn? Hành động này KHÔNG THỂ khôi phục!"
-                          onConfirm={() => handlePermanentDelete(page.id)}
-                          okText="Xóa vĩnh viễn" cancelText="Hủy" okType="danger"
-                        >
-                          <Button danger icon={<DeleteOutlined />}>Xóa vĩnh viễn</Button>
-                        </Popconfirm>
+                        <Tooltip title="Xóa vĩnh viễn — mất toàn bộ lịch sử hội thoại, KHÔNG khôi phục được">
+                          <Button danger icon={<DeleteOutlined />} onClick={() => openDeleteModal(page)}>
+                            Xóa vĩnh viễn
+                          </Button>
+                        </Tooltip>
                       </>
                     )}
                   </Space>
@@ -549,6 +578,22 @@ export default function FacebookConfigPage() {
             </Col>
           </Row>
 
+          <Divider>💬 Mẫu tin nhắn xin thông tin (Quick Reply 1 chạm)</Divider>
+          <Form.Item
+            name="request_phone_template"
+            label="Lời nhắn xin SĐT (Mặc định)"
+            tooltip="Mẫu tin nhắn sẽ gửi kèm nút 1 chạm xin SĐT từ Facebook Graph API"
+          >
+            <Input.TextArea rows={2} placeholder="Nhập lời nhắn xin số điện thoại..." />
+          </Form.Item>
+          <Form.Item
+            name="request_email_template"
+            label="Lời nhắn xin Email (Mặc định)"
+            tooltip="Mẫu tin nhắn sẽ gửi kèm nút 1 chạm xin Email từ Facebook Graph API"
+          >
+            <Input.TextArea rows={2} placeholder="Nhập lời nhắn xin địa chỉ email..." />
+          </Form.Item>
+
           {(editingPage && !isCreatingNew) && (
             <>
               <Divider>🔑 Cập nhật Token thủ công (nếu cần)</Divider>
@@ -612,6 +657,103 @@ export default function FacebookConfigPage() {
             </Card>
           ))}
         </div>
+      </Modal>
+
+      {/* ── Safe Delete Modal ─────────────────────────────────────────────────── */}
+      <Modal
+        open={deleteModal.open}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#dc2626' }}>
+            <DeleteOutlined style={{ fontSize: 20 }} />
+            <span>Xóa vĩnh viễn Trang Facebook</span>
+          </div>
+        }
+        onCancel={() => setDeleteModal({ open: false, page: null })}
+        footer={[
+          <Button key="cancel" onClick={() => setDeleteModal({ open: false, page: null })}>
+            Hủy bỏ
+          </Button>,
+          <Button
+            key="confirm"
+            danger
+            type="primary"
+            icon={<DeleteOutlined />}
+            disabled={deleteConfirmText !== 'DELETE'}
+            loading={deleting}
+            onClick={handlePermanentDelete}
+          >
+            Xác nhận xóa vĩnh viễn
+          </Button>,
+        ]}
+        width={500}
+      >
+        {deleteModal.page && (
+          <div>
+            <Alert
+              type="error"
+              showIcon
+              style={{ marginBottom: 16, borderRadius: 8 }}
+              message="Hành động này KHÔNG THỂ hoàn tác!"
+              description={
+                <ul style={{ margin: '8px 0 0', paddingLeft: 18, lineHeight: 2 }}>
+                  <li>Toàn bộ <b>lịch sử hội thoại</b> với khách hàng từ trang này sẽ <b style={{ color: '#dc2626' }}>bị xóa sạch</b></li>
+                  <li>Toàn bộ <b>tin nhắn, file đính kèm, ghi chú nội bộ</b> sẽ bị xóa</li>
+                  <li>Các <b>khách hàng CRM được tạo từ trang này</b> sẽ không bị ảnh hưởng</li>
+                </ul>
+              }
+            />
+
+            <div style={{
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: 8,
+              padding: '12px 16px',
+              marginBottom: 16,
+            }}>
+              <Text strong style={{ color: '#dc2626' }}>Trang sẽ bị xóa:</Text>
+              <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 8, background: '#1877f2',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontWeight: 900, fontSize: 18, flexShrink: 0,
+                }}>𝐟</div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>{deleteModal.page.page_name}</div>
+                  {deleteModal.page.page_id && (
+                    <div style={{ fontSize: 12, color: '#6b7280' }}>ID: {deleteModal.page.page_id}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 8 }}>
+              <Text>Để xác nhận, hãy nhập chính xác <Text strong style={{ color: '#dc2626', fontSize: 15 }}>DELETE</Text> vào ô bên dưới:</Text>
+            </div>
+            <Input
+              size="large"
+              placeholder="Nhập DELETE để xác nhận"
+              value={deleteConfirmText}
+              onChange={e => setDeleteConfirmText(e.target.value.toUpperCase())}
+              style={{
+                borderColor: deleteConfirmText === 'DELETE' ? '#10b981' : '#d1d5db',
+                fontWeight: 700,
+                letterSpacing: 2,
+                textAlign: 'center',
+              }}
+              onPressEnter={() => deleteConfirmText === 'DELETE' && handlePermanentDelete()}
+            />
+            {deleteConfirmText.length > 0 && deleteConfirmText !== 'DELETE' && (
+              <Text type="danger" style={{ fontSize: 12, marginTop: 4, display: 'block' }}>
+                ❌ Vui lòng nhập đúng: <b>DELETE</b>
+              </Text>
+            )}
+            {deleteConfirmText === 'DELETE' && (
+              <Text style={{ fontSize: 12, marginTop: 4, display: 'block', color: '#10b981' }}>
+                ✅ Đã xác nhận — nhấn nút đỏ bên dưới để tiến hành xóa
+              </Text>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   )

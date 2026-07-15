@@ -65,44 +65,203 @@ def smart_extract_vn_phone(text: str):
     return None
 
 
+def smart_extract_email(text: str):
+    """
+    Phát hiện và chuẩn hoá địa chỉ email trong tin nhắn.
+    """
+    if not text:
+        return None
+    email_pattern = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b')
+    match = email_pattern.search(text)
+    if match:
+        email = match.group(0).lower().strip()
+        if not any(e in email for e in ['@example.', 'noreply@', 'test@']):
+            return email
+    return None
+
+
+def smart_extract_address(text: str):
+    """
+    Nhận diện và trích xuất TRUNG THỰC đoạn địa chỉ giao hàng/nhà riêng trong tin nhắn.
+    Cắt bỏ các câu hội thoại giao tiếp không liên quan (chào hỏi, hỏi giá, hỏi địa chỉ shop...).
+    """
+    if not text:
+        return None
+
+    # Loại bỏ các câu hỏi/thoại chung chung về địa chỉ
+    ignore_patterns = [
+        r'địa\s*chỉ\s*(?:email|shop|bên\s*mình|ở\s*đâu|cty|công\s*ty|nào|để|của|chi\s*tiết|\?)',
+        r'(?:xin|hỏi|cho|tìm|qua|biết|gửi|lấy)\s*(?:xin\s*)?địa\s*chỉ',
+        r'catalogue.*email|email.*catalogue'
+    ]
+    
+    # 1. Tách văn bản thành các dòng (theo \n)
+    raw_lines = [line.strip() for line in text.split('\n') if line.strip()]
+    
+    # Bộ từ khóa chỉ đơn vị hành chính/địa điểm VN rõ ràng
+    admin_keywords = [
+        'số nhà', 'ngõ ', 'ngách ', 'hẻm ', 'đường ', 'phố ',
+        'phường', 'p.', 'quận', 'q.', 'huyện', 'h.', 'xã ', 'tỉnh ',
+        'thành phố', 'tp.', 'tx.', 'tt.', 'kđt', 'khu đô thị',
+        'chung cư', 'toà ', 'tòa ', 'sảnh ', 'bld ', 'block ',
+        'hà nội', 'tphcm', 'tp hcm', 'hồ chí minh', 'sài gòn',
+        'đà nẵng', 'cần thơ', 'hải phòng', 'bình dương', 'đồng nai',
+        'thôn ', 'xóm ', 'ấp '
+    ]
+    
+    prefix_regex = re.compile(r'^(?:.*?\b(?:địa\s*chỉ|đ\/c|d\/c|đc|dc|ship\s*(?:đến|tới|về)?|giao\s*(?:đến|tới|về)?|ở\s*(?:tại)?|nhà\s*số|add|address)\s*[:\-\.]?\s*)', re.IGNORECASE)
+
+    extracted_segments = []
+
+    for line in raw_lines:
+        line_low = line.lower()
+        if any(re.search(pat, line_low) for pat in ignore_patterns):
+            continue
+
+        # Tách dòng dài thành các câu nhỏ hơn nếu có dấu chấm, chấm phẩy hoặc nhiều khoảng trắng
+        sub_sentences = [s.strip() for s in re.split(r'[\.\!\?]\s+|\s{2,}', line) if s.strip()]
+        
+        for sent in sub_sentences:
+            sent_low = sent.lower()
+            if any(re.search(pat, sent_low) for pat in ignore_patterns):
+                continue
+            
+            # Kiểm tra xem câu có tiền tố địa chỉ rõ ràng không (VD: "Đc: Số 12 Lê Lợi...")
+            has_prefix = bool(re.search(r'\b(?:địa\s*chỉ|đ\/c|d\/c|đc|dc|ship\s*(?:đến|tới|về)?|giao\s*(?:đến|tới|về)?|nhà\s*số)\s*[:\-\.]', sent_low))
+            
+            if has_prefix:
+                clean_addr = prefix_regex.sub('', sent).strip()
+                # Loại bỏ SĐT nếu dính trong câu địa chỉ
+                clean_addr = re.sub(r'\b(?:0|\+84)[35789]\d{8}\b', '', clean_addr).strip(' .,:-')
+                if len(clean_addr) >= 6 and any(c.isalpha() for c in clean_addr):
+                    extracted_segments.append(clean_addr)
+            else:
+                matching_kws = [kw for kw in admin_keywords if kw in sent_low]
+                # Từ khóa mạnh (thêm thành phố lớn, ngõ, ngách, đường, thôn...)
+                strong_kws = [
+                    'số nhà', 'chung cư', 'khu đô thị', 'kđt', 'phường', 'quận', 'huyện',
+                    'thành phố', 'tp.', 'tỉnh', 'hà nội', 'tphcm', 'tp hcm', 'hồ chí minh',
+                    'sài gòn', 'đà nẵng', 'cần thơ', 'hải phòng', 'hn', 'hcm',
+                    'thôn ', 'xóm ', 'ấp ', 'ngõ ', 'ngách ', 'hẻm ', 'đường ', 'phố '
+                ]
+                has_strong = any(skw in sent_low for skw in strong_kws)
+                
+                # Kiểm tra cấu trúc số nhà đứng đầu (VD: "220 định công, hà nội")
+                starts_with_house_number = bool(re.match(r'^\d{1,4}(?:[\/-]\d{1,4})*\s+[A-Za-zĐđÂâĂăÊêÔôƠơƯưÁáÀàẠạẢảÃã]', sent.strip()))
+                has_comma_or_admin = (',' in sent) or (len(matching_kws) >= 1)
+                
+                if len(matching_kws) >= 2 or (has_strong and len(sent) >= 8) or (starts_with_house_number and has_comma_or_admin and len(sent) >= 8):
+                    clean_addr = re.sub(r'\b(?:0|\+84)[35789]\d{8}\b', '', sent).strip(' .,:-')
+                    if len(clean_addr) >= 6 and any(c.isalpha() for c in clean_addr):
+                        if not any(w in sent_low for w in ['ko ak', 'được ko', 'khi nào', 'hay sao vậy', 'muốn mua', 'hết hàng', 'giá bao nhiêu', 'bán cho', 'lít mật ong', 'kg ', 'gram ']):
+                            extracted_segments.append(clean_addr)
+
+    if extracted_segments:
+        unique_segments = []
+        for seg in extracted_segments:
+            if not any(seg.lower() in u.lower() for u in unique_segments):
+                unique_segments.append(seg)
+        result = ". ".join(unique_segments)
+        return result[:300] if len(result) >= 6 else None
+    return None
+
+
 # ── Gửi tin nhắn qua Facebook Graph API ──────────────────────────────────────
 
-def send_facebook_message(page_access_token: str, recipient_psid: str, message_text: str, attachment_url: str = None) -> dict:
+def send_facebook_message(
+    page_access_token: str,
+    recipient_psid: str,
+    message_text: str = "",
+    attachment_url: str = None,
+    file_obj = None,
+    attachment_type: str = "image",
+    quick_replies: list = None,
+) -> dict:
     """
-    Gửi tin nhắn văn bản (hoặc ảnh đính kèm) từ Trang Facebook tới khách hàng.
+    Gửi tin nhắn văn bản (hoặc ảnh/file đính kèm, quick replies) từ Trang Facebook tới khách hàng.
+    Hỗ trợ gửi trực tiếp file binary qua multipart/form-data.
     """
     if not page_access_token or not recipient_psid:
         return {"success": False, "error": "Thiếu token hoặc recipient_id."}
 
     url = f"{FB_GRAPH_API_BASE}/me/messages"
     params = {"access_token": page_access_token}
+    last_message_id = None
 
-    if attachment_url:
+    # 1. Gửi đính kèm (nếu có file binary hoặc URL)
+    if file_obj:
+        data = {
+            "recipient": json.dumps({"id": recipient_psid}),
+            "message": json.dumps({
+                "attachment": {
+                    "type": attachment_type if attachment_type in ["image", "file", "audio", "video"] else "file",
+                    "payload": {"is_reusable": True}
+                }
+            })
+        }
+        try:
+            if hasattr(file_obj, "seek"):
+                file_obj.seek(0)
+            file_content = file_obj.read() if hasattr(file_obj, "read") else file_obj
+            file_name = getattr(file_obj, "name", "attachment.png")
+            content_type = getattr(file_obj, "content_type", "application/octet-stream")
+            files = {"filedata": (file_name, file_content, content_type)}
+            resp = requests.post(url, params=params, data=data, files=files, timeout=30)
+            resp_data = resp.json()
+            if "error" in resp_data:
+                logger.error(f"[Facebook] Lỗi gửi file binary: {resp_data['error']}")
+                return {"success": False, "error": resp_data["error"].get("message", "Lỗi gửi file lên Meta")}
+            last_message_id = resp_data.get("message_id")
+        except Exception as e:
+            logger.error(f"[Facebook] Exception khi gửi file binary: {e}")
+            return {"success": False, "error": str(e)}
+
+    elif attachment_url:
         payload = {
             "recipient": {"id": recipient_psid},
             "message": {
                 "attachment": {
-                    "type": "image",
+                    "type": attachment_type if attachment_type in ["image", "file", "audio", "video"] else "image",
                     "payload": {"url": attachment_url, "is_reusable": True}
                 }
             }
         }
-    else:
+        try:
+            resp = requests.post(url, params=params, json=payload, timeout=15)
+            resp_data = resp.json()
+            if "error" in resp_data:
+                logger.error(f"[Facebook] Lỗi gửi attachment URL: {resp_data['error']}")
+                return {"success": False, "error": resp_data["error"].get("message", "Lỗi gửi attachment URL")}
+            last_message_id = resp_data.get("message_id")
+        except Exception as e:
+            logger.error(f"[Facebook] Exception khi gửi attachment URL: {e}")
+            return {"success": False, "error": str(e)}
+
+    # 2. Gửi tin nhắn text (nếu có text hoặc quick_replies)
+    if (message_text and message_text.strip()) or quick_replies:
         payload = {
             "recipient": {"id": recipient_psid},
-            "message": {"text": message_text}
+            "message": {"text": (message_text or "").strip() or "Xin chào"}
         }
+        if quick_replies:
+            payload["message"]["quick_replies"] = quick_replies
 
-    try:
-        resp = requests.post(url, params=params, json=payload, timeout=10)
-        data = resp.json()
-        if "error" in data:
-            logger.error(f"[Facebook] Lỗi gửi tin nhắn: {data['error']}")
-            return {"success": False, "error": data["error"].get("message", "Lỗi không xác định")}
-        return {"success": True, "message_id": data.get("message_id")}
-    except requests.RequestException as e:
-        logger.error(f"[Facebook] Lỗi kết nối Graph API: {e}")
-        return {"success": False, "error": str(e)}
+        try:
+            resp = requests.post(url, params=params, json=payload, timeout=10)
+            resp_data = resp.json()
+            if "error" in resp_data:
+                logger.error(f"[Facebook] Lỗi gửi text/quick_replies: {resp_data['error']}")
+                if not last_message_id:
+                    return {"success": False, "error": resp_data["error"].get("message", "Lỗi gửi tin nhắn")}
+            else:
+                last_message_id = resp_data.get("message_id") or last_message_id
+        except Exception as e:
+            logger.error(f"[Facebook] Exception khi gửi text/quick_replies: {e}")
+            if not last_message_id:
+                return {"success": False, "error": str(e)}
+
+    if not last_message_id:
+        return {"success": False, "error": "Không có nội dung hoặc đính kèm nào được gửi đi."}
 
 
 # ── Lấy thông tin Profile Facebook User ──────────────────────────────────────
@@ -277,6 +436,8 @@ def process_fb_webhook_message(entry: dict):
 
         lead.last_message_at = timezone.now()
         lead.last_message_preview = (msg_text or "[Đính kèm]")[:255]
+        lead.has_unread_message = True
+        lead.unread_count = (lead.unread_count or 0) + 1
         lead.save()
 
         # Lưu tin nhắn
@@ -309,52 +470,110 @@ def process_fb_webhook_message(entry: dict):
 
 def extract_and_process_phone_fb(lead, text: str):
     """
-    Quét SĐT trong tin nhắn Facebook với thuật toán thông minh.
+    Quét SĐT, Email và Địa chỉ trong tin nhắn Facebook với thuật toán thông minh.
     Tự động tạo KH hoặc đánh dấu trạng thái tuỳ theo cấu hình.
+    Đảm bảo: Mỗi hội thoại/Lead Facebook chỉ nhận diện 1 SĐT chính và tạo tối đa 1 Khách hàng CRM.
+    Nếu người dùng cho 2 số điện thoại (hoặc nhắn nhiều SĐT), tuyệt đối không tạo thành 2 Khách hàng CRM khác nhau.
     """
     if not text:
         return None
 
+    updated = False
     norm_phone = smart_extract_vn_phone(text)
-    if not norm_phone:
-        return None
+    detected_email = smart_extract_email(text)
+    detected_address = smart_extract_address(text)
 
-    if not lead.detected_phone:
-        lead.detected_phone = norm_phone
+    if detected_email and (not lead.detected_email or detected_email != lead.detected_email):
+        lead.detected_email = detected_email
+        updated = True
 
-    from crm.models import Customer
-    company = lead.company
-    already_exists = Customer.objects.filter(company=company, phone=norm_phone).exists()
+    if lead.detected_address != detected_address:
+        lead.detected_address = detected_address
+        updated = True
 
-    auto_create = lead.page_config.auto_create_customer_from_phone
+    if norm_phone:
+        # 1. Nếu Lead ĐÃ được chuyển đổi thành Khách hàng CRM (hoặc ĐÃ gắn customer),
+        # tuyệt đối KHÔNG tạo thêm Khách hàng CRM thứ 2 và KHÔNG thay đổi SĐT/Khách hàng hiện tại.
+        if not (lead.is_customer_converted or lead.customer_id) and not (lead.detected_phone and lead.detected_phone != norm_phone):
+            if not lead.detected_phone:
+                lead.detected_phone = norm_phone
+                updated = True
 
-    if already_exists:
-        existing_customer = Customer.objects.filter(company=company, phone=norm_phone).first()
-        lead.is_customer_converted = True
-        lead.customer = existing_customer
-        lead.save(update_fields=["detected_phone", "is_customer_converted", "customer", "updated_at"])
-    elif auto_create:
-        try:
-            convert_facebook_lead(lead, norm_phone)
-            logger.info(f"[FacebookAutoScan] Tự động tạo KH từ SĐT {norm_phone} của Lead #{lead.id}")
-        except Exception as e:
-            logger.error(f"[FacebookAutoScan] Lỗi tự động tạo KH từ SĐT {norm_phone}: {e}")
-            lead.save(update_fields=["detected_phone", "updated_at"])
-    else:
-        lead.is_customer_converted = False
-        lead.save(update_fields=["detected_phone", "is_customer_converted", "updated_at"])
+            from crm.models import Customer
+            company = lead.company
+            already_exists = Customer.objects.filter(company=company, phone=norm_phone).exists()
+            auto_create = lead.page_config.auto_create_customer_from_phone if lead.page_config else False
 
-    return norm_phone
+            if already_exists:
+                existing_customer = Customer.objects.filter(company=company, phone=norm_phone).first()
+                lead.is_customer_converted = True
+                lead.customer = existing_customer
+                updated = True
+            elif auto_create:
+                try:
+                    convert_facebook_lead(lead, norm_phone)
+                    logger.info(f"[FacebookAutoScan] Tự động tạo KH từ SĐT {norm_phone} của Lead #{lead.id}")
+                except Exception as e:
+                    logger.error(f"[FacebookAutoScan] Lỗi tự động tạo KH từ SĐT {norm_phone}: {e}")
+                    updated = True
+            else:
+                lead.is_customer_converted = False
+                updated = True
+
+    # Đồng bộ sang Customer nếu đã có Customer liên kết nhưng Customer đang thiếu email/address
+    if lead.customer:
+        customer = lead.customer
+        cust_updated = False
+        if lead.detected_email and not customer.email:
+            customer.email = lead.detected_email
+            cust_updated = True
+        if lead.detected_address and not customer.address:
+            customer.address = lead.detected_address
+            cust_updated = True
+        if cust_updated:
+            customer.save(update_fields=["email", "address", "updated_at"])
+
+    if updated:
+        update_f = ["detected_email", "detected_address", "updated_at"]
+        if lead.detected_phone:
+            update_f.append("detected_phone")
+        if lead.is_customer_converted:
+            update_f.append("is_customer_converted")
+        if lead.customer_id:
+            update_f.append("customer")
+        lead.save(update_fields=list(set(update_f)))
+
+    return norm_phone or lead.detected_phone
 
 
 # ── Chuyển đổi FacebookLead → Customer ───────────────────────────────────────
 
 @transaction.atomic
-def convert_facebook_lead(lead, phone_number: str, assigned_user=None, customer_name: str = None):
+def convert_facebook_lead(lead, phone_number: str, assigned_user=None, customer_name: str = None, email: str = None, address: str = None):
     """
     Tạo mới hoặc liên kết Customer từ FacebookLead.
     """
     from crm.models import Customer
+
+    final_email = (email or lead.detected_email or "").strip()
+    final_address = (address or lead.detected_address or "").strip()
+
+    # Bảo vệ: Nếu Lead đã gắn với Khách hàng CRM rồi thì trả về Khách hàng cũ, không tạo trùng
+    if lead.customer:
+        if not lead.is_customer_converted:
+            lead.is_customer_converted = True
+            lead.save(update_fields=["is_customer_converted", "updated_at"])
+        # Cập nhật email/address nếu thiếu hoặc được truyền
+        cust_updated = False
+        if final_email and not lead.customer.email:
+            lead.customer.email = final_email
+            cust_updated = True
+        if final_address and not lead.customer.address:
+            lead.customer.address = final_address
+            cust_updated = True
+        if cust_updated:
+            lead.customer.save(update_fields=["email", "address", "updated_at"])
+        return lead.customer
 
     company = lead.company
     final_name = customer_name or lead.fb_user_name or f"KH Facebook {lead.fb_user_id[-6:]}"
@@ -362,11 +581,22 @@ def convert_facebook_lead(lead, phone_number: str, assigned_user=None, customer_
     existing = Customer.objects.filter(company=company, phone=phone_number).first()
     if existing:
         customer = existing
+        cust_updated = False
+        if final_email and not customer.email:
+            customer.email = final_email
+            cust_updated = True
+        if final_address and not customer.address:
+            customer.address = final_address
+            cust_updated = True
+        if cust_updated:
+            customer.save(update_fields=["email", "address", "updated_at"])
     else:
         customer = Customer.objects.create(
             company=company,
             name=final_name,
             phone=phone_number,
+            email=final_email,
+            address=final_address,
             source="facebook",
             status="new",
             assigned_to=assigned_user or lead.assigned_to,
@@ -442,7 +672,8 @@ def sync_page_conversations_history(page_config, max_conversations: int = 100, l
             upd_str = conv.get("updated_time")
             last_dt = parse_datetime(upd_str) if upd_str else timezone.now()
             snippet = conv.get("snippet", "")
-            unread = (conv.get("unread_count", 0) > 0)
+            unread_cnt = int(conv.get("unread_count", 0) or 0)
+            unread = (unread_cnt > 0)
 
             lead, created = FacebookLead.objects.get_or_create(
                 page_config=page_config,
@@ -453,6 +684,7 @@ def sync_page_conversations_history(page_config, max_conversations: int = 100, l
                     "last_message_at": last_dt,
                     "last_message_preview": snippet[:255],
                     "has_unread_message": unread,
+                    "unread_count": unread_cnt,
                     "assigned_to": page_config.assigned_to,
                 }
             )
@@ -470,6 +702,7 @@ def sync_page_conversations_history(page_config, max_conversations: int = 100, l
                     lead.last_message_at = last_dt
                     lead.last_message_preview = snippet[:255]
                     lead.has_unread_message = unread
+                    lead.unread_count = unread_cnt
                 lead.save()
             else:
                 if not lead.company_id and page_config.company_id:
@@ -480,6 +713,7 @@ def sync_page_conversations_history(page_config, max_conversations: int = 100, l
                     lead.last_message_at = last_dt
                     lead.last_message_preview = snippet[:255]
                     lead.has_unread_message = unread
+                    lead.unread_count = unread_cnt
                 lead.save()
 
             synced_conversations += 1

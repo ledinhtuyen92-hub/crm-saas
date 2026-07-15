@@ -59,6 +59,34 @@ class ZaloOaConfigWriteSerializer(serializers.ModelSerializer):
         return attrs
 
 
+def check_and_sync_converted_zalo(obj):
+    from crm.models import Customer
+    cust = getattr(obj, "converted_customer", None)
+    if cust:
+        if Customer.objects.filter(id=cust.id).exists():
+            if not obj.is_customer_converted:
+                obj.is_customer_converted = True
+                obj.save(update_fields=["is_customer_converted", "updated_at"])
+            return True, cust.id, cust.name
+        else:
+            obj.is_customer_converted = False
+            obj.save(update_fields=["is_customer_converted", "updated_at"])
+            return False, None, None
+
+    if getattr(obj, "company_id", None) and obj.detected_phone:
+        cust = Customer.objects.filter(company_id=obj.company_id, phone=obj.detected_phone).first()
+        if cust:
+            if not obj.is_customer_converted:
+                obj.is_customer_converted = True
+                obj.save(update_fields=["is_customer_converted", "updated_at"])
+            return True, cust.id, cust.name
+
+    if obj.is_customer_converted:
+        obj.is_customer_converted = False
+        obj.save(update_fields=["is_customer_converted", "updated_at"])
+    return False, None, None
+
+
 # ── SocialLead ───────────────────────────────────────────────────────────────
 
 class SocialLeadListSerializer(serializers.ModelSerializer):
@@ -71,6 +99,7 @@ class SocialLeadListSerializer(serializers.ModelSerializer):
     platform_display = serializers.CharField(source="get_platform_display", read_only=True)
     is_converted = serializers.SerializerMethodField()
     is_customer_converted = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
 
     class Meta:
         model = SocialLead
@@ -80,18 +109,23 @@ class SocialLeadListSerializer(serializers.ModelSerializer):
             "last_message", "last_interaction_date",
             "status", "status_display",
             "assigned_to", "assigned_to_name",
-            "is_converted", "detected_phone", "is_customer_converted",
-            "created_at", "has_unread_message"
+            "is_converted", "detected_phone", "detected_email", "detected_address",
+            "is_customer_converted",
+            "created_at", "has_unread_message", "unread_count"
         ]
 
     def get_is_converted(self, obj):
         return obj.status == SocialLead.STATUS_CONVERTED
 
     def get_is_customer_converted(self, obj):
-        if not obj.detected_phone:
-            return obj.is_customer_converted
-        from crm.models import Customer
-        return Customer.objects.filter(company_id=obj.company_id, phone=obj.detected_phone).exists()
+        converted, _, _ = check_and_sync_converted_zalo(obj)
+        return converted
+
+    def get_unread_count(self, obj):
+        count = getattr(obj, "unread_count", 0) or 0
+        if count == 0 and getattr(obj, "has_unread_message", False):
+            return 1
+        return count
 
 
 class SocialLeadDetailSerializer(serializers.ModelSerializer):
@@ -105,6 +139,7 @@ class SocialLeadDetailSerializer(serializers.ModelSerializer):
     converted_customer_id = serializers.SerializerMethodField()
     converted_customer_name = serializers.SerializerMethodField()
     is_customer_converted = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
 
     class Meta:
         model = SocialLead
@@ -115,26 +150,29 @@ class SocialLeadDetailSerializer(serializers.ModelSerializer):
             "status", "status_display",
             "assigned_to", "assigned_to_name",
             "notes",
-            "converted_customer_id", "converted_customer_name", "has_unread_message",
-            "detected_phone", "is_customer_converted",
+            "converted_customer_id", "converted_customer_name", "has_unread_message", "unread_count",
+            "detected_phone", "detected_email", "detected_address",
+            "is_customer_converted",
             "created_at", "updated_at",
         ]
 
     def get_is_customer_converted(self, obj):
-        if not obj.detected_phone:
-            return obj.is_customer_converted
-        from crm.models import Customer
-        return Customer.objects.filter(company_id=obj.company_id, phone=obj.detected_phone).exists()
+        converted, _, _ = check_and_sync_converted_zalo(obj)
+        return converted
+
+    def get_unread_count(self, obj):
+        count = getattr(obj, "unread_count", 0) or 0
+        if count == 0 and getattr(obj, "has_unread_message", False):
+            return 1
+        return count
 
     def get_converted_customer_id(self, obj):
-        if hasattr(obj, "converted_customer"):
-            return obj.converted_customer.id
-        return None
+        _, cid, _ = check_and_sync_converted_zalo(obj)
+        return cid
 
     def get_converted_customer_name(self, obj):
-        if hasattr(obj, "converted_customer"):
-            return obj.converted_customer.name
-        return None
+        _, _, cname = check_and_sync_converted_zalo(obj)
+        return cname
 
 
 class SocialLeadUpdateSerializer(serializers.ModelSerializer):
@@ -149,6 +187,8 @@ class ConvertLeadSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=20)
     customer_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     assigned_to = serializers.IntegerField(required=False, allow_null=True)
+    email = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    address = serializers.CharField(max_length=500, required=False, allow_blank=True)
 
     def validate_phone_number(self, value):
         from zalo_integration.services import normalize_phone

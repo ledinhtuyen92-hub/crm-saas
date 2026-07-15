@@ -66,7 +66,7 @@ def normalize_phone(phone: str) -> str:
 
 # ── Convert SocialLead -> Customer ───────────────────────────────────────────
 
-def convert_social_lead(social_lead, phone_number: str, assigned_user=None, customer_name=None):
+def convert_social_lead(social_lead, phone_number: str, assigned_user=None, customer_name=None, email: str = None, address: str = None):
     """
     Chuyển đổi SocialLead (Tầng 1) thành Customer (Tầng 2 — hồ sơ chuẩn).
 
@@ -81,12 +81,18 @@ def convert_social_lead(social_lead, phone_number: str, assigned_user=None, cust
     """
     from crm.models import Customer
 
-    if social_lead.status == "converted":
-        raise ValueError(f"SocialLead #{social_lead.id} đã được chuyển đổi thành Customer trước đó.")
+    if social_lead.status == "converted" or social_lead.is_customer_converted:
+        # Nếu đã có customer liên kết thì trả về ngay, không raise lỗi khi tự động quét
+        if hasattr(social_lead, 'customer') and social_lead.customer:
+            return social_lead.customer
+        if social_lead.status == "converted":
+            raise ValueError(f"SocialLead #{social_lead.id} đã được chuyển đổi thành Customer trước đó.")
 
     phone_number = normalize_phone(phone_number)
     company = social_lead.company
     final_name = (customer_name or "").strip() or social_lead.display_name or f"Khách Zalo ({social_lead.social_id[-4:]})"
+    final_email = (email or social_lead.detected_email or "").strip()
+    final_address = (address or social_lead.detected_address or "").strip()
 
     with transaction.atomic():
         # Cập nhật lại display_name cho social_lead nếu có chỉnh sửa tên
@@ -108,6 +114,12 @@ def convert_social_lead(social_lead, phone_number: str, assigned_user=None, cust
             if customer_name and customer_name.strip() and existing_customer.name != final_name:
                 existing_customer.name = final_name
                 update_fields.append("name")
+            if final_email and not existing_customer.email:
+                existing_customer.email = final_email
+                update_fields.append("email")
+            if final_address and not existing_customer.address:
+                existing_customer.address = final_address
+                update_fields.append("address")
             existing_customer.save(update_fields=update_fields)
             customer = existing_customer
             logger.info(
@@ -120,17 +132,20 @@ def convert_social_lead(social_lead, phone_number: str, assigned_user=None, cust
                 company=company,
                 name=final_name,
                 phone=phone_number,
+                email=final_email,
+                address=final_address,
                 source="zalo",
                 status="new",
-                social_lead=social_lead,
                 assigned_to=assigned_user or social_lead.assigned_to,
+                avatar=social_lead.avatar or "",
             )
-            logger.info(
-                f"[ZaloConvert] Created new Customer #{customer.id} "
-                f"from SocialLead #{social_lead.id} (phone: {phone_number})"
-            )
+            logger.info(f"[ZaloConvert] Created Customer #{customer.id} from SocialLead #{social_lead.id}")
 
-        # Cập nhật trạng thái SocialLead
+            # Thiết lập quan hệ 1-1
+            customer.social_lead = social_lead
+            customer.save(update_fields=["social_lead"])
+
+        # Cập nhật trạng thái cho SocialLead
         social_lead.status = "converted"
         social_lead.is_customer_converted = True
         if phone_number and not social_lead.detected_phone:
@@ -142,13 +157,9 @@ def convert_social_lead(social_lead, phone_number: str, assigned_user=None, cust
 
 def smart_extract_vn_phone(text: str):
     """
-    Thuật toán phát hiện và chuẩn hoá số điện thoại Việt Nam thông minh:
-    1. Nhận diện các định dạng:
-       - Có số 0 ở đầu: 0912345678, 0912 345 678, 0912.345.678, 0912-345-678
-       - Mã vùng quốc tế: +84912345678, +84 912 345 678, 84912345678
-       - Thiếu số 0 ở đầu (9 chữ số): 912345678, 912 345 678 (kèm từ khoá sđt/so/liên hệ hoặc phân cụm)
-    2. Loại trừ false positive (giá tiền, số lượng hàng hoá như 500.000.000 đ).
-    3. Chuẩn hoá về đúng định dạng chuẩn 10 chữ số (03/05/07/08/09xxxxxxxx).
+    Thuật toán phát hiện và chuẩn hoá SĐT Việt Nam thông minh.
+    - Nhận diện SĐT thiếu 0, có/không có +84, cách khoảng/chấm/gạch ngang
+    - Tự động chuẩn hoá về 10 số (0xxxxxxxxx)
     """
     if not text:
         return None
@@ -187,45 +198,177 @@ def smart_extract_vn_phone(text: str):
     return None
 
 
-def extract_and_process_phone(social_lead, text: str):
+def smart_extract_email(text: str):
     """
-    Quét SĐT trong tin nhắn Zalo với thuật toán thông minh:
-    - Nhận diện SĐT thiếu 0, có/không có +84, cách khoảng/chấm/gạch ngang
-    - Tự động chuẩn hoá về 10 số (0xxxxxxxxx)
+    Phát hiện và chuẩn hoá địa chỉ email trong tin nhắn.
+    """
+    if not text:
+        return None
+    email_pattern = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b')
+    match = email_pattern.search(text)
+    if match:
+        email = match.group(0).lower().strip()
+        if not any(e in email for e in ['@example.', 'noreply@', 'test@']):
+            return email
+    return None
+
+
+def smart_extract_address(text: str):
+    """
+    Nhận diện và trích xuất TRUNG THỰC đoạn địa chỉ giao hàng/nhà riêng trong tin nhắn.
+    Cắt bỏ các câu hội thoại giao tiếp không liên quan (chào hỏi, hỏi giá, hỏi địa chỉ shop...).
     """
     if not text:
         return None
 
-    norm_phone = smart_extract_vn_phone(text)
-    if not norm_phone:
+    # Loại bỏ các câu hỏi/thoại chung chung về địa chỉ
+    ignore_patterns = [
+        r'địa\s*chỉ\s*(?:email|shop|bên\s*mình|ở\s*đâu|cty|công\s*ty|nào|để|của|chi\s*tiết|\?)',
+        r'(?:xin|hỏi|cho|tìm|qua|biết|gửi|lấy)\s*(?:xin\s*)?địa\s*chỉ',
+        r'catalogue.*email|email.*catalogue'
+    ]
+    
+    # 1. Tách văn bản thành các dòng (theo \n)
+    raw_lines = [line.strip() for line in text.split('\n') if line.strip()]
+    
+    # Bộ từ khóa chỉ đơn vị hành chính/địa điểm VN rõ ràng
+    admin_keywords = [
+        'số nhà', 'ngõ ', 'ngách ', 'hẻm ', 'đường ', 'phố ',
+        'phường', 'p.', 'quận', 'q.', 'huyện', 'h.', 'xã ', 'tỉnh ',
+        'thành phố', 'tp.', 'tx.', 'tt.', 'kđt', 'khu đô thị',
+        'chung cư', 'toà ', 'tòa ', 'sảnh ', 'bld ', 'block ',
+        'hà nội', 'tphcm', 'tp hcm', 'hồ chí minh', 'sài gòn',
+        'đà nẵng', 'cần thơ', 'hải phòng', 'bình dương', 'đồng nai',
+        'thôn ', 'xóm ', 'ấp '
+    ]
+    
+    prefix_regex = re.compile(r'^(?:.*?\b(?:địa\s*chỉ|đ\/c|d\/c|đc|dc|ship\s*(?:đến|tới|về)?|giao\s*(?:đến|tới|về)?|ở\s*(?:tại)?|nhà\s*số|add|address)\s*[:\-\.]?\s*)', re.IGNORECASE)
+
+    extracted_segments = []
+
+    for line in raw_lines:
+        line_low = line.lower()
+        if any(re.search(pat, line_low) for pat in ignore_patterns):
+            continue
+
+        # Tách dòng dài thành các câu nhỏ hơn nếu có dấu chấm, chấm phẩy hoặc nhiều khoảng trắng
+        sub_sentences = [s.strip() for s in re.split(r'[\.\!\?]\s+|\s{2,}', line) if s.strip()]
+        
+        for sent in sub_sentences:
+            sent_low = sent.lower()
+            if any(re.search(pat, sent_low) for pat in ignore_patterns):
+                continue
+            
+            # Kiểm tra xem câu có tiền tố địa chỉ rõ ràng không (VD: "Đc: Số 12 Lê Lợi...")
+            has_prefix = bool(re.search(r'\b(?:địa\s*chỉ|đ\/c|d\/c|đc|dc|ship\s*(?:đến|tới|về)?|giao\s*(?:đến|tới|về)?|nhà\s*số)\s*[:\-\.]', sent_low))
+            
+            if has_prefix:
+                clean_addr = prefix_regex.sub('', sent).strip()
+                # Loại bỏ SĐT nếu dính trong câu địa chỉ
+                clean_addr = re.sub(r'\b(?:0|\+84)[35789]\d{8}\b', '', clean_addr).strip(' .,:-')
+                if len(clean_addr) >= 6 and any(c.isalpha() for c in clean_addr):
+                    extracted_segments.append(clean_addr)
+            else:
+                matching_kws = [kw for kw in admin_keywords if kw in sent_low]
+                # Từ khóa mạnh (thêm thành phố lớn, ngõ, ngách, đường, thôn...)
+                strong_kws = [
+                    'số nhà', 'chung cư', 'khu đô thị', 'kđt', 'phường', 'quận', 'huyện',
+                    'thành phố', 'tp.', 'tỉnh', 'hà nội', 'tphcm', 'tp hcm', 'hồ chí minh',
+                    'sài gòn', 'đà nẵng', 'cần thơ', 'hải phòng', 'hn', 'hcm',
+                    'thôn ', 'xóm ', 'ấp ', 'ngõ ', 'ngách ', 'hẻm ', 'đường ', 'phố '
+                ]
+                has_strong = any(skw in sent_low for skw in strong_kws)
+                
+                # Kiểm tra cấu trúc số nhà đứng đầu (VD: "220 định công, hà nội")
+                starts_with_house_number = bool(re.match(r'^\d{1,4}(?:[\/-]\d{1,4})*\s+[A-Za-zĐđÂâĂăÊêÔôƠơƯưÁáÀàẠạẢảÃã]', sent.strip()))
+                has_comma_or_admin = (',' in sent) or (len(matching_kws) >= 1)
+                
+                if len(matching_kws) >= 2 or (has_strong and len(sent) >= 8) or (starts_with_house_number and has_comma_or_admin and len(sent) >= 8):
+                    clean_addr = re.sub(r'\b(?:0|\+84)[35789]\d{8}\b', '', sent).strip(' .,:-')
+                    if len(clean_addr) >= 6 and any(c.isalpha() for c in clean_addr):
+                        if not any(w in sent_low for w in ['ko ak', 'được ko', 'khi nào', 'hay sao vậy', 'muốn mua', 'hết hàng', 'giá bao nhiêu', 'bán cho', 'lít mật ong', 'kg ', 'gram ']):
+                            extracted_segments.append(clean_addr)
+
+    if extracted_segments:
+        unique_segments = []
+        for seg in extracted_segments:
+            if not any(seg.lower() in u.lower() for u in unique_segments):
+                unique_segments.append(seg)
+        result = ". ".join(unique_segments)
+        return result[:300] if len(result) >= 6 else None
+    return None
+
+
+def extract_and_process_phone(social_lead, text: str):
+    """
+    Quét SĐT, Email và Địa chỉ trong tin nhắn Zalo với thuật toán thông minh.
+    """
+    if not text:
         return None
 
-    if not social_lead.detected_phone:
-        social_lead.detected_phone = norm_phone
+    updated = False
+    norm_phone = smart_extract_vn_phone(text)
+    detected_email = smart_extract_email(text)
+    detected_address = smart_extract_address(text)
 
-    from crm.models import Customer
-    company = social_lead.company
-    already_exists = Customer.objects.filter(company=company, phone=norm_phone).exists()
+    if detected_email and (not social_lead.detected_email or detected_email != social_lead.detected_email):
+        social_lead.detected_email = detected_email
+        updated = True
 
-    auto_create = False
-    if social_lead.oa_config and social_lead.oa_config.auto_create_customer_from_phone:
-        auto_create = True
+    if social_lead.detected_address != detected_address:
+        social_lead.detected_address = detected_address
+        updated = True
 
-    if already_exists:
-        social_lead.is_customer_converted = True
-        social_lead.save(update_fields=["detected_phone", "is_customer_converted", "updated_at"])
-    elif auto_create and social_lead.status != "converted":
-        try:
-            convert_social_lead(social_lead, norm_phone)
-            logger.info(f"[ZaloAutoScan] Tự động tạo khách hàng từ SĐT {norm_phone} của Lead #{social_lead.id}")
-        except Exception as e:
-            logger.error(f"[ZaloAutoScan] Lỗi tự động tạo khách hàng từ SĐT {norm_phone}: {e}")
-            social_lead.save(update_fields=["detected_phone", "updated_at"])
-    else:
-        social_lead.is_customer_converted = False
-        social_lead.save(update_fields=["detected_phone", "is_customer_converted", "updated_at"])
+    if norm_phone:
+        if not (social_lead.is_customer_converted or hasattr(social_lead, 'customer')) and not (social_lead.detected_phone and social_lead.detected_phone != norm_phone):
+            if not social_lead.detected_phone:
+                social_lead.detected_phone = norm_phone
+                updated = True
 
-    return norm_phone
+            from crm.models import Customer
+            company = social_lead.company
+            already_exists = Customer.objects.filter(company=company, phone=norm_phone).exists()
+            auto_create = social_lead.oa_config.auto_create_customer_from_phone if social_lead.oa_config else False
+
+            if already_exists:
+                existing_customer = Customer.objects.filter(company=company, phone=norm_phone).first()
+                social_lead.is_customer_converted = True
+                if existing_customer.social_lead is None:
+                    existing_customer.social_lead = social_lead
+                    existing_customer.save(update_fields=["social_lead", "updated_at"])
+                updated = True
+            elif auto_create and social_lead.status != "converted":
+                try:
+                    convert_social_lead(social_lead, norm_phone)
+                    logger.info(f"[ZaloAutoScan] Tự động tạo khách hàng từ SĐT {norm_phone} của Lead #{social_lead.id}")
+                except Exception as e:
+                    logger.error(f"[ZaloAutoScan] Lỗi tự động tạo KH từ SĐT {norm_phone}: {e}")
+                    updated = True
+            else:
+                social_lead.is_customer_converted = False
+                updated = True
+
+    if hasattr(social_lead, 'customer') and social_lead.customer:
+        customer = social_lead.customer
+        cust_updated = False
+        if social_lead.detected_email and not customer.email:
+            customer.email = social_lead.detected_email
+            cust_updated = True
+        if social_lead.detected_address and not customer.address:
+            customer.address = social_lead.detected_address
+            cust_updated = True
+        if cust_updated:
+            customer.save(update_fields=["email", "address", "updated_at"])
+
+    if updated:
+        update_f = ["detected_email", "detected_address", "updated_at"]
+        if social_lead.detected_phone:
+            update_f.append("detected_phone")
+        if social_lead.is_customer_converted:
+            update_f.append("is_customer_converted")
+        social_lead.save(update_fields=list(set(update_f)))
+
+    return norm_phone or social_lead.detected_phone
 
 
 # ── Lấy Thông tin Zalo OA từ Open API ─────────────────────────────────────────
