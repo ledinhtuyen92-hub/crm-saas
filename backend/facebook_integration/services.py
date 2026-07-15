@@ -531,6 +531,7 @@ def sync_page_conversations_history(page_config, max_conversations: int = 100, l
                 page_config=page_config,
                 fb_user_id=psid,
                 defaults={
+                    "company": page_config.company,
                     "fb_user_name": psid_name or f"FB {psid[-6:]}",
                     "last_message_at": last_dt,
                     "last_message_preview": snippet[:255],
@@ -539,13 +540,15 @@ def sync_page_conversations_history(page_config, max_conversations: int = 100, l
                 }
             )
             if not created:
+                if not lead.company_id and page_config.company_id:
+                    lead.company = page_config.company
                 if psid_name and not lead.fb_user_name:
                     lead.fb_user_name = psid_name
                 if last_dt and (not lead.last_message_at or last_dt > lead.last_message_at):
                     lead.last_message_at = last_dt
                     lead.last_message_preview = snippet[:255]
                     lead.has_unread_message = unread
-                lead.save(update_fields=["fb_user_name", "last_message_at", "last_message_preview", "has_unread_message", "updated_at"])
+                lead.save()
 
             synced_conversations += 1
 
