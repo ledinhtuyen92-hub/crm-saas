@@ -12,12 +12,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import FacebookLead, FacebookMessage, FacebookPageConfig
+from .models import FacebookLead, FacebookMessage, FacebookPageConfig, QuickMediaAsset
 from .serializers import (
     FacebookLeadListSerializer,
     FacebookLeadSerializer,
     FacebookMessageSerializer,
     FacebookPageConfigSerializer,
+    QuickMediaAssetSerializer,
 )
 from .services import (
     convert_facebook_lead,
@@ -28,6 +29,7 @@ from .services import (
     process_fb_webhook_message,
     send_facebook_message,
     smart_extract_vn_phone,
+    sync_page_conversations_history,
 )
 
 logger = logging.getLogger(__name__)
@@ -216,6 +218,32 @@ class FacebookPageConfigViewSet(viewsets.ModelViewSet):
             "data": FacebookPageConfigSerializer(config).data,
         })
 
+    @action(detail=True, methods=["post"], url_path="sync-history")
+    def sync_history(self, request, pk=None):
+        """
+        Đồng bộ lịch sử hội thoại và tin nhắn từ Facebook Graph API.
+        Nhận tham số max_conversations, limit_messages từ request.
+        """
+        config = self.get_object()
+        if not config.page_access_token or not config.page_id:
+            return Response(
+                {"error": "Trang Facebook chưa được kết nối Page Access Token hợp lệ."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        max_conversations = int(request.data.get("max_conversations", 100))
+        limit_messages = int(request.data.get("limit_messages", 50))
+
+        try:
+            res = sync_page_conversations_history(config, max_conversations=max_conversations, limit_messages=limit_messages)
+            return Response({
+                "detail": f"Đã đồng bộ thành công {res['synced_conversations']} hội thoại và {res['synced_messages']} tin nhắn cho Trang {config.page_name}.",
+                "data": res
+            })
+        except Exception as e:
+            logger.error(f"[SyncHistory Action] Lỗi: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 
@@ -236,9 +264,21 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
         if page_config_id and page_config_id != "all":
             qs = qs.filter(page_config_id=page_config_id)
 
+        is_archived_param = self.request.query_params.get("is_archived")
+        if is_archived_param == "true":
+            qs = qs.filter(is_archived=True)
+        else:
+            qs = qs.filter(is_archived=False)
+
         has_phone = self.request.query_params.get("has_phone")
         if has_phone == "true":
             qs = qs.exclude(detected_phone__isnull=True).exclude(detected_phone="")
+        elif has_phone == "false":
+            qs = qs.filter(detected_phone__isnull=True) | qs.filter(detected_phone="")
+
+        has_unread = self.request.query_params.get("has_unread")
+        if has_unread == "true":
+            qs = qs.filter(has_unread_message=True)
 
         conv_status = self.request.query_params.get("status")
         if conv_status == "not_added":
@@ -259,26 +299,49 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
         lead = self.get_object()
         text = request.data.get("text", "").strip()
         attachment_url = request.data.get("attachment_url")
+        file_obj = request.FILES.get("file")
+        request_phone = request.data.get("request_phone") in ["true", "True", True, 1, "1"]
 
-        if not text and not attachment_url:
-            return Response({"error": "Thiếu nội dung tin nhắn."}, status=status.HTTP_400_BAD_REQUEST)
+        if request_phone and not text:
+            text = "Dạ chào bạn, để tiện hỗ trợ và tư vấn chi tiết hơn, bạn cho mình xin số điện thoại liên hệ với ạ ❤️"
+
+        if not text and not attachment_url and not file_obj:
+            return Response({"error": "Vui lòng nhập nội dung hoặc chọn file/ảnh đính kèm."}, status=status.HTTP_400_BAD_REQUEST)
 
         config = lead.page_config
+        saved_file_url = ""
+        attachment_type = request.data.get("attachment_type") or "image"
+
+        if file_obj:
+            if file_obj.content_type and file_obj.content_type.startswith("image/"):
+                attachment_type = "image"
+            else:
+                attachment_type = "file"
+
+            try:
+                ext = file_obj.name.split(".")[-1] if "." in file_obj.name else "bin"
+                saved_path = default_storage.save(f"facebook_attachments/{uuid.uuid4().hex}.{ext}", file_obj)
+                saved_file_url = request.build_absolute_uri(default_storage.url(saved_path))
+            except Exception as e:
+                logger.error(f"[Facebook] Lỗi lưu file local: {e}")
+
         result = send_facebook_message(
             page_access_token=config.page_access_token,
             recipient_psid=lead.fb_user_id,
             message_text=text,
             attachment_url=attachment_url,
+            file_obj=file_obj,
+            attachment_type=attachment_type
         )
 
         if result.get("success"):
-            # Lưu tin nhắn vào DB
             msg = FacebookMessage.objects.create(
                 lead=lead,
                 fb_message_id=result.get("message_id"),
                 sender_type="page",
                 text=text,
-                attachment_url=attachment_url or "",
+                attachment_url=saved_file_url or attachment_url or "",
+                attachment_type=attachment_type if (saved_file_url or file_obj or attachment_url) else "",
             )
             lead.last_message_at = msg.created_at
             lead.last_message_preview = (text or "[Đính kèm]")[:255]
@@ -383,3 +446,34 @@ class FacebookWebhookView(APIView):
                 logger.error(f"[Facebook Webhook] Error processing entry: {e}")
 
         return Response({"status": "EVENT_RECEIVED"})
+
+
+# ── ViewSet: QuickMediaAsset ──────────────────────────────────────────────────
+
+class QuickMediaAssetViewSet(viewsets.ModelViewSet):
+    """
+    Quản lý Thư viện file gửi nhanh (ảnh, video, báo giá...).
+    """
+    serializer_class = QuickMediaAssetSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return QuickMediaAsset.objects.filter(company=self.request.user.company).order_by("-created_at")
+
+    def perform_create(self, serializer):
+        file_obj = self.request.FILES.get("file")
+        file_url = self.request.data.get("file_url", "").strip()
+        media_type = self.request.data.get("media_type", "image")
+
+        if file_obj and not file_url:
+            filename = f"quick_media/{uuid.uuid4().hex[:12]}_{file_obj.name}"
+            saved_path = default_storage.save(filename, file_obj)
+            file_url = f"/media/{saved_path}"
+
+        serializer.save(
+            company=self.request.user.company,
+            created_by=self.request.user,
+            file_url=file_url,
+            media_type=media_type,
+        )
+

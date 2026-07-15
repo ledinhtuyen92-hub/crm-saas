@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import FacebookPageConfig, FacebookLead, FacebookMessage
+from .models import FacebookPageConfig, FacebookLead, FacebookMessage, QuickMediaAsset
 
 
 # ── FacebookPageConfig ────────────────────────────────────────────────────────
@@ -20,7 +20,7 @@ class FacebookPageConfigSerializer(serializers.ModelSerializer):
             "page_access_token", "token_expires_at", "token_expires_at_display",
             "is_token_valid", "is_token_near_expiry",
             "webhook_verify_token", "page_avatar", "is_active",
-            "auto_create_customer_from_phone",
+            "auto_create_customer_from_phone", "lead_cleanup_days",
             "assigned_to", "assigned_to_name",
             "created_at", "updated_at",
         ]
@@ -78,7 +78,7 @@ class FacebookLeadSerializer(serializers.ModelSerializer):
         fields = [
             "id", "fb_user_id", "fb_user_name", "fb_user_avatar",
             "page_id", "page_name", "page_config",
-            "detected_phone", "is_customer_converted", "status",
+            "detected_phone", "is_customer_converted", "status", "is_archived",
             "customer", "customer_name",
             "assigned_to", "assigned_to_name",
             "last_message_at", "last_message_preview",
@@ -112,8 +112,24 @@ class FacebookLeadListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "fb_user_id", "fb_user_name", "fb_user_avatar",
             "page_id", "page_name", "page_config",
-            "detected_phone", "is_customer_converted", "status",
+            "detected_phone", "is_customer_converted", "status", "is_archived",
             "customer", "customer_name",
             "last_message_at", "last_message_preview",
             "has_unread_message", "created_at",
         ]
+
+
+# ── QuickMediaAsset ───────────────────────────────────────────────────────────
+
+class QuickMediaAssetSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source="created_by.full_name", read_only=True, default="")
+    media_type_display = serializers.CharField(source="get_media_type_display", read_only=True)
+
+    class Meta:
+        model = QuickMediaAsset
+        fields = [
+            "id", "company", "title", "media_type", "media_type_display",
+            "file_url", "created_by", "created_by_name", "created_at",
+        ]
+        read_only_fields = ["id", "company", "created_by", "created_at", "media_type_display"]
+

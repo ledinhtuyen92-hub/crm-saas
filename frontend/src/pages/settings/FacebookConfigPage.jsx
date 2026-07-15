@@ -20,6 +20,7 @@ import {
   Divider,
   Form,
   Input,
+  InputNumber,
   Modal,
   Popconfirm,
   Row,
@@ -207,11 +208,12 @@ export default function FacebookConfigPage() {
         app_secret: '',
         webhook_verify_token: page.webhook_verify_token,
         auto_create_customer_from_phone: page.auto_create_customer_from_phone,
+        lead_cleanup_days: page.lead_cleanup_days || 30,
         is_active: page.is_active,
       })
     } else {
       form.resetFields()
-      form.setFieldsValue({ use_system_config: true, is_active: true })
+      form.setFieldsValue({ use_system_config: true, is_active: true, lead_cleanup_days: 30 })
     }
     setModalVisible(true)
   }
@@ -477,20 +479,30 @@ export default function FacebookConfigPage() {
               message="Sẽ dùng App ID, App Secret và Webhook Verify Token do SuperAdmin cấu hình trong Cài đặt Hệ thống."
             />
           )}
-          <Divider>✅ Trạng thái & Tính năng</Divider>          <Row gutter={16}>
-            <Col span={12}>
+          <Divider>✅ Trạng thái & Tính năng</Divider>
+          <Row gutter={16}>
+            <Col span={8}>
               <Form.Item name="is_active" label="Trạng thái" valuePropName="checked">
                 <Switch checkedChildren="Hoạt động" unCheckedChildren="Tạm dừng" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col span={8}>
               <Form.Item
                 name="auto_create_customer_from_phone"
-                label="Tự động tạo KH từ SĐT"
+                label="Tự tạo KH từ SĐT"
                 valuePropName="checked"
                 tooltip="Tự động tạo Khách hàng CRM khi phát hiện SĐT trong hội thoại"
               >
                 <Switch checkedChildren="🤖 Tự động" unCheckedChildren="👆 Thủ công" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="lead_cleanup_days"
+                label="Dọn dẹp Lead rác"
+                tooltip="Hội thoại không có SĐT và không tương tác sau số ngày này sẽ tự động bị ẩn vào kho lưu trữ (3:00 sáng hàng ngày)"
+              >
+                <InputNumber min={1} max={365} addonAfter="ngày" style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           </Row>

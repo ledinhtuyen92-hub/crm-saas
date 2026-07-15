@@ -380,3 +380,151 @@ def convert_facebook_lead(lead, phone_number: str, assigned_user=None, customer_
     lead.save(update_fields=["customer", "is_customer_converted", "detected_phone", "updated_at"])
 
     return customer
+
+
+# ── Đồng bộ Lịch sử Trò chuyện từ Graph API ──────────────────────────────────
+
+def sync_page_conversations_history(page_config, max_conversations: int = 100, limit_messages: int = 50):
+    """
+    Kéo danh sách hội thoại cũ (/conversations) và tin nhắn (/messages)
+    cho một Trang Facebook từ Graph API.
+    """
+    if not page_config.page_access_token or not page_config.page_id:
+        raise ValueError("Trang Facebook chưa có Page ID hoặc Page Access Token hợp lệ.")
+
+    token = page_config.page_access_token
+    page_id = str(page_config.page_id)
+    url = f"{FB_GRAPH_API_BASE}/{page_id}/conversations"
+    params = {
+        "fields": "id,participants,updated_time,snippet,unread_count,message_count",
+        "access_token": token,
+        "limit": min(max_conversations, 100),
+    }
+
+    synced_conversations = 0
+    synced_messages = 0
+
+    from facebook_integration.models import FacebookLead, FacebookMessage
+    from django.utils.dateparse import parse_datetime
+
+    while url and synced_conversations < max_conversations:
+        try:
+            resp = requests.get(url, params=params, timeout=15)
+            if resp.status_code != 200:
+                logger.error(f"[SyncHistory] Lỗi gọi API /conversations: {resp.status_code} - {resp.text}")
+                break
+            data = resp.json()
+        except Exception as e:
+            logger.error(f"[SyncHistory] Lỗi kết nối Graph API: {e}")
+            break
+
+        conv_list = data.get("data", [])
+        if not conv_list:
+            break
+
+        for conv in conv_list:
+            if synced_conversations >= max_conversations:
+                break
+
+            conv_id = conv.get("id")
+            participants = conv.get("participants", {}).get("data", [])
+            psid = None
+            psid_name = ""
+            for p in participants:
+                if str(p.get("id")) != page_id:
+                    psid = str(p.get("id"))
+                    psid_name = p.get("name", "")
+                    break
+
+            if not psid:
+                continue
+
+            upd_str = conv.get("updated_time")
+            last_dt = parse_datetime(upd_str) if upd_str else timezone.now()
+            snippet = conv.get("snippet", "")
+            unread = (conv.get("unread_count", 0) > 0)
+
+            lead, created = FacebookLead.objects.get_or_create(
+                page_config=page_config,
+                fb_user_id=psid,
+                defaults={
+                    "fb_user_name": psid_name or f"FB {psid[-6:]}",
+                    "last_message_at": last_dt,
+                    "last_message_preview": snippet[:255],
+                    "has_unread_message": unread,
+                    "assigned_to": page_config.assigned_to,
+                }
+            )
+            if not created:
+                if psid_name and not lead.fb_user_name:
+                    lead.fb_user_name = psid_name
+                if last_dt and (not lead.last_message_at or last_dt > lead.last_message_at):
+                    lead.last_message_at = last_dt
+                    lead.last_message_preview = snippet[:255]
+                    lead.has_unread_message = unread
+                lead.save(update_fields=["fb_user_name", "last_message_at", "last_message_preview", "has_unread_message", "updated_at"])
+
+            synced_conversations += 1
+
+            msg_url = f"{FB_GRAPH_API_BASE}/{conv_id}/messages"
+            msg_params = {
+                "fields": "id,created_time,from,to,message,attachments",
+                "access_token": token,
+                "limit": min(limit_messages, 100),
+            }
+            try:
+                m_resp = requests.get(msg_url, params=msg_params, timeout=10)
+                if m_resp.status_code == 200:
+                    m_data = m_resp.json().get("data", [])
+                    m_data.reverse()
+                    for m_item in m_data:
+                        m_id = m_item.get("id")
+                        if not m_id:
+                            continue
+                        m_from = m_item.get("from", {})
+                        from_id = str(m_from.get("id", ""))
+                        s_type = "page" if from_id == page_id else "customer"
+                        m_text = m_item.get("message", "")
+
+                        att_url = None
+                        att_type = ""
+                        atts = m_item.get("attachments", {}).get("data", [])
+                        if atts:
+                            first_att = atts[0]
+                            att_type = first_att.get("mime_type", "image")
+                            payload = first_att.get("payload", {})
+                            att_url = payload.get("url") or first_att.get("image_data", {}).get("url")
+
+                        c_dt_str = m_item.get("created_time")
+                        c_dt = parse_datetime(c_dt_str) if c_dt_str else timezone.now()
+
+                        msg_obj, m_created = FacebookMessage.objects.get_or_create(
+                            fb_message_id=m_id,
+                            defaults={
+                                "lead": lead,
+                                "sender_type": s_type,
+                                "text": m_text,
+                                "attachment_url": att_url,
+                                "attachment_type": att_type,
+                            }
+                        )
+                        if m_created:
+                            FacebookMessage.objects.filter(id=msg_obj.id).update(created_at=c_dt)
+                            synced_messages += 1
+
+                            if s_type == "customer" and m_text:
+                                smart_scan_and_auto_create_customer(lead, m_text)
+
+            except Exception as me:
+                logger.error(f"[SyncHistory] Lỗi kéo tin nhắn của hội thoại {conv_id}: {me}")
+
+        paging = data.get("paging", {})
+        url = paging.get("next")
+        params = {}
+
+    logger.info(f"[SyncHistory] Đã đồng bộ xong cho Trang {page_config.page_name}: {synced_conversations} hội thoại, {synced_messages} tin nhắn.")
+    return {
+        "synced_conversations": synced_conversations,
+        "synced_messages": synced_messages,
+    }
+

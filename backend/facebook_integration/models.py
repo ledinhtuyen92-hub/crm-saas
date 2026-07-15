@@ -86,6 +86,11 @@ class FacebookPageConfig(models.Model):
         verbose_name="Tự động tạo KH khi phát hiện SĐT",
         help_text="Tự động tạo hồ sơ Khách hàng vào CRM khi nhận diện được SĐT trong hội thoại.",
     )
+    lead_cleanup_days = models.IntegerField(
+        default=30,
+        verbose_name="Số ngày dọn dẹp Lead rác",
+        help_text="Hội thoại không tương tác sau X ngày sẽ tự động bị ẩn (archived).",
+    )
     assigned_to = models.ForeignKey(
         "users.User",
         on_delete=models.SET_NULL,
@@ -210,6 +215,10 @@ class FacebookLead(models.Model):
         default=False,
         verbose_name="Có tin nhắn chưa đọc",
     )
+    is_archived = models.BooleanField(
+        default=False,
+        verbose_name="Đã dọn dẹp / Ẩn khỏi inbox",
+    )
     last_message_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -234,6 +243,8 @@ class FacebookLead(models.Model):
 
     @property
     def status(self):
+        if self.is_archived:
+            return "archived"
         if self.customer_id:
             return "converted"
         if self.is_customer_converted:
@@ -303,3 +314,55 @@ class FacebookMessage(models.Model):
     def __str__(self):
         preview = (self.text or "[Đính kèm]")[:40]
         return f"[{self.sender_type}] {preview}"
+
+
+# ── Model 4: Thư viện hình ảnh & video gửi nhanh (Quick Media Asset) ─────────
+
+class QuickMediaAsset(models.Model):
+    """
+    Thư viện file mẫu gửi nhanh cho hội thoại (catalogue, bảng giá, hình sản phẩm...).
+    """
+    MEDIA_TYPES = [
+        ("image", "Hình ảnh"),
+        ("video", "Video"),
+        ("file", "Tài liệu/File"),
+    ]
+
+    company = models.ForeignKey(
+        "users.Company",
+        on_delete=models.CASCADE,
+        related_name="quick_media_assets",
+        verbose_name="Công ty",
+    )
+    title = models.CharField(
+        max_length=255,
+        verbose_name="Tiêu đề / Tên mẫu",
+        help_text="Ví dụ: Bảng báo giá sỉ 2026, Hình Sâm VIP...",
+    )
+    media_type = models.CharField(
+        max_length=20,
+        choices=MEDIA_TYPES,
+        default="image",
+        verbose_name="Loại file",
+    )
+    file_url = models.URLField(
+        max_length=1000,
+        verbose_name="URL file/ảnh",
+    )
+    created_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Người tạo",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Thư viện file gửi nhanh"
+        verbose_name_plural = "Thư viện file gửi nhanh"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.title
+

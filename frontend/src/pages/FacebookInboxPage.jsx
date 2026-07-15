@@ -1,5 +1,9 @@
 import {
+  DeleteOutlined,
   DownloadOutlined,
+  FileOutlined,
+  FolderOpenOutlined,
+  HistoryOutlined,
   MessageOutlined,
   PaperClipOutlined,
   PhoneOutlined,
@@ -10,22 +14,28 @@ import {
   SendOutlined,
   UserAddOutlined,
   UserOutlined,
+  VideoCameraOutlined,
 } from '@ant-design/icons'
 import {
   Avatar,
   Badge,
   Button,
+  Card,
   Col,
   Empty,
   Form,
   Image,
   Input,
+  InputNumber,
   Modal,
+  Popconfirm,
+  Radio,
   Row,
   Select,
   Skeleton,
   Space,
   Spin,
+  Tabs,
   Tag,
   Tooltip,
   Typography,
@@ -219,6 +229,8 @@ export default function FacebookInboxPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [hasPhoneOnly, setHasPhoneOnly] = useState(false)
+  const [hasUnreadOnly, setHasUnreadOnly] = useState(false)
+  const [isArchivedOnly, setIsArchivedOnly] = useState(false)
   const [msgText, setMsgText] = useState('')
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -228,6 +240,21 @@ export default function FacebookInboxPage() {
   const [createModal, setCreateModal] = useState(false)
   const [creating, setCreating] = useState(false)
   const messagesEndRef = useRef(null)
+
+  // Sync History
+  const [syncModal, setSyncModal] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMaxConv, setSyncMaxConv] = useState(100)
+  const [syncLimitMsg, setSyncLimitMsg] = useState(50)
+  const [syncTargetPage, setSyncTargetPage] = useState('all')
+
+  // Quick Media Library
+  const [quickMediaModal, setQuickMediaModal] = useState(false)
+  const [quickMediaList, setQuickMediaList] = useState([])
+  const [quickMediaLoading, setQuickMediaLoading] = useState(false)
+  const [quickMediaUploading, setQuickMediaUploading] = useState(false)
+  const [quickMediaTitle, setQuickMediaTitle] = useState('')
+  const [quickMediaType, setQuickMediaType] = useState('image')
 
   const fetchPages = async () => {
     try {
@@ -244,6 +271,8 @@ export default function FacebookInboxPage() {
       if (selectedPage && selectedPage !== 'all') params.page_config = selectedPage
       if (hasPhoneOnly) params.has_phone = 'true'
       if (statusFilter) params.status = statusFilter
+      if (hasUnreadOnly) params.has_unread = 'true'
+      if (isArchivedOnly) params.is_archived = 'true'
       const res = await api.get('/facebook/leads/', { params })
       setLeads(Array.isArray(res.data) ? res.data : res.data?.results ?? [])
     } catch { if (!silent) message.error('Không thể tải danh sách hội thoại Facebook.') }
@@ -269,7 +298,7 @@ export default function FacebookInboxPage() {
     fetchLeads() 
     const interval = setInterval(() => { fetchLeads(true) }, 3000)
     return () => clearInterval(interval)
-  }, [selectedPage, hasPhoneOnly, statusFilter])
+  }, [selectedPage, hasPhoneOnly, statusFilter, hasUnreadOnly, isArchivedOnly])
 
   useEffect(() => {
     if (selectedLead?.id) {
@@ -347,6 +376,97 @@ export default function FacebookInboxPage() {
     }
   }
 
+  const fetchQuickMedia = async () => {
+    setQuickMediaLoading(true)
+    try {
+      const res = await api.get('/facebook/quick-media/')
+      setQuickMediaList(Array.isArray(res.data) ? res.data : res.data?.results ?? [])
+    } catch { message.error('Lỗi khi tải thư viện media mẫu.') }
+    finally { setQuickMediaLoading(false) }
+  }
+
+  const handleUploadQuickMedia = async (file) => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì!'); return false }
+    if (!file) return false
+    setQuickMediaUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('title', quickMediaTitle || file.name)
+      formData.append('media_type', quickMediaType)
+      await api.post('/facebook/quick-media/', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+      message.success('Đã tải lên thư viện mẫu!')
+      setQuickMediaTitle('')
+      fetchQuickMedia()
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Không thể tải file lên.')
+    } finally { setQuickMediaUploading(false) }
+    return false
+  }
+
+  const handleDeleteQuickMedia = async (id) => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì!'); return }
+    try {
+      await api.delete(`/facebook/quick-media/${id}/`)
+      message.success('Đã xóa mẫu!')
+      fetchQuickMedia()
+    } catch { message.error('Lỗi khi xóa.') }
+  }
+
+  const handleSendQuickMedia = async (asset) => {
+    if (!selectedLead) {
+      message.warning('Vui lòng chọn một hội thoại trước khi gửi!')
+      setQuickMediaModal(false)
+      return
+    }
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì!'); return }
+    setSending(true)
+    setQuickMediaModal(false)
+    try {
+      const res = await api.post(`/facebook/leads/${selectedLead.id}/send-message/`, {
+        text: '',
+        attachment_url: asset.file_url,
+        attachment_type: asset.media_type || 'image'
+      })
+      setMessages(prev => [...prev, res.data])
+      message.success(`Đã gửi "${asset.title}" đến ${selectedLead.fb_user_name || 'Khách hàng'}!`)
+      fetchLeads(true)
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Không thể gửi mẫu.')
+    } finally { setSending(false) }
+  }
+
+  const handleSyncHistory = async () => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì!'); return }
+    const targets = syncTargetPage === 'all'
+      ? pages
+      : pages.filter(p => p.id === syncTargetPage)
+
+    if (targets.length === 0) {
+      message.warning('Không tìm thấy Trang Facebook nào để đồng bộ!')
+      return
+    }
+
+    setSyncing(true)
+    try {
+      let totalConv = 0
+      let totalMsg = 0
+      for (const page of targets) {
+        const res = await api.post(`/facebook/pages/${page.id}/sync-history/`, {
+          max_conversations: syncMaxConv,
+          limit_messages: syncLimitMsg,
+        })
+        totalConv += res.data?.data?.synced_conversations || 0
+        totalMsg += res.data?.data?.synced_messages || 0
+      }
+      message.success(`🎉 Đã đồng bộ thành công ${totalConv} hội thoại và ${totalMsg} tin nhắn từ Meta!`)
+      setSyncModal(false)
+      fetchLeads()
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Lỗi khi đồng bộ lịch sử.')
+    } finally { setSyncing(false) }
+  }
+
   const filteredLeads = (leads || []).filter(l =>
     !search || (l.fb_user_name || '').toLowerCase().includes(search.toLowerCase()) ||
     (l.last_message_preview || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -372,27 +492,66 @@ export default function FacebookInboxPage() {
             ))}
           </Select>
         )}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Button
+            size="small"
+            type="primary"
+            style={{ background: '#8b5cf6', borderColor: '#8b5cf6' }}
+            icon={<HistoryOutlined />}
+            onClick={() => {
+              setSyncTargetPage(selectedPage !== 'all' ? selectedPage : (pages[0]?.id || 'all'))
+              setSyncModal(true)
+            }}
+          >
+            🔄 Đồng bộ lịch sử
+          </Button>
+          <Button
+            size="small"
+            style={{ background: '#10b981', color: '#fff', borderColor: '#10b981' }}
+            icon={<FolderOpenOutlined />}
+            onClick={() => {
+              fetchQuickMedia()
+              setQuickMediaModal(true)
+            }}
+          >
+            📁 Thư viện mẫu
+          </Button>
+          <Button
+            size="small"
+            type={hasUnreadOnly ? 'primary' : 'default'}
+            danger={hasUnreadOnly}
+            onClick={() => setHasUnreadOnly(!hasUnreadOnly)}
+          >
+            {hasUnreadOnly ? '🔴 Chưa đọc' : 'Chưa đọc'}
+          </Button>
           <Button
             size="small"
             type={hasPhoneOnly ? 'primary' : 'default'}
             icon={<PhoneOutlined />}
             onClick={() => setHasPhoneOnly(!hasPhoneOnly)}
           >
-            {hasPhoneOnly ? '📞 Có SĐT' : 'Lọc có SĐT'}
+            {hasPhoneOnly ? '📞 Có SĐT' : 'Lọc SĐT'}
           </Button>
           <Select
             value={statusFilter}
             onChange={setStatusFilter}
             size="small"
-            style={{ width: 160 }}
+            style={{ width: 140 }}
             placeholder="Lọc trạng thái"
           >
             <Select.Option value="">Tất cả trạng thái</Select.Option>
             <Select.Option value="not_added">Chưa thêm KH</Select.Option>
             <Select.Option value="converted">Đã có trong KH</Select.Option>
           </Select>
-          <Button size="small" icon={<ReloadOutlined />} onClick={fetchLeads}>Làm mới</Button>
+          <Button
+            size="small"
+            type={isArchivedOnly ? 'primary' : 'default'}
+            onClick={() => setIsArchivedOnly(!isArchivedOnly)}
+            style={isArchivedOnly ? { background: '#f97316', borderColor: '#f97316' } : {}}
+          >
+            {isArchivedOnly ? '🗑️ Lead rác (đã ẩn)' : '🗑️ Kho rác'}
+          </Button>
+          <Button size="small" icon={<ReloadOutlined />} onClick={() => fetchLeads()} title="Làm mới" />
         </div>
       </div>
 
@@ -614,6 +773,180 @@ export default function FacebookInboxPage() {
           )}
         </div>
       </div>
+
+      {/* Sync History Modal */}
+      <Modal
+        open={syncModal}
+        title="🔄 Đồng bộ lịch sử hội thoại từ Facebook (chuẩn Pancake)"
+        onCancel={() => setSyncModal(false)}
+        onOk={handleSyncHistory}
+        confirmLoading={syncing}
+        okText="Bắt đầu đồng bộ"
+        cancelText="Đóng"
+        width={560}
+      >
+        <div style={{ padding: '8px 0' }}>
+          <p style={{ color: '#4b5563', fontSize: 13, marginBottom: 16 }}>
+            Hệ thống sẽ kéo các hội thoại cũ và tin nhắn gần nhất trực tiếp từ Graph API. Quá trình này chỉ mất 3-5 giây nhờ cơ chế tối giới hạn, không gây tải nặng hay đầy DB.
+          </p>
+          <Form layout="vertical">
+            <Form.Item label="Chọn Trang Facebook cần đồng bộ">
+              <Select value={syncTargetPage} onChange={setSyncTargetPage}>
+                {pages.length > 1 && <Select.Option value="all">🔀 Tất cả Trang quản lý</Select.Option>}
+                {pages.map(p => (
+                  <Select.Option key={p.id} value={p.id}>🟦 {p.page_name}</Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Số hội thoại tối đa"
+                  tooltip="Số lượng hội thoại gần nhất kéo về (mặc định 50 - 200)"
+                >
+                  <InputNumber
+                    min={10}
+                    max={500}
+                    value={syncMaxConv}
+                    onChange={setSyncMaxConv}
+                    style={{ width: '100%' }}
+                    addonAfter="hội thoại"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Số tin nhắn / hội thoại"
+                  tooltip="Số tin nhắn gần nhất mỗi hội thoại để Sale hiểu ngữ cảnh (mặc định 50)"
+                >
+                  <InputNumber
+                    min={5}
+                    max={100}
+                    value={syncLimitMsg}
+                    onChange={setSyncLimitMsg}
+                    style={{ width: '100%' }}
+                    addonAfter="tin nhắn"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form>
+        </div>
+      </Modal>
+
+      {/* Quick Media Library Modal */}
+      <Modal
+        open={quickMediaModal}
+        title="📁 Thư viện mẫu & gửi nhanh (Pancake style)"
+        onCancel={() => setQuickMediaModal(false)}
+        footer={[
+          <Button key="close" onClick={() => setQuickMediaModal(false)}>Đóng</Button>
+        ]}
+        width={720}
+      >
+        <div style={{ padding: '8px 0' }}>
+          <Card size="small" style={{ marginBottom: 16, background: '#f8fafc', borderColor: '#e2e8f0' }}>
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>⬆️ Tải lên mẫu mới (Hình ảnh, Video, Báo giá...)</div>
+            <Row gutter={12} align="middle">
+              <Col span={10}>
+                <Input
+                  size="small"
+                  placeholder="Tên gợi nhớ (VD: Báo giá 2026, Banner khuyến mãi)..."
+                  value={quickMediaTitle}
+                  onChange={e => setQuickMediaTitle(e.target.value)}
+                />
+              </Col>
+              <Col span={6}>
+                <Select size="small" value={quickMediaType} onChange={setQuickMediaType} style={{ width: '100%' }}>
+                  <Select.Option value="image">🖼️ Hình ảnh</Select.Option>
+                  <Select.Option value="video">🎬 Video</Select.Option>
+                  <Select.Option value="file">📄 Tài liệu / File</Select.Option>
+                </Select>
+              </Col>
+              <Col span={8}>
+                <Upload
+                  beforeUpload={handleUploadQuickMedia}
+                  showUploadList={false}
+                  accept={quickMediaType === 'image' ? 'image/*' : quickMediaType === 'video' ? 'video/*' : '*/*'}
+                >
+                  <Button size="small" type="primary" icon={<PlusOutlined />} loading={quickMediaUploading} style={{ background: '#10b981' }}>
+                    Chọn file tải lên
+                  </Button>
+                </Upload>
+              </Col>
+            </Row>
+          </Card>
+
+          {quickMediaLoading ? <Spin style={{ display: 'block', margin: '30px auto' }} /> : (
+            <Tabs
+              defaultActiveKey="all"
+              items={[
+                {
+                  key: 'all',
+                  label: `Tất cả (${quickMediaList.length})`,
+                  children: (
+                    <Row gutter={[12, 12]} style={{ maxHeight: 380, overflowY: 'auto', marginTop: 8 }}>
+                      {quickMediaList.length === 0 && <Empty description="Chưa có mẫu nào trong thư viện" style={{ margin: '30px auto', width: '100%' }} />}
+                      {quickMediaList.map(item => (
+                        <Col span={8} key={item.id}>
+                          <Card
+                            size="small"
+                            hoverable
+                            style={{ borderRadius: 8, overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}
+                            bodyStyle={{ padding: 10, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+                          >
+                            <div>
+                              {item.media_type === 'image' ? (
+                                <Image
+                                  src={item.file_url}
+                                  alt={item.title}
+                                  style={{ height: 110, width: '100%', objectFit: 'cover', borderRadius: 6 }}
+                                  preview={false}
+                                />
+                              ) : (
+                                <div style={{ height: 110, background: '#e2e8f0', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 6 }}>
+                                  {item.media_type === 'video' ? <VideoCameraOutlined style={{ fontSize: 32, color: '#3b82f6' }} /> : <FileOutlined style={{ fontSize: 32, color: '#64748b' }} />}
+                                  <span style={{ fontSize: 11, color: '#475569', padding: '0 8px', textAlign: 'center', wordBreak: 'break-all' }}>
+                                    {item.file_url.split('/').pop()}
+                                  </span>
+                                </div>
+                              )}
+                              <div style={{ fontWeight: 600, fontSize: 13, marginTop: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.title}>
+                                {item.title}
+                              </div>
+                              <div style={{ fontSize: 11, color: '#94a3b8' }}>Bởi: {item.created_by_name || 'Admin'}</div>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, borderTop: '1px solid #f1f5f9', paddingTop: 8 }}>
+                              <Button
+                                type="primary"
+                                size="small"
+                                icon={<SendOutlined />}
+                                onClick={() => handleSendQuickMedia(item)}
+                                disabled={!selectedLead}
+                                style={{ background: '#1877f2', fontSize: 11, padding: '0 8px' }}
+                              >
+                                Gửi ngay
+                              </Button>
+                              <Popconfirm
+                                title="Xóa mẫu này?"
+                                onConfirm={() => handleDeleteQuickMedia(item.id)}
+                                okText="Xóa"
+                                cancelText="Hủy"
+                              >
+                                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                              </Popconfirm>
+                            </div>
+                          </Card>
+                        </Col>
+                      ))}
+                    </Row>
+                  )
+                }
+              ]}
+            />
+          )}
+        </div>
+      </Modal>
 
       {/* Create Customer Modal */}
       <Modal

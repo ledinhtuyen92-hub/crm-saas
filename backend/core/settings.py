@@ -221,6 +221,11 @@ try:
             "task": "zalo.cleanup_stale_leads",
             "schedule": crontab(minute=0, hour=3),
         },
+        # Dọn rác Facebook Lead mỗi ngày lúc 3h sáng
+        "facebook-cleanup-stale-leads": {
+            "task": "facebook.cleanup_stale_leads",
+            "schedule": crontab(minute=0, hour=3),
+        },
         # Tự động gửi ZNS chúc mừng sinh nhật mỗi ngày lúc 8h sáng
         "zalo-send-birthday-zns": {
             "task": "zalo.send_birthday_zns",
