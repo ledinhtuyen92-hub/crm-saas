@@ -539,7 +539,22 @@ def sync_page_conversations_history(page_config, max_conversations: int = 100, l
                     "assigned_to": page_config.assigned_to,
                 }
             )
-            if not created:
+            if created or not lead.fb_user_avatar or not lead.fb_user_name or lead.fb_user_name.startswith("FB "):
+                profile = get_fb_user_profile(token, psid)
+                if profile.get("name"):
+                    lead.fb_user_name = profile["name"]
+                elif psid_name and not lead.fb_user_name:
+                    lead.fb_user_name = psid_name
+                if profile.get("avatar"):
+                    lead.fb_user_avatar = profile["avatar"]
+                if not lead.company_id and page_config.company_id:
+                    lead.company = page_config.company
+                if last_dt and (not lead.last_message_at or last_dt > lead.last_message_at):
+                    lead.last_message_at = last_dt
+                    lead.last_message_preview = snippet[:255]
+                    lead.has_unread_message = unread
+                lead.save()
+            else:
                 if not lead.company_id and page_config.company_id:
                     lead.company = page_config.company
                 if psid_name and not lead.fb_user_name:
@@ -555,7 +570,7 @@ def sync_page_conversations_history(page_config, max_conversations: int = 100, l
             # Kéo tin nhắn của hội thoại này (/messages)
             msg_url = f"{FB_GRAPH_API_BASE}/{conv_id}/messages"
             msg_params = {
-                "fields": "id,created_time,from,to,message,attachments",
+                "fields": "id,created_time,from,to,message,attachments{id,mime_type,name,size,image_data,video_data,file_url,payload}",
                 "access_token": token,
                 "limit": min(limit_messages, 100),
             }
@@ -570,7 +585,8 @@ def sync_page_conversations_history(page_config, max_conversations: int = 100, l
                             continue
                         m_from = m_item.get("from", {})
                         from_id = str(m_from.get("id", ""))
-                        s_type = "page" if from_id == page_id else "customer"
+                        # Nếu ID người gửi trùng với ID khách hàng (psid) -> Khách hàng gửi. Khác -> Page gửi
+                        s_type = "customer" if (from_id and str(from_id) == str(psid)) else "page"
                         m_text = m_item.get("message", "")
 
                         att_url = None
@@ -578,9 +594,29 @@ def sync_page_conversations_history(page_config, max_conversations: int = 100, l
                         atts = m_item.get("attachments", {}).get("data", [])
                         if atts:
                             first_att = atts[0]
-                            att_type = first_att.get("mime_type", "image")
+                            mime = (first_att.get("mime_type") or "").lower()
                             payload = first_att.get("payload", {})
-                            att_url = payload.get("url") or first_att.get("image_data", {}).get("url")
+                            img_data = first_att.get("image_data", {})
+                            vid_data = first_att.get("video_data", {})
+
+                            att_url = (
+                                payload.get("url")
+                                or img_data.get("url")
+                                or img_data.get("preview_url")
+                                or vid_data.get("url")
+                                or vid_data.get("preview_url")
+                                or first_att.get("file_url")
+                                or first_att.get("url")
+                            )
+
+                            if mime.startswith("image/") or img_data or (att_url and any(ext in att_url.lower() for ext in [".jpg", ".jpeg", ".png", ".gif", ".webp", "scontent", "fbcdn"])):
+                                att_type = "image"
+                            elif mime.startswith("video/") or vid_data or (att_url and any(ext in att_url.lower() for ext in [".mp4", ".mov", ".avi", ".webm"])):
+                                att_type = "video"
+                            elif mime.startswith("audio/"):
+                                att_type = "audio"
+                            elif att_url:
+                                att_type = "file"
 
                         c_dt_str = m_item.get("created_time")
                         c_dt = parse_datetime(c_dt_str) if c_dt_str else timezone.now()

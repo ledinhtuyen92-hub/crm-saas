@@ -137,8 +137,21 @@ function ConvItem({ lead, selected, onClick }) {
 function MessageBubble({ msg, lead, showAvatar = true }) {
   if (!msg) return null
   const isPage = msg.sender_type === 'page'
-  const isImage = msg.attachment_type === 'image' || (msg.attachment_url && /\.(png|jpg|jpeg|gif|webp)$/i.test(msg.attachment_url))
-  const hasOnlyImage = !msg.text && msg.attachment_url && isImage
+  const urlLower = (msg.attachment_url || '').toLowerCase()
+  const isImage = msg.attachment_type === 'image' ||
+    /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(urlLower) ||
+    urlLower.includes('fbcdn.net/v/') ||
+    urlLower.includes('scontent.') ||
+    urlLower.includes('/images/')
+
+  const isVideo = msg.attachment_type === 'video' ||
+    /\.(mp4|mov|avi|webm|mkv)(\?.*)?$/i.test(urlLower) ||
+    urlLower.includes('/videos/')
+
+  const isAudio = msg.attachment_type === 'audio' ||
+    /\.(mp3|wav|ogg|m4a)(\?.*)?$/i.test(urlLower)
+
+  const hasOnlyMedia = !msg.text && msg.attachment_url && (isImage || isVideo)
 
   return (
     <div style={{
@@ -161,13 +174,13 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
       )}
       <div style={{
         maxWidth: '68%',
-        padding: hasOnlyImage ? 0 : '10px 14px',
+        padding: hasOnlyMedia ? 0 : '10px 14px',
         borderRadius: isPage ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-        background: hasOnlyImage ? 'transparent' : isPage ? '#1877f2' : '#f0f0f0',
+        background: hasOnlyMedia ? 'transparent' : isPage ? '#1877f2' : '#f0f0f0',
         color: isPage ? '#fff' : '#1a1a1a',
         fontSize: 14,
         lineHeight: 1.5,
-        boxShadow: hasOnlyImage ? 'none' : isPage ? '0 1px 4px rgba(24,119,242,0.25)' : '0 1px 4px rgba(0,0,0,0.08)',
+        boxShadow: hasOnlyMedia ? 'none' : isPage ? '0 1px 4px rgba(24,119,242,0.25)' : '0 1px 4px rgba(0,0,0,0.08)',
         overflow: 'hidden',
       }}>
         {msg.text && <div style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{msg.text}</div>}
@@ -177,8 +190,16 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
               <Image
                 src={msg.attachment_url}
                 alt="attachment"
-                style={{ maxWidth: 220, maxHeight: 220, borderRadius: 12, objectFit: 'cover', display: 'block' }}
+                style={{ maxWidth: 260, maxHeight: 260, borderRadius: 12, objectFit: 'cover', display: 'block' }}
               />
+            ) : isVideo ? (
+              <video
+                controls
+                src={msg.attachment_url}
+                style={{ maxWidth: 280, maxHeight: 260, borderRadius: 12, display: 'block', background: '#000' }}
+              />
+            ) : isAudio ? (
+              <audio controls src={msg.attachment_url} style={{ maxWidth: 240 }} />
             ) : (
               <a
                 href={msg.attachment_url}
@@ -197,7 +218,7 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
               >
                 <PaperClipOutlined style={{ fontSize: 18 }} />
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  Tệp đính kèm
+                  Tệp đính kèm ({msg.attachment_url.split('/').pop().split('?')[0] || 'file'})
                 </span>
                 <DownloadOutlined />
               </a>
@@ -209,8 +230,8 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
           marginTop: 4,
           opacity: isPage ? 0.8 : 0.6,
           textAlign: isPage ? 'right' : 'left',
-          textShadow: hasOnlyImage ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
-          color: hasOnlyImage ? '#6b7280' : 'inherit',
+          textShadow: hasOnlyMedia ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
+          color: hasOnlyMedia ? '#6b7280' : 'inherit',
         }}>
           {formatTime(msg.created_at)}
         </div>
