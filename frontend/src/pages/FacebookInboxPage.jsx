@@ -53,6 +53,35 @@ const STATUS_CONFIG = {
   converted: { color: '#10b981', bg: '#d1fae5', label: 'Đã có trong KH', border: '#6ee7b7' },
 }
 
+const avatarColors = ['#2563eb', '#7c3aed', '#dc2626', '#d97706', '#059669', '#0891b2', '#db2777', '#4f46e5', '#ea580c', '#16a34a']
+function getAvatarColor(name) {
+  if (!name) return '#2563eb'
+  const idx = (name.charCodeAt(0) + (name.charCodeAt(1) || 0)) % avatarColors.length
+  return avatarColors[idx]
+}
+
+function LeadAvatar({ lead, size = 44, style = {} }) {
+  const name = lead?.fb_user_name || 'Khách hàng'
+  const src = lead?.fb_user_avatar || null
+  const initial = name.charAt(0).toUpperCase()
+  return (
+    <Avatar
+      size={size}
+      src={src}
+      style={{
+        background: src ? 'transparent' : getAvatarColor(name),
+        color: '#fff',
+        fontWeight: 600,
+        fontSize: Math.round(size * 0.42),
+        flexShrink: 0,
+        ...style
+      }}
+    >
+      {!src && initial}
+    </Avatar>
+  )
+}
+
 function formatTime(dateStr) {
   if (!dateStr) return ''
   try {
@@ -96,12 +125,7 @@ function ConvItem({ lead, selected, onClick }) {
           style={{ background: lead.is_customer_converted ? '#10b981' : '#f59e0b' }}
           offset={[-3, 40]}
         >
-          <Avatar
-            src={lead.fb_user_avatar || null}
-            icon={!lead.fb_user_avatar ? <UserOutlined /> : null}
-            size={44}
-            style={{ background: '#dbeafe', color: '#1877f2', flexShrink: 0 }}
-          />
+          <LeadAvatar lead={lead} size={44} />
         </Badge>
       </Badge>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -163,12 +187,7 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
       {!isPage && (
         <div style={{ width: 28, marginRight: 8, flexShrink: 0, alignSelf: 'flex-end' }}>
           {showAvatar && (
-            <Avatar
-              size={28}
-              src={lead?.fb_user_avatar || null}
-              icon={!lead?.fb_user_avatar ? <UserOutlined /> : null}
-              style={{ background: '#dbeafe', color: '#1877f2' }}
-            />
+            <LeadAvatar lead={lead} size={28} />
           )}
         </div>
       )}
@@ -619,7 +638,7 @@ export default function FacebookInboxPage() {
             <>
               {/* Chat header */}
               <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb', background: '#fff', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Avatar src={selectedLead.fb_user_avatar} icon={<UserOutlined />} size={36} style={{ background: '#dbeafe', color: '#1877f2' }} />
+                <LeadAvatar lead={selectedLead} size={36} />
                 <div>
                   <Text strong>{selectedLead.fb_user_name || 'Khách hàng'}</Text>
                   <div style={{ fontSize: 12, color: '#9ca3af' }}>{selectedLead.page_name}</div>
@@ -732,11 +751,10 @@ export default function FacebookInboxPage() {
           {selectedLead ? (
             <>
               <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <Avatar
-                  src={selectedLead.fb_user_avatar}
-                  icon={<UserOutlined />}
+                <LeadAvatar
+                  lead={selectedLead}
                   size={64}
-                  style={{ background: '#dbeafe', color: '#1877f2' }}
+                  style={{ margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 />
                 <div style={{ fontWeight: 700, fontSize: 15, marginTop: 8 }}>{selectedLead.fb_user_name || 'Khách hàng'}</div>
                 <Tag color={selectedLead.is_customer_converted ? 'success' : 'warning'} style={{ marginTop: 6 }}>

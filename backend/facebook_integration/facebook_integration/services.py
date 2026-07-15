@@ -551,7 +551,21 @@ def sync_page_conversations_history(page_config, max_conversations: int = 100, l
                             synced_messages += 1
 
                             if s_type == "customer" and m_text:
-                                smart_scan_and_auto_create_customer(lead, m_text)
+                                extract_and_process_phone_fb(lead, m_text)
+                        else:
+                            upd = []
+                            if msg_obj.sender_type != s_type:
+                                msg_obj.sender_type = s_type
+                                upd.append("sender_type")
+                            if m_text and not msg_obj.text:
+                                msg_obj.text = m_text
+                                upd.append("text")
+                            if att_url and not msg_obj.attachment_url:
+                                msg_obj.attachment_url = att_url
+                                msg_obj.attachment_type = att_type
+                                upd.extend(["attachment_url", "attachment_type"])
+                            if upd:
+                                msg_obj.save(update_fields=upd)
 
             except Exception as me:
                 logger.error(f"[SyncHistory] Lỗi kéo tin nhắn của hội thoại {conv_id}: {me}")
