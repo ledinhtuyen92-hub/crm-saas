@@ -3,6 +3,7 @@ import {
   DeleteOutlined,
   DownloadOutlined,
   FileOutlined,
+  FileTextOutlined,
   FolderOpenOutlined,
   FolderOutlined,
   HistoryOutlined,
@@ -15,9 +16,14 @@ import {
   ReloadOutlined,
   SearchOutlined,
   SendOutlined,
+  StarFilled,
+  StarOutlined,
+  TagOutlined,
   TeamOutlined,
+  ThunderboltOutlined,
   UserAddOutlined,
   UserOutlined,
+  UserSwitchOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons'
 import {
@@ -136,6 +142,7 @@ function ConvItem({ lead, selected, onClick }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text strong style={{ fontSize: 13, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}>
+            {lead.is_starred && <StarFilled style={{ color: '#f59e0b', marginRight: 4 }} />}
             {lead.fb_user_name || 'Khách hàng'}
           </Text>
           <Text type="secondary" style={{ fontSize: 11, flexShrink: 0, marginLeft: 4 }}>
@@ -146,6 +153,16 @@ function ConvItem({ lead, selected, onClick }) {
           {lead.last_message_preview || 'Chưa có tin nhắn'}
         </Text>
         <div style={{ marginTop: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {lead.tags && lead.tags.map(t => (
+            <Tag key={t.id} style={{ fontSize: 10, padding: '0 6px', lineHeight: '16px', borderRadius: 8, margin: 0, color: '#fff', background: t.color || '#3b82f6', border: 'none', fontWeight: 600 }}>
+              {t.name}
+            </Tag>
+          ))}
+          {lead.assigned_to_name && (
+            <Tag style={{ fontSize: 10, padding: '0 6px', lineHeight: '16px', borderRadius: 8, margin: 0, color: '#4b5563', background: '#f3f4f6', border: '1px solid #e5e7eb' }}>
+              👤 {lead.assigned_to_name}
+            </Tag>
+          )}
           <Tag style={{ fontSize: 10, padding: '0 5px', lineHeight: '16px', borderRadius: 8, margin: 0,
             color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>
             {cfg.label}
@@ -315,11 +332,44 @@ export default function FacebookInboxPage() {
   const [quickMediaTitle, setQuickMediaTitle] = useState('')
   const [quickMediaType, setQuickMediaType] = useState('image')
 
+  // Pancake filters state
+  const [isStarredOnly, setIsStarredOnly] = useState(false)
+  const [tagFilter, setTagFilter] = useState('all')
+  const [assignedToFilter, setAssignedToFilter] = useState('all')
+
+  // Tags & Quick Replies & Notes state
+  const [tagsList, setTagsList] = useState([])
+  const [quickRepliesList, setQuickRepliesList] = useState([])
+  const [quickReplyModal, setQuickReplyModal] = useState(false)
+  const [qrShortcut, setQrShortcut] = useState('')
+  const [qrTitle, setQrTitle] = useState('')
+  const [qrContent, setQrContent] = useState('')
+  const [qrSaving, setQrSaving] = useState(false)
+  const [noteText, setNoteText] = useState('')
+  const [noteSaving, setNoteSaving] = useState(false)
+  const [manageTagsModal, setManageTagsModal] = useState(false)
+  const [newTagName, setNewTagName] = useState('')
+  const [newTagColor, setNewTagColor] = useState('#3b82f6')
+
   const fetchPages = async () => {
     try {
       const res = await api.get('/facebook/pages/')
       const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
       setPages(data)
+    } catch { /* silent */ }
+  }
+
+  const fetchTags = async () => {
+    try {
+      const res = await api.get('/facebook/lead-tags/')
+      setTagsList(Array.isArray(res.data) ? res.data : res.data?.results ?? [])
+    } catch { /* silent */ }
+  }
+
+  const fetchQuickReplies = async () => {
+    try {
+      const res = await api.get('/facebook/quick-replies/')
+      setQuickRepliesList(Array.isArray(res.data) ? res.data : res.data?.results ?? [])
     } catch { /* silent */ }
   }
 
@@ -335,6 +385,9 @@ export default function FacebookInboxPage() {
       if (isArchivedOnly) params.is_archived = 'true'
       if (replyFilter) params.reply_filter = replyFilter
       if (sortBy) params.sort_by = sortBy
+      if (isStarredOnly) params.is_starred = 'true'
+      if (tagFilter && tagFilter !== 'all') params.tag_id = tagFilter
+      if (assignedToFilter && assignedToFilter !== 'all') params.assigned_to = assignedToFilter
       const res = await api.get('/facebook/leads/', { params })
       setLeads(Array.isArray(res.data) ? res.data : res.data?.results ?? [])
     } catch { if (!silent) message.error('Không thể tải danh sách hội thoại Facebook.') }
@@ -354,13 +407,15 @@ export default function FacebookInboxPage() {
 
   useEffect(() => {
     fetchPages()
+    fetchTags()
+    fetchQuickReplies()
     api.get('/users/').then(res => setEmployees(Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.results) ? res.data.results : []))).catch(() => setEmployees([]))
   }, [])
   useEffect(() => { 
     fetchLeads() 
     const interval = setInterval(() => { fetchLeads(true) }, 3000)
     return () => clearInterval(interval)
-  }, [selectedPage, hasPhoneOnly, phoneFilterMode, statusFilter, hasUnreadOnly, isArchivedOnly, replyFilter, sortBy])
+  }, [selectedPage, hasPhoneOnly, phoneFilterMode, statusFilter, hasUnreadOnly, isArchivedOnly, replyFilter, sortBy, isStarredOnly, tagFilter, assignedToFilter])
 
   useEffect(() => {
     if (selectedLead?.id) {
@@ -529,6 +584,115 @@ export default function FacebookInboxPage() {
     } finally { setSyncing(false) }
   }
 
+  const handleToggleStar = async () => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
+    if (!selectedLead) return
+    try {
+      const res = await api.post(`/facebook/leads/${selectedLead.id}/toggle-star/`)
+      setSelectedLead(prev => ({ ...prev, is_starred: res.data.is_starred }))
+      message.success(res.data.is_starred ? '★ Đã đánh dấu Khách VIP!' : '☆ Đã bỏ đánh dấu VIP.')
+      fetchLeads(true)
+    } catch { message.error('Lỗi khi đánh dấu VIP.') }
+  }
+
+  const handleUpdateLeadTags = async (tagIds) => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
+    if (!selectedLead) return
+    try {
+      const res = await api.post(`/facebook/leads/${selectedLead.id}/update-tags/`, { tag_ids: tagIds })
+      setSelectedLead(prev => ({ ...prev, tags: res.data.tags }))
+      message.success('Đã cập nhật nhãn!')
+      fetchLeads(true)
+    } catch { message.error('Lỗi khi cập nhật nhãn.') }
+  }
+
+  const handleAddNote = async (content) => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
+    if (!selectedLead || !content.trim()) return
+    setNoteSaving(true)
+    try {
+      const res = await api.post(`/facebook/leads/${selectedLead.id}/add-note/`, { content: content.trim() })
+      setSelectedLead(prev => ({
+        ...prev,
+        internal_notes: [res.data, ...(prev.internal_notes || [])]
+      }))
+      setNoteText('')
+      message.success('Đã thêm ghi chú nội bộ!')
+    } catch { message.error('Lỗi khi thêm ghi chú.') }
+    finally { setNoteSaving(false) }
+  }
+
+  const handleCreateTag = async () => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
+    if (!newTagName.trim()) return
+    try {
+      await api.post('/facebook/lead-tags/', { name: newTagName.trim(), color: newTagColor })
+      message.success('Đã tạo nhãn mới!')
+      setNewTagName('')
+      fetchTags()
+    } catch { message.error('Lỗi khi tạo nhãn.') }
+  }
+
+  const handleDeleteTag = async (id) => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
+    try {
+      await api.delete(`/facebook/lead-tags/${id}/`)
+      message.success('Đã xóa nhãn!')
+      fetchTags()
+      fetchLeads(true)
+    } catch { message.error('Lỗi khi xóa nhãn.') }
+  }
+
+  const handleCreateQuickReply = async () => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
+    if (!qrShortcut.trim() || !qrContent.trim()) {
+      message.warning('Vui lòng nhập phím tắt (VD: /hello) và nội dung mẫu!')
+      return
+    }
+    let shortcut = qrShortcut.trim()
+    if (!shortcut.startsWith('/')) shortcut = '/' + shortcut
+    setQrSaving(true)
+    try {
+      await api.post('/facebook/quick-replies/', { shortcut, title: qrTitle || shortcut, content: qrContent })
+      message.success('Đã tạo văn bản mẫu!')
+      setQrShortcut('')
+      setQrTitle('')
+      setQrContent('')
+      fetchQuickReplies()
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Lỗi khi tạo văn bản mẫu.')
+    } finally { setQrSaving(false) }
+  }
+
+  const handleDeleteQuickReply = async (id) => {
+    if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
+    try {
+      await api.delete(`/facebook/quick-replies/${id}/`)
+      message.success('Đã xóa văn bản mẫu!')
+      fetchQuickReplies()
+    } catch { message.error('Lỗi khi xóa văn bản mẫu.') }
+  }
+
+  const handleInsertQuickReply = (qr) => {
+    setMsgText(prev => (prev ? prev + ' ' + qr.content : qr.content))
+    setQuickReplyModal(false)
+  }
+
+  const handleMsgTextChange = (e) => {
+    const val = e.target.value
+    setMsgText(val)
+    const parts = val.split(' ')
+    const lastWord = parts[parts.length - 1]
+    if (lastWord.startsWith('/') && lastWord.length > 1) {
+      const match = quickRepliesList.find(q => q.shortcut.toLowerCase() === lastWord.toLowerCase())
+      if (match) {
+        parts[parts.length - 1] = match.content
+        setMsgText(parts.join(' '))
+        message.info(`⚡ Đã tự động gõ tắt ${match.shortcut} -> "${match.title}"`)
+      }
+    }
+  }
+
   const filteredLeads = (leads || []).filter(l =>
     !search || (l.fb_user_name || '').toLowerCase().includes(search.toLowerCase()) ||
     (l.last_message_preview || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -644,12 +808,15 @@ export default function FacebookInboxPage() {
                 setPhoneFilterMode('all')
                 setStatusFilter('')
                 setIsArchivedOnly(false)
+                setIsStarredOnly(false)
+                setTagFilter('all')
+                setAssignedToFilter('all')
               }}
               style={{
                 width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: (!replyFilter && !sortBy && !hasUnreadOnly && phoneFilterMode === 'all' && !hasPhoneOnly && !statusFilter && !isArchivedOnly) ? '#2563eb' : 'transparent',
-                color: (!replyFilter && !sortBy && !hasUnreadOnly && phoneFilterMode === 'all' && !hasPhoneOnly && !statusFilter && !isArchivedOnly) ? '#fff' : '#94a3b8',
+                background: (!replyFilter && !sortBy && !hasUnreadOnly && phoneFilterMode === 'all' && !hasPhoneOnly && !statusFilter && !isArchivedOnly && !isStarredOnly && tagFilter === 'all' && assignedToFilter === 'all') ? '#2563eb' : 'transparent',
+                color: (!replyFilter && !sortBy && !hasUnreadOnly && phoneFilterMode === 'all' && !hasPhoneOnly && !statusFilter && !isArchivedOnly && !isStarredOnly && tagFilter === 'all' && assignedToFilter === 'all') ? '#fff' : '#94a3b8',
                 transition: 'all 0.2s',
               }}
             >
@@ -703,6 +870,99 @@ export default function FacebookInboxPage() {
                 }}
               >
                 <ClockCircleOutlined style={{ fontSize: 18 }} />
+              </div>
+            </Tooltip>
+          </Popover>
+
+          {/* Khách VIP (Starred) */}
+          <Tooltip title="Lọc Khách VIP (Đánh dấu sao)" placement="right">
+            <div
+              onClick={() => setIsStarredOnly(!isStarredOnly)}
+              style={{
+                width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: isStarredOnly ? '#f59e0b' : 'transparent',
+                color: isStarredOnly ? '#fff' : '#94a3b8',
+                transition: 'all 0.2s',
+              }}
+            >
+              <StarFilled style={{ fontSize: 18, color: isStarredOnly ? '#fff' : '#f59e0b' }} />
+            </div>
+          </Tooltip>
+
+          {/* Lọc theo Nhãn (Tags) */}
+          <Popover
+            placement="rightTop"
+            title={<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontWeight: 700, color: '#1e293b' }}>🏷️ Lọc theo Nhãn Tag</span><Button size="small" type="link" onClick={() => setManageTagsModal(true)} style={{ padding: 0 }}>Quản lý</Button></div>}
+            content={
+              <div style={{ minWidth: 200, padding: 4, maxHeight: 300, overflowY: 'auto' }}>
+                <Radio.Group
+                  value={tagFilter}
+                  onChange={e => setTagFilter(e.target.value)}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+                >
+                  <Radio value="all" style={{ fontWeight: 500 }}>🌐 Tất cả nhãn</Radio>
+                  {tagsList.map(t => (
+                    <Radio key={t.id} value={t.id}>
+                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: t.color || '#3b82f6', marginRight: 6 }} />
+                      <span style={{ fontWeight: 500 }}>{t.name}</span>
+                    </Radio>
+                  ))}
+                </Radio.Group>
+              </div>
+            }
+            trigger="click"
+          >
+            <Tooltip title="Lọc theo Nhãn Tag" placement="right">
+              <div
+                style={{
+                  width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: tagFilter !== 'all' ? '#10b981' : 'transparent',
+                  color: tagFilter !== 'all' ? '#fff' : '#94a3b8',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <TagOutlined style={{ fontSize: 18 }} />
+              </div>
+            </Tooltip>
+          </Popover>
+
+          {/* Lọc theo Sale phụ trách */}
+          <Popover
+            placement="rightTop"
+            title={<span style={{ fontWeight: 700, color: '#1e293b' }}>👤 Phân công Sale</span>}
+            content={
+              <div style={{ minWidth: 200, padding: 4, maxHeight: 300, overflowY: 'auto' }}>
+                <Radio.Group
+                  value={assignedToFilter}
+                  onChange={e => setAssignedToFilter(e.target.value)}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+                >
+                  <Radio value="all" style={{ fontWeight: 500 }}>🌐 Tất cả nhân viên</Radio>
+                  <Radio value="me" style={{ fontWeight: 600, color: '#2563eb' }}>🧑 Giỏ hội thoại của tôi</Radio>
+                  <Radio value="unassigned" style={{ fontWeight: 500, color: '#f59e0b' }}>❓ Chưa phân công</Radio>
+                  {employees.map(emp => (
+                    <Radio key={emp.id} value={emp.id} style={{ fontWeight: 500 }}>
+                      👤 {emp.full_name || emp.username}
+                    </Radio>
+                  ))}
+                </Radio.Group>
+              </div>
+            }
+            trigger="click"
+          >
+            <Tooltip title="Lọc theo Sale phụ trách" placement="right">
+              <div
+                style={{
+                  width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: assignedToFilter !== 'all' ? '#8b5cf6' : 'transparent',
+                  color: assignedToFilter !== 'all' ? '#fff' : '#94a3b8',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <UserSwitchOutlined style={{ fontSize: 18 }} />
               </div>
             </Tooltip>
           </Popover>
@@ -818,12 +1078,15 @@ export default function FacebookInboxPage() {
         {/* Left: Conversation List */}
         <div style={{ width: 300, flexShrink: 0, borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', background: '#fff' }}>
           {/* Active Filter Banner */}
-          {(replyFilter || sortBy || hasUnreadOnly || (phoneFilterMode !== 'all' && phoneFilterMode !== '') || hasPhoneOnly || statusFilter || isArchivedOnly) && (
+          {(replyFilter || sortBy || hasUnreadOnly || (phoneFilterMode !== 'all' && phoneFilterMode !== '') || hasPhoneOnly || statusFilter || isArchivedOnly || isStarredOnly || tagFilter !== 'all' || assignedToFilter !== 'all') && (
             <div style={{ padding: '6px 10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Lọc:</span>
               {replyFilter === 'unanswered' && sortBy !== 'waiting_longest' && <Tag color="blue" closable onClose={() => setReplyFilter('')} style={{ fontSize: 11, margin: 1 }}>⏱️ Khách chờ</Tag>}
               {sortBy === 'waiting_longest' && <Tag color="orange" closable onClose={() => { setSortBy(''); setReplyFilter(''); }} style={{ fontSize: 11, margin: 1 }}>⏳ Đợi lâu nhất</Tag>}
               {replyFilter === 'read_unanswered' && <Tag color="purple" closable onClose={() => setReplyFilter('')} style={{ fontSize: 11, margin: 1 }}>👀 Đã đọc</Tag>}
+              {isStarredOnly && <Tag color="gold" closable onClose={() => setIsStarredOnly(false)} style={{ fontSize: 11, margin: 1 }}>★ Khách VIP</Tag>}
+              {tagFilter !== 'all' && <Tag color="green" closable onClose={() => setTagFilter('all')} style={{ fontSize: 11, margin: 1 }}>🏷️ {tagsList.find(t => t.id == tagFilter)?.name || 'Tag'}</Tag>}
+              {assignedToFilter !== 'all' && <Tag color="purple" closable onClose={() => setAssignedToFilter('all')} style={{ fontSize: 11, margin: 1 }}>👤 {assignedToFilter === 'me' ? 'Của tôi' : assignedToFilter === 'unassigned' ? 'Chưa phân công' : employees.find(e => e.id == assignedToFilter)?.full_name || 'Sale'}</Tag>}
               {hasUnreadOnly && <Tag color="red" closable onClose={() => setHasUnreadOnly(false)} style={{ fontSize: 11, margin: 1 }}>🔴 Chưa đọc</Tag>}
               {(phoneFilterMode === 'has_phone' || hasPhoneOnly) && <Tag color="green" closable onClose={() => { setPhoneFilterMode('all'); setHasPhoneOnly(false); }} style={{ fontSize: 11, margin: 1 }}>📞 Có SĐT</Tag>}
               {phoneFilterMode === 'no_phone' && <Tag color="default" closable onClose={() => setPhoneFilterMode('all')} style={{ fontSize: 11, margin: 1 }}>❌ Không SĐT</Tag>}
@@ -840,6 +1103,9 @@ export default function FacebookInboxPage() {
                   setPhoneFilterMode('all')
                   setStatusFilter('')
                   setIsArchivedOnly(false)
+                  setIsStarredOnly(false)
+                  setTagFilter('all')
+                  setAssignedToFilter('all')
                 }}
               >
                 Xóa lọc
@@ -958,16 +1224,19 @@ export default function FacebookInboxPage() {
 
               {/* Message input & toolbar */}
               <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', background: '#fff' }}>
-                <div style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <Button size="small" icon={<PhoneOutlined />} onClick={() => handleSend(null, true)} loading={sending} style={{ borderRadius: 14 }}>
                     Yêu cầu chia sẻ SĐT
+                  </Button>
+                  <Button size="small" icon={<ThunderboltOutlined />} onClick={() => setQuickReplyModal(true)} style={{ borderRadius: 14, background: '#fff7ed', borderColor: '#fdba74', color: '#c2410c', fontWeight: 600 }}>
+                    ⚡ Văn bản mẫu (/gõ tắt)
                   </Button>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <Input.TextArea
                     value={msgText}
-                    onChange={e => setMsgText(e.target.value)}
-                    placeholder="Nhập tin nhắn..."
+                    onChange={handleMsgTextChange}
+                    placeholder="Nhập tin nhắn (hoặc gõ phím tắt VD: /hello)..."
                     autoSize={{ minRows: 1, maxRows: 4 }}
                     style={{ borderRadius: 20, resize: 'none', flex: 1 }}
                     onPressEnter={e => { if (!e.shiftKey) { e.preventDefault(); handleSend() } }}
@@ -994,61 +1263,147 @@ export default function FacebookInboxPage() {
         </div>
 
         {/* Right: CRM Customer Profile */}
-        <div style={{ width: 280, flexShrink: 0, borderLeft: '1px solid #e5e7eb', background: '#fafafa', overflowY: 'auto', padding: 16 }}>
+        <div style={{ width: 285, flexShrink: 0, borderLeft: '1px solid #e5e7eb', background: '#fafafa', overflowY: 'auto', padding: 14 }}>
           {selectedLead ? (
             <>
-              <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <div style={{ textAlign: 'center', marginBottom: 12 }}>
                 <LeadAvatar
                   lead={selectedLead}
                   size={64}
                   style={{ margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 />
-                <div style={{ fontWeight: 700, fontSize: 15, marginTop: 8 }}>{selectedLead.fb_user_name || 'Khách hàng'}</div>
+                <div style={{ fontWeight: 700, fontSize: 15, marginTop: 8 }}>
+                  {selectedLead.is_starred && <StarFilled style={{ color: '#f59e0b', marginRight: 4 }} />}
+                  {selectedLead.fb_user_name || 'Khách hàng'}
+                </div>
                 <Tag color={selectedLead.is_customer_converted ? 'success' : 'warning'} style={{ marginTop: 6 }}>
                   {selectedLead.is_customer_converted ? '✅ Đã có trong KH' : '⚠️ Chưa thêm KH'}
                 </Tag>
               </div>
+
               <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
-                <div style={{ marginBottom: 8 }}><Text type="secondary" style={{ fontSize: 11 }}>TRANG FACEBOOK</Text></div>
-                <div style={{ fontSize: 13, marginBottom: 12 }}>🟦 {selectedLead.page_name}</div>
-                {selectedLead.detected_phone && (
-                  <>
-                    <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>SỐ ĐIỆN THOẠI</Text></div>
-                    <div style={{ fontSize: 13, marginBottom: 12, color: '#1877f2', fontWeight: 600 }}>📞 {selectedLead.detected_phone}</div>
-                  </>
-                )}
-                {selectedLead.customer_name && (
-                  <>
-                    <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>KHÁCH HÀNG CRM</Text></div>
-                    <div style={{ fontSize: 13, marginBottom: 12 }}>👤 {selectedLead.customer_name}</div>
-                  </>
-                )}
-                <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>NHÂN VIÊN PHỤ TRÁCH</Text></div>
+                <Button
+                  type={selectedLead.is_starred ? "primary" : "default"}
+                  block
+                  icon={<StarFilled style={{ color: selectedLead.is_starred ? '#fff' : '#f59e0b' }} />}
+                  onClick={handleToggleStar}
+                  style={{ background: selectedLead.is_starred ? '#f59e0b' : '#fff', borderColor: '#f59e0b', color: selectedLead.is_starred ? '#fff' : '#d97706', marginBottom: 14, borderRadius: 20, fontWeight: 600 }}
+                >
+                  {selectedLead.is_starred ? '★ Đang là Khách VIP' : '☆ Đánh dấu Khách VIP'}
+                </Button>
+
+                <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text type="secondary" style={{ fontSize: 11 }}>NHÃN HỘI THOẠI (TAGS)</Text>
+                  <Button size="small" type="link" onClick={() => setManageTagsModal(true)} style={{ padding: 0, fontSize: 11 }}>+ Quản lý</Button>
+                </div>
                 <div style={{ marginBottom: 16 }}>
                   <Select
-                    placeholder="Chọn nhân viên"
+                    mode="multiple"
+                    placeholder="Gắn nhãn cho khách hàng..."
                     style={{ width: '100%' }}
-                    value={selectedLead.assigned_to || ''}
-                    allowClear
-                    onChange={val => handleAssign(val || null)}
-                    options={[{ value: '', label: '-- Chưa phân công --' }, ...(employees || []).map(e => ({ value: e.id, label: e.full_name || e.username }))]}
+                    value={(selectedLead.tags || []).map(t => t.id)}
+                    onChange={handleUpdateLeadTags}
+                    tagRender={(props) => {
+                      const t = tagsList.find(item => item.id === props.value)
+                      return <Tag color={t?.color || '#3b82f6'} closable={props.closable} onClose={props.onClose} style={{ marginRight: 3, fontWeight: 600 }}>{props.label}</Tag>
+                    }}
+                    options={tagsList.map(t => ({ value: t.id, label: t.name }))}
                   />
                 </div>
-                {!selectedLead.is_customer_converted && (
-                  <Button
-                    type="primary"
-                    block
-                    icon={<UserAddOutlined />}
-                    onClick={() => {
-                      if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì!'); return }
-                      createForm.setFieldsValue({ phone: selectedLead.detected_phone || '', name: selectedLead.fb_user_name || '' })
-                      setCreateModal(true)
-                    }}
-                    style={{ background: '#1877f2', marginTop: 8, borderRadius: 20 }}
-                  >
-                    Tạo Khách hàng CRM
-                  </Button>
-                )}
+
+                <Tabs
+                  defaultActiveKey="info"
+                  items={[
+                    {
+                      key: 'info',
+                      label: 'ℹ️ Thông tin',
+                      children: (
+                        <div style={{ paddingTop: 6 }}>
+                          <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>TRANG FACEBOOK</Text></div>
+                          <div style={{ fontSize: 13, marginBottom: 12 }}>🟦 {selectedLead.page_name}</div>
+                          {selectedLead.detected_phone && (
+                            <>
+                              <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>SỐ ĐIỆN THOẠI</Text></div>
+                              <div style={{ fontSize: 13, marginBottom: 12, color: '#1877f2', fontWeight: 600 }}>📞 {selectedLead.detected_phone}</div>
+                            </>
+                          )}
+                          {selectedLead.customer_name && (
+                            <>
+                              <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>KHÁCH HÀNG CRM</Text></div>
+                              <div style={{ fontSize: 13, marginBottom: 12 }}>👤 {selectedLead.customer_name}</div>
+                            </>
+                          )}
+                          <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>NHÂN VIÊN PHỤ TRÁCH</Text></div>
+                          <div style={{ marginBottom: 16 }}>
+                            <Select
+                              placeholder="Chọn nhân viên"
+                              style={{ width: '100%' }}
+                              value={selectedLead.assigned_to || ''}
+                              allowClear
+                              onChange={val => handleAssign(val || null)}
+                              options={[{ value: '', label: '-- Chưa phân công --' }, ...(employees || []).map(e => ({ value: e.id, label: e.full_name || e.username }))]}
+                            />
+                          </div>
+                          {!selectedLead.is_customer_converted && (
+                            <Button
+                              type="primary"
+                              block
+                              icon={<UserAddOutlined />}
+                              onClick={() => {
+                                if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì!'); return }
+                                createForm.setFieldsValue({ phone: selectedLead.detected_phone || '', name: selectedLead.fb_user_name || '' })
+                                setCreateModal(true)
+                              }}
+                              style={{ background: '#1877f2', marginTop: 8, borderRadius: 20 }}
+                            >
+                              Tạo Khách hàng CRM
+                            </Button>
+                          )}
+                        </div>
+                      )
+                    },
+                    {
+                      key: 'notes',
+                      label: `📝 Ghi chú (${selectedLead.internal_notes?.length || 0})`,
+                      children: (
+                        <div style={{ paddingTop: 6 }}>
+                          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                            <Input.TextArea
+                              value={noteText}
+                              onChange={e => setNoteText(e.target.value)}
+                              placeholder="Ghi chú nội bộ (chỉ Sale thấy)..."
+                              autoSize={{ minRows: 2, maxRows: 4 }}
+                              style={{ borderRadius: 8, fontSize: 12 }}
+                            />
+                            <Button
+                              type="primary"
+                              icon={<PlusOutlined />}
+                              loading={noteSaving}
+                              onClick={() => handleAddNote(noteText)}
+                              disabled={!noteText.trim()}
+                              style={{ background: '#10b981', borderRadius: 8 }}
+                            />
+                          </div>
+                          <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {(selectedLead.internal_notes || []).length === 0 ? (
+                              <Text type="secondary" style={{ fontSize: 12, textAlign: 'center', display: 'block', margin: '20px 0' }}>Chưa có ghi chú nào</Text>
+                            ) : (
+                              (selectedLead.internal_notes || []).map((note, idx) => (
+                                <div key={note.id || idx} style={{ background: '#fff', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, alignItems: 'center' }}>
+                                    <Text strong style={{ fontSize: 11, color: '#334155' }}>👤 {note.created_by_name || 'Sale'}</Text>
+                                    <Text type="secondary" style={{ fontSize: 10 }}>{formatTime(note.created_at)}</Text>
+                                  </div>
+                                  <div style={{ color: '#1e293b', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{note.content}</div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      )
+                    }
+                  ]}
+                />
               </div>
             </>
           ) : (
@@ -1255,6 +1610,131 @@ export default function FacebookInboxPage() {
             </Button>
           </div>
         </Form>
+      </Modal>
+
+      {/* Manage Tags Modal */}
+      <Modal
+        open={manageTagsModal}
+        title="🏷️ Quản lý Nhãn hội thoại (Tags)"
+        onCancel={() => setManageTagsModal(false)}
+        footer={[
+          <Button key="close" onClick={() => setManageTagsModal(false)}>Đóng</Button>
+        ]}
+        width={500}
+      >
+        <div style={{ padding: '8px 0' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <Input
+              placeholder="Tên nhãn mới..."
+              value={newTagName}
+              onChange={e => setNewTagName(e.target.value)}
+              onPressEnter={handleCreateTag}
+              style={{ flex: 1 }}
+            />
+            <input
+              type="color"
+              value={newTagColor}
+              onChange={e => setNewTagColor(e.target.value)}
+              style={{ width: 40, height: 32, padding: 0, border: '1px solid #d9d9d9', borderRadius: 6, cursor: 'pointer' }}
+              title="Chọn màu"
+            />
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateTag} style={{ background: '#10b981' }}>
+              Tạo nhãn
+            </Button>
+          </div>
+          <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {tagsList.length === 0 ? (
+              <Empty description="Chưa có nhãn nào" style={{ margin: '20px auto' }} />
+            ) : (
+              tagsList.map(t => (
+                <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '8px 12px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: t.color || '#3b82f6', display: 'inline-block' }} />
+                    <Text strong style={{ fontSize: 13 }}>{t.name}</Text>
+                  </div>
+                  <Popconfirm title="Xóa nhãn này?" onConfirm={() => handleDeleteTag(t.id)} okText="Xóa" cancelText="Hủy">
+                    <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+                  </Popconfirm>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Quick Replies Modal */}
+      <Modal
+        open={quickReplyModal}
+        title="⚡ Danh sách Văn bản mẫu (/gõ tắt)"
+        onCancel={() => setQuickReplyModal(false)}
+        footer={[
+          <Button key="close" onClick={() => setQuickReplyModal(false)}>Đóng</Button>
+        ]}
+        width={640}
+      >
+        <div style={{ padding: '8px 0' }}>
+          <Card size="small" style={{ marginBottom: 16, background: '#fff7ed', borderColor: '#fed7aa' }}>
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13, color: '#9a3412' }}>➕ Thêm văn bản mẫu mới</div>
+            <Row gutter={[8, 8]}>
+              <Col span={8}>
+                <Input
+                  size="small"
+                  placeholder="Phím tắt (VD: /hello)..."
+                  value={qrShortcut}
+                  onChange={e => setQrShortcut(e.target.value)}
+                />
+              </Col>
+              <Col span={16}>
+                <Input
+                  size="small"
+                  placeholder="Tiêu đề gợi nhớ (VD: Chào hỏi ban đầu)..."
+                  value={qrTitle}
+                  onChange={e => setQrTitle(e.target.value)}
+                />
+              </Col>
+              <Col span={24}>
+                <Input.TextArea
+                  size="small"
+                  placeholder="Nội dung tin nhắn mẫu..."
+                  value={qrContent}
+                  onChange={e => setQrContent(e.target.value)}
+                  autoSize={{ minRows: 2, maxRows: 4 }}
+                />
+              </Col>
+              <Col span={24} style={{ textAlign: 'right' }}>
+                <Button size="small" type="primary" icon={<PlusOutlined />} loading={qrSaving} onClick={handleCreateQuickReply} style={{ background: '#f59e0b', borderColor: '#f59e0b' }}>
+                  Tạo mẫu
+                </Button>
+              </Col>
+            </Row>
+          </Card>
+
+          <div style={{ maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {quickRepliesList.length === 0 ? (
+              <Empty description="Chưa có văn bản mẫu nào" style={{ margin: '20px auto' }} />
+            ) : (
+              quickRepliesList.map(qr => (
+                <div key={qr.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: '#f8fafc', padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <Tag color="orange" style={{ fontWeight: 700, margin: 0 }}>{qr.shortcut}</Tag>
+                      <Text strong style={{ fontSize: 13 }}>{qr.title}</Text>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#475569', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{qr.content}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <Button type="primary" size="small" onClick={() => handleInsertQuickReply(qr)} style={{ background: '#1877f2' }}>
+                      Chèn
+                    </Button>
+                    <Popconfirm title="Xóa mẫu này?" onConfirm={() => handleDeleteQuickReply(qr.id)} okText="Xóa" cancelText="Hủy">
+                      <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+                    </Popconfirm>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </Modal>
     </div>
   )

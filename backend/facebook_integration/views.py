@@ -14,13 +14,19 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import FacebookLead, FacebookMessage, FacebookPageConfig, QuickMediaAsset
+from .models import (
+    FacebookLead, FacebookMessage, FacebookPageConfig, QuickMediaAsset,
+    FacebookLeadTag, FacebookLeadNote, FacebookQuickReply,
+)
 from .serializers import (
     FacebookLeadListSerializer,
     FacebookLeadSerializer,
     FacebookMessageSerializer,
     FacebookPageConfigSerializer,
     QuickMediaAssetSerializer,
+    FacebookLeadTagSerializer,
+    FacebookLeadNoteSerializer,
+    FacebookQuickReplySerializer,
 )
 from .services import (
     convert_facebook_lead,
@@ -312,6 +318,23 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
         else:
             qs = qs.filter(is_archived=False)
 
+        is_starred_param = self.request.query_params.get("is_starred")
+        if is_starred_param == "true":
+            qs = qs.filter(is_starred=True)
+
+        tag_id = self.request.query_params.get("tag_id")
+        if tag_id and tag_id != "all":
+            qs = qs.filter(tags__id=tag_id)
+
+        assigned_to = self.request.query_params.get("assigned_to")
+        if assigned_to:
+            if assigned_to == "me":
+                qs = qs.filter(assigned_to=self.request.user)
+            elif assigned_to == "unassigned":
+                qs = qs.filter(assigned_to__isnull=True)
+            elif assigned_to != "all":
+                qs = qs.filter(assigned_to_id=assigned_to)
+
         has_phone = self.request.query_params.get("has_phone")
         if has_phone == "true":
             qs = qs.exclude(detected_phone__isnull=True).exclude(detected_phone="")
@@ -346,11 +369,11 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
         if sort_by == "waiting_longest":
             if not reply_filter:
                 qs = qs.filter(latest_sender="customer")
-            return qs.order_by("last_message_at")
+            return qs.order_by("last_message_at").distinct()
         elif sort_by == "time_asc":
-            return qs.order_by("last_message_at")
+            return qs.order_by("last_message_at").distinct()
         else:
-            return qs.order_by("-last_message_at")
+            return qs.order_by("-last_message_at").distinct()
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -443,6 +466,64 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
             {"error": "Không tìm thấy số điện thoại nào trong lịch sử tin nhắn của khách hàng này."},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+    @action(detail=True, methods=["post"], url_path="toggle-star")
+    def toggle_star(self, request, pk=None):
+        """Bật/tắt đánh dấu sao (VIP) cho hội thoại."""
+        lead = self.get_object()
+        lead.is_starred = not lead.is_starred
+        lead.save(update_fields=["is_starred"])
+        return Response({
+            "detail": "Đã cập nhật đánh dấu sao.",
+            "is_starred": lead.is_starred,
+        })
+
+    @action(detail=True, methods=["post"], url_path="update-tags")
+    def update_tags(self, request, pk=None):
+        """Cập nhật danh sách nhãn/tag cho hội thoại."""
+        lead = self.get_object()
+        tag_ids = request.data.get("tag_ids", [])
+        valid_tags = FacebookLeadTag.objects.filter(company=request.user.company, id__in=tag_ids)
+        lead.tags.set(valid_tags)
+        return Response({
+            "detail": "Đã cập nhật nhãn hội thoại.",
+            "tags": FacebookLeadTagSerializer(valid_tags, many=True).data,
+        })
+
+    @action(detail=True, methods=["post"], url_path="assign")
+    def assign(self, request, pk=None):
+        """Chỉ định nhân viên (Sale) phụ trách hội thoại."""
+        lead = self.get_object()
+        assigned_to_id = request.data.get("assigned_to")
+        if not assigned_to_id or assigned_to_id in ["unassigned", "none", "None"]:
+            lead.assigned_to = None
+        else:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user = User.objects.filter(company=request.user.company, id=assigned_to_id).first()
+            if not user:
+                return Response({"error": "Nhân viên không tồn tại hoặc không thuộc công ty."}, status=status.HTTP_400_BAD_REQUEST)
+            lead.assigned_to = user
+        lead.save(update_fields=["assigned_to"])
+        return Response({
+            "detail": "Đã phân công hội thoại.",
+            "assigned_to": lead.assigned_to_id,
+            "assigned_to_name": lead.assigned_to.full_name if lead.assigned_to else None,
+        })
+
+    @action(detail=True, methods=["post"], url_path="add-note")
+    def add_note(self, request, pk=None):
+        """Thêm ghi chú nội bộ cho hội thoại (chỉ nhân viên thấy)."""
+        lead = self.get_object()
+        content = request.data.get("content", "").strip()
+        if not content:
+            return Response({"error": "Vui lòng nhập nội dung ghi chú."}, status=status.HTTP_400_BAD_REQUEST)
+        note = FacebookLeadNote.objects.create(
+            lead=lead,
+            user=request.user,
+            content=content,
+        )
+        return Response(FacebookLeadNoteSerializer(note).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"], url_path="create-customer")
     def create_customer(self, request, pk=None):
@@ -603,4 +684,51 @@ class QuickMediaAssetViewSet(viewsets.ModelViewSet):
             file_url=file_url,
             media_type=media_type,
         )
+
+
+# ── ViewSet: FacebookLeadTag ──────────────────────────────────────────────────
+
+class FacebookLeadTagViewSet(viewsets.ModelViewSet):
+    """Quản lý các thẻ/nhãn hội thoại Facebook của công ty."""
+    serializer_class = FacebookLeadTagSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return FacebookLeadTag.objects.filter(company=self.request.user.company)
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company)
+
+
+# ── ViewSet: FacebookLeadNote ─────────────────────────────────────────────────
+
+class FacebookLeadNoteViewSet(viewsets.ModelViewSet):
+    """Quản lý ghi chú nội bộ cho hội thoại."""
+    serializer_class = FacebookLeadNoteSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        lead_id = self.request.query_params.get("lead")
+        qs = FacebookLeadNote.objects.filter(lead__company=self.request.user.company)
+        if lead_id:
+            qs = qs.filter(lead_id=lead_id)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+# ── ViewSet: FacebookQuickReply ───────────────────────────────────────────────
+
+class FacebookQuickReplyViewSet(viewsets.ModelViewSet):
+    """Quản lý tin nhắn mẫu (văn bản gõ tắt) của công ty."""
+    serializer_class = FacebookQuickReplySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return FacebookQuickReply.objects.filter(company=self.request.user.company)
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company, created_by=self.request.user)
+
 

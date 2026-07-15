@@ -147,16 +147,32 @@ class FacebookPageConfig(models.Model):
 
 # ── Model 2: Hội thoại Khách hàng trên Facebook ──────────────────────────────
 
+class FacebookLeadTag(models.Model):
+    company = models.ForeignKey(
+        "users.Company",
+        on_delete=models.CASCADE,
+        related_name="fb_lead_tags",
+        verbose_name="Công ty",
+    )
+    name = models.CharField(max_length=50, verbose_name="Tên nhãn/Tag")
+    color = models.CharField(max_length=20, default="#3b82f6", verbose_name="Màu sắc")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Nhãn hội thoại Facebook"
+        verbose_name_plural = "Nhãn hội thoại Facebook"
+        unique_together = [("company", "name")]
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.color})"
+
+
 class FacebookLead(models.Model):
     """
     Đại diện cho mỗi người dùng Facebook đã nhắn tin vào Trang.
     Mỗi Lead tương ứng 1 PSID (Page-Scoped User ID) trên từng Trang.
     """
-
-    STATUS_CHOICES = [
-        ("not_added", "Chưa thêm KH"),
-        ("converted", "Đã có trong KH"),
-    ]
 
     company = models.ForeignKey(
         "users.Company",
@@ -210,6 +226,16 @@ class FacebookLead(models.Model):
         blank=True,
         related_name="facebook_leads_assigned",
         verbose_name="Nhân viên phụ trách",
+    )
+    is_starred = models.BooleanField(
+        default=False,
+        verbose_name="Đánh dấu sao / Khách VIP",
+    )
+    tags = models.ManyToManyField(
+        FacebookLeadTag,
+        blank=True,
+        related_name="leads",
+        verbose_name="Nhãn/Tag hội thoại",
     )
     has_unread_message = models.BooleanField(
         default=False,
@@ -365,4 +391,70 @@ class QuickMediaAsset(models.Model):
 
     def __str__(self):
         return self.title
+
+
+# ── Model 5: Ghi chú nội bộ cho ca làm việc / Sale ───────────────────────────
+
+class FacebookLeadNote(models.Model):
+    lead = models.ForeignKey(
+        FacebookLead,
+        on_delete=models.CASCADE,
+        related_name="internal_notes",
+        verbose_name="Hội thoại",
+    )
+    user = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Nhân viên ghi chú",
+    )
+    content = models.TextField(verbose_name="Nội dung ghi chú")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Ghi chú nội bộ hội thoại"
+        verbose_name_plural = "Ghi chú nội bộ hội thoại"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Note on {self.lead_id} by {self.user_id}"
+
+
+# ── Model 6: Văn bản tin nhắn mẫu (Quick Reply / Shortcuts) ─────────────────
+
+class FacebookQuickReply(models.Model):
+    company = models.ForeignKey(
+        "users.Company",
+        on_delete=models.CASCADE,
+        related_name="fb_quick_replies",
+        verbose_name="Công ty",
+    )
+    shortcut = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Cú pháp gõ tắt (vd: /stk)",
+    )
+    title = models.CharField(
+        max_length=100,
+        verbose_name="Tiêu đề mẫu tin",
+    )
+    content = models.TextField(verbose_name="Nội dung tin nhắn mẫu")
+    created_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Người tạo",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Tin nhắn mẫu Facebook"
+        verbose_name_plural = "Tin nhắn mẫu Facebook"
+        ordering = ["title"]
+
+    def __str__(self):
+        return f"{self.shortcut or ''} - {self.title}"
+
 

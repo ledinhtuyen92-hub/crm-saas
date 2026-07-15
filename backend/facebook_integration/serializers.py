@@ -1,6 +1,41 @@
 from rest_framework import serializers
 
-from .models import FacebookPageConfig, FacebookLead, FacebookMessage, QuickMediaAsset
+from .models import (
+    FacebookPageConfig, FacebookLead, FacebookMessage, QuickMediaAsset,
+    FacebookLeadTag, FacebookLeadNote, FacebookQuickReply,
+)
+
+
+# ── FacebookLeadTag ───────────────────────────────────────────────────────────
+
+class FacebookLeadTagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FacebookLeadTag
+        fields = ["id", "company", "name", "color", "created_at"]
+        read_only_fields = ["id", "company", "created_at"]
+
+
+# ── FacebookLeadNote ──────────────────────────────────────────────────────────
+
+class FacebookLeadNoteSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source="user.full_name", read_only=True, default="Hệ thống")
+    user_avatar = serializers.URLField(source="user.avatar_url", read_only=True, default=None)
+
+    class Meta:
+        model = FacebookLeadNote
+        fields = ["id", "lead", "user", "user_name", "user_avatar", "content", "created_at"]
+        read_only_fields = ["id", "user", "created_at"]
+
+
+# ── FacebookQuickReply ────────────────────────────────────────────────────────
+
+class FacebookQuickReplySerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source="created_by.full_name", read_only=True, default="")
+
+    class Meta:
+        model = FacebookQuickReply
+        fields = ["id", "company", "shortcut", "title", "content", "created_by", "created_by_name", "created_at"]
+        read_only_fields = ["id", "company", "created_by", "created_at"]
 
 
 # ── FacebookPageConfig ────────────────────────────────────────────────────────
@@ -24,19 +59,16 @@ class FacebookPageConfigSerializer(serializers.ModelSerializer):
             "assigned_to", "assigned_to_name",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "is_token_valid",
-                            "is_token_near_expiry", "token_expires_at_display"]
+        read_only_fields = ["id", "created_at", "updated_at", "is_token_valid", "is_token_near_expiry"]
         extra_kwargs = {
-            "page_access_token": {"write_only": True},
-            "app_secret": {"write_only": True},
+            "page_access_token": {"write_only": True, "required": False},
         }
 
     def get_token_expires_at_display(self, obj):
-        if obj.token_expires_at:
-            import django.utils.timezone as tz
-            local_dt = obj.token_expires_at.astimezone(tz.get_current_timezone())
-            return local_dt.strftime("%d/%m/%Y %H:%M")
-        return "Không giới hạn (Page Token)"
+        if not obj.token_expires_at:
+            return "Không hết hạn / Chưa rõ"
+        from django.utils.timezone import localtime
+        return localtime(obj.token_expires_at).strftime("%d/%m/%Y %H:%M")
 
 
 # ── FacebookMessage ───────────────────────────────────────────────────────────
@@ -60,6 +92,8 @@ class FacebookLeadSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source="customer.name", read_only=True, default=None)
     assigned_to_name = serializers.CharField(source="assigned_to.full_name", read_only=True, default=None)
     messages = FacebookMessageSerializer(many=True, read_only=True)
+    tags = FacebookLeadTagSerializer(many=True, read_only=True)
+    internal_notes = FacebookLeadNoteSerializer(many=True, read_only=True)
     is_customer_converted = serializers.SerializerMethodField()
 
     def get_is_customer_converted(self, obj):
@@ -81,6 +115,7 @@ class FacebookLeadSerializer(serializers.ModelSerializer):
             "detected_phone", "is_customer_converted", "status", "is_archived",
             "customer", "customer_name",
             "assigned_to", "assigned_to_name",
+            "is_starred", "tags", "internal_notes",
             "last_message_at", "last_message_preview",
             "has_unread_message", "messages",
             "created_at", "updated_at",
@@ -94,6 +129,8 @@ class FacebookLeadListSerializer(serializers.ModelSerializer):
     page_name = serializers.CharField(source="page_config.page_name", read_only=True)
     page_id = serializers.CharField(source="page_config.page_id", read_only=True)
     customer_name = serializers.CharField(source="customer.name", read_only=True, default=None)
+    assigned_to_name = serializers.CharField(source="assigned_to.full_name", read_only=True, default=None)
+    tags = FacebookLeadTagSerializer(many=True, read_only=True)
     is_customer_converted = serializers.SerializerMethodField()
 
     def get_is_customer_converted(self, obj):
@@ -122,6 +159,8 @@ class FacebookLeadListSerializer(serializers.ModelSerializer):
             "page_id", "page_name", "page_config",
             "detected_phone", "is_customer_converted", "status", "is_archived",
             "customer", "customer_name",
+            "assigned_to", "assigned_to_name",
+            "is_starred", "tags",
             "last_message_at", "last_message_preview",
             "has_unread_message", "created_at", "latest_sender",
         ]
@@ -140,4 +179,3 @@ class QuickMediaAssetSerializer(serializers.ModelSerializer):
             "file_url", "created_by", "created_by_name", "created_at",
         ]
         read_only_fields = ["id", "company", "created_by", "created_at", "media_type_display"]
-

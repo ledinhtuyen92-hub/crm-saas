@@ -6,6 +6,7 @@ Chạy docker:
                           docker-compose exec -T web python manage.py migrate
                           docker exec crm_web python manage.py seed_permissions (chạy nạp quyền)
                           docker exec crm_web python manage.py loaddata sync_data.json
+                          docker exec crm_web python load_sync_data.py
 
 - Tắt khi không dùng: docker-compose down
 - Xem báo lỗi: docker-compose logs -f
