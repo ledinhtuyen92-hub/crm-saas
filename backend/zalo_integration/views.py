@@ -5,8 +5,10 @@ API Views: Webhook handler + CRUD ViewSets cho module Zalo.
 
 import json
 import logging
+import uuid
 
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -746,7 +748,7 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
             
             # Chỉ bật chế độ giả lập (demo/mock) nếu chưa cấu hình App ID thật hoặc đang test trên Lead Demo mẫu
             is_demo_lead = str(social_lead.social_id).startswith("demo_") or str(social_lead.social_id).endswith("_zalo")
-            if not oa_config.app_id or is_demo_lead:
+            if not oa_config.get_app_id() or is_demo_lead:
                 logger.warning(f"[ZaloChat] Chưa cấu hình App ID thật hoặc đang test trên Lead Demo ({err_code}: {err_msg}). Chuyển sang chế độ giả lập Demo.")
                 is_mock = True
                 msg_id = f"demo_zalo_{uuid.uuid4().hex[:8]}"
