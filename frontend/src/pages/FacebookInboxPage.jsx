@@ -1501,34 +1501,37 @@ export default function FacebookInboxPage() {
 
               {/* Message input & toolbar */}
               <div style={{ padding: '10px 14px', borderTop: '1px solid #e5e7eb', background: '#fff' }}>
-                {/* Hàng ngang phía trên khung nhập chat (3 nút: Yêu cầu SĐT, Yêu cầu Email, Văn bản mẫu) */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Button
-                    size="small"
-                    icon={<PhoneOutlined />}
-                    onClick={() => handleSend(null, true, false)}
-                    loading={sending}
-                    style={{ borderRadius: 14, color: '#1877f2', borderColor: '#1877f2', fontWeight: 500 }}
-                  >
-                    Yêu cầu SĐT
-                  </Button>
-                  <Button
-                    size="small"
-                    icon={<MailOutlined />}
-                    onClick={() => handleSend(null, false, true)}
-                    loading={sending}
-                    style={{ borderRadius: 14, color: '#10b981', borderColor: '#10b981', fontWeight: 500 }}
-                  >
-                    Yêu cầu Email
-                  </Button>
-                  <Button
-                    size="small"
-                    icon={<ThunderboltOutlined />}
-                    onClick={() => setQuickReplyModal(true)}
-                    style={{ borderRadius: 14, color: '#c2410c', borderColor: '#fdba74', background: '#fff7ed', fontWeight: 600 }}
-                  >
-                    ⚡ Văn bản mẫu (/gõ tắt)
-                  </Button>
+                {/* Hàng ngang phía trên khung nhập chat (3 nút biểu tượng icon: Yêu cầu SĐT, Yêu cầu Email, Văn bản mẫu) */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
+                  <Tooltip title="Yêu cầu khách chia sẻ số điện thoại" placement="top">
+                    <Button
+                      size="small"
+                      shape="circle"
+                      icon={<PhoneOutlined />}
+                      onClick={() => handleSend(null, true, false)}
+                      loading={sending}
+                      style={{ color: '#1877f2', borderColor: '#1877f2' }}
+                    />
+                  </Tooltip>
+                  <Tooltip title="Yêu cầu khách chia sẻ Email" placement="top">
+                    <Button
+                      size="small"
+                      shape="circle"
+                      icon={<MailOutlined />}
+                      onClick={() => handleSend(null, false, true)}
+                      loading={sending}
+                      style={{ color: '#10b981', borderColor: '#10b981' }}
+                    />
+                  </Tooltip>
+                  <Tooltip title="⚡ Văn bản mẫu (/gõ tắt)" placement="top">
+                    <Button
+                      size="small"
+                      shape="circle"
+                      icon={<ThunderboltOutlined />}
+                      onClick={() => setQuickReplyModal(true)}
+                      style={{ color: '#c2410c', borderColor: '#fdba74', background: '#fff7ed' }}
+                    />
+                  </Tooltip>
                 </div>
 
                 {/* Hàng ngang khung nhập chat + Nút đính kèm & Gửi bên phải */}
