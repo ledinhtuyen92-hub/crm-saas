@@ -84,6 +84,9 @@ export function AuthProvider({ children }) {
       }
 
       if (user.is_superuser || user.is_company_admin) return true
+      if (Array.isArray(permissionCode)) {
+        return permissionCode.some(code => (user.permissions || []).includes(code))
+      }
       return (user.permissions || []).includes(permissionCode)
     },
     [user, isModuleActive],

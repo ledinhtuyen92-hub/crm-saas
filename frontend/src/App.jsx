@@ -170,7 +170,7 @@ function App() {
               } />
               <Route path="/settings/zalo-templates" element={
                 <ModuleRoute moduleCode="zalo">
-                  <PermissionRoute permissionCode="zalo.config" fallback="/dashboard">
+                  <PermissionRoute permissionCode={['zalo.config', 'zalo.manage_templates']} fallback="/dashboard">
                     <ZaloTemplatePage />
                   </PermissionRoute>
                 </ModuleRoute>

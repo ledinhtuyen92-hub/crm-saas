@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import {
   Alert, Button, Card, Col, Collapse, Descriptions, Divider, Form, Input, InputNumber,
-  message, Modal, Row, Space, Switch, Tag, Tooltip, Typography
+  message, Modal, Popconfirm, Row, Space, Switch, Tag, Tooltip, Typography
 } from 'antd'
 import {
   ApiOutlined, CheckCircleOutlined, CloseCircleOutlined,
-  EditOutlined, InfoCircleOutlined, KeyOutlined,
+  DeleteOutlined, DisconnectOutlined, EditOutlined, InfoCircleOutlined, KeyOutlined,
   ReloadOutlined, SettingOutlined, WarningOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -23,6 +23,9 @@ export default function ZaloConfigPage() {
   const [saving, setSaving] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [isCreatingNew, setIsCreatingNew] = useState(false)
+  const [deleteModal, setDeleteModal] = useState({ open: false, config: null })
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
   const [form] = Form.useForm()
 
   const fetchConfig = async (preferredId = null) => {
@@ -65,41 +68,47 @@ export default function ZaloConfigPage() {
     }
   }, [])
 
-  const handleZaloOAuthLogin = () => {
-    const appId = config?.resolved_app_id || config?.app_id
+  const handleZaloOAuthLogin = (targetConfig = null) => {
+    const cfg = targetConfig && targetConfig.id ? targetConfig : config
+    const appId = cfg?.resolved_app_id || cfg?.app_id
     if (!appId) {
       message.warning('Vui lòng lưu cấu hình App ID (hoặc dùng cấu hình hệ thống) trước khi bấm Uỷ quyền.')
       return
     }
-    if (config?.id) {
-      localStorage.setItem('zalo_oauth_config_id', config.id)
+    if (cfg?.id) {
+      localStorage.setItem('zalo_oauth_config_id', cfg.id)
     }
     const redirectUri = window.location.origin + window.location.pathname
-    const oauthUrl = `https://oauth.zaloapp.com/v4/oa/permission?app_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${config?.id || ''}`
+    const oauthUrl = `https://oauth.zaloapp.com/v4/oa/permission?app_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${cfg?.id || ''}`
     window.location.href = oauthUrl
   }
 
-  const handleOpenModal = (isNew = false) => {
+  const handleOpenModal = (targetConfig = null, isNew = false) => {
     if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
-    setIsCreatingNew(isNew)
-    if (config && !isNew) {
+    const createNew = isNew || !targetConfig
+    setIsCreatingNew(createNew)
+    if (!createNew && targetConfig && targetConfig.id) {
+      setConfig(targetConfig)
       form.setFieldsValue({
-        use_system_config: config.use_system_config,
-        oa_name: config.oa_name,
-        app_id: config.app_id,
-        oa_id: config.oa_id,
-        secret_key: config.secret_key,
-        webhook_secret: config.webhook_secret,
-        access_token: config.access_token,
-        refresh_token: config.refresh_token,
-        auto_send_payment_zns: config.auto_send_payment_zns,
-        auto_send_delivery_zns: config.auto_send_delivery_zns,
-        auto_send_birthday_zns: config.auto_send_birthday_zns,
-        auto_create_customer_from_phone: config.auto_create_customer_from_phone || false,
-        lead_cleanup_days: config.lead_cleanup_days,
-        is_active: config.is_active,
+        use_system_config: targetConfig.use_system_config,
+        oa_name: targetConfig.oa_name,
+        app_id: targetConfig.app_id,
+        oa_id: targetConfig.oa_id,
+        secret_key: targetConfig.secret_key,
+        webhook_secret: targetConfig.webhook_secret,
+        access_token: targetConfig.access_token,
+        refresh_token: targetConfig.refresh_token,
+        auto_send_payment_zns: targetConfig.auto_send_payment_zns,
+        auto_send_delivery_zns: targetConfig.auto_send_delivery_zns,
+        auto_send_birthday_zns: targetConfig.auto_send_birthday_zns,
+        auto_create_customer_from_phone: targetConfig.auto_create_customer_from_phone || false,
+        lead_cleanup_days: targetConfig.lead_cleanup_days,
+        request_phone_template: targetConfig.request_phone_template,
+        request_email_template: targetConfig.request_email_template,
+        is_active: targetConfig.is_active,
       })
     } else {
+      setConfig(null)
       form.resetFields()
       form.setFieldsValue({
         use_system_config: true,
@@ -108,6 +117,8 @@ export default function ZaloConfigPage() {
         auto_send_birthday_zns: false,
         auto_create_customer_from_phone: false,
         lead_cleanup_days: 30,
+        request_phone_template: "Vui lòng chia sẻ số điện thoại để chúng tôi có thể liên hệ hỗ trợ tốt nhất.",
+        request_email_template: "Xin chào quý khách! Để thuận tiện gửi thông tin và tài liệu, xin vui lòng chia sẻ địa chỉ Email của quý khách tại đây ạ.",
         is_active: true,
       })
     }
@@ -136,11 +147,12 @@ export default function ZaloConfigPage() {
 
   const [verifying, setVerifying] = useState(false)
 
-  const handleVerifyToken = async () => {
-    if (!config) return
+  const handleVerifyToken = async (targetConfig = null) => {
+    const cfg = targetConfig && targetConfig.id ? targetConfig : config
+    if (!cfg) return
     setVerifying(true)
     try {
-      const res = await api.post(`/zalo/config/${config.id}/verify-token/`)
+      const res = await api.post(`/zalo/config/${cfg.id}/verify-token/`)
       Modal.success({
         title: 'Xác thực chuẩn Token Zalo OA',
         content: (
@@ -159,16 +171,51 @@ export default function ZaloConfigPage() {
     }
   }
 
-  const handleRefreshToken = async () => {
-    if (!config) return
+  const handleRefreshToken = async (targetConfig = null) => {
+    const cfg = targetConfig && targetConfig.id ? targetConfig : config
+    if (!cfg) return
     setRefreshing(true)
     try {
-      await api.post(`/zalo/config/${config.id}/refresh-token/`)
+      await api.post(`/zalo/config/${cfg.id}/refresh-token/`)
       message.success('Token đã được làm mới!')
       fetchConfig()
     } catch (err) {
       message.error(err.response?.data?.detail || 'Không thể làm mới token. Vui lòng bấm Đăng nhập & Lấy Token tự động.')
     } finally { setRefreshing(false) }
+  }
+
+  const handleDisconnect = async (id) => {
+    try {
+      await api.delete(`/zalo/config/${id}/`)
+      message.success('Đã ngắt kết nối Zalo OA. Lịch sử hội thoại & tin nhắn được bảo vệ an toàn!')
+      fetchConfig()
+    } catch { message.error('Không thể ngắt kết nối Zalo OA này.') }
+  }
+
+  const handleReconnect = async (id) => {
+    try {
+      await api.post(`/zalo/config/${id}/reconnect/`)
+      message.success('Đã khôi phục kết nối và kích hoạt lại Zalo OA!')
+      fetchConfig()
+    } catch { message.error('Lỗi khi khôi phục kết nối.') }
+  }
+
+  const openDeleteModal = (cfg) => {
+    setDeleteModal({ open: true, config: cfg })
+    setDeleteConfirmText('')
+  }
+
+  const handlePermanentDelete = async () => {
+    const { config: cfg } = deleteModal
+    if (!cfg) return
+    setDeleting(true)
+    try {
+      await api.delete(`/zalo/config/${cfg.id}/permanent-delete/`)
+      message.success(`Đã xoá vĩnh viễn Zalo OA "${cfg.oa_name}" và toàn bộ dữ liệu liên quan.`)
+      setDeleteModal({ open: false, config: null })
+      fetchConfig()
+    } catch { message.error('Lỗi khi xoá vĩnh viễn. Vui lòng thử lại.') }
+    finally { setDeleting(false) }
   }
 
   return (
@@ -182,170 +229,173 @@ export default function ZaloConfigPage() {
           <Text type="secondary">Kết nối Official Account Zalo để nhận Lead và gửi ZNS tự động</Text>
         </div>
         <Space>
-          {configs.length > 0 && (
-            <Button
-              onClick={() => handleOpenModal(true)}
-              style={{ borderRadius: 16 }}
-            >
-              + Thêm trang Zalo OA
-            </Button>
-          )}
           <Button
             type="primary"
             icon={<SettingOutlined />}
-            onClick={() => handleOpenModal(false)}
-            style={{ background: '#0068ff', borderColor: '#0068ff' }}
+            onClick={() => handleOpenModal(null, true)}
+            style={{ background: '#0068ff', borderColor: '#0068ff', borderRadius: 16 }}
           >
-            {config ? 'Chỉnh sửa cấu hình' : 'Kết nối Zalo OA'}
+            + Thêm Zalo OA mới
           </Button>
         </Space>
       </div>
 
-      {configs.length > 1 && (
-        <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Text strong style={{ marginRight: 8 }}>Chọn trang Zalo OA:</Text>
-          {configs.map((item, idx) => (
-            <Button
-              key={item.id}
-              type={config?.id === item.id ? 'primary' : 'default'}
-              onClick={() => setConfig(item)}
-              style={{ borderRadius: 18 }}
-            >
-              🟢 {item.oa_name || `OA #${idx + 1}`}
-            </Button>
-          ))}
-        </div>
-      )}
-
-      {!config ? (
+      {configs.length === 0 && !loading ? (
         <Card style={{ textAlign: 'center', padding: '40px 20px', borderRadius: 12 }}>
           <ApiOutlined style={{ fontSize: 48, color: '#d1d5db', marginBottom: 16, display: 'block' }} />
           <Title level={5} style={{ color: '#6b7280' }}>Chưa kết nối Zalo OA</Title>
           <Paragraph type="secondary" style={{ maxWidth: 400, margin: '0 auto 20px' }}>
             Kết nối Zalo Official Account để bắt đầu nhận Lead tự động từ Zalo và gửi thông báo ZNS đến khách hàng.
           </Paragraph>
-          <Button type="primary" icon={<ApiOutlined />} onClick={handleOpenModal}
+          <Button type="primary" icon={<ApiOutlined />} onClick={() => handleOpenModal(null, true)}
             style={{ background: '#0068ff', borderColor: '#0068ff' }}>
             Kết nối ngay
           </Button>
         </Card>
       ) : (
-        <Row gutter={[16, 16]}>
-          {/* Card trạng thái kết nối */}
-          <Col span={24}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {configs.map(item => (
             <Card
-              style={{ borderRadius: 12, border: config.is_active ? '1px solid #bbf7d0' : '1px solid #fed7aa' }}
+              key={item.id}
+              style={{
+                borderRadius: 12,
+                border: item.is_active ? '1px solid #bbf7d0' : '1px solid #fed7aa',
+              }}
               bodyStyle={{ padding: '20px 24px' }}
             >
-              <Row align="middle" gutter={16}>
-                <Col>
-                  <div style={{
-                    width: 48, height: 48, borderRadius: 12,
-                    background: config.is_active ? '#dcfce7' : '#fef3c7',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {config.is_active
-                      ? <CheckCircleOutlined style={{ fontSize: 24, color: '#16a34a' }} />
-                      : <CloseCircleOutlined style={{ fontSize: 24, color: '#d97706' }} />
-                    }
-                  </div>
-                </Col>
+              <Row align="middle" gutter={[16, 16]}>
                 <Col flex="auto">
-                  <Text strong style={{ fontSize: 16 }}>{config.oa_name}</Text>
-                  <div style={{ marginTop: 2 }}>
-                    <Tag color={config.is_active ? 'success' : 'warning'}>
-                      {config.is_active ? '✅ Đang hoạt động' : '⚠️ Tạm dừng'}
-                    </Tag>
-                    {config.is_token_near_expiry && (
-                      <Tag color="error" icon={<WarningOutlined />}>Token sắp hết hạn!</Tag>
-                    )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <div style={{
+                      width: 52, height: 52, borderRadius: 12,
+                      background: item.is_active ? '#dcfce7' : '#fef3c7',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                    }}>
+                      {item.is_active
+                        ? <CheckCircleOutlined style={{ fontSize: 26, color: '#16a34a' }} />
+                        : <CloseCircleOutlined style={{ fontSize: 26, color: '#d97706' }} />
+                      }
+                    </div>
+                    <div>
+                      <Text strong style={{ fontSize: 16 }}>{item.oa_name}</Text>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                        <Tag color={item.is_active ? 'success' : 'warning'}>
+                          {item.is_active ? '✅ Đang hoạt động' : '⚠️ Tạm ngắt kết nối'}
+                        </Tag>
+                        {item.is_token_near_expiry && (
+                          <Tag color="error" icon={<WarningOutlined />}>Token sắp hết hạn!</Tag>
+                        )}
+                        {item.oa_id && <Tag color="blue">OA ID: {item.oa_id}</Tag>}
+                        {item.use_system_config
+                          ? <Tag color="purple">🔧 Dùng App hệ thống</Tag>
+                          : <Tag color="orange">⚙️ App riêng</Tag>}
+                      </div>
+                      <Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: 'block' }}>
+                        {item.token_expires_at_display ? `⏳ Token hết hạn: ${item.token_expires_at_display}` : 'Chưa có Token'}
+                      </Text>
+                    </div>
                   </div>
                 </Col>
                 <Col>
-                  <Space>
-                    <Button
-                      type="primary"
-                      onClick={handleZaloOAuthLogin}
-                      style={{ background: '#0068ff', borderColor: '#0068ff' }}
-                    >
-                      Đăng nhập & Lấy Token tự động
-                    </Button>
-                    <Button
-                      onClick={handleVerifyToken}
-                      loading={verifying}
-                      icon={<InfoCircleOutlined />}
-                    >
-                      Kiểm tra chuẩn OA
-                    </Button>
-                    <Button
-                      icon={<ReloadOutlined />}
-                      loading={refreshing}
-                      onClick={handleRefreshToken}
-                    >
-                      Làm mới Token
-                    </Button>
+                  <Space wrap style={{ rowGap: 8 }}>
+                    {item.is_active ? (
+                      <>
+                        <Tooltip title="Đăng nhập Zalo và tự động lấy Access Token cho OA này">
+                          <Button
+                            type="primary"
+                            onClick={() => handleZaloOAuthLogin(item)}
+                            style={{ background: '#0068ff', borderColor: '#0068ff' }}
+                          >
+                            Đăng nhập & Lấy Token
+                          </Button>
+                        </Tooltip>
+                        <Button
+                          onClick={() => handleVerifyToken(item)}
+                          loading={verifying}
+                          icon={<InfoCircleOutlined />}
+                        >
+                          Kiểm tra chuẩn OA
+                        </Button>
+                        <Button
+                          icon={<ReloadOutlined />}
+                          loading={refreshing}
+                          onClick={() => handleRefreshToken(item)}
+                        >
+                          Làm mới Token
+                        </Button>
+                        <Button icon={<SettingOutlined />} onClick={() => handleOpenModal(item, false)}>
+                          Chỉnh sửa
+                        </Button>
+                        <Popconfirm
+                          title={
+                            <div style={{ maxWidth: 280 }}>
+                              <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠️ Xác nhận ngắt kết nối?</div>
+                              <div style={{ fontSize: 13, color: '#555' }}>
+                                Zalo OA sẽ bị <b>tạm dừng nhận tin nhắn mới</b>, nhưng <b style={{ color: '#10b981' }}>toàn bộ lịch sử hội thoại và tin nhắn được giữ nguyên hoàn toàn</b>. Bạn có thể khôi phục lại bất cứ lúc nào.
+                              </div>
+                            </div>
+                          }
+                          onConfirm={() => handleDisconnect(item.id)}
+                          okText="Ngắt kết nối" cancelText="Hủy" okType="warning"
+                          icon={null}
+                        >
+                          <Tooltip title="Tạm ngắt kết nối — lịch sử tin nhắn được bảo toàn, khôi phục được">
+                            <Button danger icon={<DisconnectOutlined />}>Ngắt kết nối</Button>
+                          </Tooltip>
+                        </Popconfirm>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          type="primary"
+                          icon={<ReloadOutlined />}
+                          onClick={() => handleReconnect(item.id)}
+                          style={{ background: '#10b981', borderColor: '#10b981' }}
+                        >
+                          🔄 Khôi phục kết nối
+                        </Button>
+                        <Button
+                          type="primary"
+                          onClick={() => handleZaloOAuthLogin(item)}
+                          style={{ background: '#0068ff', borderColor: '#0068ff' }}
+                        >
+                          Đăng nhập & Lấy Token
+                        </Button>
+                        <Button icon={<SettingOutlined />} onClick={() => handleOpenModal(item, false)}>
+                          Chỉnh sửa
+                        </Button>
+                        <Tooltip title="Xóa vĩnh viễn — mất toàn bộ lịch sử hội thoại, KHÔNG khôi phục được">
+                          <Button danger icon={<DeleteOutlined />} onClick={() => openDeleteModal(item)}>
+                            Xóa vĩnh viễn
+                          </Button>
+                        </Tooltip>
+                      </>
+                    )}
                   </Space>
                 </Col>
               </Row>
             </Card>
-          </Col>
+          ))}
 
-          {/* Thông báo hướng dẫn Callback URL cho Zalo OAuth */}
-          <Col span={24}>
-            <Alert
-              type="info"
-              showIcon
-              message="Cấu hình Callback URL trên Zalo Developers"
-              description={
-                <div>
-                  Để nút <b>Đăng nhập & Lấy Token tự động</b> không bị lỗi <code>Invalid redirect uri (-14003)</code>, bạn hãy vào trang <a href="https://developers.zalo.me" target="_blank" rel="noreferrer">Zalo Developers</a> &gt; App của bạn &gt; <b>Cài đặt (Settings)</b> &gt; điền chính xác đường dẫn sau vào ô <b>Official Account Callback Url</b>:
-                  <div style={{ marginTop: 8, background: '#f3f4f6', padding: '6px 12px', borderRadius: 6, display: 'inline-block', fontWeight: 600, color: '#1f2937' }}>
-                    {window.location.origin + window.location.pathname}
-                  </div>
+          {/* Hướng dẫn & Webhook chung cho hệ thống */}
+          <Alert
+            type="info"
+            showIcon
+            message="Cấu hình Callback URL & Webhook trên Zalo Developers"
+            description={
+              <div>
+                <div>1. <b>Official Account Callback Url (Để Đăng nhập lấy Token tự động):</b></div>
+                <div style={{ marginTop: 4, marginBottom: 12, background: '#f3f4f6', padding: '6px 12px', borderRadius: 6, display: 'inline-block', fontWeight: 600, color: '#1f2937' }}>
+                  {window.location.origin + window.location.pathname}
                 </div>
-              }
-            />
-          </Col>
-
-          {/* Thông tin chi tiết */}
-          <Col span={24}>
-            <Card style={{ borderRadius: 12 }} title={<><InfoCircleOutlined style={{ marginRight: 8 }} />Chi tiết kết nối</>}>
-              <Descriptions column={2} size="small" bordered style={{ borderRadius: 8, overflow: 'hidden' }}>
-                <Descriptions.Item label="Sử dụng Cấu hình App">
-                  {config.use_system_config ? <Tag color="blue">Từ Hệ thống SaaS</Tag> : <Tag color="default">Riêng lẻ (Custom)</Tag>}
-                </Descriptions.Item>
-                <Descriptions.Item label="App ID">
-                  <Text code>{config.resolved_app_id || config.app_id || '—'}</Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="OA ID">
-                  <Text code>{config.oa_id || '—'}</Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Token hết hạn" span={2}>
-                  {config.token_expires_at_display || '—'}
-                  {config.is_token_near_expiry && (
-                    <Tag color="error" style={{ marginLeft: 8 }}>Cần refresh!</Tag>
-                  )}
-                </Descriptions.Item>
-              </Descriptions>
-
-              <Divider style={{ margin: '16px 0' }} />
-
-              <Alert
-                type="info"
-                showIcon
-                message="Cấu hình Webhook"
-                description={
-                  <div>
-                    <div>Cài đặt URL Webhook sau vào trang Zalo Developers:</div>
-                    <Text code style={{ display: 'block', marginTop: 8, wordBreak: 'break-all' }}>
-                      {window.location.origin}/api/zalo/webhook/
-                    </Text>
-                  </div>
-                }
-              />
-            </Card>
-          </Col>
-        </Row>
+                <div>2. <b>URL Webhook (Để Zalo đẩy tin nhắn về CRM khi khách chat):</b></div>
+                <Text code style={{ display: 'block', marginTop: 4, wordBreak: 'break-all' }}>
+                  {window.location.origin}/api/zalo/webhook/
+                </Text>
+              </div>
+            }
+          />
+        </div>
       )}
 
       {/* Modal Form */}
@@ -463,11 +513,87 @@ export default function ZaloConfigPage() {
             <InputNumber min={1} max={365} style={{ width: '100%' }} suffix="ngày" />
           </Form.Item>
 
+          <Divider style={{ margin: '12px 0' }} />
+          <Text strong style={{ fontSize: 13, color: '#1e293b', display: 'block', marginBottom: 12 }}>💬 Mẫu tin nhắn xin SĐT & Email (Gửi khi bấm nút trong Zalo Inbox)</Text>
+          <Form.Item
+            name="request_phone_template"
+            label="Mẫu tin nhắn xin Số điện thoại"
+            help="Sẽ được dùng làm nội dung gửi kèm khi nhân viên bấm nút xin SĐT trong khung chat."
+          >
+            <Input.TextArea rows={2} placeholder="Vui lòng chia sẻ số điện thoại để chúng tôi có thể liên hệ hỗ trợ tốt nhất." />
+          </Form.Item>
+          <Form.Item
+            name="request_email_template"
+            label="Mẫu tin nhắn xin Email"
+            help="Sẽ được dùng khi nhân viên bấm nút xin Email trong khung chat."
+          >
+            <Input.TextArea rows={2} placeholder="Xin chào quý khách! Để thuận tiện gửi thông tin và tài liệu, xin vui lòng chia sẻ địa chỉ Email của quý khách tại đây ạ." />
+          </Form.Item>
+
           <Divider />
           <Form.Item name="is_active" label="Trạng thái" valuePropName="checked">
             <Switch checkedChildren="Hoạt động" unCheckedChildren="Tạm dừng" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal xác nhận xóa vĩnh viễn Zalo OA */}
+      <Modal
+        title={
+          <Space style={{ color: '#dc2626' }}>
+            <WarningOutlined />
+            <span>Xác nhận xóa vĩnh viễn Zalo OA</span>
+          </Space>
+        }
+        open={deleteModal.open}
+        onCancel={() => setDeleteModal({ open: false, config: null })}
+        footer={[
+          <Button key="cancel" onClick={() => setDeleteModal({ open: false, config: null })}>
+            Hủy bỏ
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            danger
+            icon={<DeleteOutlined />}
+            loading={deleting}
+            disabled={deleteConfirmText !== deleteModal.config?.oa_name}
+            onClick={handlePermanentDelete}
+          >
+            Xóa vĩnh viễn không khôi phục
+          </Button>,
+        ]}
+      >
+        <Alert
+          type="error"
+          showIcon
+          message="Hành động này KHÔNG THỂ khôi phục!"
+          description={
+            <div>
+              Trang Zalo OA <b>{deleteModal.config?.oa_name}</b> sẽ bị xóa khỏi hệ thống SaaS, cùng toàn bộ:
+              <ul style={{ margin: '8px 0', paddingLeft: 20 }}>
+                <li>Lịch sử hội thoại Zalo</li>
+                <li>Toàn bộ tin nhắn Zalo đã lưu</li>
+                <li>Các cài đặt ZNS tự động</li>
+              </ul>
+              Nếu bạn chỉ muốn tạm dừng, hãy chọn <b>Ngắt kết nối</b>.
+            </div>
+          }
+          style={{ marginBottom: 16 }}
+        />
+        <div>
+          <Text>Để xác nhận, vui lòng nhập chính xác tên OA:</Text>
+          <div style={{ fontWeight: 700, margin: '6px 0', color: '#111', background: '#f3f4f6', padding: '4px 8px', borderRadius: 4, display: 'inline-block' }}>
+            {deleteModal.config?.oa_name}
+          </div>
+          <Input
+            placeholder={`Nhập "${deleteModal.config?.oa_name}" để xác nhận...`}
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            style={{ marginTop: 6 }}
+            status={deleteConfirmText && deleteConfirmText !== deleteModal.config?.oa_name ? 'error' : ''}
+          />
+        </div>
       </Modal>
     </div>
   )

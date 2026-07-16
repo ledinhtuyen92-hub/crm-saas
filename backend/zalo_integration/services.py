@@ -620,8 +620,11 @@ def send_zalo_chat_message(oa_config, zalo_uid: str, text: str = "", file_token:
             json=payload,
             timeout=15,
         )
-        response.raise_for_status()
-        return response.json()
+        try:
+            return response.json()
+        except Exception:
+            response.raise_for_status()
+            return {"error": -1, "message": f"HTTP {response.status_code}: {response.text}"}
     except Exception as e:
         logger.error(f"[ZaloChat] Send error: {e}")
         return {"error": -1, "message": str(e)}

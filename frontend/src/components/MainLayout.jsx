@@ -147,39 +147,42 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           icon: <span style={{ color: '#1877f2', fontWeight: 900, fontSize: 14 }}>𝐟</span>,
           label: <Link to="/facebook/inbox">Facebook Inbox</Link>,
         }] : []),
-        ...(isCompanyAdmin
+        ...(isCompanyAdmin || (isModuleActive('zalo') && (hasPermission('zalo.config') || hasPermission('zalo.manage_templates'))) || (isModuleActive('facebook') && hasPermission('facebook.manage_config'))
           ? [
               { type: 'divider' },
               {
                 key: 'settings-group',
                 icon: <SettingOutlined />,
-                label: 'Quản lý công ty',
+                label: isCompanyAdmin ? 'Quản lý công ty' : 'Cấu hình hệ thống',
                 children: [
-                  {
-                    key: '/settings/general',
-                    icon: <SettingOutlined />,
-                    label: <Link to="/settings/general">Cài đặt & Mẫu báo giá</Link>,
-                  },
-                  {
-                    key: '/settings/users',
-                    icon: <UsergroupAddOutlined />,
-                    label: <Link to="/settings/users">Nhân viên</Link>,
-                  },
-                  {
-                    key: '/settings/departments',
-                    icon: <TeamOutlined />,
-                    label: <Link to="/settings/departments">Phòng ban</Link>,
-                  },
-                  {
-                    key: '/settings/roles',
-                    icon: <KeyOutlined />,
-                    label: <Link to="/settings/roles">Vai trò & Quyền</Link>,
-                  },
+                  ...(isCompanyAdmin ? [
+                    {
+                      key: '/settings/general',
+                      icon: <SettingOutlined />,
+                      label: <Link to="/settings/general">Cài đặt & Mẫu báo giá</Link>,
+                    },
+                    {
+                      key: '/settings/users',
+                      icon: <UsergroupAddOutlined />,
+                      label: <Link to="/settings/users">Nhân viên</Link>,
+                    },
+                    {
+                      key: '/settings/departments',
+                      icon: <TeamOutlined />,
+                      label: <Link to="/settings/departments">Phòng ban</Link>,
+                    },
+                    {
+                      key: '/settings/roles',
+                      icon: <KeyOutlined />,
+                      label: <Link to="/settings/roles">Vai trò & Quyền</Link>,
+                    },
+                  ] : []),
                   ...(isModuleActive('zalo') && hasPermission('zalo.config') ? [{
                     key: '/settings/zalo',
                     icon: <WechatOutlined />,
                     label: <Link to="/settings/zalo">Cấu hình Zalo OA</Link>,
-                  }, {
+                  }] : []),
+                  ...(isModuleActive('zalo') && (hasPermission('zalo.config') || hasPermission('zalo.manage_templates')) ? [{
                     key: '/settings/zalo-templates',
                     icon: <MessageOutlined />,
                     label: <Link to="/settings/zalo-templates">Mẫu Zalo ZNS</Link>,

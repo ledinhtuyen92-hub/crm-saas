@@ -13,7 +13,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import SocialLead, ZaloMessageLog, ZaloMessageTemplate, ZaloOaConfig
+from .models import (
+    SocialLead, ZaloMessageLog, ZaloMessageTemplate, ZaloOaConfig,
+    ZaloLeadTag, ZaloLeadNote, ZaloQuickReply
+)
 from .serializers import (
     ConvertLeadSerializer,
     SocialLeadDetailSerializer,
@@ -24,6 +27,9 @@ from .serializers import (
     ZaloOaConfigSerializer,
     ZaloOaConfigWriteSerializer,
     ZaloMessageSerializer,
+    ZaloLeadTagSerializer,
+    ZaloLeadNoteSerializer,
+    ZaloQuickReplySerializer,
 )
 from .services import (
     convert_social_lead,
@@ -66,8 +72,9 @@ class ZaloWebhookView(APIView):
             return Response({"error": "Invalid JSON"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Tìm OA Config theo oa_id (vì 1 app_id có thể dùng cho nhiều OA)
-        oa_id = data.get("oa_id") or data.get("recipient", {}).get("id")
-        app_id = data.get("app_id")
+        oa_id_raw = data.get("oa_id") or data.get("recipient", {}).get("id")
+        oa_id = str(oa_id_raw).strip() if oa_id_raw else ""
+        app_id = str(data.get("app_id", "")).strip()
         
         try:
             oa_config = ZaloOaConfig.objects.select_related("company").get(
@@ -250,6 +257,36 @@ class ZaloOaConfigViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
 
+    def perform_destroy(self, instance):
+        """Soft delete: Ngắt kết nối Zalo OA (is_active=False) để giữ an toàn toàn bộ lịch sử hội thoại/tin nhắn."""
+        instance.is_active = False
+        instance.access_token = ""
+        instance.refresh_token = ""
+        instance.token_expires_at = None
+        instance.save(update_fields=["is_active", "access_token", "refresh_token", "token_expires_at", "updated_at"])
+
+    @action(detail=True, methods=["delete", "post"], url_path="permanent-delete")
+    def permanent_delete(self, request, pk=None):
+        """Xóa vĩnh viễn Zalo OA và toàn bộ hội thoại/tin nhắn liên quan (chỉ dùng khi thực sự cần)."""
+        instance = self.get_object()
+        oa_name = instance.oa_name
+        leads_count = instance.social_leads.count()
+        instance.delete()
+        return Response({
+            "detail": f"Đã xóa vĩnh viễn Zalo OA {oa_name} và {leads_count} hội thoại liên quan."
+        })
+
+    @action(detail=True, methods=["post"], url_path="reconnect")
+    def reconnect(self, request, pk=None):
+        """Khôi phục trạng thái hoạt động cho Zalo OA (is_active=True)."""
+        instance = self.get_object()
+        instance.is_active = True
+        instance.save(update_fields=["is_active", "updated_at"])
+        return Response({
+            "detail": f"Đã khôi phục kết nối cho Zalo OA {instance.oa_name}.",
+            "data": ZaloOaConfigSerializer(instance).data
+        })
+
     @action(detail=True, methods=["post"], url_path="refresh-token")
     def refresh_token(self, request, pk=None):
         """Manually refresh access token."""
@@ -263,7 +300,7 @@ class ZaloOaConfigViewSet(viewsets.ModelViewSet):
                 "data": serializer.data,
             })
         err_reason = getattr(config, "_last_refresh_error", None)
-        msg = f"Zalo từ chối gia hạn Token ({err_reason}). Bạn vui lòng bấm nút 'Đăng nhập & Lấy Token tự động' để cấp lại mã refresh mới." if err_reason else "Không thể làm mới token. Vui lòng bấm 'Đăng nhập & Lấy Token tự động' để cấp lại."
+        msg = f"Zalo từ chối gia hạn Token ({err_reason}). Bạn vui lòng bấm nút 'Đăng nhập & Lấy Token' để cấp lại mã refresh mới." if err_reason else "Không thể làm mới token. Vui lòng bấm 'Đăng nhập & Lấy Token' để cấp lại."
         return Response(
             {"detail": msg},
             status=status.HTTP_400_BAD_REQUEST,
@@ -273,10 +310,12 @@ class ZaloOaConfigViewSet(viewsets.ModelViewSet):
     def verify_token(self, request, pk=None):
         """Kiểm tra token hiện tại thuộc Zalo OA nào thông qua Zalo Open API."""
         config = self.get_object()
+        if not config.is_active or not config.access_token:
+            return Response({"error": f"OA '{config.oa_name}' đang ngắt kết nối hoặc chưa có Access Token. Vui lòng bấm 'Đăng nhập & Lấy Token'."}, status=status.HTTP_400_BAD_REQUEST)
         from zalo_integration.services import fetch_zalo_oa_info
         oa_info = fetch_zalo_oa_info(config.access_token)
         if not oa_info:
-            return Response({"error": "Token không hợp lệ hoặc đã hết hạn trên Zalo."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Token không hợp lệ hoặc đã hết hạn trên Zalo. Vui lòng bấm 'Đăng nhập & Lấy Token' để cấp lại."}, status=status.HTTP_400_BAD_REQUEST)
         
         config.oa_id = oa_info["oa_id"]
         if oa_info["name"]:
@@ -375,13 +414,33 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
     """
 
     def get_queryset(self):
+        user = self.request.user
         qs = SocialLead.objects.filter(
-            company=self.request.user.company
+            company=user.company
         ).select_related("assigned_to", "oa_config")
+
+        # ── Cơ chế tầm nhìn giới hạn (giống Pancake) ─────────────────────────
+        # Admin công ty và Superuser luôn thấy tất cả hội thoại
+        # Nhân viên có quyền "zalo.view_all_inbox" thấy tất cả hội thoại
+        # Nhân viên KHÔNG có quyền đó chỉ thấy: Chưa phân công + Đã phân công cho chính mình
+        is_admin = user.is_superuser or user.is_company_admin
+        if not is_admin:
+            has_view_all = (
+                user.role and user.role.permissions.filter(code="zalo.view_all_inbox").exists()
+            )
+            if not has_view_all:
+                from django.db.models import Q
+                qs = qs.filter(Q(assigned_to__isnull=True) | Q(assigned_to=user))
+        # ─────────────────────────────────────────────────────────────────────
+
 
         # Filter theo status
         status_filter = self.request.query_params.get("status")
-        if status_filter:
+        if status_filter == "not_added":
+            qs = qs.filter(is_customer_converted=False)
+        elif status_filter == "converted":
+            qs = qs.filter(is_customer_converted=True)
+        elif status_filter:
             qs = qs.filter(status=status_filter)
 
         # Filter theo platform
@@ -403,13 +462,59 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
         has_phone = self.request.query_params.get("has_phone")
         if has_phone in ["true", "1", "True"]:
             qs = qs.exclude(detected_phone="")
+        elif has_phone in ["false", "0", "False"]:
+            from django.db.models import Q
+            qs = qs.filter(Q(detected_phone="") | Q(detected_phone__isnull=True))
 
         # Filter theo Zalo OA Config (đa trang OA)
         oa_config_id = self.request.query_params.get("oa_config")
         if oa_config_id and str(oa_config_id) != "all":
             qs = qs.filter(oa_config_id=oa_config_id)
 
-        return qs.order_by("-last_interaction_date")
+        # Filter theo VIP Star
+        is_starred = self.request.query_params.get("is_starred")
+        if is_starred in ["true", "1", "True"]:
+            qs = qs.filter(is_starred=True)
+
+        # Filter theo Nhãn (Tag)
+        tag_id = self.request.query_params.get("tag")
+        if tag_id:
+            qs = qs.filter(tags__id=tag_id)
+
+        # Filter theo Sale phụ trách
+        assigned_filter = self.request.query_params.get("assigned_to")
+        if assigned_filter:
+            if assigned_filter in ["my", "me"]:
+                qs = qs.filter(assigned_to=self.request.user)
+            elif str(assigned_filter) == "unassigned":
+                qs = qs.filter(assigned_to__isnull=True)
+            elif str(assigned_filter) != "all":
+                qs = qs.filter(assigned_to_id=assigned_filter)
+
+        from django.db.models import Subquery, OuterRef
+        from .models import ZaloMessage
+        latest_direction_sq = Subquery(
+            ZaloMessage.objects.filter(social_lead=OuterRef("pk"))
+            .order_by("-created_at")
+            .values("direction")[:1]
+        )
+        qs = qs.annotate(latest_direction=latest_direction_sq)
+
+        reply_filter = self.request.query_params.get("reply_filter")
+        if reply_filter == "unanswered":
+            qs = qs.filter(latest_direction=ZaloMessage.DIRECTION_INBOUND)
+        elif reply_filter == "read_unanswered":
+            qs = qs.filter(latest_direction=ZaloMessage.DIRECTION_INBOUND, has_unread_message=False)
+
+        sort_by = self.request.query_params.get("sort_by")
+        if sort_by == "waiting_longest":
+            if not reply_filter:
+                qs = qs.filter(latest_direction=ZaloMessage.DIRECTION_INBOUND)
+            return qs.order_by("last_interaction_date").distinct()
+        elif sort_by == "time_asc":
+            return qs.order_by("last_interaction_date").distinct()
+        else:
+            return qs.order_by("-last_interaction_date").distinct()
 
     def get_serializer_class(self):
         if self.action in ["update", "partial_update"]:
@@ -423,6 +528,15 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
             {"detail": "SocialLead được tạo tự động qua Webhook. Không thể tạo thủ công."},
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
+
+    def destroy(self, request, *args, **kwargs):
+        role_name = request.user.role.name.lower() if request.user.role and request.user.role.name else ""
+        if not ("giám đốc" in role_name or "admin" in role_name or "quản trị" in role_name or request.user.is_superuser):
+            return Response(
+                {"error": "Bạn là Nhân viên Sale, không được phép xóa hội thoại Zalo để đảm bảo an toàn dữ liệu khách hàng."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().destroy(request, *args, **kwargs)
 
     @action(detail=True, methods=["post"], url_path="convert")
     def convert(self, request, pk=None):
@@ -524,6 +638,36 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
         social_lead.save(update_fields=["assigned_to"])
         return Response({"detail": f"Đã phân công cho {user.get_full_name()}."})
 
+    @action(detail=True, methods=["post"], url_path="toggle_star")
+    def toggle_star(self, request, pk=None):
+        """Bật/tắt trạng thái VIP cho hội thoại Zalo."""
+        lead = self.get_object()
+        lead.is_starred = not lead.is_starred
+        lead.save(update_fields=["is_starred", "updated_at"])
+        return Response({"is_starred": lead.is_starred})
+
+    @action(detail=True, methods=["post"], url_path="manage_tags")
+    def manage_tags(self, request, pk=None):
+        """Quản lý danh sách thẻ/nhãn của hội thoại."""
+        lead = self.get_object()
+        tag_ids = request.data.get("tag_ids", [])
+        tags = ZaloLeadTag.objects.filter(company=request.user.company, id__in=tag_ids)
+        lead.tags.set(tags)
+        return Response({"tags": ZaloLeadTagSerializer(lead.tags.all(), many=True).data})
+
+    @action(detail=True, methods=["get", "post"], url_path="notes")
+    def notes(self, request, pk=None):
+        """Lấy danh sách hoặc thêm ghi chú nội bộ cho hội thoại."""
+        lead = self.get_object()
+        if request.method == "POST":
+            content = request.data.get("content", "").strip()
+            if not content:
+                return Response({"error": "Nội dung không được rỗng"}, status=status.HTTP_400_BAD_REQUEST)
+            note = ZaloLeadNote.objects.create(lead=lead, user=request.user, content=content)
+            return Response(ZaloLeadNoteSerializer(note).data, status=status.HTTP_201_CREATED)
+        notes_qs = lead.internal_notes.select_related("user").all()
+        return Response(ZaloLeadNoteSerializer(notes_qs, many=True).data)
+
     @action(detail=True, methods=["get"])
     def messages(self, request, pk=None):
         """Lấy danh sách tin nhắn của 1 Lead và đánh dấu đã đọc."""
@@ -551,12 +695,18 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
         if not oa_config.is_active:
             return Response({"error": "OA này đang tạm dừng"}, status=status.HTTP_400_BAD_REQUEST)
 
-        text = request.data.get("text", "")
+        text = request.data.get("text", "").strip()
         request_phone = request.data.get("request_phone") in ["true", "True", True, 1, "1"]
+        request_email = request.data.get("request_email") in ["true", "True", True, 1, "1"]
         file_obj = request.FILES.get("file")
 
-        if not text and not file_obj and not request_phone:
-            return Response({"error": "Vui lòng nhập nội dung, đính kèm file hoặc yêu cầu SĐT."}, status=status.HTTP_400_BAD_REQUEST)
+        if not text and not file_obj and not request_phone and not request_email:
+            return Response({"error": "Vui lòng nhập nội dung, đính kèm file hoặc yêu cầu SĐT/Email."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if request_email and not text:
+            text = oa_config.request_email_template if oa_config and oa_config.request_email_template else "Xin chào quý khách! Để thuận tiện gửi thông tin và tài liệu, xin vui lòng chia sẻ địa chỉ Email của quý khách tại đây ạ."
+        elif request_phone and not text:
+            text = oa_config.request_phone_template if oa_config and oa_config.request_phone_template else "Vui lòng chia sẻ số điện thoại để chúng tôi có thể liên hệ hỗ trợ tốt nhất."
 
         file_token = ""
         image_id = ""
@@ -589,17 +739,49 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
             request_phone=request_phone
         )
         
+        is_mock = False
         if res.get("error", 0) != 0:
-            return Response(
-                {"error": f"Lỗi từ Zalo: {res.get('message', '')}", "details": res},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            err_code = res.get("error", 0)
+            err_msg = str(res.get("message", ""))
+            
+            # Chỉ bật chế độ giả lập (demo/mock) nếu chưa cấu hình App ID thật hoặc đang test trên Lead Demo mẫu
+            is_demo_lead = str(social_lead.social_id).startswith("demo_") or str(social_lead.social_id).endswith("_zalo")
+            if not oa_config.app_id or is_demo_lead:
+                logger.warning(f"[ZaloChat] Chưa cấu hình App ID thật hoặc đang test trên Lead Demo ({err_code}: {err_msg}). Chuyển sang chế độ giả lập Demo.")
+                is_mock = True
+                msg_id = f"demo_zalo_{uuid.uuid4().hex[:8]}"
+            else:
+                # Dịch mã lỗi từ máy chủ Zalo sang tiếng Việt để báo rõ nguyên nhân cho người dùng
+                code_str = str(err_code)
+                msg_lower = err_msg.lower()
+                if err_code in [-216, -201] or "invalid user_id" in msg_lower or "user not found" in msg_lower:
+                    explanation = f"Khách hàng chưa tương tác với Zalo OA trong vòng 48 giờ qua, hoặc số điện thoại/ID Zalo không hợp lệ (Lỗi Zalo {err_code}: {err_msg}). Zalo quy định OA chỉ được nhắn tin chat thông thường nếu khách đã nhắn tin cho OA trong 48h hoặc khách nằm trong danh sách Tester của App đang phát triển."
+                elif err_code in [-213, -214] or "48h" in msg_lower or "window" in msg_lower or "not allowed" in msg_lower:
+                    explanation = f"Đã quá 48 giờ kể từ lần cuối khách hàng gửi tin nhắn cho Zalo OA (Lỗi Zalo {err_code}: {err_msg}). Theo quy định của Zalo, sau 48h bạn cần sử dụng Mẫu Zalo ZNS để liên hệ với khách."
+                elif err_code in [-124, -14, -202] or "token" in msg_lower or "expired" in msg_lower:
+                    explanation = f"Access Token của Zalo OA đã hết hạn hoặc bị Zalo thu hồi (Lỗi Zalo {err_code}: {err_msg}). Vui lòng vào Cấu hình Zalo OA bấm 'Đăng nhập & Lấy Token' để làm mới."
+                elif err_code in [-204, -205, -209] or "permission" in msg_lower or "app" in msg_lower:
+                    explanation = f"Ứng dụng Zalo (Zalo App) chưa được cấp quyền gửi tin nhắn hoặc đang ở chế độ Đang phát triển mà tài khoản này chưa được thêm vào danh sách Tester (Lỗi Zalo {err_code}: {err_msg})."
+                elif err_code in [-230, -232] or "quota" in msg_lower or "limit" in msg_lower:
+                    explanation = f"Zalo OA đã hết hạn mức (quota) gửi tin nhắn miễn phí trong tháng hoặc bị giới hạn (Lỗi Zalo {err_code}: {err_msg})."
+                else:
+                    explanation = f"Zalo từ chối gửi tin nhắn (Mã lỗi {err_code}: {err_msg}). Vui lòng kiểm tra lại cấu hình Zalo App và quyền gửi tin."
+
+                return Response(
+                    {
+                        "error": explanation,
+                        "zalo_error_code": err_code,
+                        "zalo_message": err_msg,
+                        "details": res
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            msg_id = res.get("data", {}).get("message_id", "")
 
         # Ghi vào DB
         from .models import ZaloMessage
         from django.utils import timezone
-        
-        msg_id = res.get("data", {}).get("message_id", "")
         
         msg = ZaloMessage.objects.create(
             company=request.user.company,
@@ -617,7 +799,11 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
         social_lead.last_interaction_date = timezone.now()
         social_lead.save(update_fields=["last_message", "last_interaction_date", "updated_at"])
 
-        return Response(ZaloMessageSerializer(msg).data)
+        data = ZaloMessageSerializer(msg).data
+        if is_mock:
+            data["is_mock"] = True
+            data["note"] = "💡 [Chế độ thử nghiệm]: Access token Zalo OA hiện tại hết hạn hoặc là tài khoản Demo. Tin nhắn đã được lưu vào hệ thống CRM để kiểm thử trải nghiệm."
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 # ── ZaloMessageTemplate ViewSet ───────────────────────────────────────────────
@@ -766,3 +952,30 @@ class ZaloMessageLogViewSet(viewsets.ReadOnlyModelViewSet):
             qs = qs.filter(status=status_filter)
 
         return qs.order_by("-sent_at")
+
+
+# ── ZaloLeadTag ViewSet ──────────────────────────────────────────────────────
+
+class ZaloLeadTagViewSet(viewsets.ModelViewSet):
+    """Quản lý nhãn hội thoại Zalo theo công ty."""
+    serializer_class = ZaloLeadTagSerializer
+
+    def get_queryset(self):
+        return ZaloLeadTag.objects.filter(company=self.request.user.company).order_by("name")
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company)
+
+
+# ── ZaloQuickReply ViewSet ───────────────────────────────────────────────────
+
+class ZaloQuickReplyViewSet(viewsets.ModelViewSet):
+    """Quản lý tin nhắn mẫu Zalo theo công ty."""
+    serializer_class = ZaloQuickReplySerializer
+
+    def get_queryset(self):
+        return ZaloQuickReply.objects.filter(company=self.request.user.company).order_by("title")
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company, created_by=self.request.user)
+

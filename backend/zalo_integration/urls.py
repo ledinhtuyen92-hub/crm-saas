@@ -7,6 +7,8 @@ from .views import (
     ZaloOaConfigViewSet,
     ZaloWebhookView,
     SocialLeadViewSet,
+    ZaloLeadTagViewSet,
+    ZaloQuickReplyViewSet,
 )
 
 router = DefaultRouter()
@@ -14,6 +16,8 @@ router.register(r"config", ZaloOaConfigViewSet, basename="zalo-config")
 router.register(r"social-leads", SocialLeadViewSet, basename="social-lead")
 router.register(r"templates", ZaloMessageTemplateViewSet, basename="zalo-template")
 router.register(r"message-logs", ZaloMessageLogViewSet, basename="zalo-log")
+router.register(r"tags", ZaloLeadTagViewSet, basename="zalo-tag")
+router.register(r"quick-replies", ZaloQuickReplyViewSet, basename="zalo-quick-reply")
 
 urlpatterns = [
     # Webhook endpoint (Public — Zalo server gọi vào, không cần JWT)

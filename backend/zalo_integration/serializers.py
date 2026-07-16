@@ -1,6 +1,35 @@
 from rest_framework import serializers
 
-from .models import SocialLead, ZaloMessageLog, ZaloMessageTemplate, ZaloOaConfig, ZaloMessage
+from .models import (
+    SocialLead, ZaloMessageLog, ZaloMessageTemplate, ZaloOaConfig, ZaloMessage,
+    ZaloLeadTag, ZaloLeadNote, ZaloQuickReply
+)
+
+
+# ── ZaloLeadTag & Note & QuickReply Serializers ──────────────────────────────
+
+class ZaloLeadTagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ZaloLeadTag
+        fields = ["id", "name", "color", "created_at"]
+
+
+class ZaloLeadNoteSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source="user.get_full_name", read_only=True, default="Nội bộ")
+
+    class Meta:
+        model = ZaloLeadNote
+        fields = ["id", "lead", "user", "user_name", "content", "created_at"]
+        read_only_fields = ["id", "user", "created_at"]
+
+
+class ZaloQuickReplySerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source="created_by.get_full_name", read_only=True, default=None)
+
+    class Meta:
+        model = ZaloQuickReply
+        fields = ["id", "company", "shortcut", "title", "content", "created_by", "created_by_name", "created_at"]
+        read_only_fields = ["id", "company", "created_by", "created_at"]
 
 
 # ── ZaloOaConfig ─────────────────────────────────────────────────────────────
@@ -17,7 +46,8 @@ class ZaloOaConfigSerializer(serializers.ModelSerializer):
             "access_token", "refresh_token", "token_expires_at",
             "token_expires_at_display", "is_token_near_expiry",
             "webhook_secret", "auto_send_payment_zns", "auto_send_delivery_zns", 
-            "auto_send_birthday_zns", "auto_create_customer_from_phone", "lead_cleanup_days", "is_active", 
+            "auto_send_birthday_zns", "auto_create_customer_from_phone", "lead_cleanup_days",
+            "request_phone_template", "request_email_template", "is_active", 
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "company", "created_at", "updated_at",
@@ -28,6 +58,8 @@ class ZaloOaConfigSerializer(serializers.ModelSerializer):
         }
 
     def get_token_expires_at_display(self, obj):
+        if not obj.is_active or not obj.access_token:
+            return "Trống (Đã ngắt kết nối)"
         if obj.token_expires_at:
             import django.utils.timezone as tz
             local_dt = obj.token_expires_at.astimezone(tz.get_current_timezone())
@@ -43,7 +75,8 @@ class ZaloOaConfigWriteSerializer(serializers.ModelSerializer):
             "oa_name", "use_system_config", "app_id", "secret_key", "oa_id",
             "access_token", "refresh_token", "token_expires_at",
             "webhook_secret", "auto_send_payment_zns", "auto_send_delivery_zns", 
-            "auto_send_birthday_zns", "auto_create_customer_from_phone", "lead_cleanup_days", "is_active",
+            "auto_send_birthday_zns", "auto_create_customer_from_phone", "lead_cleanup_days",
+            "request_phone_template", "request_email_template", "is_active",
         ]
 
     def validate(self, attrs):
@@ -100,6 +133,7 @@ class SocialLeadListSerializer(serializers.ModelSerializer):
     is_converted = serializers.SerializerMethodField()
     is_customer_converted = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
+    tags = ZaloLeadTagSerializer(many=True, read_only=True)
 
     class Meta:
         model = SocialLead
@@ -110,7 +144,7 @@ class SocialLeadListSerializer(serializers.ModelSerializer):
             "status", "status_display",
             "assigned_to", "assigned_to_name",
             "is_converted", "detected_phone", "detected_email", "detected_address",
-            "is_customer_converted",
+            "is_customer_converted", "is_starred", "tags",
             "created_at", "has_unread_message", "unread_count"
         ]
 
@@ -140,6 +174,8 @@ class SocialLeadDetailSerializer(serializers.ModelSerializer):
     converted_customer_name = serializers.SerializerMethodField()
     is_customer_converted = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
+    tags = ZaloLeadTagSerializer(many=True, read_only=True)
+    internal_notes = ZaloLeadNoteSerializer(many=True, read_only=True)
 
     class Meta:
         model = SocialLead
@@ -152,7 +188,7 @@ class SocialLeadDetailSerializer(serializers.ModelSerializer):
             "notes",
             "converted_customer_id", "converted_customer_name", "has_unread_message", "unread_count",
             "detected_phone", "detected_email", "detected_address",
-            "is_customer_converted",
+            "is_customer_converted", "is_starred", "tags", "internal_notes",
             "created_at", "updated_at",
         ]
 

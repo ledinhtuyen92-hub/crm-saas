@@ -383,7 +383,8 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
 }
 
 export default function FacebookInboxPage() {
-  const { maintenanceMode } = useAuth()
+  const { maintenanceMode, hasPermission, isCompanyAdmin } = useAuth()
+  const canViewAllInbox = isCompanyAdmin || hasPermission('facebook.view_all_inbox')
   // Resizable columns
   const [leftColWidth, setLeftColWidth] = useState(270)
   const [rightColWidth, setRightColWidth] = useState(260)
@@ -495,7 +496,7 @@ export default function FacebookInboxPage() {
     try {
       const res = await api.get('/facebook/pages/')
       const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
-      setPages(data)
+      setPages(data.filter(p => p.is_active !== false))
     } catch { /* silent */ }
   }
 
@@ -553,8 +554,9 @@ export default function FacebookInboxPage() {
     api.get('/users/users/').then(res => {
       const data = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.results) ? res.data.results : [])
       const active = data.filter(e => e.is_active !== false)
-      // Chỉ giữ nhân viên có quyền liên quan đến module Facebook
+      // Chỉ giữ nhân viên có quyền liên quan đến module Facebook hoặc là admin
       const withFb = active.filter(e => {
+        if (e.is_superuser || e.is_company_admin) return true
         const perms = e.permissions || []
         return perms.some(p => typeof p === 'string' ? p.startsWith('facebook.') : (p.codename || '').startsWith('facebook.'))
       })
@@ -634,7 +636,17 @@ export default function FacebookInboxPage() {
       isUserScrollingUp.current = false
       fetchLeads(true)
     } catch (err) {
-      message.error(err.response?.data?.error || 'Không thể gửi tin nhắn.')
+      const errMsg = err.response?.data?.error || 'Không thể gửi tin nhắn.'
+      if (errMsg.length > 50) {
+        Modal.error({
+          title: '⚠️ Facebook từ chối gửi tin nhắn',
+          content: errMsg,
+          okText: 'Đã hiểu',
+          width: 460
+        })
+      } else {
+        message.error(errMsg)
+      }
     } finally { setSending(false) }
   }
 
@@ -959,6 +971,13 @@ export default function FacebookInboxPage() {
           </Select>
         )}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          {!canViewAllInbox && (
+            <Tooltip title="Bạn đang ở chế độ 'Giỏ của tôi': Chỉ thấy hội thoại chưa phân công + hội thoại được giao cho bạn. Liên hệ Admin để được cấp quyền xem toàn bộ.">
+              <Tag color="blue" style={{ borderRadius: 20, cursor: 'default', fontWeight: 600, fontSize: 11, margin: 0 }}>
+                🧑 Giỏ của tôi
+              </Tag>
+            </Tooltip>
+          )}
           <Button
             size="small"
             style={{ background: '#3b82f6', color: '#fff', borderColor: '#3b82f6' }}

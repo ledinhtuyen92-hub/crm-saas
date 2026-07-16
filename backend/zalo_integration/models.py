@@ -98,6 +98,16 @@ class ZaloOaConfig(models.Model):
         verbose_name="Số ngày dọn dẹp Lead rác",
         help_text="SocialLead không tương tác sau X ngày sẽ tự động bị ẩn (archived)."
     )
+    request_phone_template = models.TextField(
+        verbose_name="Mẫu tin nhắn xin SĐT",
+        blank=True,
+        default="Vui lòng chia sẻ số điện thoại để chúng tôi có thể liên hệ hỗ trợ tốt nhất."
+    )
+    request_email_template = models.TextField(
+        verbose_name="Mẫu tin nhắn xin Email",
+        blank=True,
+        default="Xin chào quý khách! Để thuận tiện gửi thông tin và tài liệu, xin vui lòng chia sẻ địa chỉ Email của quý khách tại đây ạ."
+    )
 
     is_active = models.BooleanField(default=True, verbose_name="Đang hoạt động")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -257,7 +267,18 @@ class SocialLead(models.Model):
         help_text="Đánh dấu True nếu SĐT này đã có hoặc đã được thêm vào Customer hệ thống."
     )
 
-    # ── Phân công nội bộ ───────────────────────────────────────────────
+    # ── Phân công & Phân loại nội bộ ───────────────────────────────────
+    is_starred = models.BooleanField(
+        default=False,
+        verbose_name="Đánh dấu Khách VIP / Gấp",
+        db_index=True,
+    )
+    tags = models.ManyToManyField(
+        "ZaloLeadTag",
+        blank=True,
+        related_name="social_leads",
+        verbose_name="Nhãn hội thoại",
+    )
     assigned_to = models.ForeignKey(
         "users.User",
         on_delete=models.SET_NULL,
@@ -531,3 +552,92 @@ class ZaloMessage(models.Model):
 
     def __str__(self):
         return f"[{self.get_direction_display()}] {self.social_lead.display_name}: {self.content[:30]}"
+
+
+# ── Model 6: Nhãn hội thoại Zalo (Multi-Color Tags) ──────────────────────────
+
+class ZaloLeadTag(models.Model):
+    company = models.ForeignKey(
+        "users.Company",
+        on_delete=models.CASCADE,
+        related_name="zalo_lead_tags",
+        verbose_name="Công ty",
+    )
+    name = models.CharField(max_length=50, verbose_name="Tên nhãn")
+    color = models.CharField(max_length=20, default="#3b82f6", verbose_name="Màu sắc (HEX)")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Nhãn hội thoại Zalo"
+        verbose_name_plural = "Nhãn hội thoại Zalo"
+        unique_together = [("company", "name")]
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+# ── Model 7: Ghi chú nội bộ hội thoại Zalo ───────────────────────────────────
+
+class ZaloLeadNote(models.Model):
+    lead = models.ForeignKey(
+        SocialLead,
+        on_delete=models.CASCADE,
+        related_name="internal_notes",
+        verbose_name="Hội thoại Zalo",
+    )
+    user = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Nhân viên ghi chú",
+    )
+    content = models.TextField(verbose_name="Nội dung ghi chú")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Ghi chú nội bộ Zalo"
+        verbose_name_plural = "Ghi chú nội bộ Zalo"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Note on {self.lead_id} by {self.user_id}"
+
+
+# ── Model 8: Văn bản tin nhắn mẫu Zalo (Quick Replies) ───────────────────────
+
+class ZaloQuickReply(models.Model):
+    company = models.ForeignKey(
+        "users.Company",
+        on_delete=models.CASCADE,
+        related_name="zalo_quick_replies",
+        verbose_name="Công ty",
+    )
+    shortcut = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Cú pháp gõ tắt (vd: /banggia)",
+    )
+    title = models.CharField(
+        max_length=100,
+        verbose_name="Tiêu đề mẫu tin",
+    )
+    content = models.TextField(verbose_name="Nội dung tin nhắn")
+    created_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Người tạo",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Tin nhắn mẫu Zalo"
+        verbose_name_plural = "Tin nhắn mẫu Zalo"
+        ordering = ["title"]
+
+    def __str__(self):
+        return f"{self.shortcut or ''} - {self.title}"
+

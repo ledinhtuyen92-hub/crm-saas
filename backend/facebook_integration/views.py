@@ -301,12 +301,29 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        qs = FacebookLead.objects.filter(company=self.request.user.company).select_related(
+        user = self.request.user
+        qs = FacebookLead.objects.filter(company=user.company).select_related(
             "page_config", "customer", "assigned_to"
         )
+
+        # ── Cơ chế tầm nhìn giới hạn (giống Pancake) ─────────────────────────
+        # Admin công ty và Superuser luôn thấy tất cả hội thoại
+        # Nhân viên có quyền "facebook.view_all_inbox" thấy tất cả hội thoại
+        # Nhân viên KHÔNG có quyền đó chỉ thấy: Chưa phân công + Đã phân công cho chính mình
+        is_admin = user.is_superuser or user.is_company_admin
+        if not is_admin:
+            has_view_all = (
+                user.role and user.role.permissions.filter(code="facebook.view_all_inbox").exists()
+            )
+            if not has_view_all:
+                from django.db.models import Q
+                qs = qs.filter(Q(assigned_to__isnull=True) | Q(assigned_to=user))
+        # ─────────────────────────────────────────────────────────────────────
+
         show_inactive = self.request.query_params.get("show_inactive")
         if show_inactive != "true":
             qs = qs.filter(page_config__is_active=True)
+
 
         page_config_id = self.request.query_params.get("page_config")
         if page_config_id and page_config_id != "all":
@@ -388,6 +405,15 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
             instance.save(update_fields=["has_unread_message", "unread_count"])
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        role_name = request.user.role.name.lower() if request.user.role and request.user.role.name else ""
+        if not ("giám đốc" in role_name or "admin" in role_name or "quản trị" in role_name or request.user.is_superuser):
+            return Response(
+                {"error": "Bạn là Nhân viên Sale, không được phép xóa hội thoại Facebook để đảm bảo an toàn dữ liệu khách hàng."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().destroy(request, *args, **kwargs)
 
     @action(detail=True, methods=["post"], url_path="send-message")
     def send_message(self, request, pk=None):
