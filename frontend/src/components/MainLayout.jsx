@@ -487,13 +487,16 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
             >
               <SmileOutlined style={{ fontSize: 24, color: isDarkMode ? '#60a5fa' : '#2563eb', animation: 'wave 2.5s infinite', transformOrigin: '70% 70%' }} />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden' }}>
               <Title
                 level={3}
                 style={{
                   margin: 0,
                   fontSize: 22,
                   fontWeight: 800,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
                 }}
               >
                 <span
@@ -510,7 +513,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                   Xin chào, {user?.full_name || user?.username}!
                 </span>
               </Title>
-              <Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>
+              <Text type="secondary" style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {greetingMessage}
               </Text>
             </div>
@@ -530,7 +533,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
             </style>
           </div>
 
-          <Space size={20} align="center">
+          <Space size={20} align="center" style={{ flexShrink: 0 }}>
             <Switch
               checked={isDarkMode}
               checkedChildren={<MoonOutlined />}
