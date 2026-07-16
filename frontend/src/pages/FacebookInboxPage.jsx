@@ -1500,64 +1500,65 @@ export default function FacebookInboxPage() {
               </div>
 
               {/* Message input & toolbar */}
-              <div style={{ padding: '8px 12px', borderTop: '1px solid #e5e7eb', background: '#fff' }}>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <Tooltip title="Yêu cầu khách chia sẻ số điện thoại" placement="top">
-                      <Button
-                        size="small"
-                        shape="circle"
-                        icon={<PhoneOutlined />}
-                        onClick={() => handleSend(null, true, false)}
-                        loading={sending}
-                        style={{ color: '#1877f2', borderColor: '#1877f2' }}
-                      />
-                    </Tooltip>
-                    <Tooltip title="Yêu cầu khách chia sẻ Email" placement="top">
-                      <Button
-                        size="small"
-                        shape="circle"
-                        icon={<MailOutlined />}
-                        onClick={() => handleSend(null, false, true)}
-                        loading={sending}
-                        style={{ color: '#10b981', borderColor: '#10b981' }}
-                      />
-                    </Tooltip>
-                    <Tooltip title="⚡ Văn bản mẫu — gõ /phimtat để dùng nhanh" placement="top">
-                      <Button
-                        size="small"
-                        shape="circle"
-                        icon={<ThunderboltOutlined />}
-                        onClick={() => setQuickReplyModal(true)}
-                        style={{ color: '#c2410c', borderColor: '#fdba74', background: '#fff7ed' }}
-                      />
-                    </Tooltip>
-                  </div>
+              <div style={{ padding: '10px 14px', borderTop: '1px solid #e5e7eb', background: '#fff' }}>
+                {/* Hàng ngang phía trên khung nhập chat (3 nút: Yêu cầu SĐT, Yêu cầu Email, Văn bản mẫu) */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Button
+                    size="small"
+                    icon={<PhoneOutlined />}
+                    onClick={() => handleSend(null, true, false)}
+                    loading={sending}
+                    style={{ borderRadius: 14, color: '#1877f2', borderColor: '#1877f2', fontWeight: 500 }}
+                  >
+                    Yêu cầu SĐT
+                  </Button>
+                  <Button
+                    size="small"
+                    icon={<MailOutlined />}
+                    onClick={() => handleSend(null, false, true)}
+                    loading={sending}
+                    style={{ borderRadius: 14, color: '#10b981', borderColor: '#10b981', fontWeight: 500 }}
+                  >
+                    Yêu cầu Email
+                  </Button>
+                  <Button
+                    size="small"
+                    icon={<ThunderboltOutlined />}
+                    onClick={() => setQuickReplyModal(true)}
+                    style={{ borderRadius: 14, color: '#c2410c', borderColor: '#fdba74', background: '#fff7ed', fontWeight: 600 }}
+                  >
+                    ⚡ Văn bản mẫu (/gõ tắt)
+                  </Button>
+                </div>
+
+                {/* Hàng ngang khung nhập chat + Nút đính kèm & Gửi bên phải */}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                   <Input.TextArea
                     value={msgText}
                     onChange={handleMsgTextChange}
                     placeholder="Nhập tin nhắn (hoặc gõ /phimtat)..."
                     autoSize={{ minRows: 1, maxRows: 4 }}
-                    style={{ borderRadius: 16, resize: 'none', flex: 1 }}
+                    style={{ borderRadius: 18, resize: 'none', flex: 1, padding: '8px 12px' }}
                     onPressEnter={e => { if (!e.shiftKey) { e.preventDefault(); handleSend() } }}
                     disabled={sending}
                   />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {/* Đính kèm ảnh và tài liệu ở bên phải (nằm ngang như bình thường) */}
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', paddingBottom: 2 }}>
                     <Upload beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={true} accept="image/*">
-                      <Button size="small" shape="circle" icon={<PictureOutlined />} disabled={sending} title="Gửi hình ảnh (Chọn nhiều được)" />
+                      <Button shape="circle" icon={<PictureOutlined style={{ fontSize: 16 }} />} disabled={sending} title="Gửi hình ảnh (Chọn nhiều được)" />
                     </Upload>
                     <Upload beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={true}>
-                      <Button size="small" shape="circle" icon={<PaperClipOutlined />} disabled={sending} title="Gửi file (Chọn nhiều được)" />
+                      <Button shape="circle" icon={<PaperClipOutlined style={{ fontSize: 16 }} />} disabled={sending} title="Gửi file tài liệu (Chọn nhiều được)" />
                     </Upload>
+                    <Button
+                      type="primary"
+                      icon={<SendOutlined style={{ fontSize: 16 }} />}
+                      onClick={() => handleSend()}
+                      loading={sending}
+                      disabled={!msgText.trim() && !sending}
+                      style={{ background: '#1877f2', borderRadius: '50%', width: 36, height: 36, padding: 0, flexShrink: 0 }}
+                    />
                   </div>
-                  <Button
-                    type="primary"
-                    icon={<SendOutlined />}
-                    onClick={() => handleSend()}
-                    loading={sending}
-                    disabled={!msgText.trim() && !sending}
-                    style={{ background: '#1877f2', borderRadius: '50%', width: 36, height: 36, padding: 0, flexShrink: 0, alignSelf: 'flex-end' }}
-                  />
                 </div>
               </div>
             </>
