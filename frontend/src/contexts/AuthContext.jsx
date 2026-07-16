@@ -75,7 +75,8 @@ export function AuthProvider({ children }) {
     (permissionCode) => {
       if (!user) return false
       
-      const moduleCode = permissionCode.split('.')[0]
+      const firstCode = Array.isArray(permissionCode) ? permissionCode[0] : permissionCode
+      const moduleCode = firstCode.split('.')[0]
       const coreModules = ['dashboard', 'settings', 'notifications', 'reports']
       
       // Nếu không phải module cốt lõi, bắt buộc module đó phải đang được kích hoạt
