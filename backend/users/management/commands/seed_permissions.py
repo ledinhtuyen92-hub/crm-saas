@@ -8,6 +8,7 @@ PERMISSIONS = [
     # ── Dashboard ──────────────────────────────────────────────────
     {"code": "dashboard.view", "name": "Xem Dashboard tổng quan", "module": "dashboard"},
     {"code": "dashboard.view_revenue", "name": "Xem biểu đồ doanh thu & dòng tiền", "module": "dashboard"},
+    {"code": "dashboard.view_debt", "name": "Xem biểu đồ công nợ toàn công ty", "module": "dashboard"},
 
     # ── CRM (Khách hàng & Leads) ───────────────────────────────────
     {"code": "crm.view", "name": "Xem danh sách khách hàng", "module": "crm"},

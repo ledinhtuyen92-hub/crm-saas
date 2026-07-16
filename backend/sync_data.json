@@ -686,6 +686,51 @@
     }
   },
   {
+    "model": "users.permission",
+    "pk": 110,
+    "fields": {
+      "code": "dashboard.view_debt",
+      "name": "Xem biểu đồ công nợ toàn công ty",
+      "module": "dashboard"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 111,
+    "fields": {
+      "code": "zalo.view_all_inbox",
+      "name": "Xem toàn bộ hội thoại Zalo (không giới hạn bởi phân công)",
+      "module": "zalo"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 112,
+    "fields": {
+      "code": "zalo.chat",
+      "name": "Chat trực tiếp với khách hàng trên Zalo",
+      "module": "zalo"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 113,
+    "fields": {
+      "code": "zalo.create_customer",
+      "name": "Tạo khách hàng từ hội thoại Zalo",
+      "module": "zalo"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 114,
+    "fields": {
+      "code": "facebook.view_all_inbox",
+      "name": "Xem toàn bộ hội thoại Facebook (không giới hạn bởi phân công)",
+      "module": "facebook"
+    }
+  },
+  {
     "model": "users.role",
     "pk": 18,
     "fields": {
@@ -708,6 +753,7 @@
         2,
         9,
         1,
+        110,
         75,
         71,
         90,
@@ -717,6 +763,7 @@
         107,
         108,
         109,
+        114,
         106,
         49,
         59,
@@ -764,10 +811,13 @@
         70,
         69,
         68,
+        112,
         74,
+        113,
         104,
         73,
-        72
+        72,
+        111
       ]
     }
   },
@@ -944,7 +994,7 @@
     "model": "users.user",
     "fields": {
       "password": "pbkdf2_sha256$1000000$gogv5if640Ve4r5k5DvYiY$Co2C/05RkNJOSvpBH4uiONSzdeTJAZ/vJysA2SrgpDY=",
-      "last_login": "2026-07-15T13:14:47.632Z",
+      "last_login": "2026-07-16T16:36:37.709Z",
       "is_superuser": false,
       "username": "giamdoc",
       "first_name": "",
@@ -1707,510 +1757,6 @@
     }
   },
   {
-    "model": "orders.order",
-    "pk": 48,
-    "fields": {
-      "company": 15,
-      "order_number": "FUJI-DH-20260711-001",
-      "customer": 26,
-      "quotation": 18,
-      "created_by": [
-        "giamdoc"
-      ],
-      "approved_by": [
-        "giamdoc"
-      ],
-      "status": "completed",
-      "financial_status": "fully_paid",
-      "payment_term": "Cọc 30% - Giao hàng 70%",
-      "payment_terms_schedule": [
-        {
-          "type": "deposit",
-          "title": "Thanh to├ín ─æß╗út 1",
-          "percentage": 100
-        }
-      ],
-      "installation_date": null,
-      "notes": "Thanh toán 50% sau khi ký hợp đồng, 50% sau khi nghiệm thu thi công.",
-      "subtotal": "3900000.00",
-      "vat_rate": "0.00",
-      "vat_amount": "0.00",
-      "shipping_fee": "0.00",
-      "installation_fee": "0.00",
-      "delivery_time": "3-5 ngày làm việc",
-      "warranty_months": 12,
-      "validity_days": 15,
-      "discount_total": "0.00",
-      "total_amount": "3900000.00",
-      "approved_at": "2026-07-11T08:35:44.541Z",
-      "custom_data": {
-        "template_snapshot": {
-          "id": 2,
-          "code": "default",
-          "name": "B├ío gi├í FUJITECH",
-          "layout_style": "modern_navy",
-          "layout_config": {
-            "sections": [
-              {
-                "id": "header",
-                "name": "≡ƒÅó Khß╗æi Header & Logo C├┤ng ty",
-                "order": 1,
-                "visible": true
-              },
-              {
-                "id": "title",
-                "name": "≡ƒôî Khß╗æi Ti├¬u ─æß╗ü & Lß╗¥i ch├áo",
-                "order": 2,
-                "visible": true
-              },
-              {
-                "id": "customer_info",
-                "name": "≡ƒæñ Khß╗æi Th├┤ng tin Kh├ích h├áng / ─Éß╗æi t├íc",
-                "order": 3,
-                "visible": true
-              },
-              {
-                "id": "items_table",
-                "name": "≡ƒôª Khß╗æi Bß║úng Hß║íng mß╗Ñc Sß║ún phß║⌐m & Dß╗ïch vß╗Ñ",
-                "order": 4,
-                "visible": true
-              },
-              {
-                "id": "summary",
-                "name": "≡ƒÆ░ Khß╗æi Tß╗òng kß║┐t Thanh to├ín & Chiß║┐t khß║Ñu",
-                "order": 5,
-                "visible": true
-              },
-              {
-                "id": "terms",
-                "name": "≡ƒô£ Khß╗æi Ghi ch├║ & ─Éiß╗üu khoß║ún (Tß╗½ Admin C├┤ng ty)",
-                "order": 6,
-                "visible": true
-              },
-              {
-                "id": "signatures",
-                "name": "Γ£ì∩╕Å Khß╗æi Chß╗» k├╜ X├íc nhß║¡n",
-                "order": 7,
-                "columns": 2,
-                "visible": true
-              }
-            ],
-            "table_style": "classic_border",
-            "theme_color": "#d97706",
-            "custom_title": "B├üO GI├ü Sß║óN XUß║ñT Cß╗¼A COMPOSITE",
-            "paper_orientation": "landscape"
-          },
-          "footer_content": "1. B├ío gi├í c├│ hiß╗çu lß╗▒c trong v├▓ng 15 ng├áy kß╗â tß╗½ ng├áy xuß║Ñt b├ío gi├í.\n2. Thanh to├ín: Tß║ím ß╗⌐ng 50% ngay sau khi x├íc nhß║¡n ─æ╞ín h├áng, 50% c├▓n lß║íi thanh to├ín sau khi b├án giao nghiß╗çm thu.\n3. ─É╞ín gi├í tr├¬n ch╞░a bao gß╗ôm thuß║┐ VAT (nß║┐u xuß║Ñt h├│a ─æ╞ín).\n4. Bß║úo h├ánh: Theo ti├¬u chuß║⌐n tß╗½ nh├á sß║ún xuß║Ñt kß╗â tß╗½ ng├áy b├án giao."
-        }
-      },
-      "created_at": "2026-07-11T07:47:41.837Z",
-      "updated_at": "2026-07-11T08:36:38.698Z"
-    }
-  },
-  {
-    "model": "orders.order",
-    "pk": 49,
-    "fields": {
-      "company": 15,
-      "order_number": "FUJI-DH-20260711-002",
-      "customer": 25,
-      "quotation": 19,
-      "created_by": [
-        "giamdoc"
-      ],
-      "approved_by": [
-        "giamdoc"
-      ],
-      "status": "completed",
-      "financial_status": "fully_paid",
-      "payment_term": "Cọc 30% - Giao hàng 70%",
-      "payment_terms_schedule": [
-        {
-          "type": "deposit",
-          "title": "Thanh to├ín ─æß╗út 1",
-          "percentage": 100
-        }
-      ],
-      "installation_date": null,
-      "notes": "Thanh toán 50% sau khi ký hợp đồng, 50% sau khi nghiệm thu thi công.",
-      "subtotal": "3900000.00",
-      "vat_rate": "0.00",
-      "vat_amount": "0.00",
-      "shipping_fee": "0.00",
-      "installation_fee": "0.00",
-      "delivery_time": "3-5 ngày làm việc",
-      "warranty_months": 12,
-      "validity_days": 15,
-      "discount_total": "0.00",
-      "total_amount": "3900000.00",
-      "approved_at": "2026-07-11T09:11:34.594Z",
-      "custom_data": {
-        "template_snapshot": {
-          "id": 2,
-          "code": "default",
-          "name": "B├ío gi├í FUJITECH",
-          "layout_style": "modern_navy",
-          "layout_config": {
-            "sections": [
-              {
-                "id": "header",
-                "name": "≡ƒÅó Khß╗æi Header & Logo C├┤ng ty",
-                "order": 1,
-                "visible": true
-              },
-              {
-                "id": "title",
-                "name": "≡ƒôî Khß╗æi Ti├¬u ─æß╗ü & Lß╗¥i ch├áo",
-                "order": 2,
-                "visible": true
-              },
-              {
-                "id": "customer_info",
-                "name": "≡ƒæñ Khß╗æi Th├┤ng tin Kh├ích h├áng / ─Éß╗æi t├íc",
-                "order": 3,
-                "visible": true
-              },
-              {
-                "id": "items_table",
-                "name": "≡ƒôª Khß╗æi Bß║úng Hß║íng mß╗Ñc Sß║ún phß║⌐m & Dß╗ïch vß╗Ñ",
-                "order": 4,
-                "visible": true
-              },
-              {
-                "id": "summary",
-                "name": "≡ƒÆ░ Khß╗æi Tß╗òng kß║┐t Thanh to├ín & Chiß║┐t khß║Ñu",
-                "order": 5,
-                "visible": true
-              },
-              {
-                "id": "terms",
-                "name": "≡ƒô£ Khß╗æi Ghi ch├║ & ─Éiß╗üu khoß║ún (Tß╗½ Admin C├┤ng ty)",
-                "order": 6,
-                "visible": true
-              },
-              {
-                "id": "signatures",
-                "name": "Γ£ì∩╕Å Khß╗æi Chß╗» k├╜ X├íc nhß║¡n",
-                "order": 7,
-                "columns": 2,
-                "visible": true
-              }
-            ],
-            "table_style": "classic_border",
-            "theme_color": "#d97706",
-            "custom_title": "B├üO GI├ü Sß║óN XUß║ñT Cß╗¼A COMPOSITE",
-            "paper_orientation": "landscape"
-          },
-          "footer_content": "1. B├ío gi├í c├│ hiß╗çu lß╗▒c trong v├▓ng 15 ng├áy kß╗â tß╗½ ng├áy xuß║Ñt b├ío gi├í.\n2. Thanh to├ín: Tß║ím ß╗⌐ng 50% ngay sau khi x├íc nhß║¡n ─æ╞ín h├áng, 50% c├▓n lß║íi thanh to├ín sau khi b├án giao nghiß╗çm thu.\n3. ─É╞ín gi├í tr├¬n ch╞░a bao gß╗ôm thuß║┐ VAT (nß║┐u xuß║Ñt h├│a ─æ╞ín).\n4. Bß║úo h├ánh: Theo ti├¬u chuß║⌐n tß╗½ nh├á sß║ún xuß║Ñt kß╗â tß╗½ ng├áy b├án giao."
-        }
-      },
-      "created_at": "2026-07-11T08:43:39.557Z",
-      "updated_at": "2026-07-11T09:22:24.656Z"
-    }
-  },
-  {
-    "model": "orders.order",
-    "pk": 50,
-    "fields": {
-      "company": 15,
-      "order_number": "FUJI-DH-20260711-003",
-      "customer": 26,
-      "quotation": null,
-      "created_by": [
-        "giamdoc"
-      ],
-      "approved_by": [
-        "giamdoc"
-      ],
-      "status": "completed",
-      "financial_status": "fully_paid",
-      "payment_term": "Cọc 30% - Giao hàng 70%",
-      "payment_terms_schedule": [
-        {
-          "type": "deposit",
-          "title": "Thanh to├ín ─æß╗út 1",
-          "percentage": 100
-        }
-      ],
-      "installation_date": "2026-07-01",
-      "notes": "",
-      "subtotal": "3900000.00",
-      "vat_rate": "0.00",
-      "vat_amount": "0.00",
-      "shipping_fee": "0.00",
-      "installation_fee": "0.00",
-      "delivery_time": "3-5 ngày làm việc",
-      "warranty_months": 24,
-      "validity_days": 30,
-      "discount_total": "0.00",
-      "total_amount": "3900000.00",
-      "approved_at": "2026-07-11T09:53:44.973Z",
-      "custom_data": {
-        "template_snapshot": {
-          "id": 2,
-          "code": "default",
-          "name": "B├ío gi├í FUJITECH",
-          "layout_style": "modern_navy",
-          "layout_config": {
-            "sections": [
-              {
-                "id": "header",
-                "name": "≡ƒÅó Khß╗æi Header & Logo C├┤ng ty",
-                "order": 1,
-                "visible": true
-              },
-              {
-                "id": "title",
-                "name": "≡ƒôî Khß╗æi Ti├¬u ─æß╗ü & Lß╗¥i ch├áo",
-                "order": 2,
-                "visible": true
-              },
-              {
-                "id": "customer_info",
-                "name": "≡ƒæñ Khß╗æi Th├┤ng tin Kh├ích h├áng / ─Éß╗æi t├íc",
-                "order": 3,
-                "visible": true
-              },
-              {
-                "id": "items_table",
-                "name": "≡ƒôª Khß╗æi Bß║úng Hß║íng mß╗Ñc Sß║ún phß║⌐m & Dß╗ïch vß╗Ñ",
-                "order": 4,
-                "visible": true
-              },
-              {
-                "id": "summary",
-                "name": "≡ƒÆ░ Khß╗æi Tß╗òng kß║┐t Thanh to├ín & Chiß║┐t khß║Ñu",
-                "order": 5,
-                "visible": true
-              },
-              {
-                "id": "terms",
-                "name": "≡ƒô£ Khß╗æi Ghi ch├║ & ─Éiß╗üu khoß║ún (Tß╗½ Admin C├┤ng ty)",
-                "order": 6,
-                "visible": true
-              },
-              {
-                "id": "signatures",
-                "name": "Γ£ì∩╕Å Khß╗æi Chß╗» k├╜ X├íc nhß║¡n",
-                "order": 7,
-                "columns": 2,
-                "visible": true
-              }
-            ],
-            "table_style": "classic_border",
-            "theme_color": "#d97706",
-            "custom_title": "B├üO GI├ü Sß║óN XUß║ñT Cß╗¼A COMPOSITE",
-            "paper_orientation": "landscape"
-          },
-          "footer_content": "1. B├ío gi├í c├│ hiß╗çu lß╗▒c trong v├▓ng 15 ng├áy kß╗â tß╗½ ng├áy xuß║Ñt b├ío gi├í.\n2. Thanh to├ín: Tß║ím ß╗⌐ng 50% ngay sau khi x├íc nhß║¡n ─æ╞ín h├áng, 50% c├▓n lß║íi thanh to├ín sau khi b├án giao nghiß╗çm thu.\n3. ─É╞ín gi├í tr├¬n ch╞░a bao gß╗ôm thuß║┐ VAT (nß║┐u xuß║Ñt h├│a ─æ╞ín).\n4. Bß║úo h├ánh: Theo ti├¬u chuß║⌐n tß╗½ nh├á sß║ún xuß║Ñt kß╗â tß╗½ ng├áy b├án giao."
-        }
-      },
-      "created_at": "2026-07-11T09:53:38.253Z",
-      "updated_at": "2026-07-11T09:55:46.302Z"
-    }
-  },
-  {
-    "model": "orders.order",
-    "pk": 51,
-    "fields": {
-      "company": 15,
-      "order_number": "FUJI-DH-20260711-004",
-      "customer": 26,
-      "quotation": null,
-      "created_by": [
-        "giamdoc"
-      ],
-      "approved_by": [
-        "giamdoc"
-      ],
-      "status": "completed",
-      "financial_status": "fully_paid",
-      "payment_term": "Cọc 30% - Giao hàng 70%",
-      "payment_terms_schedule": [
-        {
-          "type": "deposit",
-          "title": "Thanh to├ín ─æß╗út 1",
-          "percentage": 100
-        }
-      ],
-      "installation_date": null,
-      "notes": "",
-      "subtotal": "3900000.00",
-      "vat_rate": "0.00",
-      "vat_amount": "0.00",
-      "shipping_fee": "0.00",
-      "installation_fee": "0.00",
-      "delivery_time": "3-5 ngày làm việc",
-      "warranty_months": 12,
-      "validity_days": 30,
-      "discount_total": "0.00",
-      "total_amount": "3900000.00",
-      "approved_at": "2026-07-11T10:03:28.721Z",
-      "custom_data": {
-        "template_snapshot": {
-          "id": 2,
-          "code": "default",
-          "name": "B├ío gi├í FUJITECH",
-          "layout_style": "modern_navy",
-          "layout_config": {
-            "sections": [
-              {
-                "id": "header",
-                "name": "≡ƒÅó Khß╗æi Header & Logo C├┤ng ty",
-                "order": 1,
-                "visible": true
-              },
-              {
-                "id": "title",
-                "name": "≡ƒôî Khß╗æi Ti├¬u ─æß╗ü & Lß╗¥i ch├áo",
-                "order": 2,
-                "visible": true
-              },
-              {
-                "id": "customer_info",
-                "name": "≡ƒæñ Khß╗æi Th├┤ng tin Kh├ích h├áng / ─Éß╗æi t├íc",
-                "order": 3,
-                "visible": true
-              },
-              {
-                "id": "items_table",
-                "name": "≡ƒôª Khß╗æi Bß║úng Hß║íng mß╗Ñc Sß║ún phß║⌐m & Dß╗ïch vß╗Ñ",
-                "order": 4,
-                "visible": true
-              },
-              {
-                "id": "summary",
-                "name": "≡ƒÆ░ Khß╗æi Tß╗òng kß║┐t Thanh to├ín & Chiß║┐t khß║Ñu",
-                "order": 5,
-                "visible": true
-              },
-              {
-                "id": "terms",
-                "name": "≡ƒô£ Khß╗æi Ghi ch├║ & ─Éiß╗üu khoß║ún (Tß╗½ Admin C├┤ng ty)",
-                "order": 6,
-                "visible": true
-              },
-              {
-                "id": "signatures",
-                "name": "Γ£ì∩╕Å Khß╗æi Chß╗» k├╜ X├íc nhß║¡n",
-                "order": 7,
-                "columns": 2,
-                "visible": true
-              }
-            ],
-            "table_style": "classic_border",
-            "theme_color": "#d97706",
-            "custom_title": "B├üO GI├ü Sß║óN XUß║ñT Cß╗¼A COMPOSITE",
-            "paper_orientation": "landscape"
-          },
-          "footer_content": "1. B├ío gi├í c├│ hiß╗çu lß╗▒c trong v├▓ng 15 ng├áy kß╗â tß╗½ ng├áy xuß║Ñt b├ío gi├í.\n2. Thanh to├ín: Tß║ím ß╗⌐ng 50% ngay sau khi x├íc nhß║¡n ─æ╞ín h├áng, 50% c├▓n lß║íi thanh to├ín sau khi b├án giao nghiß╗çm thu.\n3. ─É╞ín gi├í tr├¬n ch╞░a bao gß╗ôm thuß║┐ VAT (nß║┐u xuß║Ñt h├│a ─æ╞ín).\n4. Bß║úo h├ánh: Theo ti├¬u chuß║⌐n tß╗½ nh├á sß║ún xuß║Ñt kß╗â tß╗½ ng├áy b├án giao."
-        }
-      },
-      "created_at": "2026-07-11T10:03:25.702Z",
-      "updated_at": "2026-07-11T10:03:53.109Z"
-    }
-  },
-  {
-    "model": "orders.orderitem",
-    "pk": 58,
-    "fields": {
-      "order": 48,
-      "product": 7,
-      "product_name": "Cửa composite mẫu mới",
-      "unit_price": "3900000.00",
-      "width": "0.00",
-      "height": "0.00",
-      "quantity": 1,
-      "discount_percent": "0.00",
-      "line_total": "0.00",
-      "note": "",
-      "length": "0.00",
-      "area": "0.00",
-      "spec": "",
-      "warranty": "12 tháng",
-      "thickness": "0.00",
-      "product_image": null,
-      "custom_data": {
-        "unit": "bß╗Ö",
-        "symbol": "",
-        "thickness": 0
-      }
-    }
-  },
-  {
-    "model": "orders.orderitem",
-    "pk": 59,
-    "fields": {
-      "order": 49,
-      "product": 7,
-      "product_name": "Cửa composite mẫu mới",
-      "unit_price": "3900000.00",
-      "width": "0.00",
-      "height": "0.00",
-      "quantity": 1,
-      "discount_percent": "0.00",
-      "line_total": "0.00",
-      "note": "",
-      "length": "0.00",
-      "area": "0.00",
-      "spec": "",
-      "warranty": "12 tháng",
-      "thickness": "0.00",
-      "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
-      "custom_data": {
-        "unit": "bß╗Ö",
-        "symbol": "",
-        "thickness": 0
-      }
-    }
-  },
-  {
-    "model": "orders.orderitem",
-    "pk": 60,
-    "fields": {
-      "order": 50,
-      "product": 7,
-      "product_name": "Cửa composite mẫu mới",
-      "unit_price": "3900000.00",
-      "width": "0.00",
-      "height": "0.00",
-      "quantity": 1,
-      "discount_percent": "0.00",
-      "line_total": "0.00",
-      "note": "",
-      "length": "0.00",
-      "area": "0.00",
-      "spec": "",
-      "warranty": "12 tháng",
-      "thickness": "0.00",
-      "product_image": null,
-      "custom_data": {}
-    }
-  },
-  {
-    "model": "orders.orderitem",
-    "pk": 61,
-    "fields": {
-      "order": 51,
-      "product": 7,
-      "product_name": "Cửa composite mẫu mới",
-      "unit_price": "3900000.00",
-      "width": "0.00",
-      "height": "0.00",
-      "quantity": 1,
-      "discount_percent": "0.00",
-      "line_total": "0.00",
-      "note": "",
-      "length": "0.00",
-      "area": "0.00",
-      "spec": "",
-      "warranty": "12 tháng",
-      "thickness": "0.00",
-      "product_image": null,
-      "custom_data": {}
-    }
-  },
-  {
     "model": "inventory.productcategory",
     "pk": 7,
     "fields": {
@@ -2351,7 +1897,7 @@
       "status": "completed",
       "quantity": 1,
       "unit_cost": "0.00",
-      "reference_order": 48,
+      "reference_order": null,
       "note": "Lệnh xuất kho chờ duyệt cho đơn hàng FUJI-DH-20260711-001",
       "created_by": [
         "giamdoc"
@@ -2371,7 +1917,7 @@
       "status": "completed",
       "quantity": 1,
       "unit_cost": "0.00",
-      "reference_order": 49,
+      "reference_order": null,
       "note": "Lệnh xuất kho chờ duyệt cho đơn hàng FUJI-DH-20260711-002",
       "created_by": [
         "giamdoc"
@@ -2391,7 +1937,7 @@
       "status": "pending",
       "quantity": 1,
       "unit_cost": "0.00",
-      "reference_order": 50,
+      "reference_order": null,
       "note": "Lệnh xuất kho chờ duyệt cho đơn hàng FUJI-DH-20260711-003",
       "created_by": [
         "giamdoc"
@@ -2411,86 +1957,12 @@
       "status": "pending",
       "quantity": 1,
       "unit_cost": "0.00",
-      "reference_order": 51,
+      "reference_order": null,
       "note": "Lệnh xuất kho chờ duyệt cho đơn hàng FUJI-DH-20260711-004",
       "created_by": [
         "giamdoc"
       ],
       "created_at": "2026-07-11T10:03:34.720Z"
-    }
-  },
-  {
-    "model": "production.productionorder",
-    "pk": 52,
-    "fields": {
-      "company": 15,
-      "production_order_code": "FUJI-LSX-20260711-001",
-      "order": 48,
-      "status": "completed",
-      "start_date": null,
-      "end_date": null,
-      "notes": "",
-      "created_at": "2026-07-11T07:47:55.929Z",
-      "updated_at": "2026-07-11T08:06:58.888Z"
-    }
-  },
-  {
-    "model": "production.productionorder",
-    "pk": 53,
-    "fields": {
-      "company": 15,
-      "production_order_code": "FUJI-LSX-20260711-002",
-      "order": 49,
-      "status": "completed",
-      "start_date": null,
-      "end_date": null,
-      "notes": "",
-      "created_at": "2026-07-11T09:21:00.424Z",
-      "updated_at": "2026-07-11T09:21:53.206Z"
-    }
-  },
-  {
-    "model": "production.productionorder",
-    "pk": 54,
-    "fields": {
-      "company": 15,
-      "production_order_code": "FUJI-LSX-20260711-003",
-      "order": 50,
-      "status": "completed",
-      "start_date": null,
-      "end_date": null,
-      "notes": "",
-      "created_at": "2026-07-11T09:53:58.385Z",
-      "updated_at": "2026-07-11T09:54:08.846Z"
-    }
-  },
-  {
-    "model": "production.productionorder",
-    "pk": 55,
-    "fields": {
-      "company": 15,
-      "production_order_code": "FUJI-LSX-20260711-004",
-      "order": 51,
-      "status": "completed",
-      "start_date": null,
-      "end_date": null,
-      "notes": "",
-      "created_at": "2026-07-11T10:03:34.623Z",
-      "updated_at": "2026-07-11T10:03:43.414Z"
-    }
-  },
-  {
-    "model": "production.productionstep",
-    "pk": 12,
-    "fields": {
-      "production_order": 52,
-      "step_name": "Pha phôi và sản xuất cửa",
-      "sequence": 1,
-      "assigned_to": null,
-      "status": "done",
-      "started_at": "2026-07-11T08:05:55.433Z",
-      "completed_at": "2026-07-11T08:05:55.433Z",
-      "notes": ""
     }
   },
   {
@@ -6201,46 +5673,6 @@
   },
   {
     "model": "approvals.approvalrequest",
-    "pk": 80,
-    "fields": {
-      "company": 15,
-      "content_type": [
-        "orders",
-        "order"
-      ],
-      "object_id": 48,
-      "requester": [
-        "giamdoc"
-      ],
-      "title": "Phê duyệt Đơn hàng FUJI-DH-20260711-001",
-      "description": "Đơn hàng FUJI-DH-20260711-001 — Khách hàng: LE DINH TUYEN",
-      "status": "approved",
-      "created_at": "2026-07-11T07:47:42.144Z",
-      "updated_at": "2026-07-11T07:47:42.144Z"
-    }
-  },
-  {
-    "model": "approvals.approvalrequest",
-    "pk": 81,
-    "fields": {
-      "company": 15,
-      "content_type": [
-        "orders",
-        "order"
-      ],
-      "object_id": 48,
-      "requester": [
-        "giamdoc"
-      ],
-      "title": "Phê duyệt lại Đơn hàng FUJI-DH-20260711-001",
-      "description": "Đơn hàng FUJI-DH-20260711-001 — Khách hàng: LE DINH TUYEN",
-      "status": "approved",
-      "created_at": "2026-07-11T08:26:13.661Z",
-      "updated_at": "2026-07-11T08:26:13.661Z"
-    }
-  },
-  {
-    "model": "approvals.approvalrequest",
     "pk": 82,
     "fields": {
       "company": 15,
@@ -6257,86 +5689,6 @@
       "status": "approved",
       "created_at": "2026-07-11T08:43:06.993Z",
       "updated_at": "2026-07-11T08:43:06.993Z"
-    }
-  },
-  {
-    "model": "approvals.approvalrequest",
-    "pk": 83,
-    "fields": {
-      "company": 15,
-      "content_type": [
-        "orders",
-        "order"
-      ],
-      "object_id": 49,
-      "requester": [
-        "giamdoc"
-      ],
-      "title": "Phê duyệt Đơn hàng FUJI-DH-20260711-002",
-      "description": "Đơn hàng FUJI-DH-20260711-002 — Khách hàng: Vũ Thị Huế",
-      "status": "rejected",
-      "created_at": "2026-07-11T08:43:39.592Z",
-      "updated_at": "2026-07-11T08:43:39.592Z"
-    }
-  },
-  {
-    "model": "approvals.approvalrequest",
-    "pk": 84,
-    "fields": {
-      "company": 15,
-      "content_type": [
-        "orders",
-        "order"
-      ],
-      "object_id": 49,
-      "requester": [
-        "ketoan1"
-      ],
-      "title": "Phê duyệt lại Đơn hàng FUJI-DH-20260711-002",
-      "description": "Đơn hàng FUJI-DH-20260711-002 — Khách hàng: Vũ Thị Huế",
-      "status": "approved",
-      "created_at": "2026-07-11T09:11:11.855Z",
-      "updated_at": "2026-07-11T09:11:34.585Z"
-    }
-  },
-  {
-    "model": "approvals.approvalrequest",
-    "pk": 85,
-    "fields": {
-      "company": 15,
-      "content_type": [
-        "orders",
-        "order"
-      ],
-      "object_id": 50,
-      "requester": [
-        "giamdoc"
-      ],
-      "title": "Phê duyệt Đơn hàng FUJI-DH-20260711-003",
-      "description": "Đơn hàng FUJI-DH-20260711-003 — Khách hàng: LE DINH TUYEN",
-      "status": "approved",
-      "created_at": "2026-07-11T09:53:38.621Z",
-      "updated_at": "2026-07-11T09:53:38.621Z"
-    }
-  },
-  {
-    "model": "approvals.approvalrequest",
-    "pk": 86,
-    "fields": {
-      "company": 15,
-      "content_type": [
-        "orders",
-        "order"
-      ],
-      "object_id": 51,
-      "requester": [
-        "giamdoc"
-      ],
-      "title": "Phê duyệt Đơn hàng FUJI-DH-20260711-004",
-      "description": "Đơn hàng FUJI-DH-20260711-004 — Khách hàng: LE DINH TUYEN",
-      "status": "approved",
-      "created_at": "2026-07-11T10:03:26.167Z",
-      "updated_at": "2026-07-11T10:03:26.167Z"
     }
   },
   {
@@ -6510,40 +5862,6 @@
   },
   {
     "model": "approvals.approvalstep",
-    "pk": 79,
-    "fields": {
-      "request": 80,
-      "step_order": 1,
-      "approver_user": null,
-      "approver_role": null,
-      "acted_by": [
-        "giamdoc"
-      ],
-      "status": "approved",
-      "comment": "",
-      "comments": "",
-      "acted_at": null
-    }
-  },
-  {
-    "model": "approvals.approvalstep",
-    "pk": 80,
-    "fields": {
-      "request": 81,
-      "step_order": 1,
-      "approver_user": null,
-      "approver_role": null,
-      "acted_by": [
-        "giamdoc"
-      ],
-      "status": "approved",
-      "comment": "",
-      "comments": "",
-      "acted_at": null
-    }
-  },
-  {
-    "model": "approvals.approvalstep",
     "pk": 81,
     "fields": {
       "request": 82,
@@ -6557,335 +5875,6 @@
       "comment": "",
       "comments": "",
       "acted_at": null
-    }
-  },
-  {
-    "model": "approvals.approvalstep",
-    "pk": 82,
-    "fields": {
-      "request": 83,
-      "step_order": 1,
-      "approver_user": null,
-      "approver_role": null,
-      "acted_by": [
-        "giamdoc"
-      ],
-      "status": "rejected",
-      "comment": "",
-      "comments": "",
-      "acted_at": null
-    }
-  },
-  {
-    "model": "approvals.approvalstep",
-    "pk": 83,
-    "fields": {
-      "request": 84,
-      "step_order": 1,
-      "approver_user": null,
-      "approver_role": null,
-      "acted_by": [
-        "giamdoc"
-      ],
-      "status": "approved",
-      "comment": "",
-      "comments": "",
-      "acted_at": "2026-07-11T09:11:34.569Z"
-    }
-  },
-  {
-    "model": "approvals.approvalstep",
-    "pk": 84,
-    "fields": {
-      "request": 85,
-      "step_order": 1,
-      "approver_user": null,
-      "approver_role": null,
-      "acted_by": [
-        "giamdoc"
-      ],
-      "status": "approved",
-      "comment": "",
-      "comments": "",
-      "acted_at": null
-    }
-  },
-  {
-    "model": "approvals.approvalstep",
-    "pk": 85,
-    "fields": {
-      "request": 86,
-      "step_order": 1,
-      "approver_user": null,
-      "approver_role": null,
-      "acted_by": [
-        "giamdoc"
-      ],
-      "status": "approved",
-      "comment": "",
-      "comments": "",
-      "acted_at": null
-    }
-  },
-  {
-    "model": "finance.orderpaymentmilestone",
-    "pk": 23,
-    "fields": {
-      "company": 15,
-      "order": 48,
-      "milestone_type": "deposit",
-      "title": "Thanh toán đợt 1",
-      "percentage": "100.00",
-      "amount": "3900000.00",
-      "paid_amount": "3900000.00",
-      "status": "paid",
-      "due_date": null,
-      "note": "",
-      "created_at": "2026-07-11T07:47:46.256Z",
-      "updated_at": "2026-07-14T01:37:02.504Z"
-    }
-  },
-  {
-    "model": "finance.orderpaymentmilestone",
-    "pk": 24,
-    "fields": {
-      "company": 15,
-      "order": 49,
-      "milestone_type": "deposit",
-      "title": "Thanh toán đợt 1",
-      "percentage": "100.00",
-      "amount": "3900000.00",
-      "paid_amount": "3900000.00",
-      "status": "paid",
-      "due_date": null,
-      "note": "",
-      "created_at": "2026-07-11T09:11:34.625Z",
-      "updated_at": "2026-07-14T01:37:02.494Z"
-    }
-  },
-  {
-    "model": "finance.orderpaymentmilestone",
-    "pk": 25,
-    "fields": {
-      "company": 15,
-      "order": 50,
-      "milestone_type": "deposit",
-      "title": "Thanh toán đợt 1",
-      "percentage": "100.00",
-      "amount": "3900000.00",
-      "paid_amount": "3900000.00",
-      "status": "paid",
-      "due_date": null,
-      "note": "",
-      "created_at": "2026-07-11T09:53:44.994Z",
-      "updated_at": "2026-07-14T01:37:02.484Z"
-    }
-  },
-  {
-    "model": "finance.orderpaymentmilestone",
-    "pk": 26,
-    "fields": {
-      "company": 15,
-      "order": 51,
-      "milestone_type": "deposit",
-      "title": "Thanh toán đợt 1",
-      "percentage": "100.00",
-      "amount": "3900000.00",
-      "paid_amount": "3900000.00",
-      "status": "paid",
-      "due_date": null,
-      "note": "",
-      "created_at": "2026-07-11T10:03:28.748Z",
-      "updated_at": "2026-07-14T01:37:02.474Z"
-    }
-  },
-  {
-    "model": "finance.paymentreceipt",
-    "pk": 15,
-    "fields": {
-      "company": 15,
-      "receipt_code": "FUJI-PT-20260711-001",
-      "order": 48,
-      "milestone": 23,
-      "amount": "3900000.00",
-      "payment_method": "transfer",
-      "payment_date": "2026-07-11",
-      "reference_code": "",
-      "note": "Thanh toán Thanh toán đợt 1 - Đơn hàng FUJI-DH-20260711-001",
-      "created_by": [
-        "giamdoc"
-      ],
-      "created_at": "2026-07-11T07:47:55.887Z"
-    }
-  },
-  {
-    "model": "finance.paymentreceipt",
-    "pk": 16,
-    "fields": {
-      "company": 15,
-      "receipt_code": "FUJI-PT-20260711-002",
-      "order": 49,
-      "milestone": 24,
-      "amount": "3900000.00",
-      "payment_method": "transfer",
-      "payment_date": "2026-07-11",
-      "reference_code": "",
-      "note": "Thanh toán Thanh toán đợt 1 - Đơn hàng FUJI-DH-20260711-002",
-      "created_by": [
-        "ketoan1"
-      ],
-      "created_at": "2026-07-11T09:21:00.331Z"
-    }
-  },
-  {
-    "model": "finance.paymentreceipt",
-    "pk": 17,
-    "fields": {
-      "company": 15,
-      "receipt_code": "FUJI-PT-20260711-003",
-      "order": 50,
-      "milestone": 25,
-      "amount": "3900000.00",
-      "payment_method": "transfer",
-      "payment_date": "2026-07-11",
-      "reference_code": "",
-      "note": "Thanh toán Thanh toán đợt 1 - Đơn hàng FUJI-DH-20260711-003",
-      "created_by": [
-        "giamdoc"
-      ],
-      "created_at": "2026-07-11T09:53:58.287Z"
-    }
-  },
-  {
-    "model": "finance.paymentreceipt",
-    "pk": 18,
-    "fields": {
-      "company": 15,
-      "receipt_code": "FUJI-PT-20260711-004",
-      "order": 51,
-      "milestone": 26,
-      "amount": "3900000.00",
-      "payment_method": "transfer",
-      "payment_date": "2026-07-11",
-      "reference_code": "",
-      "note": "Thanh toán Thanh toán đợt 1 - Đơn hàng FUJI-DH-20260711-004",
-      "created_by": [
-        "giamdoc"
-      ],
-      "created_at": "2026-07-11T10:03:34.561Z"
-    }
-  },
-  {
-    "model": "delivery.deliveryorder",
-    "pk": 9,
-    "fields": {
-      "company": 15,
-      "order": 48,
-      "delivery_code": "FUJI-GH-20260711-001",
-      "status": "delivered",
-      "shipper_name": "TPKD 2",
-      "shipper_phone": "0925315226",
-      "shipper_user": [
-        "kinhdoanh2"
-      ],
-      "shipping_address": "63 Calle De Los Vientos Hà Nội",
-      "expected_date": null,
-      "actual_date": "2026-07-11",
-      "notes": "",
-      "created_at": "2026-07-11T08:28:22.005Z",
-      "updated_at": "2026-07-11T09:57:32.894Z"
-    }
-  },
-  {
-    "model": "delivery.deliveryorder",
-    "pk": 10,
-    "fields": {
-      "company": 15,
-      "order": 49,
-      "delivery_code": "FUJI-GH-20260711-002",
-      "status": "delivered",
-      "shipper_name": "",
-      "shipper_phone": "",
-      "shipper_user": null,
-      "shipping_address": "Hạ trường, thanh cường, thanh hà",
-      "expected_date": null,
-      "actual_date": "2026-07-11",
-      "notes": "",
-      "created_at": "2026-07-11T09:21:53.214Z",
-      "updated_at": "2026-07-11T09:41:40.084Z"
-    }
-  },
-  {
-    "model": "delivery.deliveryorder",
-    "pk": 12,
-    "fields": {
-      "company": 15,
-      "order": 51,
-      "delivery_code": "FUJI-GH-20260711-004",
-      "status": "delivered",
-      "shipper_name": "",
-      "shipper_phone": "",
-      "shipper_user": null,
-      "shipping_address": "63 Calle De Los Vientos",
-      "expected_date": null,
-      "actual_date": "2026-07-11",
-      "notes": "",
-      "created_at": "2026-07-11T10:03:43.443Z",
-      "updated_at": "2026-07-11T10:03:53.040Z"
-    }
-  },
-  {
-    "model": "delivery.warrantycard",
-    "pk": 6,
-    "fields": {
-      "company": 15,
-      "order": 49,
-      "customer": 25,
-      "warranty_code": "FUJI-BH-20260711-001",
-      "status": "active",
-      "start_date": "2026-07-11",
-      "end_date": "2027-07-11",
-      "terms": "Bảo hành 12 tháng kể từ ngày giao hàng.",
-      "warranty_content": "",
-      "warranty_rules": "",
-      "created_at": "2026-07-11T09:41:40.179Z",
-      "updated_at": "2026-07-11T09:41:40.179Z"
-    }
-  },
-  {
-    "model": "delivery.warrantycard",
-    "pk": 8,
-    "fields": {
-      "company": 15,
-      "order": 48,
-      "customer": 26,
-      "warranty_code": "FUJI-BH-20260711-002",
-      "status": "active",
-      "start_date": "2026-07-11",
-      "end_date": "2027-07-11",
-      "terms": "Bảo hành 12 tháng kể từ ngày giao hàng.",
-      "warranty_content": "",
-      "warranty_rules": "",
-      "created_at": "2026-07-11T09:57:32.901Z",
-      "updated_at": "2026-07-11T09:57:32.901Z"
-    }
-  },
-  {
-    "model": "delivery.warrantycard",
-    "pk": 9,
-    "fields": {
-      "company": 15,
-      "order": 51,
-      "customer": 26,
-      "warranty_code": "FUJI-BH-20260711-004",
-      "status": "active",
-      "start_date": "2026-07-11",
-      "end_date": "2027-07-11",
-      "terms": "Bảo hành 12 tháng kể từ ngày giao hàng.",
-      "warranty_content": "",
-      "warranty_rules": "",
-      "created_at": "2026-07-11T10:03:53.057Z",
-      "updated_at": "2026-07-11T10:03:53.057Z"
     }
   },
   {
@@ -6907,6 +5896,8 @@
       "auto_send_birthday_zns": false,
       "auto_create_customer_from_phone": true,
       "lead_cleanup_days": 30,
+      "request_phone_template": "Vui lòng chia sẻ số điện thoại để chúng tôi có thể liên hệ hỗ trợ tốt nhất.",
+      "request_email_template": "Xin chào quý khách! Để thuận tiện gửi thông tin và tài liệu, xin vui lòng chia sẻ địa chỉ Email của quý khách tại đây ạ.",
       "is_active": true,
       "created_at": "2026-07-14T02:32:51.927Z",
       "updated_at": "2026-07-14T04:02:04.540Z"
@@ -6931,6 +5922,8 @@
       "auto_send_birthday_zns": false,
       "auto_create_customer_from_phone": false,
       "lead_cleanup_days": 30,
+      "request_phone_template": "Vui lòng chia sẻ số điện thoại để chúng tôi có thể liên hệ hỗ trợ tốt nhất.",
+      "request_email_template": "Xin chào quý khách! Để thuận tiện gửi thông tin và tài liệu, xin vui lòng chia sẻ địa chỉ Email của quý khách tại đây ạ.",
       "is_active": true,
       "created_at": "2026-07-14T03:41:37.660Z",
       "updated_at": "2026-07-14T04:02:57.978Z"
@@ -6955,10 +5948,12 @@
       "detected_email": null,
       "detected_address": null,
       "is_customer_converted": false,
+      "is_starred": false,
       "assigned_to": null,
       "notes": "",
       "created_at": "2026-07-14T10:36:09.144Z",
-      "updated_at": "2026-07-14T10:36:26.896Z"
+      "updated_at": "2026-07-14T10:36:26.896Z",
+      "tags": []
     }
   },
   {

@@ -96,7 +96,8 @@ const contractColumns = [
 function Dashboard() {
   const { token } = theme.useToken()
   const { isSuperAdmin, hasPermission, isCompanyAdmin } = useAuth()
-  const canViewRevenue = isCompanyAdmin || hasPermission('dashboard.view_revenue')
+  const canViewRevenue = isCompanyAdmin || hasPermission('dashboard.view_revenue') || hasPermission('reports.view_all')
+  const canViewDebt = isCompanyAdmin || hasPermission('dashboard.view_debt') || hasPermission('orders.view_all')
   const [messageApi, contextHolder] = message.useMessage()
 
   const [loading, setLoading] = useState(true)
@@ -105,6 +106,7 @@ function Dashboard() {
   const [orderStatusData, setOrderStatusData] = useState([])
   const [latestOrders, setLatestOrders] = useState([])
   const [topSellers, setTopSellers] = useState([])
+  const [debtStats, setDebtStats] = useState({ total_debt: 0, chart_data: [] })
 
   useEffect(() => {
     if (isSuperAdmin) return
@@ -116,16 +118,18 @@ function Dashboard() {
     try {
       const fetchSafe = (url, fallback) => api.get(url).catch(() => ({ data: fallback }))
 
-      const [summaryRes, revenueRes, statusRes, sellersRes, ordersRes] = await Promise.all([
+      const [summaryRes, revenueRes, statusRes, sellersRes, ordersRes, debtRes] = await Promise.all([
         fetchSafe('dashboard/summary/', {}),
         fetchSafe('dashboard/revenue-chart/?period=6', []),
         fetchSafe('dashboard/orders-by-status/', []),
         fetchSafe('dashboard/top-sellers/?limit=100', []),
-        fetchSafe('orders/orders/', { results: [] })
+        fetchSafe('orders/orders/', { results: [] }),
+        fetchSafe('dashboard/debt-stats/', { total_debt: 0, chart_data: [] })
       ])
 
       setSummary(summaryRes.data)
       setRevenueData(revenueRes.data)
+      setDebtStats(debtRes.data)
       
       // Map colors for pie chart
       const colors = ['#2563eb', '#0f766e', '#f59e0b', '#7c3aed', '#ef4444', '#64748b']
@@ -157,8 +161,11 @@ function Dashboard() {
     boxShadow: '0 10px 28px rgba(15, 23, 42, 0.07)',
   }
   
-  const bestSeller = topSellers.length > 0 ? topSellers[0] : null
-  const worstSeller = topSellers.length > 1 ? topSellers[topSellers.length - 1] : null
+  const maxRevenue = topSellers.length > 0 ? topSellers[0].total_revenue : 0;
+  const bestSellers = topSellers.length > 0 ? topSellers.filter(s => s.total_revenue === maxRevenue) : [];
+
+  const minRevenue = topSellers.length > 0 ? topSellers[topSellers.length - 1].total_revenue : 0;
+  const worstSellers = topSellers.length > 0 ? topSellers.filter(s => s.total_revenue === minRevenue) : [];
 
   const statisticCards = [
     {
@@ -170,6 +177,17 @@ function Dashboard() {
       iconStyle: {
         color: '#2563eb',
         background: 'rgba(37, 99, 235, 0.12)',
+      },
+    },
+    {
+      title: 'Nợ phải thu',
+      value: canViewDebt ? (debtStats?.total_debt || 0) : '***',
+      suffix: canViewDebt ? 'đ' : '',
+      icon: <DollarCircleOutlined />,
+      valueStyle: { color: '#ef4444' },
+      iconStyle: {
+        color: '#ef4444',
+        background: 'rgba(239, 68, 68, 0.12)',
       },
     },
     {
@@ -261,7 +279,7 @@ function Dashboard() {
                     lineHeight: 1.2,
                     ...item.valueStyle,
                   }}
-                  formatter={(value) => Number(value).toLocaleString('vi-VN')}
+                  formatter={(value) => value === '***' ? value : Number(value).toLocaleString('vi-VN')}
                 />
               </Space>
             </Card>
@@ -270,7 +288,7 @@ function Dashboard() {
       </Row>
 
       <Row gutter={[16, 16]} style={{ width: '100%', marginTop: 16, marginInline: 0 }}>
-        <Col xs={24} sm={24} md={24} lg={15} xl={16} xxl={17}>
+        <Col xs={24} lg={16}>
           <Card title="Doanh thu & Số lượng đơn hàng (6 tháng gần nhất)" bordered={false} style={cardStyle} loading={loading}>
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={revenueData} margin={{ top: 12, right: 8, left: 20, bottom: 0 }}>
@@ -316,72 +334,119 @@ function Dashboard() {
           </Card>
         </Col>
 
-        <Col xs={24} sm={24} md={24} lg={9} xl={8} xxl={7}>
-          <Space direction="vertical" size={16} style={{ width: '100%', height: '100%' }}>
-            <Card title="Tỷ trọng trạng thái đơn hàng" bordered={false} style={{...cardStyle, height: 320}} loading={loading}>
-              <ResponsiveContainer width="100%" height={230}>
-                <PieChart>
-                  <Pie
-                    data={orderStatusData}
-                    dataKey="count"
-                    nameKey="label"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={4}
-                  >
-                    {orderStatusData.map((entry) => (
-                      <Cell key={entry.status} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value) => [`${value} đơn`, 'Số lượng']}
-                    contentStyle={{
-                      borderRadius: 10,
-                      borderColor: token.colorBorderSecondary,
-                      background: token.colorBgElevated,
-                      color: token.colorText,
-                    }}
-                  />
-                  <Legend iconType="circle" verticalAlign="bottom" height={36} />
-                </PieChart>
-              </ResponsiveContainer>
-            </Card>
+        <Col xs={24} lg={8}>
+          <Card title="Tỷ trọng trạng thái đơn hàng" bordered={false} style={{...cardStyle, height: '100%'}} loading={loading}>
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={orderStatusData}
+                  dataKey="count"
+                  nameKey="label"
+                  innerRadius={60}
+                  outerRadius={90}
+                  paddingAngle={4}
+                >
+                  {orderStatusData.map((entry) => (
+                    <Cell key={entry.status} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value) => [`${value} đơn`, 'Số lượng']}
+                  contentStyle={{
+                    borderRadius: 10,
+                    borderColor: token.colorBorderSecondary,
+                    background: token.colorBgElevated,
+                    color: token.colorText,
+                  }}
+                />
+                <Legend iconType="circle" verticalAlign="bottom" height={36} />
+              </PieChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+      </Row>
 
-            <Card bordered={false} style={{...cardStyle, height: 'auto', minHeight: 120}} loading={loading}>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Statistic
-                    title={
-                      <Space>
-                        <TrophyOutlined style={{color: '#eab308'}} />
-                        <Text strong>Sales Tốt nhất</Text>
-                      </Space>
-                    }
-                    value={bestSeller ? bestSeller.full_name : 'N/A'}
-                    valueStyle={{ fontSize: 16, color: '#16a34a', marginTop: 8 }}
-                  />
-                  <Text type="secondary" style={{fontSize: 12}}>
-                    {bestSeller ? `${Number(bestSeller.total_revenue).toLocaleString('vi-VN')}đ (${bestSeller.order_count} đơn)` : 'Chưa có DL'}
-                  </Text>
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title={
-                      <Space>
-                        <FrownOutlined style={{color: '#ef4444'}} />
-                        <Text strong>Sales Yếu nhất</Text>
-                      </Space>
-                    }
-                    value={worstSeller ? worstSeller.full_name : 'N/A'}
-                    valueStyle={{ fontSize: 16, color: '#dc2626', marginTop: 8 }}
-                  />
-                  <Text type="secondary" style={{fontSize: 12}}>
-                     {worstSeller ? `${Number(worstSeller.total_revenue).toLocaleString('vi-VN')}đ (${worstSeller.order_count} đơn)` : 'Chưa có DL'}
-                  </Text>
-                </Col>
-              </Row>
-            </Card>
-          </Space>
+      <Row gutter={[16, 16]} style={{ width: '100%', marginTop: 16, marginInline: 0 }}>
+        <Col xs={24} lg={16}>
+          <Card title="Công nợ (6 tháng gần nhất)" bordered={false} style={cardStyle} loading={loading}>
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={debtStats?.chart_data || []} margin={{ top: 12, right: 8, left: 20, bottom: 0 }}>
+                <CartesianGrid stroke={token.colorBorderSecondary} strokeDasharray="4 4" vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fill: token.colorTextSecondary, fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: token.colorTextSecondary, fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
+                />
+                <Tooltip
+                  formatter={(value, name) => {
+                    return [`${Number(value).toLocaleString('vi-VN')} đ`, name]
+                  }}
+                  cursor={{ fill: 'rgba(239, 68, 68, 0.08)' }}
+                  contentStyle={{
+                    borderRadius: 10,
+                    borderColor: token.colorBorderSecondary,
+                    background: token.colorBgElevated,
+                    color: token.colorText,
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="debt" name="Công nợ phát sinh" fill="#ef4444" radius={[10, 10, 0, 0]} barSize={42} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+
+        <Col xs={24} lg={8}>
+          <Card bordered={false} style={{...cardStyle, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center'}} loading={loading}>
+            <Row gutter={[16, 24]}>
+              <Col span={24}>
+                <div style={{ width: '100%', marginBottom: 8 }}>
+                  <Space style={{ marginBottom: 12 }}>
+                    <TrophyOutlined style={{color: '#eab308', fontSize: 20}} />
+                    <Text strong style={{fontSize: 16}}>Sales Tốt nhất</Text>
+                  </Space>
+                  <div 
+                    title={bestSellers.length > 0 ? bestSellers.map(s => s.full_name).join(', ') : 'N/A'}
+                    style={{ fontSize: 20, color: '#16a34a', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}
+                  >
+                    {bestSellers.length > 0 ? bestSellers.map(s => s.full_name).join(', ') : 'N/A'}
+                  </div>
+                </div>
+                <Text type="secondary" style={{fontSize: 14}}>
+                  {bestSellers.length > 0 ? (bestSellers.length === 1 ? `${Number(maxRevenue).toLocaleString('vi-VN')} đ (${bestSellers[0].order_count} đơn)` : `${Number(maxRevenue).toLocaleString('vi-VN')} đ`) : 'Chưa có DL'}
+                </Text>
+              </Col>
+              
+              <Col span={24}>
+                <div style={{ height: 1, background: token.colorBorderSecondary, margin: '8px 0' }} />
+              </Col>
+
+              <Col span={24}>
+                <div style={{ width: '100%', marginBottom: 8 }}>
+                  <Space style={{ marginBottom: 12 }}>
+                    <FrownOutlined style={{color: '#ef4444', fontSize: 20}} />
+                    <Text strong style={{fontSize: 16}}>Sales Yếu nhất</Text>
+                  </Space>
+                  <div 
+                    title={worstSellers.length > 0 ? worstSellers.map(s => s.full_name).join(', ') : 'N/A'}
+                    style={{ fontSize: 20, color: '#dc2626', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}
+                  >
+                    {worstSellers.length > 0 ? worstSellers.map(s => s.full_name).join(', ') : 'N/A'}
+                  </div>
+                </div>
+                <Text type="secondary" style={{fontSize: 14}}>
+                  {worstSellers.length > 0 ? (worstSellers.length === 1 ? `${Number(minRevenue).toLocaleString('vi-VN')} đ (${worstSellers[0].order_count} đơn)` : `${Number(minRevenue).toLocaleString('vi-VN')} đ`) : 'Chưa có DL'}
+                </Text>
+              </Col>
+            </Row>
+          </Card>
         </Col>
       </Row>
 
