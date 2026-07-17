@@ -162,10 +162,10 @@ function Dashboard() {
   }
   
   const maxRevenue = topSellers.length > 0 ? topSellers[0].total_revenue : 0;
-  const bestSellers = topSellers.length > 0 ? topSellers.filter(s => s.total_revenue === maxRevenue) : [];
+  const bestSellers = maxRevenue > 0 ? topSellers.filter(s => s.total_revenue === maxRevenue) : [];
 
   const minRevenue = topSellers.length > 0 ? topSellers[topSellers.length - 1].total_revenue : 0;
-  const worstSellers = topSellers.length > 0 ? topSellers.filter(s => s.total_revenue === minRevenue) : [];
+  const worstSellers = (topSellers.length > 1 && maxRevenue > 0) ? topSellers.filter(s => s.total_revenue === minRevenue) : [];
 
   const statisticCards = [
     {
@@ -405,45 +405,71 @@ function Dashboard() {
 
         <Col xs={24} lg={8}>
           <Card bordered={false} style={{...cardStyle, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center'}} loading={loading}>
-            <Row gutter={[16, 24]}>
+            <Row gutter={[16, 32]}>
               <Col span={24}>
-                <div style={{ width: '100%', marginBottom: 8 }}>
-                  <Space style={{ marginBottom: 12 }}>
-                    <TrophyOutlined style={{color: '#eab308', fontSize: 20}} />
-                    <Text strong style={{fontSize: 16}}>Sales Tốt nhất</Text>
+                <div style={{ width: '100%' }}>
+                  <Space style={{ marginBottom: 16, background: '#fef9c3', padding: '6px 16px', borderRadius: 20 }}>
+                    <TrophyOutlined style={{color: '#eab308', fontSize: 18}} />
+                    <Text strong style={{fontSize: 14, color: '#ca8a04'}}>Sales Tốt nhất</Text>
                   </Space>
-                  <div 
-                    title={bestSellers.length > 0 ? bestSellers.map(s => s.full_name).join(', ') : 'N/A'}
-                    style={{ fontSize: 20, color: '#16a34a', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}
-                  >
-                    {bestSellers.length > 0 ? bestSellers.map(s => s.full_name).join(', ') : 'N/A'}
-                  </div>
+                  {bestSellers.length > 0 ? (
+                    <>
+                      <div 
+                        title={bestSellers.map(s => s.full_name).join(', ')}
+                        style={{ fontSize: 18, color: '#16a34a', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}
+                      >
+                        {bestSellers.map(s => s.full_name).join(', ')}
+                      </div>
+                      <Text type="secondary" style={{fontSize: 14, display: 'block', marginTop: 8}}>
+                        <Space>
+                          <Tag color="green" style={{ margin: 0, fontSize: 14, padding: '2px 8px' }}>
+                            {Number(maxRevenue).toLocaleString('vi-VN')} đ
+                          </Tag>
+                          {bestSellers.length === 1 && <span>({bestSellers[0].order_count} đơn)</span>}
+                        </Space>
+                      </Text>
+                    </>
+                  ) : (
+                    <div style={{ color: '#9ca3af', fontStyle: 'italic', padding: '8px 0', fontSize: 14 }}>
+                      Chưa có doanh thu phát sinh
+                    </div>
+                  )}
                 </div>
-                <Text type="secondary" style={{fontSize: 14}}>
-                  {bestSellers.length > 0 ? (bestSellers.length === 1 ? `${Number(maxRevenue).toLocaleString('vi-VN')} đ (${bestSellers[0].order_count} đơn)` : `${Number(maxRevenue).toLocaleString('vi-VN')} đ`) : 'Chưa có DL'}
-                </Text>
               </Col>
               
               <Col span={24}>
-                <div style={{ height: 1, background: token.colorBorderSecondary, margin: '8px 0' }} />
+                <div style={{ height: 1, background: token.colorBorderSecondary, margin: '8px 0', opacity: 0.6 }} />
               </Col>
 
               <Col span={24}>
-                <div style={{ width: '100%', marginBottom: 8 }}>
-                  <Space style={{ marginBottom: 12 }}>
-                    <FrownOutlined style={{color: '#ef4444', fontSize: 20}} />
-                    <Text strong style={{fontSize: 16}}>Sales Yếu nhất</Text>
+                <div style={{ width: '100%' }}>
+                  <Space style={{ marginBottom: 16, background: '#fee2e2', padding: '6px 16px', borderRadius: 20 }}>
+                    <FrownOutlined style={{color: '#ef4444', fontSize: 18}} />
+                    <Text strong style={{fontSize: 14, color: '#dc2626'}}>Sales Yếu nhất</Text>
                   </Space>
-                  <div 
-                    title={worstSellers.length > 0 ? worstSellers.map(s => s.full_name).join(', ') : 'N/A'}
-                    style={{ fontSize: 20, color: '#dc2626', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}
-                  >
-                    {worstSellers.length > 0 ? worstSellers.map(s => s.full_name).join(', ') : 'N/A'}
-                  </div>
+                  {worstSellers.length > 0 ? (
+                    <>
+                      <div 
+                        title={worstSellers.map(s => s.full_name).join(', ')}
+                        style={{ fontSize: 18, color: '#dc2626', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}
+                      >
+                        {worstSellers.map(s => s.full_name).join(', ')}
+                      </div>
+                      <Text type="secondary" style={{fontSize: 14, display: 'block', marginTop: 8}}>
+                         <Space>
+                          <Tag color="red" style={{ margin: 0, fontSize: 14, padding: '2px 8px' }}>
+                            {Number(minRevenue).toLocaleString('vi-VN')} đ
+                          </Tag>
+                          {worstSellers.length === 1 && <span>({worstSellers[0].order_count} đơn)</span>}
+                        </Space>
+                      </Text>
+                    </>
+                  ) : (
+                    <div style={{ color: '#9ca3af', fontStyle: 'italic', padding: '8px 0', fontSize: 14 }}>
+                      Chưa có dữ liệu đánh giá
+                    </div>
+                  )}
                 </div>
-                <Text type="secondary" style={{fontSize: 14}}>
-                  {worstSellers.length > 0 ? (worstSellers.length === 1 ? `${Number(minRevenue).toLocaleString('vi-VN')} đ (${worstSellers[0].order_count} đơn)` : `${Number(minRevenue).toLocaleString('vi-VN')} đ`) : 'Chưa có DL'}
-                </Text>
               </Col>
             </Row>
           </Card>
