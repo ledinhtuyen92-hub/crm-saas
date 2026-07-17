@@ -1143,10 +1143,10 @@ export default function ZaloInboxPage() {
                     />
                     {/* Đính kèm ảnh và tài liệu ở bên phải (nằm ngang như bình thường) */}
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center', paddingBottom: 2 }}>
-                      <Upload beforeUpload={(file) => { handleSendMessage(file, false, false); return false; }} showUploadList={false} multiple={true} accept="image/*">
+                      <Upload fileList={[]} beforeUpload={(file) => { handleSendMessage(file, false, false); return false; }} showUploadList={false} multiple={true} accept="image/*">
                         <Button shape="circle" icon={<PictureOutlined style={{ fontSize: 16 }} />} disabled={sending} title="Gửi hình ảnh" />
                       </Upload>
-                      <Upload beforeUpload={(file) => { handleSendMessage(file, false, true); return false; }} showUploadList={false} multiple={true}>
+                      <Upload fileList={[]} beforeUpload={(file) => { handleSendMessage(file, false, true); return false; }} showUploadList={false} multiple={true}>
                         <Button shape="circle" icon={<PaperClipOutlined style={{ fontSize: 16 }} />} disabled={sending} title="Gửi file tài liệu" />
                       </Upload>
                       <Button

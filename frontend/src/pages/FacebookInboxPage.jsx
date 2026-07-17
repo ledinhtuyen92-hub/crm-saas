@@ -1568,10 +1568,10 @@ export default function FacebookInboxPage() {
                   />
                   {/* Đính kèm ảnh và tài liệu ở bên phải (nằm ngang như bình thường) */}
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', paddingBottom: 2 }}>
-                    <Upload beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={true} accept="image/*">
+                    <Upload fileList={[]} beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={true} accept="image/*">
                       <Button shape="circle" icon={<PictureOutlined style={{ fontSize: 16 }} />} disabled={sending} title="Gửi hình ảnh (Chọn nhiều được)" />
                     </Upload>
-                    <Upload beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={true}>
+                    <Upload fileList={[]} beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={true}>
                       <Button shape="circle" icon={<PaperClipOutlined style={{ fontSize: 16 }} />} disabled={sending} title="Gửi file tài liệu (Chọn nhiều được)" />
                     </Upload>
                     <Button
@@ -1875,6 +1875,7 @@ export default function FacebookInboxPage() {
               </Col>
               <Col xs={24} md={5}>
                 <Upload
+                  fileList={[]}
                   multiple={true}
                   beforeUpload={handleUploadQuickMedia}
                   showUploadList={false}

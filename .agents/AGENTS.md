@@ -27,3 +27,27 @@
   python manage.py dumpdata -e contenttypes -e auth.Permission -e sessions -e admin.logentry --indent 2 > sync_data.json
   ```
 - **Lưu ý:** Việc này giúp đồng bộ dữ liệu cài đặt, cấu hình, dữ liệu người dùng và phân quyền giữa các môi trường làm việc.
+
+## 5. Quotation Template Snapshot (Chốt mẫu Báo giá)
+- **Luôn bảo lưu cấu hình mẫu:** Báo giá phải luôn lưu lại cấu hình mẫu (ngang/dọc) tại thời điểm tạo/sửa thông qua 	emplate_snapshot.
+- **Hiển thị Form Sửa:** Khi sửa báo giá, Form sửa phải render các cột và tính tổng tiền dựa vào effectiveTemplate của chính báo giá đó (hàm getEffectiveTemplate()), tuyệt đối KHÔNG dùng cấu hình mặc định hiện tại của công ty.
+- **Lưu Báo Giá:** Khi lưu (Save) một báo giá cũ, phải dùng chính effectiveTemplate của nó để lưu đè lại vào snapshot, nhằm cô lập hoàn toàn với việc công ty có đổi mẫu mặc định hay không.
+- **Báo giá cũ không có snapshot:** Bất kỳ báo giá nào không có 	emplate_snapshot thì mặc định được coi là mẫu STANDARD (Dọc).
+
+## 6. Auto-Cancel Approval Requests (Tự động hủy Yêu cầu duyệt cũ)
+- **Quy tắc:** Bất kỳ module nào có sử dụng quy trình phê duyệt tập trung (ApprovalRequest) như Báo giá, Đơn hàng... nếu bị người dùng **chỉnh sửa dữ liệu** trong lúc đang ở trạng thái pending_approval (Chờ duyệt) hoặc pproved (Đã duyệt), hệ thống phải:
+  1. Tự động lùi trạng thái của đối tượng đó về draft (Nháp) hoặc pending (Chờ duyệt lại).
+  2. Tự động tìm và chuyển trạng thái của tất cả các ApprovalRequest cũ đang chờ duyệt thành canceled (Đã hủy).
+  3. Yêu cầu người dùng trình duyệt lại (hoặc tự động tạo Request mới tùy module).
+- **Mục đích:** Đảm bảo cấp quản lý không bao giờ nhìn thấy các yêu cầu duyệt rác/cũ đã bị thay đổi dữ liệu.
+
+## 7. Xử lý Giao diện In ấn (Print/PDF Views)
+- Trong các form in ấn như PDF, Print Báo giá... các ô/cột không có dữ liệu (ví dụ: Ký hiệu, Ghi chú kỹ thuật, Chiết khấu) phải được **để trống hoàn toàn** (return 
+ull hoặc chuỗi rỗng ''), tuyệt đối KHÔNG dùng dấu gạch ngang (—) để tránh gây nhiễu và mất tính chuyên nghiệp của biểu mẫu.
+
+## 8. Logic Thêm dòng Kích thước mới (Insert Product Row)
+- Khi bấm nút "Thêm kích thước" (chèn thêm một biến thể/kích thước mới của cùng một sản phẩm đang có), dòng mới **phải được chèn vào ngay sau dòng cuối cùng** của nhóm sản phẩm đó, KHÔNG được chèn ngay sau dòng đầu tiên chứa nút bấm. Quét mảng để tìm index cuối cùng của sản phẩm đó rồi mới splice.
+
+## 9. Xử lý Lỗi Giao diện (Error Handling)
+- **Quy tắc:** Bất kỳ thao tác nào của người dùng (bấm nút Lưu, Xóa, Phê duyệt...) nếu bị hệ thống từ chối hoặc không thực hiện được (bị lỗi từ Backend), Frontend BẮT BUỘC phải bắt được lỗi (`catch`) và hiển thị thông báo lỗi RÕ RÀNG cho người dùng biết lý do tại sao.
+- Tuyệt đối KHÔNG dùng các câu thông báo chung chung như "Không thể xóa" hoặc "Có lỗi xảy ra" nếu có thể lấy được chi tiết. Phải bóc tách `err.response.data` để lấy được thông báo lỗi cụ thể do Backend trả về (ví dụ: "Không thể xóa đơn hàng đã có phiếu thu tiền").

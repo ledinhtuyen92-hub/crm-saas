@@ -220,9 +220,16 @@ class Order(models.Model):
             
         from finance.models import OrderPaymentMilestone
         
-        # Kiểm tra nếu đã có kỳ thanh toán thì bỏ qua để tránh duplicate
-        if OrderPaymentMilestone.objects.filter(order=self).exists():
-            return
+        existing_milestones = OrderPaymentMilestone.objects.filter(order=self)
+        if existing_milestones.exists():
+            has_receipts = False
+            for m in existing_milestones:
+                if m.receipts.exists():
+                    has_receipts = True
+                    break
+            if has_receipts:
+                return
+            existing_milestones.delete()
             
         total = float(self.total_amount or 0)
         

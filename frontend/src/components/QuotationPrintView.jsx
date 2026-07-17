@@ -287,21 +287,24 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
                   dataIndex: 'height',
                   width: 70,
                   align: 'center',
-                  render: (v) => <Text>{v || 0}</Text>,
+                  render: (v) => <Text>{Number(v) > 0 ? v : ''}</Text>,
                 },
                 {
                   title: 'Rộng',
                   dataIndex: 'width',
                   width: 70,
                   align: 'center',
-                  render: (v) => <Text>{v || 0}</Text>,
+                  render: (v) => <Text>{Number(v) > 0 ? v : ''}</Text>,
                 },
                 {
                   title: 'Dày',
                   dataIndex: 'thickness',
                   width: 70,
                   align: 'center',
-                  render: (v, r) => <Text>{v || r.custom_data?.thickness || 0}</Text>,
+                  render: (v, r) => {
+                    const thickness = v || r.custom_data?.thickness
+                    return <Text>{Number(thickness) > 0 ? thickness : ''}</Text>
+                  },
                 },
               ],
             },
@@ -312,7 +315,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
               align: 'center',
               render: (_, r) => {
                 const sym = r.custom_data?.symbol || r.symbol
-                return sym ? <Tag color="blue" style={{ fontWeight: 600 }}>{sym}</Tag> : <Text type="secondary">—</Text>
+                return sym ? <Tag color="blue" style={{ fontWeight: 600 }}>{sym}</Tag> : null
               },
             },
             {
@@ -320,7 +323,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
               dataIndex: 'note',
               key: 'note',
               width: 150,
-              render: (val) => <Text style={{ fontSize: 12 }}>{val || '—'}</Text>,
+              render: (val) => <Text style={{ fontSize: 12 }}>{val || ''}</Text>,
             },
             {
               title: 'SL',
@@ -376,7 +379,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
               width: 175,
               render: (val) => val
                 ? <Text style={{ fontSize: 12.5, whiteSpace: 'pre-wrap', color: '#334155', lineHeight: 1.4 }}>{val}</Text>
-                : <Text type="secondary">—</Text>,
+                : null,
             },
             {
               title: 'ĐVT',
@@ -407,7 +410,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
               key: 'discount_percent',
               align: 'center',
               width: 50,
-              render: (v) => v > 0 ? <Text type="warning">{v}%</Text> : <Text type="secondary">—</Text>,
+              render: (v) => v > 0 ? <Text type="warning">{v}%</Text> : null,
             },
             {
               title: 'Thành tiền',

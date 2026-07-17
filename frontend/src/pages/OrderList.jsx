@@ -162,10 +162,11 @@ export default function OrderList() {
     let note = `Thanh toán cho Đơn hàng ${selectedOrder?.order_number}`
 
     if (selectedOrder?.payment_milestones?.length > 0) {
-      const pendingMilestone = selectedOrder.payment_milestones.find(m => m.status !== 'paid')
+      const adjusted = getAdjustedMilestones(selectedOrder.payment_milestones)
+      const pendingMilestone = adjusted.find(m => m.status !== 'paid' && m.adjusted_needed > 0)
       if (pendingMilestone) {
         defaultMilestoneId = pendingMilestone.id
-        defaultAmount = Number(pendingMilestone.amount) - Number(pendingMilestone.paid_amount)
+        defaultAmount = pendingMilestone.adjusted_needed
         note = `Thanh toán ${pendingMilestone.title} - Đơn hàng ${selectedOrder?.order_number}`
       }
     }
@@ -179,11 +180,30 @@ export default function OrderList() {
     setReceiptModalVisible(true)
   }
 
+  const getAdjustedMilestones = (milestones) => {
+    if (!milestones) return []
+    let totalOverpaid = 0
+    milestones.forEach(m => {
+      const diff = Number(m.paid_amount || 0) - Number(m.amount || 0)
+      if (diff > 0) totalOverpaid += diff
+    })
+    return milestones.map(m => {
+      let needed = Number(m.amount || 0) - Number(m.paid_amount || 0)
+      if (needed > 0 && totalOverpaid > 0) {
+        const deduct = Math.min(needed, totalOverpaid)
+        needed -= deduct
+        totalOverpaid -= deduct
+      }
+      return { ...m, adjusted_needed: Math.max(0, needed) }
+    })
+  }
+
   const handleMilestoneChange = (milestoneId) => {
-    const milestone = selectedOrder?.payment_milestones?.find(m => m.id === milestoneId)
+    const adjusted = getAdjustedMilestones(selectedOrder?.payment_milestones)
+    const milestone = adjusted?.find(m => m.id === milestoneId)
     if (milestone) {
       receiptForm.setFieldsValue({
-        amount: Number(milestone.amount) - Number(milestone.paid_amount),
+        amount: milestone.adjusted_needed,
         note: `Thanh toán ${milestone.title} - Đơn hàng ${selectedOrder?.order_number}`
       })
     }
@@ -205,7 +225,15 @@ export default function OrderList() {
       const { data } = await api.get(`/orders/orders/${selectedOrder.id}/`)
       setSelectedOrder(data)
     } catch (err) {
-      messageApi.error('Lỗi khi lập phiếu thu!')
+      let msg = 'Lỗi khi lập phiếu thu!'
+      if (err.response?.data) {
+        if (typeof err.response.data === 'string') msg = err.response.data
+        else if (err.response.data.amount) msg = err.response.data.amount[0]
+        else if (err.response.data.detail) msg = err.response.data.detail
+        else if (Array.isArray(err.response.data)) msg = err.response.data[0]
+        else if (err.response.data.non_field_errors) msg = err.response.data.non_field_errors[0]
+      }
+      messageApi.error(msg)
     } finally {
       setReceiptSubmitting(false)
     }
@@ -521,8 +549,12 @@ export default function OrderList() {
         quantity: 1,
         discount_percent: currentItem.discount_percent || 0,
       }
+      let insertIndex = index
+      while (insertIndex + 1 < prev.length && prev[insertIndex + 1].product === currentItem.product) {
+        insertIndex++
+      }
       const updated = [...prev]
-      updated.splice(index + 1, 0, newItem)
+      updated.splice(insertIndex + 1, 0, newItem)
       return updated
     })
   }
@@ -991,13 +1023,14 @@ export default function OrderList() {
       const vatAmount = (subtotal * Number(values.vat_rate || 0)) / 100.0
       const totalAmt = subtotal + vatAmount + Number(values.shipping_fee || 0) + Number(values.installation_fee || 0) - Number(values.discount_total || 0)
 
-      const templateSnapshot = companyTemplate ? {
-        id: companyTemplate.id,
-        code: companyTemplate.code,
-        name: companyTemplate.name,
-        layout_config: companyTemplate.layout_config,
-        layout_style: companyTemplate.layout_style,
-        footer_content: companyTemplate.footer_content,
+      const effectiveTmpl = getEffectiveTemplate(editingOrder)
+      const templateSnapshot = effectiveTmpl ? {
+        id: effectiveTmpl.id,
+        code: effectiveTmpl.code,
+        name: effectiveTmpl.name,
+        layout_config: effectiveTmpl.layout_config,
+        layout_style: effectiveTmpl.layout_style,
+        footer_content: effectiveTmpl.footer_content,
       } : null
 
       const payload = {
@@ -1079,8 +1112,15 @@ export default function OrderList() {
       await api.delete(`/orders/orders/${id}/`)
       messageApi.success('Đã xoá đơn hàng.')
       fetchOrders()
-    } catch {
-      messageApi.error('Không thể xoá đơn hàng này.')
+    } catch (err) {
+      let msg = 'Không thể xoá đơn hàng này.'
+      if (err.response?.data) {
+        if (typeof err.response.data === 'string') msg = err.response.data
+        else if (err.response.data.detail) msg = err.response.data.detail
+        else if (Array.isArray(err.response.data)) msg = err.response.data[0]
+        else if (err.response.data.non_field_errors) msg = err.response.data.non_field_errors[0]
+      }
+      messageApi.error(msg)
     }
   }
 
@@ -1896,10 +1936,14 @@ export default function OrderList() {
       >
         <Form form={receiptForm} layout="vertical" onFinish={handleCreateReceipt}>
           {selectedOrder?.payment_milestones?.length > 0 && (
-            <Form.Item name="milestone" label="Kỳ thanh toán">
+            <Form.Item name="milestone" label="Kỳ thanh toán" rules={[{ required: true, message: 'Vui lòng chọn kỳ thanh toán' }]}>
               <Select placeholder="Chọn kỳ thanh toán" onChange={handleMilestoneChange} allowClear>
-                {selectedOrder.payment_milestones.filter(m => m.status !== 'paid').map(m => (
-                  <Option key={m.id} value={m.id}>{m.title} - Cần thu: {Number(Number(m.amount) - Number(m.paid_amount)).toLocaleString('vi-VN')} đ</Option>
+                {getAdjustedMilestones(selectedOrder.payment_milestones)
+                  .filter(m => m.status !== 'paid' && m.adjusted_needed > 0)
+                  .map(m => (
+                    <Option key={m.id} value={m.id}>
+                      {m.title} - Cần thu: {Number(m.adjusted_needed).toLocaleString('vi-VN')} đ
+                    </Option>
                 ))}
               </Select>
             </Form.Item>

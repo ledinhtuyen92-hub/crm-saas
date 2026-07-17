@@ -76,6 +76,7 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             order_number=order_number,
             status="pending",
         )
+        order.generate_payment_milestones()
         try:
             from approvals.models import ApprovalRequest, ApprovalStep
             from django.contrib.contenttypes.models import ContentType
@@ -101,6 +102,7 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         instance = self.get_object()
+        old_status = instance.status
         new_status = serializer.validated_data.get("status", instance.status)
         if new_status != instance.status:
             if hasattr(instance, 'delivery_order') and instance.delivery_order.status == 'delivered':
@@ -109,7 +111,42 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             if hasattr(instance, 'production_order') and instance.production_order.status in ['in_progress', 'completed'] and new_status in ['pending', 'rejected', 'cancelled']:
                 from rest_framework.exceptions import ValidationError
                 raise ValidationError({"status": "Không thể chuyển về chờ duyệt/hủy khi Lệnh sản xuất đang thực hiện hoặc đã hoàn thành."})
-        serializer.save()
+        if old_status in ["pending", "rejected"]:
+            serializer.validated_data["status"] = "pending"
+            
+        order = serializer.save()
+        order.generate_payment_milestones()
+
+        if old_status in ["pending", "rejected"]:
+            try:
+                from approvals.models import ApprovalRequest, ApprovalStep
+                from django.contrib.contenttypes.models import ContentType
+                ct = ContentType.objects.get_for_model(order)
+                
+                # Hủy tất cả request cũ đang pending
+                ApprovalRequest.objects.filter(
+                    content_type=ct,
+                    object_id=order.id,
+                    status=ApprovalRequest.STATUS_PENDING
+                ).update(status=ApprovalRequest.STATUS_CANCELED)
+                
+                # Tạo request mới
+                req = ApprovalRequest.objects.create(
+                    company=order.company,
+                    content_type=ct,
+                    object_id=order.id,
+                    requester=self.request.user,
+                    title=f"Phê duyệt Đơn hàng {order.order_number} (Cập nhật)",
+                    description=f"Đơn hàng {order.order_number} — Khách hàng: {order.customer.name if order.customer else 'Khách lẻ'}",
+                    status=ApprovalRequest.STATUS_PENDING,
+                )
+                ApprovalStep.objects.create(
+                    request=req,
+                    step_order=1,
+                    status=ApprovalStep.STATUS_PENDING,
+                )
+            except Exception as e:
+                pass
 
     @action(detail=True, methods=["post"], url_path="approve")
     def approve(self, request, pk=None):
@@ -313,6 +350,10 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         )
 
     def perform_destroy(self, instance):
+        if instance.payment_receipts.exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Không thể xóa đơn hàng đã có phiếu thu tiền. Vui lòng xóa phiếu thu trước.")
+
         from production.models import ProductionOrder
         ProductionOrder.objects.filter(order=instance).delete()
         from inventory.models import InventoryTransaction

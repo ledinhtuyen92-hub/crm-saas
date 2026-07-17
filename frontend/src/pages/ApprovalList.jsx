@@ -16,7 +16,7 @@ const statusConfig = {
 }
 
 export default function ApprovalList() {
-  const { user } = useAuth()
+  const { user, hasPermission } = useAuth()
   const [activeTab, setActiveTab] = useState('to_approve')
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(false)
@@ -120,6 +120,8 @@ export default function ApprovalList() {
           if (pendingStep.approver_user === user.id) canAct = true
           if (pendingStep.approver_role === user.role) canAct = true
           if (user.is_superuser || user.is_company_admin) canAct = true
+          if (hasPermission('orders.approve') && record.title?.toLowerCase().includes('đơn hàng')) canAct = true
+          if (hasPermission('sales.approve') && record.title?.toLowerCase().includes('báo giá')) canAct = true
         }
 
         return (

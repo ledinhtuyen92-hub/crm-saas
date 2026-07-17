@@ -648,11 +648,12 @@ export default function Products() {
             <Col xs={24} md={24}>
               <Form.Item label="Hình ảnh sản phẩm (Tải lên ảnh mẫu cửa / sản phẩm)">
                 <Upload
+                  fileList={productImageFile ? [productImageFile] : []}
                   beforeUpload={(file) => {
                     const isImage = file.type.startsWith('image/')
                     if (!isImage) {
-                      messageApi.error('Chỉ được tải lên file hình ảnh!')
-                      return Upload.LIST_IGNORE
+                      message.error('Chỉ được tải lên file hình ảnh!')
+                      return false
                     }
                     setProductImageFile(file)
                     setProductPreviewImage(URL.createObjectURL(file))

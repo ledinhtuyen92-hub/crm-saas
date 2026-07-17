@@ -86,6 +86,14 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         # Nếu sửa đổi báo giá đang ở trạng thái Chờ duyệt hoặc Đã duyệt -> Tự động đưa về Nháp
         if old_status in [Quotation.STATUS_APPROVED, Quotation.STATUS_PENDING_APPROVAL]:
             serializer.validated_data['status'] = Quotation.STATUS_DRAFT
+            from approvals.models import ApprovalRequest
+            from django.contrib.contenttypes.models import ContentType
+            ctype = ContentType.objects.get_for_model(instance)
+            ApprovalRequest.objects.filter(
+                content_type=ctype,
+                object_id=instance.id,
+                status=ApprovalRequest.STATUS_PENDING
+            ).update(status=ApprovalRequest.STATUS_CANCELED)
             
         serializer.save()
 
@@ -194,8 +202,9 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 import logging
                 logging.error(f"Failed to create ApprovalRequest for order {order.id}: {e}")
 
-        serializer = OrderSerializer(order)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+            order.generate_payment_milestones()
+
+            return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"], url_path="submit-approval")
     def submit_approval(self, request, pk=None):

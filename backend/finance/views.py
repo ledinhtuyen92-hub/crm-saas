@@ -37,6 +37,11 @@ class PaymentReceiptViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
+        user = self.request.user
+        if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("finance.create_receipt"):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Bạn không có quyền lập phiếu thu.")
+            
         company = self.request.user.company
         code = generate_receipt_code(company)
         serializer.save(
@@ -44,3 +49,10 @@ class PaymentReceiptViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             receipt_code=code,
             created_by=self.request.user,
         )
+
+    def perform_destroy(self, instance):
+        user = self.request.user
+        if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("finance.delete"):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Bạn không có quyền xóa phiếu thu tiền.")
+        instance.delete()

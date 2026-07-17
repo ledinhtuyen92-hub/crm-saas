@@ -261,6 +261,7 @@ export default function CompanyGeneralSettings() {
                     </div>
                   )}
                   <Upload
+                    fileList={logoFile ? [{ uid: '-1', name: logoFile.name, status: 'done' }] : []}
                     beforeUpload={(file) => { setLogoFile(file); return false }}
                     maxCount={1}
                     accept="image/*"
@@ -285,6 +286,7 @@ export default function CompanyGeneralSettings() {
                     </div>
                   )}
                   <Upload
+                    fileList={stampFile ? [{ uid: '-1', name: stampFile.name, status: 'done' }] : []}
                     beforeUpload={(file) => { setStampFile(file); return false }}
                     maxCount={1}
                     accept="image/*"
@@ -309,6 +311,7 @@ export default function CompanyGeneralSettings() {
                     </div>
                   )}
                   <Upload
+                    fileList={signatureFile ? [{ uid: '-1', name: signatureFile.name, status: 'done' }] : []}
                     beforeUpload={(file) => { setSignatureFile(file); return false }}
                     maxCount={1}
                     accept="image/*"

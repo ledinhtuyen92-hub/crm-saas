@@ -31,6 +31,16 @@ class ApprovalRequestViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 q_filter = Q(steps__approver_user=user)
                 if user.role:
                     q_filter |= Q(steps__approver_role=user.role)
+                    
+                from django.contrib.contenttypes.models import ContentType
+                if hasattr(user, 'has_perm_code'):
+                    if user.has_perm_code('orders.approve'):
+                        from orders.models import Order
+                        q_filter |= Q(content_type=ContentType.objects.get_for_model(Order))
+                    if user.has_perm_code('sales.approve'):
+                        from sales.models import Quotation
+                        q_filter |= Q(content_type=ContentType.objects.get_for_model(Quotation))
+                
                 qs = qs.filter(q_filter).distinct()
 
         req_status = self.request.query_params.get("status")
@@ -69,6 +79,13 @@ class ApprovalRequestViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             can_approve = True
         elif user.is_superuser or user.is_company_admin:
             can_approve = True # Admin có thể duyệt thay
+
+        if not can_approve and hasattr(user, 'has_perm_code'):
+            ct_model = approval_req.content_type.model
+            if ct_model == 'order' and user.has_perm_code('orders.approve'):
+                can_approve = True
+            elif ct_model == 'quotation' and user.has_perm_code('sales.approve'):
+                can_approve = True
 
         if not can_approve:
             return Response({"detail": "Bạn không có quyền duyệt bước này."}, status=status.HTTP_403_FORBIDDEN)

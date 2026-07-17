@@ -26,6 +26,15 @@ class PaymentReceiptSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "company", "receipt_code", "created_by", "created_by_name", "created_at"]
 
+    def validate(self, attrs):
+        order = attrs.get('order')
+        amount = attrs.get('amount')
+        
+        if not self.instance and order and amount:
+            if float(amount) > float(order.remaining_debt):
+                raise serializers.ValidationError({"amount": f"Số tiền thu ({amount:,.0f} đ) không được vượt quá số tiền còn nợ của đơn hàng ({order.remaining_debt:,.0f} đ)."})
+        return attrs
+
 
 class OrderPaymentMilestoneSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source="get_status_display", read_only=True)

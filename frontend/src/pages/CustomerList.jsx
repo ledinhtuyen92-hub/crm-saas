@@ -287,8 +287,8 @@ function CustomerList() {
       await api.delete(`/crm/customers/${id}/`)
       message.success('Đã xóa khách hàng.')
       fetchCustomers()
-    } catch {
-      message.error('Không thể xóa khách hàng này.')
+    } catch (err) {
+      message.error(err.response?.data?.detail || 'Không thể xóa khách hàng này.')
     }
   }
 
@@ -866,7 +866,12 @@ function CustomerList() {
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="birthday" label="Ngày sinh">
-                <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} placeholder="Chọn ngày sinh" />
+                <DatePicker 
+                  format={['DD/MM/YYYY', 'D/M/YYYY', 'DD/M/YYYY', 'D/MM/YYYY']} 
+                  style={{ width: '100%' }} 
+                  placeholder="Nhập DD/MM/YYYY" 
+                  allowClear 
+                />
               </Form.Item>
             </Col>
           </Row>

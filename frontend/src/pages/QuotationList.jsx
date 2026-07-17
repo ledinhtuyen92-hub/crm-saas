@@ -71,6 +71,7 @@ export default function QuotationList() {
   const [customers, setCustomers] = useState([])
   const [products, setProducts] = useState([])
   const [companyTemplate, setCompanyTemplate] = useState(null)
+  const [companySettings, setCompanySettings] = useState(null)
   const [loading, setLoading] = useState(false)
 
   // Filters
@@ -125,16 +126,18 @@ export default function QuotationList() {
   const fetchCustomersAndProducts = useCallback(async () => {
     await Promise.resolve()
     try {
-      const [custRes, prodRes, tmplRes] = await Promise.all([
+      const [custRes, prodRes, tmplRes, settingsRes] = await Promise.all([
         api.get('/crm/customers/').catch(() => ({ data: [] })),
         api.get('/inventory/products/').catch(() => ({ data: [] })),
         api.get('/sales/quotation-templates/my-company-template/').catch(() => ({ data: null })),
+        api.get('/users/company-settings/').catch(() => ({ data: null })),
       ])
       const custData = Array.isArray(custRes.data) ? custRes.data : custRes.data?.results ?? []
       const prodData = Array.isArray(prodRes.data) ? prodRes.data : prodRes.data?.results ?? []
       setCustomers(custData)
       setProducts(prodData)
       if (tmplRes?.data) setCompanyTemplate(tmplRes.data)
+      if (settingsRes?.data) setCompanySettings(settingsRes.data)
     } catch {
       // ignore silently
     }
@@ -165,6 +168,19 @@ export default function QuotationList() {
       window.history.replaceState({}, '', '/quotations')
     }
   }, [location.state, location.search])
+
+  useEffect(() => {
+    if (modalVisible && !editingQuotation) {
+      const currentNotes = form.getFieldValue('notes')
+      const fallback = 'Thanh toán 50% sau khi ký hợp đồng, 50% sau khi nghiệm thu thi công.'
+      if (!currentNotes || currentNotes === fallback || currentNotes === companyTemplate?.footer_content || currentNotes === companyTemplate?.company_default_terms) {
+        const newNotes = companySettings?.default_quotation_terms || companyTemplate?.company_default_terms || companyTemplate?.footer_content || fallback
+        if (newNotes !== currentNotes) {
+          form.setFieldsValue({ notes: newNotes })
+        }
+      }
+    }
+  }, [companySettings, companyTemplate, modalVisible, editingQuotation, form])
 
   // ── Filtered list ─────────────────────────────────────────────────────
   const filteredQuotations = quotations.filter((item) => {
@@ -235,23 +251,27 @@ export default function QuotationList() {
   // 1. If the quotation has a saved template_snapshot in custom_data → use it ("frozen" layout)
   // 2. Otherwise → fall back to the current company template
   const getEffectiveTemplate = (quotation) => {
+    if (!quotation) return companyTemplate
     const snap = quotation?.custom_data?.template_snapshot
     if (snap && snap.code) return snap
-    return companyTemplate
+    
+    // Nếu là báo giá cũ không có snapshot, mặc định là STANDARD (Dọc)
+    return {
+      code: 'STANDARD',
+      name: 'Tiêu chuẩn (Cũ)',
+      layout_config: { paper_orientation: 'portrait' }
+    }
   }
 
   // Backfill: when opening a quotation with no snapshot, silently save current template as snapshot
   const backfillTemplateSnapshot = async (quotation) => {
-    if (!quotation || !companyTemplate) return
+    if (!quotation) return
     if (quotation?.custom_data?.template_snapshot?.code) return // already has snapshot
     try {
       const snap = {
-        id: companyTemplate.id,
-        code: companyTemplate.code,
-        name: companyTemplate.name,
-        layout_config: companyTemplate.layout_config,
-        layout_style: companyTemplate.layout_style,
-        footer_content: companyTemplate.footer_content,
+        code: 'STANDARD',
+        name: 'Tiêu chuẩn (Cũ)',
+        layout_config: { paper_orientation: 'portrait' }
       }
       const updated = {
         ...quotation,
@@ -298,8 +318,12 @@ export default function QuotationList() {
         quantity: 1,
         discount_percent: currentItem.discount_percent || 0,
       }
+      let insertIndex = index
+      while (insertIndex + 1 < prev.length && prev[insertIndex + 1].product === currentItem.product) {
+        insertIndex++
+      }
       const updated = [...prev]
-      updated.splice(index + 1, 0, newItem)
+      updated.splice(insertIndex + 1, 0, newItem)
       return updated
     })
   }
@@ -343,8 +367,9 @@ export default function QuotationList() {
   // Calculate totals in modal
   const calculateModalTotal = () => {
     let subtotal = 0
+    const effTmpl = getEffectiveTemplate(editingQuotation)
     formItems.forEach((item) => {
-      subtotal += computeLineTotal(item)
+      subtotal += computeLineTotal(item, effTmpl)
     })
     return subtotal
   }
@@ -353,7 +378,7 @@ export default function QuotationList() {
   const openModal = (quotation = null, prefillCustomerId = null) => {
     if (checkMaintenance()) return
     setEditingQuotation(quotation)
-    const defaultTerms = companyTemplate?.company_default_terms || companyTemplate?.footer_content || 'Thanh toán 50% sau khi ký hợp đồng, 50% sau khi nghiệm thu thi công.'
+    const defaultTerms = companySettings?.default_quotation_terms || companyTemplate?.company_default_terms || companyTemplate?.footer_content || 'Thanh toán 50% sau khi ký hợp đồng, 50% sau khi nghiệm thu thi công.'
     const defaultPaymentTerms = 'Thanh toán 50% tạm ứng ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.'
     if (quotation) {
       form.setFieldsValue({
@@ -394,12 +419,15 @@ export default function QuotationList() {
               note: it.note || '',
               product_image: it.product_image || (prodObj ? (prodObj.image_url || prodObj.image) : '') || '',
               unit: it.custom_data?.unit || (prodObj ? prodObj.unit : 'cái'),
+              symbol: it.custom_data?.symbol || it.symbol || '',
+              custom_data: it.custom_data || {},
+              product_name: it.product_name || (prodObj ? prodObj.name : ''),
             }
           })
         )
       } else {
         setFormItems([
-          { key: Date.now(), product: null, width: 0, height: 0, length: 0, thickness: 0, area: 0, spec: '', warranty: '12 tháng', quantity: 1, unit_price: 0, discount_percent: 0, note: '', product_image: '', unit: 'cái' },
+          { key: Date.now(), product: null, width: 0, height: 0, length: 0, thickness: 0, area: 0, spec: '', warranty: '12 tháng', quantity: 1, unit_price: 0, discount_percent: 0, note: '', product_image: '', unit: 'cái', symbol: '', custom_data: {} },
         ])
       }
     } else {
@@ -451,13 +479,14 @@ export default function QuotationList() {
       const totalAmt = subtotal + vatAmount + Number(values.shipping_fee || 0) + Number(values.installation_fee || 0) - Number(values.discount_total || 0)
 
       // Build template snapshot to freeze the current layout with this quotation
-      const templateSnapshot = companyTemplate ? {
-        id: companyTemplate.id,
-        code: companyTemplate.code,
-        name: companyTemplate.name,
-        layout_config: companyTemplate.layout_config,
-        layout_style: companyTemplate.layout_style,
-        footer_content: companyTemplate.footer_content,
+      const effTmpl = getEffectiveTemplate(editingQuotation)
+      const templateSnapshot = effTmpl ? {
+        id: effTmpl.id,
+        code: effTmpl.code,
+        name: effTmpl.name,
+        layout_config: effTmpl.layout_config,
+        layout_style: effTmpl.layout_style,
+        footer_content: effTmpl.footer_content,
       } : null
 
       const payload = {
@@ -501,34 +530,32 @@ export default function QuotationList() {
         )
       }
 
-      await Promise.all(
-        validItems.map((it) => {
-          const prodObj = products.find((p) => p.id === it.product)
-          return api.post('/sales/quotation-items/', {
-            quotation: quotationId,
-            product: it.product,
-            product_name: prodObj ? prodObj.name : 'Sản phẩm',
-            unit_price: Number(it.unit_price || 0),
-            width: Math.round(Number(it.width || 0)),
-            height: Math.round(Number(it.height || 0)),
-            length: Math.round(Number(it.length || 0)),
+      for (const it of validItems) {
+        const prodObj = products.find((p) => p.id === it.product)
+        await api.post('/sales/quotation-items/', {
+          quotation: quotationId,
+          product: it.product,
+          product_name: prodObj ? prodObj.name : 'Sản phẩm',
+          unit_price: Number(it.unit_price || 0),
+          width: Math.round(Number(it.width || 0)),
+          height: Math.round(Number(it.height || 0)),
+          length: Math.round(Number(it.length || 0)),
+          thickness: Math.round(Number(it.thickness || 0)),
+          area: Number(it.area || 0),
+          spec: it.spec || '',
+          warranty: it.warranty || '12 tháng',
+          product_image: it.product_image || (prodObj ? (prodObj.image_url || prodObj.image) : '') || '',
+          custom_data: {
+            ...(it.custom_data || {}),
+            unit: it.unit || (prodObj ? prodObj.unit : 'cái'),
             thickness: Math.round(Number(it.thickness || 0)),
-            area: Number(it.area || 0),
-            spec: it.spec || '',
-            warranty: it.warranty || '12 tháng',
-            product_image: it.product_image || (prodObj ? (prodObj.image_url || prodObj.image) : '') || '',
-            custom_data: {
-              ...(it.custom_data || {}),
-              unit: it.unit || (prodObj ? prodObj.unit : 'cái'),
-              thickness: Math.round(Number(it.thickness || 0)),
-              symbol: it.custom_data?.symbol || it.symbol || '',
-            },
-            quantity: Number(it.quantity || 1),
-            discount_percent: Number(it.discount_percent || 0),
-            note: it.note || '',
-          })
+            symbol: it.custom_data?.symbol || it.symbol || '',
+          },
+          quantity: Number(it.quantity || 1),
+          discount_percent: Number(it.discount_percent || 0),
+          note: it.note || '',
         })
-      )
+      }
 
       setModalVisible(false)
       fetchQuotations()
@@ -988,7 +1015,7 @@ export default function QuotationList() {
               }
             }}
           />
-          {record.status === 'draft' || record.status === 'rejected' ? (
+          {(record.status === 'draft' || record.status === 'rejected') && hasPermission('sales.require_approval') ? (
             <Button
               type="default"
               size="small"
@@ -1049,8 +1076,9 @@ export default function QuotationList() {
 
   // ── Dynamic Editable Table Columns based on Template ──────────────────
   const getItemColumns = () => {
-    const tmplCode = companyTemplate?.code || 'STANDARD'
-    const isLandscape = tmplCode === 'production_landscape_a4' || companyTemplate?.layout_config?.paper_orientation === 'landscape'
+    const effectiveTmpl = getEffectiveTemplate(editingQuotation)
+    const tmplCode = effectiveTmpl?.code || 'STANDARD'
+    const isLandscape = tmplCode === 'production_landscape_a4' || effectiveTmpl?.layout_config?.paper_orientation === 'landscape'
 
     if (isLandscape) {
       return [
@@ -1213,7 +1241,7 @@ export default function QuotationList() {
           width: 130,
           align: 'right',
           render: (_, record) => {
-            const total = computeLineTotal(record)
+            const total = computeLineTotal(record, effectiveTmpl)
             return <Text strong style={{ color: '#16a34a', fontSize: 14 }}>{total.toLocaleString('vi-VN')} đ</Text>
           },
         },
@@ -1396,7 +1424,7 @@ export default function QuotationList() {
         width: 130,
         align: 'right',
         render: (_, record) => {
-          const total = computeLineTotal(record)
+          const total = computeLineTotal(record, effectiveTmpl)
           return <Text strong style={{ color: '#16a34a' }}>{total.toLocaleString('vi-VN')} đ</Text>
         },
       },
@@ -1596,7 +1624,7 @@ export default function QuotationList() {
 
           <Divider style={{ margin: '12px 0' }}>
             <Space>
-              <Text strong>Bảng Tính Chi Tiết Hạng Mục (Mẫu: {companyTemplate?.name || 'Tiêu chuẩn'})</Text>
+              <Text strong>Bảng Tính Chi Tiết Hạng Mục (Mẫu: {getEffectiveTemplate(editingQuotation)?.name || 'Tiêu chuẩn'})</Text>
               <Tag color="blue">{formItems.length} dòng</Tag>
             </Space>
           </Divider>
