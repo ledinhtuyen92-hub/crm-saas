@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Avatar, Badge, Button, Col, Divider, Empty, Input, Modal,
   Row, Select, Space, Spin, Tag, Tooltip, Typography, Form, message, Upload,
-  Tabs, Radio, Popover
+  Tabs, Radio, Popover, theme
 } from 'antd'
 import {
   CheckCircleOutlined, CloseOutlined, MessageOutlined,
@@ -183,6 +183,7 @@ function LeadListItem({ lead, selected, onClick }) {
 
 // ── Main Page Component ───────────────────────────────────────────────────────
 export default function ZaloInboxPage() {
+  const { token } = theme.useToken()
   const { user, isCompanyAdmin, maintenanceMode, hasPermission } = useAuth()
   const canDeleteConversation = isCompanyAdmin || user?.is_superuser || user?.role_name?.toLowerCase().includes('giám đốc') || user?.role_name?.toLowerCase().includes('admin') || user?.role_name?.toLowerCase().includes('quản trị')
   // Sale có thể xem toàn bộ hội thoại nếu là admin hoặc có quyền zalo.view_all_inbox
@@ -629,7 +630,7 @@ export default function ZaloInboxPage() {
   return (
     <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
       {/* Header */}
-      <div style={{ padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <div style={{ padding: '10px 16px', background: token.colorBgContainer, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <WechatOutlined style={{ fontSize: 22, color: '#0068ff' }} />
         <span style={{ fontWeight: 700, fontSize: 15, flexShrink: 0 }}>Zalo Inbox</span>
         {oaConfigs.length > 1 && (

@@ -319,10 +319,8 @@ def top_sellers(request):
     user = request.user
     cf = _company_filter(user)
 
-    # Chỉ tính các nhân viên thuộc phòng kinh doanh/sale
-    sales_deps = Q(department__name__icontains='kinh doanh') | Q(department__name__icontains='sale') | Q(department__name__icontains='bán hàng')
-
-    users = User.objects.filter(cf, is_active=True).filter(sales_deps).annotate(
+    # Chỉ tính các nhân viên thuộc phòng ban được cấu hình là "Phòng Sales"
+    users = User.objects.filter(cf, is_active=True, department__is_sales_department=True).annotate(
         total_revenue=Coalesce(
             Sum(
                 "created_orders__total_amount",

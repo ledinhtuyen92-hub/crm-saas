@@ -406,7 +406,7 @@ function Dashboard() {
         <Col xs={24} lg={8}>
           <Card bordered={false} style={{...cardStyle, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center'}} loading={loading}>
             <Row gutter={[16, 32]}>
-              <Col span={24}>
+              <Col xs={24} md={24}>
                 <div style={{ width: '100%' }}>
                   <Space style={{ marginBottom: 16, background: '#fef9c3', padding: '6px 16px', borderRadius: 20 }}>
                     <TrophyOutlined style={{color: '#eab308', fontSize: 18}} />
@@ -437,11 +437,11 @@ function Dashboard() {
                 </div>
               </Col>
               
-              <Col span={24}>
+              <Col xs={24} md={24}>
                 <div style={{ height: 1, background: token.colorBorderSecondary, margin: '8px 0', opacity: 0.6 }} />
               </Col>
 
-              <Col span={24}>
+              <Col xs={24} md={24}>
                 <div style={{ width: '100%' }}>
                   <Space style={{ marginBottom: 16, background: '#fee2e2', padding: '6px 16px', borderRadius: 20 }}>
                     <FrownOutlined style={{color: '#ef4444', fontSize: 18}} />

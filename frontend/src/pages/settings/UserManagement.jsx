@@ -387,7 +387,7 @@ export default function UserManagement() {
             options={departments.map((d) => ({ value: d.id, label: d.name }))}
           />
         </div>
-        <Table
+        <Table scroll={{ x: 'max-content' }}
           id="user-table"
           columns={columns}
           dataSource={filteredUsers}
@@ -422,7 +422,7 @@ export default function UserManagement() {
           style={{ marginTop: 16 }}
         >
           <Row gutter={12}>
-            <Col span={14}>
+            <Col xs={24} md={14}>
               <Form.Item
                 name="full_name"
                 label="Họ và tên"
@@ -431,7 +431,7 @@ export default function UserManagement() {
                 <Input size="large" placeholder="Nguyễn Văn An" />
               </Form.Item>
             </Col>
-            <Col span={10}>
+            <Col xs={24} md={10}>
               <Form.Item name="phone" label="Số điện thoại">
                 <Input size="large" placeholder="0901234567" />
               </Form.Item>
@@ -439,7 +439,7 @@ export default function UserManagement() {
           </Row>
 
           <Row gutter={12}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="email"
                 label="Email"
@@ -451,7 +451,7 @@ export default function UserManagement() {
                 <Input size="large" placeholder="nhanvien@congty.vn" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="username"
                 label="Tên đăng nhập"
@@ -462,7 +462,7 @@ export default function UserManagement() {
             </Col>
           </Row>
           <Row gutter={12}>
-            <Col span={24}>
+            <Col xs={24} md={24}>
               <Form.Item name="job_title" label="Chức danh">
                 <Input size="large" placeholder="Vd: Giám đốc Kinh doanh" />
               </Form.Item>
@@ -470,7 +470,7 @@ export default function UserManagement() {
           </Row>
 
           <Row gutter={12}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="department" label="Phòng ban">
                 <Select
                   size="large"
@@ -480,7 +480,7 @@ export default function UserManagement() {
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="role" label="Vai trò (nhóm quyền)">
                 <Select
                   size="large"
@@ -514,12 +514,12 @@ export default function UserManagement() {
           <Divider style={{ margin: '8px 0 16px' }} />
 
           <Row gutter={24}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="is_active" label="Tình trạng" valuePropName="checked">
                 <Switch checkedChildren="Đang làm việc" unCheckedChildren="Đã nghỉ việc" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="is_company_admin" label="Quyền Admin công ty" valuePropName="checked">
                 <Switch checkedChildren="Admin" unCheckedChildren="Nhân viên" />
               </Form.Item>

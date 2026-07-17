@@ -205,7 +205,7 @@ export default function AdminSettings() {
               />
 
               <Row gutter={16}>
-                <Col span={12}>
+                <Col xs={24} md={12}>
                   <Form.Item
                     name="default_plan"
                     label="Gói mặc định khi tự đăng ký mới"
@@ -220,7 +220,7 @@ export default function AdminSettings() {
                     </Select>
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} md={12}>
                   <Form.Item
                     name="default_user_limit"
                     label="Số tài khoản mặc định (Trial Seat Limit)"
@@ -257,22 +257,22 @@ export default function AdminSettings() {
               </Title>
               <div style={{ background: '#f8fafc', padding: 16, borderRadius: 8, border: '1px solid #e2e8f0' }}>
                 <Row gutter={[12, 12]}>
-                  <Col span={6}>
+                  <Col xs={24} md={6}>
                     <Tag color="blue" style={{ fontWeight: 700 }}>Starter</Tag>
                     <Text style={{ display: 'block', fontSize: 12, marginTop: 4 }}>Tối đa 5 nhân viên</Text>
                     <Text type="secondary" style={{ fontSize: 11 }}>Dành cho nhóm nhỏ</Text>
                   </Col>
-                  <Col span={6}>
+                  <Col xs={24} md={6}>
                     <Tag color="cyan" style={{ fontWeight: 700 }}>Standard</Tag>
                     <Text style={{ display: 'block', fontSize: 12, marginTop: 4 }}>Tối đa 15 nhân viên</Text>
                     <Text type="secondary" style={{ fontSize: 11 }}>Được ưa chuộng nhất</Text>
                   </Col>
-                  <Col span={6}>
+                  <Col xs={24} md={6}>
                     <Tag color="purple" style={{ fontWeight: 700 }}>Professional</Tag>
                     <Text style={{ display: 'block', fontSize: 12, marginTop: 4 }}>Tối đa 50 nhân viên</Text>
                     <Text type="secondary" style={{ fontSize: 11 }}>Dành cho công ty vừa</Text>
                   </Col>
-                  <Col span={6}>
+                  <Col xs={24} md={6}>
                     <Tag color="gold" style={{ fontWeight: 700 }}>Enterprise</Tag>
                     <Text style={{ display: 'block', fontSize: 12, marginTop: 4 }}>Không giới hạn (∞)</Text>
                     <Text type="secondary" style={{ fontSize: 11 }}>Tùy chỉnh VIP</Text>

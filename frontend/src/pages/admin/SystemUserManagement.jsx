@@ -18,6 +18,7 @@ import {
   Row,
   Select,
   Space,
+  Switch,
   Table,
   Tag,
   Tooltip,
@@ -381,7 +382,7 @@ export default function SystemUserManagement() {
           />
         </div>
 
-        <Table
+        <Table scroll={{ x: 'max-content' }}
           columns={columns}
           dataSource={filteredUsers}
           rowKey="id"
@@ -401,7 +402,7 @@ export default function SystemUserManagement() {
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false} style={{ marginTop: 24 }}>
           <Row gutter={16}>
-            <Col span={24}>
+            <Col xs={24} md={24}>
               {editingUser?.is_superuser ? (
                 <Form.Item label="Thuộc Công ty (Workspace)">
                   <Input
@@ -427,7 +428,7 @@ export default function SystemUserManagement() {
                 </Form.Item>
               )}
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="username"
                 label="Tên đăng nhập"
@@ -436,7 +437,7 @@ export default function SystemUserManagement() {
                 <Input size="large" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="password"
                 label={editingUser ? 'Mật khẩu mới (Để trống nếu không đổi)' : 'Mật khẩu'}
@@ -445,7 +446,7 @@ export default function SystemUserManagement() {
                 <Input.Password size="large" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="full_name"
                 label="Họ và tên"
@@ -454,7 +455,7 @@ export default function SystemUserManagement() {
                 <Input size="large" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="email"
                 label="Email"
@@ -463,12 +464,12 @@ export default function SystemUserManagement() {
                 <Input size="large" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="phone" label="Số điện thoại">
                 <Input size="large" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               {editingUser?.is_superuser ? (
                 <Form.Item label="Vai trò / Chức danh">
                   <Input
@@ -489,6 +490,17 @@ export default function SystemUserManagement() {
                 </Form.Item>
               )}
             </Col>
+            {!editingUser?.is_superuser && (
+              <Col xs={24} md={24}>
+                <Form.Item
+                  name="is_company_admin"
+                  valuePropName="checked"
+                  help="Bật để cấp quyền Quản trị viên Công ty (Toàn quyền quản lý tài khoản, cấu hình doanh nghiệp)."
+                >
+                  <Switch checkedChildren="Quản trị viên Công ty" unCheckedChildren="Tài khoản thường" />
+                </Form.Item>
+              </Col>
+            )}
           </Row>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>

@@ -33,10 +33,13 @@ class ApprovalRequestViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                     q_filter |= Q(steps__approver_role=user.role)
                 qs = qs.filter(q_filter).distinct()
 
-        # Thêm filter status
         req_status = self.request.query_params.get("status")
         if req_status:
             qs = qs.filter(status=req_status)
+
+        search_query = self.request.query_params.get("search")
+        if search_query:
+            qs = qs.filter(title__icontains=search_query)
 
         return qs.order_by("-created_at")
 

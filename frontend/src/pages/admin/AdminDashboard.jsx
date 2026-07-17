@@ -382,7 +382,7 @@ export default function AdminDashboard() {
             Xem tất cả công ty ({totalCompanies}) &rarr;
           </Button>
         </div>
-        <Table
+        <Table scroll={{ x: 'max-content' }}
           columns={columns}
           dataSource={companies}
           rowKey="id"

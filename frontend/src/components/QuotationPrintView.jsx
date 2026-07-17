@@ -230,7 +230,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
       )}
 
       <Title level={5}>Danh sách hạng mục báo giá</Title>
-      <Table
+      <Table scroll={{ x: 'max-content' }}
         dataSource={quotation.items || []}
         rowKey="id"
         pagination={false}
@@ -425,7 +425,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
 
       <Divider />
       <Row gutter={24}>
-        <Col span={12}>
+        <Col xs={24} md={12}>
           {quotation.payment_terms_schedule && quotation.payment_terms_schedule.length > 0 && (
             <div>
               <Text strong style={{ fontSize: 13, textDecoration: 'underline' }}>Tiến độ thanh toán:</Text>
@@ -439,7 +439,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
             </div>
           )}
         </Col>
-        <Col span={12} style={{ textAlign: 'right' }}>
+        <Col xs={24} md={12} style={{ textAlign: 'right' }}>
           <div><Text>Tổng Phí Trước Thuế:</Text> <Text strong>{Number(quotation.subtotal || 0).toLocaleString('vi-VN')} đ</Text></div>
           {Number(quotation.vat_rate || 0) > 0 && (
             <div><Text>Thuế VAT ({quotation.vat_rate}%):</Text> <Text strong>+{Number(quotation.vat_amount || 0).toLocaleString('vi-VN')} đ</Text></div>
@@ -488,7 +488,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
 
       {/* Khối Chữ Ký & Con Dấu */}
       <Row justify="space-between" className="signature-block" style={{ marginTop: 40, textAlign: 'center', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-        <Col span={10}>
+        <Col xs={24} md={10}>
           <Text strong style={{ display: 'block', fontSize: 13, color: '#1e293b' }}>BÊN MUA / KHÁCH HÀNG</Text>
           <Text type="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>(Ký, ghi rõ họ tên)</Text>
           
@@ -510,7 +510,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
             )
           )}
         </Col>
-        <Col span={10} style={{ position: 'relative' }}>
+        <Col xs={24} md={10} style={{ position: 'relative' }}>
           <Text strong style={{ display: 'block', fontSize: 13, color: '#1e293b' }}>
             {quotation?.company_info?.director_title || effectiveTemplate?.company_info?.director_title || 'ĐẠI DIỆN CÔNG TY'}
           </Text>

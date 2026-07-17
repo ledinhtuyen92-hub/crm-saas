@@ -151,7 +151,7 @@ export default function ProductTemplateTab({ categories }) {
         </Button>
       </div>
 
-      <Table columns={columns} dataSource={templates} rowKey="id" loading={loading} />
+      <Table scroll={{ x: 'max-content' }} columns={columns} dataSource={templates} rowKey="id" loading={loading} />
 
       {/* CRUD Modal */}
       <Modal
@@ -198,7 +198,7 @@ export default function ProductTemplateTab({ categories }) {
               <>
                 {fields.map(({ key, name, ...restField }) => (
                   <Row key={key} gutter={12} style={{ marginBottom: 8, alignItems: 'center' }}>
-                    <Col span={8}>
+                    <Col xs={24} md={8}>
                       <Form.Item
                         {...restField}
                         name={[name, 'name']}
@@ -208,7 +208,7 @@ export default function ProductTemplateTab({ categories }) {
                         <Input placeholder="Tên: Màu sắc, Size..." />
                       </Form.Item>
                     </Col>
-                    <Col span={14}>
+                    <Col xs={24} md={14}>
                       <Form.Item
                         {...restField}
                         name={[name, 'values']}
@@ -221,7 +221,7 @@ export default function ProductTemplateTab({ categories }) {
                         />
                       </Form.Item>
                     </Col>
-                    <Col span={2}>
+                    <Col xs={24} md={2}>
                       <Button danger icon={<DeleteOutlined />} onClick={() => remove(name)} type="text" />
                     </Col>
                   </Row>

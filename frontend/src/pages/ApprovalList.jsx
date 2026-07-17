@@ -22,6 +22,9 @@ export default function ApprovalList() {
   const [loading, setLoading] = useState(false)
   const [selectedReq, setSelectedReq] = useState(null)
   
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+
   const [modalVisible, setModalVisible] = useState(false)
   const [actionType, setActionType] = useState('') // 'approve' | 'reject'
   const [comment, setComment] = useState('')
@@ -31,14 +34,14 @@ export default function ApprovalList() {
   const fetchRequests = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await api.get(`/approvals/requests/?mode=${activeTab}`)
+      const { data } = await api.get(`/approvals/requests/?mode=${activeTab}&search=${search}&status=${statusFilter}`)
       setRequests(data.results || data)
     } catch (err) {
       message.error('Lỗi tải danh sách phê duyệt')
     } finally {
       setLoading(false)
     }
-  }, [activeTab])
+  }, [activeTab, search, statusFilter])
 
   useEffect(() => {
     fetchRequests()
@@ -140,10 +143,32 @@ export default function ApprovalList() {
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
-      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
-        <Col>
-          <Title level={3} style={{ margin: 0, color: '#1e293b' }}>Luồng Phê Duyệt</Title>
+      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }} gutter={[16, 16]}>
+        <Col xs={24} md={12}>
+          <Title level={3} style={{ margin: 0 }}>Luồng Phê Duyệt</Title>
           <Text type="secondary">Quản lý và xét duyệt các yêu cầu tập trung</Text>
+        </Col>
+        <Col xs={24} md={12} style={{ textAlign: 'right' }}>
+          <Space wrap>
+            <Input.Search
+              placeholder="Tìm theo tiêu đề..."
+              allowClear
+              onSearch={(val) => setSearch(val)}
+              style={{ width: 220 }}
+            />
+            <Select
+              placeholder="Lọc trạng thái"
+              allowClear
+              value={statusFilter || undefined}
+              onChange={(val) => setStatusFilter(val || '')}
+              style={{ width: 150 }}
+            >
+              <Select.Option value="pending">Chờ duyệt</Select.Option>
+              <Select.Option value="approved">Đã duyệt</Select.Option>
+              <Select.Option value="rejected">Từ chối</Select.Option>
+              <Select.Option value="canceled">Đã hủy</Select.Option>
+            </Select>
+          </Space>
         </Col>
       </Row>
 
@@ -162,7 +187,7 @@ export default function ApprovalList() {
             { label: 'Tất cả', key: 'all' },
           ]}
         />
-        <Table 
+        <Table scroll={{ x: 'max-content' }} 
           columns={columns} 
           dataSource={requests} 
           rowKey="id" 

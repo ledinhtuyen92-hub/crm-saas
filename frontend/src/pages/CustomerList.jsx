@@ -796,7 +796,7 @@ function CustomerList() {
       </Card>
 
       {/* Main Table */}
-      <Table
+      <Table scroll={{ x: 'max-content' }}
         rowSelection={{
           selectedRowKeys,
           onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
@@ -825,7 +825,7 @@ function CustomerList() {
       >
         <Form form={form} layout="vertical" onFinish={handleSaveCustomer}>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="name"
                 label="Tên khách hàng / Công ty"
@@ -834,7 +834,7 @@ function CustomerList() {
                 <Input placeholder="VD: Công ty ABC hoặc Nguyễn Văn A" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="phone"
                 label="Số điện thoại"
@@ -846,12 +846,12 @@ function CustomerList() {
           </Row>
 
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="email" label="Email">
                 <Input type="email" placeholder="email@domain.com" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="city" label="Thành phố / Tỉnh">
                 <Input placeholder="VD: TP. Hồ Chí Minh" />
               </Form.Item>
@@ -859,12 +859,12 @@ function CustomerList() {
           </Row>
 
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="address" label="Địa chỉ">
                 <Input placeholder="Số nhà, đường, phường/xã..." />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="birthday" label="Ngày sinh">
                 <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} placeholder="Chọn ngày sinh" />
               </Form.Item>
@@ -872,7 +872,7 @@ function CustomerList() {
           </Row>
 
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="source" label="Nguồn khách hàng" initialValue="other">
                 <Select placeholder="Chọn nguồn khách hàng">
                   {Object.entries(SOURCE_MAP).map(([key, label]) => (
@@ -886,7 +886,7 @@ function CustomerList() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="status" label="Trạng thái quy trình (Pipeline)" initialValue="new">
                 <Select>
                   {Object.entries(STATUS_MAP).map(([key, item]) => (
@@ -1102,7 +1102,7 @@ function CustomerList() {
                       </Button>
                     </div>
 
-                    <Table
+                    <Table scroll={{ x: 'max-content' }}
                       dataSource={contacts}
                       rowKey="id"
                       pagination={false}
@@ -1123,12 +1123,12 @@ function CustomerList() {
                 children: (
                   <Form layout="vertical">
                     <Row gutter={16}>
-                      <Col span={12}>
+                      <Col xs={24} md={12}>
                         <Form.Item label="Số điện thoại">
                           <Input value={currentCustomer.phone} readOnly />
                         </Form.Item>
                       </Col>
-                      <Col span={12}>
+                      <Col xs={24} md={12}>
                         <Form.Item label="Email">
                           <Input value={currentCustomer.email || '—'} readOnly />
                         </Form.Item>
@@ -1138,24 +1138,24 @@ function CustomerList() {
                       <Input value={currentCustomer.address || '—'} readOnly />
                     </Form.Item>
                     <Row gutter={16}>
-                      <Col span={12}>
+                      <Col xs={24} md={12}>
                         <Form.Item label="Thành phố">
                           <Input value={currentCustomer.city || '—'} readOnly />
                         </Form.Item>
                       </Col>
-                      <Col span={12}>
+                      <Col xs={24} md={12}>
                         <Form.Item label="Ngày sinh">
                           <Input value={currentCustomer.birthday ? dayjs(currentCustomer.birthday).format('DD/MM/YYYY') : '—'} readOnly />
                         </Form.Item>
                       </Col>
                     </Row>
                     <Row gutter={16}>
-                      <Col span={12}>
+                      <Col xs={24} md={12}>
                         <Form.Item label="Nguồn">
                           <Input value={SOURCE_MAP[currentCustomer.source] || currentCustomer.source || '—'} readOnly />
                         </Form.Item>
                       </Col>
-                      <Col span={12}>
+                      <Col xs={24} md={12}>
                         <Form.Item label="Ngày tạo">
                           <Input value={new Date(currentCustomer.created_at).toLocaleString('vi-VN')} readOnly />
                         </Form.Item>
@@ -1187,7 +1187,7 @@ function CustomerList() {
       >
         <Form form={interactionForm} layout="vertical" onFinish={handleAddInteraction}>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="type" label="Hình thức tương tác" rules={[{ required: true }]}>
                 <Select>
                   {Object.entries(INTERACTION_TYPES).map(([key, item]) => (
@@ -1196,7 +1196,7 @@ function CustomerList() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="result" label="Kết quả đánh giá" rules={[{ required: true }]}>
                 <Select>
                   {Object.entries(INTERACTION_RESULTS).map(([key, item]) => (
@@ -1242,12 +1242,12 @@ function CustomerList() {
             <Input placeholder="VD: Nguyễn Văn B" />
           </Form.Item>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="phone" label="Số điện thoại">
                 <Input placeholder="090..." />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="email" label="Email">
                 <Input type="email" placeholder="email@company.com" />
               </Form.Item>

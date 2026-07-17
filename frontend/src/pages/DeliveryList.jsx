@@ -443,7 +443,7 @@ export default function DeliveryList() {
         </Row>
       </Card>
 
-      <Table
+      <Table scroll={{ x: 'max-content' }}
         dataSource={deliveries}
         columns={columns}
         rowKey="id"
@@ -486,12 +486,12 @@ export default function DeliveryList() {
             </Select>
           </Form.Item>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="shipper_name" label="Người giao hàng (Shipper)">
                 <Input disabled={!canEdit} />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="shipper_phone" label="SĐT Shipper">
                 <Input disabled={!canEdit} />
               </Form.Item>
@@ -501,12 +501,12 @@ export default function DeliveryList() {
             <Input.TextArea rows={2} disabled={!canEdit} />
           </Form.Item>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="expected_date" label="Ngày dự kiến">
                 <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} disabled={!canEdit} />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="actual_date" label="Ngày thực tế">
                 <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} disabled={!canEdit} />
               </Form.Item>

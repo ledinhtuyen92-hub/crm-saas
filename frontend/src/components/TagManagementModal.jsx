@@ -135,7 +135,7 @@ function TagManagementModal({ open, onCancel }) {
         </Form.Item>
       </Form>
 
-      <Table
+      <Table scroll={{ x: 'max-content' }}
         dataSource={tags}
         columns={columns}
         rowKey="id"

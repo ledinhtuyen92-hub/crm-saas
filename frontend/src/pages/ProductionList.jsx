@@ -497,7 +497,7 @@ export default function ProductionList() {
 
       {/* ── Table ──────────────────────────────────────────────────────── */}
       <Card style={{ borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }} bodyStyle={{ padding: 0 }}>
-        <Table
+        <Table scroll={{ x: 'max-content' }}
           columns={columns}
           dataSource={filteredPOs}
           rowKey="id"
@@ -525,7 +525,7 @@ export default function ProductionList() {
             </Select>
           </Form.Item>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="status" label="Trạng thái">
                 <Select disabled={editingPO?.delivery_status === 'delivered'}>
                   <Option value="pending">Chờ sản xuất</Option>
@@ -540,12 +540,12 @@ export default function ProductionList() {
                 </div>
               )}
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="start_date" label="Ngày bắt đầu">
                 <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="end_date" label="Ngày kết thúc dự kiến">
                 <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
               </Form.Item>
@@ -573,15 +573,15 @@ export default function ProductionList() {
           <div>
             <Card style={{ marginBottom: 20, background: '#f8fafc', borderRadius: 10 }}>
               <Row gutter={16}>
-                <Col span={8}>
+                <Col xs={24} md={8}>
                   <Text type="secondary" style={{ fontSize: 12 }}>ĐƠN HÀNG:</Text>
                   <div><Text strong style={{ color: '#0284c7', fontSize: 15 }}>{selectedPO.order_number || `DH-${selectedPO.order}`}</Text></div>
                 </Col>
-                <Col span={8}>
+                <Col xs={24} md={8}>
                   <Text type="secondary" style={{ fontSize: 12 }}>TRẠNG THÁI LSX:</Text>
                   <div>{(() => { const c = statusConfig[selectedPO.status] || { label: selectedPO.status }; return <Tag color={c.color}>{c.label}</Tag> })()}</div>
                 </Col>
-                <Col span={8}>
+                <Col xs={24} md={8}>
                   <Text type="secondary" style={{ fontSize: 12 }}>NGÀY DỰ KIẾN XONG:</Text>
                   <div><Text strong style={{ color: '#dc2626' }}>{selectedPO.end_date ? dayjs(selectedPO.end_date).format('DD/MM/YYYY') : '—'}</Text></div>
                 </Col>
@@ -597,7 +597,7 @@ export default function ProductionList() {
               )}
             </Row>
 
-            <Table
+            <Table scroll={{ x: 'max-content' }}
               dataSource={selectedPO.steps || []}
               rowKey="id"
               pagination={false}
@@ -682,17 +682,17 @@ export default function ProductionList() {
       >
         <Form form={stepForm} layout="vertical" style={{ marginTop: 16 }}>
           <Row gutter={16}>
-            <Col span={18}>
+            <Col xs={24} md={18}>
               <Form.Item name="step_name" label="Tên công đoạn thi công" rules={[{ required: true, message: 'Nhập tên công đoạn' }]}>
                 <Input placeholder="VD: Cắt nhôm theo bản vẽ, Lắp ráp khung, Ghép kính..." />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} md={6}>
               <Form.Item name="sequence" label="Thứ tự" rules={[{ required: true }]}>
                 <Input type="number" min={1} />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="assigned_to" label="Kỹ thuật viên phụ trách">
                 <Select placeholder="Chọn nhân viên..." allowClear>
                   {users.map((u) => (
@@ -701,7 +701,7 @@ export default function ProductionList() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="status" label="Trạng thái thực hiện">
                 <Select>
                   <Option value="pending">Chờ thực hiện</Option>
@@ -710,7 +710,7 @@ export default function ProductionList() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={24}>
+            <Col xs={24} md={24}>
               <Form.Item name="notes" label="Ghi chú / Yêu cầu kỹ thuật">
                 <TextArea rows={2} placeholder="Ghi chú cho kỹ thuật viên thi công bước này..." />
               </Form.Item>

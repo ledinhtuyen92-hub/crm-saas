@@ -689,24 +689,6 @@
     "model": "users.permission",
     "pk": 110,
     "fields": {
-      "code": "dashboard.view_debt",
-      "name": "Xem biểu đồ công nợ toàn công ty",
-      "module": "dashboard"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 111,
-    "fields": {
-      "code": "zalo.view_all_inbox",
-      "name": "Xem toàn bộ hội thoại Zalo (không giới hạn bởi phân công)",
-      "module": "zalo"
-    }
-  },
-  {
-    "model": "users.permission",
-    "pk": 112,
-    "fields": {
       "code": "zalo.chat",
       "name": "Chat trực tiếp với khách hàng trên Zalo",
       "module": "zalo"
@@ -714,7 +696,7 @@
   },
   {
     "model": "users.permission",
-    "pk": 113,
+    "pk": 111,
     "fields": {
       "code": "zalo.create_customer",
       "name": "Tạo khách hàng từ hội thoại Zalo",
@@ -723,7 +705,16 @@
   },
   {
     "model": "users.permission",
-    "pk": 114,
+    "pk": 112,
+    "fields": {
+      "code": "zalo.view_all_inbox",
+      "name": "Xem toàn bộ hội thoại Zalo (không giới hạn bởi phân công)",
+      "module": "zalo"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 113,
     "fields": {
       "code": "facebook.view_all_inbox",
       "name": "Xem toàn bộ hội thoại Facebook (không giới hạn bởi phân công)",
@@ -753,7 +744,6 @@
         2,
         9,
         1,
-        110,
         75,
         71,
         90,
@@ -763,7 +753,7 @@
         107,
         108,
         109,
-        114,
+        113,
         106,
         49,
         59,
@@ -811,13 +801,13 @@
         70,
         69,
         68,
-        112,
+        110,
         74,
-        113,
+        111,
         104,
         73,
         72,
-        111
+        112
       ]
     }
   },
@@ -828,9 +818,11 @@
       "company": 15,
       "name": "Trưởng phòng kinh doanh",
       "description": "",
-      "is_auto_assign_target": false,
+      "is_auto_assign_target": true,
       "permissions": [
+        56,
         6,
+        43,
         3,
         5,
         4,
@@ -841,12 +833,32 @@
         2,
         9,
         1,
+        75,
+        65,
+        107,
+        108,
+        113,
+        106,
+        23,
         20,
-        17,
         19,
         18,
         21,
-        16
+        16,
+        32,
+        53,
+        36,
+        46,
+        12,
+        14,
+        13,
+        15,
+        11,
+        68,
+        110,
+        111,
+        73,
+        72
       ]
     }
   },
@@ -857,7 +869,7 @@
       "company": 15,
       "name": "Nhân viên kinh doanh",
       "description": "",
-      "is_auto_assign_target": false,
+      "is_auto_assign_target": true,
       "permissions": [
         43,
         3,
@@ -869,16 +881,30 @@
         44,
         2,
         1,
+        75,
+        65,
+        107,
+        108,
+        106,
+        48,
+        23,
         18,
         21,
         16,
+        32,
         53,
+        36,
         12,
         14,
         13,
         15,
         54,
-        11
+        11,
+        68,
+        110,
+        111,
+        73,
+        72
       ]
     }
   },
@@ -891,33 +917,19 @@
       "description": "",
       "is_auto_assign_target": false,
       "permissions": [
-        2,
-        9,
         1,
-        66,
+        75,
         65,
         49,
+        59,
+        63,
         48,
         23,
-        18,
-        16,
+        21,
         22,
-        33,
-        35,
-        34,
-        64,
-        32,
         53,
         36,
         37,
-        46,
-        12,
-        14,
-        13,
-        15,
-        54,
-        11,
-        47,
         68
       ]
     }
@@ -931,17 +943,20 @@
       "description": "",
       "is_auto_assign_target": false,
       "permissions": [
+        56,
         1,
+        65,
         48,
         28,
+        60,
         27,
         30,
+        61,
         23,
-        16,
         22,
         32,
-        31,
-        53
+        53,
+        11
       ]
     }
   },
@@ -954,13 +969,37 @@
       "description": "",
       "is_auto_assign_target": false,
       "permissions": [
+        56,
         1,
+        75,
+        65,
         23,
-        16,
         22,
+        33,
+        35,
+        34,
         64,
         32,
-        53
+        53,
+        68
+      ]
+    }
+  },
+  {
+    "model": "users.role",
+    "pk": 28,
+    "fields": {
+      "company": 15,
+      "name": "Phòng Giao Hàng",
+      "description": "Chức năng vận chuyển và giao hàng",
+      "is_auto_assign_target": false,
+      "permissions": [
+        1,
+        71,
+        90,
+        67,
+        66,
+        65
       ]
     }
   },
@@ -968,7 +1007,7 @@
     "model": "users.user",
     "fields": {
       "password": "pbkdf2_sha256$1000000$ECQhi9BHkIsVTlsjgPiIMe$sVQIe5Cfq9ZU7nACy/evbQj0IfRFVVhgCQ1NbKN4NE8=",
-      "last_login": "2026-07-14T09:11:25.518Z",
+      "last_login": "2026-07-17T03:39:14.001Z",
       "is_superuser": true,
       "username": "admin",
       "first_name": "",
@@ -994,7 +1033,7 @@
     "model": "users.user",
     "fields": {
       "password": "pbkdf2_sha256$1000000$gogv5if640Ve4r5k5DvYiY$Co2C/05RkNJOSvpBH4uiONSzdeTJAZ/vJysA2SrgpDY=",
-      "last_login": "2026-07-16T16:36:37.709Z",
+      "last_login": "2026-07-17T04:26:54.223Z",
       "is_superuser": false,
       "username": "giamdoc",
       "first_name": "",
@@ -1020,7 +1059,7 @@
     "model": "users.user",
     "fields": {
       "password": "pbkdf2_sha256$1000000$j4yC8eHVXgqOwTINBbGkf0$44aDim0lZRdHMPF2o5xec/Y/2IfYDgQf8D4QWuO5MI4=",
-      "last_login": null,
+      "last_login": "2026-07-17T04:27:29.819Z",
       "is_superuser": false,
       "username": "kinhdoanh1",
       "first_name": "",
@@ -1072,7 +1111,7 @@
     "model": "users.user",
     "fields": {
       "password": "pbkdf2_sha256$1000000$zGI3raZm9E8dPpanLUOhR3$66e+R9q5PbqIrxfRL936um0S8glLIWQJO9doV+Isw5o=",
-      "last_login": "2026-07-10T10:16:33.649Z",
+      "last_login": "2026-07-17T04:14:46.049Z",
       "is_superuser": false,
       "username": "nvkinhdoanh1",
       "first_name": "",
@@ -1098,7 +1137,7 @@
     "model": "users.user",
     "fields": {
       "password": "pbkdf2_sha256$1000000$3F9C08AcCODlGVhwXNS03V$JrfWLQGys/+hvGotKRSb9ZxE8keKyoOQc3WpI1D7B/4=",
-      "last_login": null,
+      "last_login": "2026-07-16T06:43:46.671Z",
       "is_superuser": false,
       "username": "nvkinhdoanh2",
       "first_name": "",
@@ -1126,7 +1165,7 @@
       "password": "pbkdf2_sha256$1000000$H1TOCIWybkAIbe766vy0sq$F7IYiH70I+xRh2rHHZRgPyLtdLM4qsNcDBfr7mN4TpU=",
       "last_login": "2026-07-11T08:10:23.247Z",
       "is_superuser": false,
-      "username": "ketoan1",
+      "username": "ketoan",
       "first_name": "",
       "last_name": "",
       "is_staff": false,
@@ -1152,7 +1191,7 @@
       "password": "pbkdf2_sha256$1000000$OMnq00wh9ETi5RXnbBgV7p$cKXUpqytAM/jKQTVFRhTlSHPhP5AVRQQlf0QVnDYqCs=",
       "last_login": null,
       "is_superuser": false,
-      "username": "thukho1",
+      "username": "thukho",
       "first_name": "",
       "last_name": "",
       "is_staff": false,
@@ -1178,7 +1217,7 @@
       "password": "pbkdf2_sha256$1000000$aJFNuF0ncdKQ1SFzwi7Ysx$2sush6cEMYIIVtw2tl3bsqHHAwjSMg+NxznawFbtF9w=",
       "last_login": "2026-07-11T05:12:59.020Z",
       "is_superuser": false,
-      "username": "quandoc1",
+      "username": "sanxuat",
       "first_name": "",
       "last_name": "",
       "is_staff": false,
@@ -1978,7 +2017,7 @@
       "title": "Bạn có khách hàng mới được phân công",
       "message": "Khách hàng V┼⌐ Thß╗ï Huß║┐ (0988565777) đã được phân công cho bạn.",
       "link": "/customers/25",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-14T01:34:47.536Z"
     }
   },
@@ -1995,7 +2034,7 @@
       "title": "Bạn có khách hàng mới được phân công",
       "message": "Khách hàng LE DINH TUYEN (0989198265) đã được phân công cho bạn.",
       "link": "/customers/26",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-14T01:34:48.032Z"
     }
   },
@@ -2052,7 +2091,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DH-20260709-001 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/6",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T04:39:36.691Z"
     }
   },
@@ -2109,7 +2148,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DH-20260709-001 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/7",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T06:11:18.597Z"
     }
   },
@@ -2185,7 +2224,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DHFUJI-20260709-001 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/8",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T06:18:41.390Z"
     }
   },
@@ -2261,7 +2300,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DHFUJI-20260709-002 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/9",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T06:20:08.910Z"
     }
   },
@@ -2318,7 +2357,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DHFUJI-20260709-003 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/10",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T06:23:28.236Z"
     }
   },
@@ -2375,7 +2414,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DHFUJI-20260709-004 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/11",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T06:24:28.105Z"
     }
   },
@@ -2470,7 +2509,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DHFUJI-20260709-001 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/12",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T06:35:50.678Z"
     }
   },
@@ -2565,7 +2604,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DHFUJI-20260709-001 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/13",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T06:40:53.749Z"
     }
   },
@@ -2622,7 +2661,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DHFUJI-20260709-001 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/14",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T06:42:37Z"
     }
   },
@@ -2698,7 +2737,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng TEST-DELETE-01 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/16",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T06:53:04.851Z"
     }
   },
@@ -2774,7 +2813,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DH-FIN-001 của khách Sever Webmail đang chờ duyệt.",
       "link": "/orders/17",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T07:20:52.884Z"
     }
   },
@@ -2812,7 +2851,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DH-MOGATE-001 của khách Sever Webmail đang chờ duyệt.",
       "link": "/orders/18",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T07:22:37.524Z"
     }
   },
@@ -2863,7 +2902,7 @@
         "giamdoc"
       ],
       "sender": [
-        "ketoan1"
+        "ketoan"
       ],
       "type": "order_new",
       "title": "Đơn hàng mới cần duyệt",
@@ -2882,13 +2921,13 @@
         "kinhdoanh1"
       ],
       "sender": [
-        "ketoan1"
+        "ketoan"
       ],
       "type": "order_new",
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DHFUJI-20260709-001 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/19",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T07:29:40.634Z"
     }
   },
@@ -2901,7 +2940,7 @@
         "kinhdoanh2"
       ],
       "sender": [
-        "ketoan1"
+        "ketoan"
       ],
       "type": "order_new",
       "title": "Đơn hàng mới cần duyệt",
@@ -2917,7 +2956,7 @@
     "fields": {
       "company": 15,
       "recipient": [
-        "ketoan1"
+        "ketoan"
       ],
       "sender": [
         "giamdoc"
@@ -2945,7 +2984,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DH-DOGATE-001 của khách Sever Webmail đang chờ duyệt.",
       "link": "/orders/20",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T07:42:01.587Z"
     }
   },
@@ -3002,7 +3041,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DH-DOGATE-002 của khách Sever Webmail đang chờ duyệt.",
       "link": "/orders/21",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T07:43:49.241Z"
     }
   },
@@ -3059,7 +3098,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DH-DOGATE-002 của khách Sever Webmail đang chờ duyệt.",
       "link": "/orders/22",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T07:44:13.892Z"
     }
   },
@@ -3135,7 +3174,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DH-DOGATE-TEST-3 của khách Sever Webmail đang chờ duyệt.",
       "link": "/orders/23",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T07:46:56.864Z"
     }
   },
@@ -3192,7 +3231,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng DHFUJI-20260709-001 của khách Sever Webmail đang chờ duyệt.",
       "link": "/orders/24",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-09T09:44:29.173Z"
     }
   },
@@ -3325,7 +3364,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260710-001 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/25",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-10T04:34:45.647Z"
     }
   },
@@ -3477,7 +3516,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260710-002 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/26",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-10T05:20:14.705Z"
     }
   },
@@ -3515,7 +3554,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260710-001 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/27",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-10T05:23:08.062Z"
     }
   },
@@ -3572,7 +3611,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260710-002 của khách Sever Webmail đang chờ duyệt.",
       "link": "/orders/28",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-10T09:45:22.684Z"
     }
   },
@@ -3703,7 +3742,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260710-001 của khách Vũ Thị Huế đang chờ duyệt.",
       "link": "/orders/29",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-10T10:32:21.052Z"
     }
   },
@@ -3872,7 +3911,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-001 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/30",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T01:43:22.768Z"
     }
   },
@@ -3967,7 +4006,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-002 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/31",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T01:46:25.860Z"
     }
   },
@@ -4024,7 +4063,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-003 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/32",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T01:50:29.077Z"
     }
   },
@@ -4081,7 +4120,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-004 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/33",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T01:50:46.859Z"
     }
   },
@@ -4138,7 +4177,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-003 của khách Vũ Thị Huế đang chờ duyệt.",
       "link": "/orders/34",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T01:54:24.097Z"
     }
   },
@@ -4195,7 +4234,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-004 của khách Vũ Thị Huế đang chờ duyệt.",
       "link": "/orders/35",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T01:54:29.398Z"
     }
   },
@@ -4252,7 +4291,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-005 của khách Vũ Thị Huế đang chờ duyệt.",
       "link": "/orders/36",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T01:55:27.068Z"
     }
   },
@@ -4309,7 +4348,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-003 của khách Vũ Thị Huế đang chờ duyệt.",
       "link": "/orders/37",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T01:59:07.287Z"
     }
   },
@@ -4404,7 +4443,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-001 của khách Vũ Thị Huế đang chờ duyệt.",
       "link": "/orders/38",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T02:09:02.333Z"
     }
   },
@@ -4518,7 +4557,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-001 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/39",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T02:16:19.837Z"
     }
   },
@@ -4613,7 +4652,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-002 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/40",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T02:18:05.517Z"
     }
   },
@@ -4784,7 +4823,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-003 của khách Vũ Thị Huế đang chờ duyệt.",
       "link": "/orders/41",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T02:25:16.129Z"
     }
   },
@@ -4879,7 +4918,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-004 của khách Vũ Thị Huế đang chờ duyệt.",
       "link": "/orders/42",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T02:28:57.411Z"
     }
   },
@@ -4974,7 +5013,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-005 của khách Vũ Thị Huế đang chờ duyệt.",
       "link": "/orders/43",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T02:40:55.693Z"
     }
   },
@@ -5050,7 +5089,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-006 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/44",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T02:41:25.539Z"
     }
   },
@@ -5107,7 +5146,7 @@
       "title": "Đơn hàng bị từ chối",
       "message": "Đơn hàng FUJI-DH-20260711-006 của khách LE DINH TUYEN đã bị từ chối.",
       "link": "/orders/44",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T02:55:55.810Z"
     }
   },
@@ -5126,7 +5165,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-001 của khách Vũ Thị Huế đang chờ duyệt.",
       "link": "/orders/45",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T06:53:18.108Z"
     }
   },
@@ -5164,7 +5203,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-002 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/46",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T07:02:33.713Z"
     }
   },
@@ -5221,7 +5260,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-001 của khách Vũ Thị Huế đang chờ duyệt.",
       "link": "/orders/47",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T07:26:43.744Z"
     }
   },
@@ -5259,7 +5298,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-001 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/48",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T07:47:41.885Z"
     }
   },
@@ -5354,7 +5393,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-002 của khách Vũ Thị Huế đang chờ duyệt.",
       "link": "/orders/49",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T08:43:39.569Z"
     }
   },
@@ -5402,7 +5441,7 @@
     "fields": {
       "company": 15,
       "recipient": [
-        "ketoan1"
+        "ketoan"
       ],
       "sender": [
         "giamdoc"
@@ -5430,7 +5469,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-003 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/50",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T09:53:38.330Z"
     }
   },
@@ -5468,7 +5507,7 @@
       "title": "Đơn hàng mới cần duyệt",
       "message": "Đơn hàng FUJI-DH-20260711-004 của khách LE DINH TUYEN đang chờ duyệt.",
       "link": "/orders/51",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-07-11T10:03:25.776Z"
     }
   },
@@ -5887,9 +5926,9 @@
       "app_id": "",
       "secret_key": "",
       "oa_id": "1164593518856973451",
-      "access_token": "-Hol3ch9D0tp4Qu5Oiaq0l0Kg05frqPZfbI6AKxjGttVL8nW2F9y8_9wxI4brYjuxclF31h_ANFWTVG5TUyhLkrLwoa--YTxxK3T1HJlBs7CCie15R0s2TPknb57n3bNXM7tDLte1JA_KPzOLejeHPeAY11GaN1MdpE09mQpSIINDRmiOeTmRkyTdsiUYKqmw1pNTdcwC1QJ5ViVMgy9TfmqoH1cw1Pjb4RmBGBp8KdQTDf0EV8rCzzwmcehq0C2t4JVMJ2S7oFe1iqbVueBPfuMuHC6YWTbYmhCCd-e26EfFT4cSPuLSei9ZnWPYLPTqnE68YkxH4h6Py4uFhmWKkibtouphLf7t2V35KxoAXsARyOOKCjMPwXUb193nN5Gsdoz0bVxTqQ6Hf4lUUTjNEnWhWXvmdHpW5hg1A3jg31jtpCB",
-      "refresh_token": "oMAXEj9hY4p3Rw0nsck8Gy1gfZNHTVyyaYM_0Dr2n3INEvGtr7lj8viym2-APwj7oM7JJT0OW4NF7Eypibwl0l92yY2rCQK3gdFl1F1wdnxe1kmmWm6S1DX9wZ2wEvu5mqx6E9mPb1VRVS0vWdMW6viEmn7WKOOSvGFb5VvMXHk32wuuqm_xBOzmi1_HBjyRgdQoABeKn27N4gy0cq_YS-OHiGwHOVyZunQm7lfWmmwWFhzpxKx1HemWicx-ICqTX2w489zIgoJXCk0ncc2DMOi5-KppGe9vYW30Tjfsj5UdT-P0tH2vS8LlnNt44ArlX7l5JPqkc3oCQ-qxpsguJ8alcchtBl1haogYQVykxak1BP52n2pOTevgiqhIRfmycnRACE92dXUh4CuqwbI1Cgacx3umA34QHTLzZqe",
-      "token_expires_at": "2026-07-15T05:02:04.539Z",
+      "access_token": "lne1MCnr2NYr5m1Jn7K9TxOI1bVFQsugvL0YSVHpIWp1Ra8iid0nSCjtGm2xIauhYKyPMuPH5YU_TqjkkcSzAfHRD0pZFK9tv3bB0C5TEdJZF61KrGmETyKUJpFsUqPkn7zC7z9cHJNUP4fM_rH5F-Tb3s3h2deuaoGUMPKcRtoaE042a1jfJhqL6nN4SN1M_duWCTTdIXJjV0jDx4nZBUHF4mlBVnbX_ciKHkr5Vot-M25mwbTAL-9aN2V5P2rZy6PEA8D7JMEFT2K0YbDQUljR55oEQna_cMnzUvXM3GogOdTkfrm869O_Pa6_03mck0LnOReW7m2g6cDBaZaI6fqwVq6IFG82vm59MSaqGYddMnftvaON0E5vOM7aO6rAw6zXEkHq6MkHObWqi5OMSQDKVbEsMdSEKq1NEnFBOmv-",
+      "refresh_token": "hZn9UsJ0NHcaCKXmRC1T5gSqJdHdtWzBh2DOM2Qm1qFeGn5eG_DEN_G0ELnAfq5gwGu1LsMiKcdq3H19F_1EN_TTMcj0tpnhZrWjLG_VRcowSHvBDSLuJQT804O4eKnsY28wTqAENWlJAq0kJAut8ErVQG0jqtmVvI8vBrAaK3JHCJq_SSTIAiD1CHbk_58DyMuj46RII2NkKZSzMjbS9DLoJK13vITdr6Gt0MwJG17V5GaC7evf5u41A7GKhauHd0WjS22yHMUT03O15gj1F9LT2ma6pNuvot4E1n_xVpArIcnM9E8gQgnMM584_4rwYa0dHHVUPbAfBHLrAQC2NgXNI3qPva8sf78E00_bRWQ6MGWREVX57graCIGkxaGcad8F0rlaG7_OI21MJlnbTLVvn2THOzPQ7m",
+      "token_expires_at": "2026-07-17T10:43:37.453Z",
       "webhook_secret": "",
       "auto_send_payment_zns": false,
       "auto_send_delivery_zns": false,
@@ -5900,7 +5939,7 @@
       "request_email_template": "Xin chào quý khách! Để thuận tiện gửi thông tin và tài liệu, xin vui lòng chia sẻ địa chỉ Email của quý khách tại đây ạ.",
       "is_active": true,
       "created_at": "2026-07-14T02:32:51.927Z",
-      "updated_at": "2026-07-14T04:02:04.540Z"
+      "updated_at": "2026-07-16T09:43:37.453Z"
     }
   },
   {
@@ -5913,9 +5952,9 @@
       "app_id": "",
       "secret_key": "",
       "oa_id": "4375101215417069625",
-      "access_token": "jxoY7yPIim6ziQCKpbAp3hwqfH35JDX5uEs2KCzTyqgWtRaoh4NlSO32Z76jLzuJjR342BiMWb21cCKAeWkhH9I4xXoCQg9uk_33FTHyYNoa-vbXecJNEzBJb42aKOCCe-h6SQ05dJACgObrXpVT6f-ukKJiG_KvxAAaKTSDoIMuwxDne7dyFTlWdMVkNzuEwh2g5y4n-GBmbO98Wplg0RctaMwSADaiveYoH-aE_5BYgkP8w2kq4--IyaJvV9ekbjZpK9b3jIA3_yPsZM6JC_dXzrBHQAqh-ulLAu0tkZ2RflTDlIId0i-trspvMAHmwVt36_HRjdJnvzamsLILPFFNmmBOC9OVueJTPlzdiJ_qvQ9vqb_p0DZwbbZL5DOgz9kONUu9p3dKxhTOzrll3E-r-1dS6kXiJqBM8Yt1HBG7",
-      "refresh_token": "5bTrSFOYkrOSMdHx_YAxMHzVSd_rFD00TqbLNjT7yZflNs9xwb-e1bfmOZxzQi1UJnTbBV8Gm5DHEseki1JsJpGtUo_K7VG2KJTPMUvAnpfIKrnv-5_r1MfVUaFDHlCSMaXhCCD6vbz_U4eJzNh2MMnYO2lQ6DXkOML7F_G5qaiUANW8W3FmU1ezNmw70ljY5ID_7gS-rc4-6a4hXIJFJMyVGdNrFiKn43XkGAyxvnew0tDbfdh08WLzINYKGUjR45KxDAnjeab95Wykrp2gJdGp9YB12f1bPXCO6EDhWKC15mmyeI-OJn4X4Z2bFuDiEXKJ9eKyl4KqDm0Kbq-iG2fDV1c0L-PwObvr9jv6m59OQKjomXJuNYXhHZoS5enhBY4h9ejKc54vUbGJeG-VCXqK66uuqqtz5V4ql50",
-      "token_expires_at": "2026-07-15T05:02:57.978Z",
+      "access_token": "LZAtO-ruG4jSFxPevNX0H5ywi6pkPXa75cogR-fjAXOxHQzw-N0j239HsbUAOaHqUqVV0BT-VdPcMznPj64jCrGbstUm55aLR5R9Q95JV0HxUSXxi6TjAa1Sqm2QQqLlHtIrCU9AC44RJy4mm59WUouPq1FC2anHD4_o1kPLPaGnSfORxqC3GozwYNNeIoi89tgE9DbAEtOOQeWU_s03DZahy7peDWCB4Hs0AAaxB79s6vydnXWYSdWUlrh7LJ0i3cEcTUDXBnauGPnuw7ixKWOzamxD621a2mQH7TLD6tGrV8uxYs80Is93ypMvS6reTrJ04BTtI3q8JzjansvcC7vbsnwVO6LXU5hAIvnUJ1nuSzfikcXF6r0tsskw7serNo3MNB4DSIXi9i05hJLNLcOWyXwN8sH0MnBZ78Xon1lgRaTD",
+      "refresh_token": "NyqOGL1GpXvLm1bAM53E4LR57qvJJgbk8hacRtXciqizYn5EI6svQIwi5NOhKuXUKy4vI1fJxcbvWNX34M_iPbg_GrelTSTIHhnXOJOhtdH0stTW92lhVIwyL7GYSD8kHEmFDqe6im4Ea6OiVGFjENRMIn012zfELUPPVGGvoN1jnHzA73AU5LZOAH014Ae6MjnuBruozWWpmqimFrVMA36OUprOLUip59DQA71vadnxkpftAK-7KIA20r5eVxnIUQqQQ1zgbJLX_IKMEnkoAp3rBX5K7QyH4VeLCdiNmJ0exLm4R2VS4G_n0HOUOv0vRuuI3GPYeWbRlmm8KLIx9G-YBYr5G_ecFQTjEqTDsZWZabObR07o82NcLXjV4lmU6j1eEHO2m1nuud429Ggc7MxR5oOyfULiLqR960",
+      "token_expires_at": "2026-07-17T07:32:03.703Z",
       "webhook_secret": "",
       "auto_send_payment_zns": false,
       "auto_send_delivery_zns": false,
@@ -5926,12 +5965,12 @@
       "request_email_template": "Xin chào quý khách! Để thuận tiện gửi thông tin và tài liệu, xin vui lòng chia sẻ địa chỉ Email của quý khách tại đây ạ.",
       "is_active": true,
       "created_at": "2026-07-14T03:41:37.660Z",
-      "updated_at": "2026-07-14T04:02:57.978Z"
+      "updated_at": "2026-07-16T06:32:03.703Z"
     }
   },
   {
     "model": "zalo_integration.sociallead",
-    "pk": 10,
+    "pk": 11,
     "fields": {
       "company": 15,
       "oa_config": 1,
@@ -5939,8 +5978,68 @@
       "social_id": "2913065542086180463",
       "display_name": "",
       "avatar_url": null,
-      "last_message": ";p ;p",
-      "last_interaction_date": "2026-07-14T10:36:26.896Z",
+      "last_message": "0967234517",
+      "last_interaction_date": "2026-07-16T07:10:53.665Z",
+      "status": "chatting",
+      "has_unread_message": false,
+      "unread_count": 0,
+      "detected_phone": "0967234517",
+      "detected_email": null,
+      "detected_address": null,
+      "is_customer_converted": false,
+      "is_starred": true,
+      "assigned_to": [
+        "nvkinhdoanh1"
+      ],
+      "notes": "",
+      "created_at": "2026-07-16T05:52:17.256Z",
+      "updated_at": "2026-07-16T07:10:53.694Z",
+      "tags": [
+        1
+      ]
+    }
+  },
+  {
+    "model": "zalo_integration.sociallead",
+    "pk": 12,
+    "fields": {
+      "company": 15,
+      "oa_config": 1,
+      "platform": "zalo",
+      "social_id": "4955126489933511622",
+      "display_name": "",
+      "avatar_url": null,
+      "last_message": "test",
+      "last_interaction_date": "2026-07-16T08:53:33.573Z",
+      "status": "chatting",
+      "has_unread_message": false,
+      "unread_count": 0,
+      "detected_phone": "",
+      "detected_email": null,
+      "detected_address": null,
+      "is_customer_converted": false,
+      "is_starred": false,
+      "assigned_to": [
+        "nvkinhdoanh2"
+      ],
+      "notes": "",
+      "created_at": "2026-07-16T07:15:48.122Z",
+      "updated_at": "2026-07-16T08:53:33.573Z",
+      "tags": []
+    }
+  },
+  {
+    "model": "zalo_integration.sociallead",
+    "pk": 13,
+    "fields": {
+      "company": 15,
+      "oa_config": 7,
+      "platform": "zalo",
+      "social_id": "835019926311679071",
+      "display_name": "",
+      "avatar_url": null,
+      "last_message": "test",
+      "last_interaction_date": "2026-07-16T08:53:09.020Z",
       "status": "chatting",
       "has_unread_message": false,
       "unread_count": 0,
@@ -5951,54 +6050,165 @@
       "is_starred": false,
       "assigned_to": null,
       "notes": "",
-      "created_at": "2026-07-14T10:36:09.144Z",
-      "updated_at": "2026-07-14T10:36:26.896Z",
+      "created_at": "2026-07-16T08:53:08.343Z",
+      "updated_at": "2026-07-16T08:53:09.021Z",
       "tags": []
     }
   },
   {
     "model": "zalo_integration.zalomessage",
-    "pk": 13,
+    "pk": 16,
     "fields": {
       "company": 15,
-      "social_lead": 10,
+      "social_lead": 11,
       "direction": "inbound",
-      "content": "/-strong",
+      "content": "hi",
       "attachment_url": "",
       "attachment_type": "",
-      "zalo_msg_id": "e8f7d27bb54a0c13555c",
+      "zalo_msg_id": "141131b95215ea4cb303",
       "sender_user": null,
-      "created_at": "2026-07-14T10:36:09.910Z"
+      "created_at": "2026-07-16T05:52:17.485Z"
     }
   },
   {
     "model": "zalo_integration.zalomessage",
-    "pk": 14,
+    "pk": 17,
     "fields": {
       "company": 15,
-      "social_lead": 10,
+      "social_lead": 11,
       "direction": "inbound",
       "content": "chào",
       "attachment_url": "",
       "attachment_type": "",
-      "zalo_msg_id": "f78503047935c06c9923",
+      "zalo_msg_id": "9d0c66701ddca585fcca",
       "sender_user": null,
-      "created_at": "2026-07-14T10:36:21.577Z"
+      "created_at": "2026-07-16T05:52:29.477Z"
     }
   },
   {
     "model": "zalo_integration.zalomessage",
-    "pk": 15,
+    "pk": 18,
     "fields": {
       "company": 15,
-      "social_lead": 10,
+      "social_lead": 11,
       "direction": "inbound",
-      "content": ";p ;p",
+      "content": "hãy tl",
       "attachment_url": "",
       "attachment_type": "",
-      "zalo_msg_id": "9e9d3ccc4afdf3a4aaeb",
+      "zalo_msg_id": "74251e1238ab80f2d9bd",
       "sender_user": null,
-      "created_at": "2026-07-14T10:36:26.910Z"
+      "created_at": "2026-07-16T07:06:38.259Z"
+    }
+  },
+  {
+    "model": "zalo_integration.zalomessage",
+    "pk": 19,
+    "fields": {
+      "company": 15,
+      "social_lead": 11,
+      "direction": "inbound",
+      "content": "0967234517",
+      "attachment_url": "",
+      "attachment_type": "",
+      "zalo_msg_id": "f777c116b3a80bf152be",
+      "sender_user": null,
+      "created_at": "2026-07-16T07:10:53.727Z"
+    }
+  },
+  {
+    "model": "zalo_integration.zalomessage",
+    "pk": 20,
+    "fields": {
+      "company": 15,
+      "social_lead": 12,
+      "direction": "inbound",
+      "content": "chào",
+      "attachment_url": "",
+      "attachment_type": "",
+      "zalo_msg_id": "1df4342c0c93b4caed85",
+      "sender_user": null,
+      "created_at": "2026-07-16T07:15:48.281Z"
+    }
+  },
+  {
+    "model": "zalo_integration.zalomessage",
+    "pk": 21,
+    "fields": {
+      "company": 15,
+      "social_lead": 12,
+      "direction": "inbound",
+      "content": "hi",
+      "attachment_url": "",
+      "attachment_type": "",
+      "zalo_msg_id": "9fed1ec3e58c5ed5079a",
+      "sender_user": null,
+      "created_at": "2026-07-16T08:22:04.370Z"
+    }
+  },
+  {
+    "model": "zalo_integration.zalomessage",
+    "pk": 22,
+    "fields": {
+      "company": 15,
+      "social_lead": 13,
+      "direction": "inbound",
+      "content": "test",
+      "attachment_url": "",
+      "attachment_type": "",
+      "zalo_msg_id": "1abb52a3fef445ad1ce2",
+      "sender_user": null,
+      "created_at": "2026-07-16T08:53:09.047Z"
+    }
+  },
+  {
+    "model": "zalo_integration.zalomessage",
+    "pk": 23,
+    "fields": {
+      "company": 15,
+      "social_lead": 12,
+      "direction": "inbound",
+      "content": "test",
+      "attachment_url": "",
+      "attachment_type": "",
+      "zalo_msg_id": "9782e0665131ea68b327",
+      "sender_user": null,
+      "created_at": "2026-07-16T08:53:33.602Z"
+    }
+  },
+  {
+    "model": "zalo_integration.zaloleadtag",
+    "pk": 1,
+    "fields": {
+      "company": 15,
+      "name": "Khách VIP",
+      "color": "#f73b3b",
+      "created_at": "2026-07-16T05:41:40.880Z"
+    }
+  },
+  {
+    "model": "zalo_integration.zaloleadnote",
+    "pk": 1,
+    "fields": {
+      "lead": 11,
+      "user": [
+        "nvkinhdoanh2"
+      ],
+      "content": "Không có nội dung",
+      "created_at": "2026-07-16T06:49:26.094Z"
+    }
+  },
+  {
+    "model": "zalo_integration.zaloquickreply",
+    "pk": 1,
+    "fields": {
+      "company": 15,
+      "shortcut": "/diachi",
+      "title": "Xin địa chỉ",
+      "content": "Địa chỉ nhà mình ở đâu?",
+      "created_by": [
+        "giamdoc"
+      ],
+      "created_at": "2026-07-16T05:42:57.748Z"
     }
   },
   {
@@ -6011,10 +6221,10 @@
       "use_system_config": true,
       "app_id": null,
       "app_secret": null,
-      "page_access_token": "EAAOi715rIAYBR0DPKjXAu3aPN14CEAjZClrejDcXFg47rDJq1nEI7eftjnmXr0TQHsZBdQq7tHnUISp2P9D3gPklpLHXuefqxQ3xjUwiipzYNX78Wy8RPtZC7J8JJNfPPiM4ZArzKlnI60wzYJtDLnJxxpZACvYZBZAKo0HDT9sXlXyp24AASkR2wMJV4VFwAObZBGjNPSZCXZAfBs1EPnDdqxUNwZD",
+      "page_access_token": "EAAOi715rIAYBR44jBIEX957L6A3cYD9fl3WTeOrNW4RnjFSFR93bvvv43ZBIRM93QaZCvVoKzlj28VxKAk1ysV7ZA4pAcjrkixedzKtwMWAn7HCpjK3BGLZCzeFdHbHcnZBXgwPZBMQGlhZAsTXfZBocz8sbV1IF2MVEZAvTFtC83eZCi8dALybWcQfUCDfYUXwGr7Wy9bbrSYfwMvVSm411IZD",
       "token_expires_at": null,
       "webhook_verify_token": "",
-      "page_avatar": "https://scontent.fhan18-1.fna.fbcdn.net/v/t39.30808-1/276312741_4809681765825719_8303386643111870120_n.jpg?stp=cp0_dst-jpg_s50x50_tt6&_nc_cat=106&ccb=1-7&_nc_sid=f907e8&_nc_eui2=AeGoo-qRN_yOmup_epa6Thr2qd9-DflCPuyp334N-UI-7EGbl1SZm_NfhczUIxzPqAEJRPdlMLgK098ylQ6mp-DP&_nc_ohc=2aO7Bqq1gtoQ7kNvwGf7Kkn&_nc_oc=Adr2TvZwlsJOpEmJROpVSuw00-SOv8SGmwH8EjRt9mjJrtUp566UPGJuELatK7Nnq_M&_nc_zt=24&_nc_ht=scontent.fhan18-1.fna&edm=AGaHXAAEAAAA&_nc_gid=EYgPT1pUoSuPLlKl5iOSMQ&_nc_tpa=Q5bMBQGLYFK_R3w-yJm0Cl1EIgXdxOERKwHG7N1fVgrvLW350m2Hv3C3xawXTqLAJngs1na3IxFmFMVFBw&oh=00_AQDVAV_-BmTh_lqhICC3WpJq47I1nFOm-cB1qZyZFPn4sg&oe=6A5D5AA8",
+      "page_avatar": "https://scontent.fhan18-1.fna.fbcdn.net/v/t39.30808-1/276312741_4809681765825719_8303386643111870120_n.jpg?stp=cp0_dst-jpg_s50x50_tt6&_nc_cat=106&ccb=1-7&_nc_sid=f907e8&_nc_eui2=AeGoo-qRN_yOmup_epa6Thr2qd9-DflCPuyp334N-UI-7EGbl1SZm_NfhczUIxzPqAEJRPdlMLgK098ylQ6mp-DP&_nc_ohc=2aO7Bqq1gtoQ7kNvwHWNMDJ&_nc_oc=Ado6bOcPqfEhQx_1YziqeakYtID6ZzHyYZMRQU5X6ss1Hn99hi-lwDAIYb6tT3nI8Yg&_nc_zt=24&_nc_ht=scontent.fhan18-1.fna&edm=AGaHXAAEAAAA&_nc_gid=YM9yCe4A6-QXVYGv3Z-uzw&_nc_tpa=Q5bMBQFdptpxNRrNZf0cMjHHAsGxJiF0NrRs2BlZ99pMfIKAW3zNpq00j8UA_5UgQG7udH4MtthWxL3WoA&oh=00_AQBKPneraQLYA9q-f2vC7JXFe5R9Ckn1xU3AOvcim0WwlQ&oe=6A5E3BA8",
       "is_active": true,
       "auto_create_customer_from_phone": false,
       "lead_cleanup_days": 30,
@@ -6022,7 +6232,7 @@
       "request_email_template": "Dạ bạn cho mình xin địa chỉ Email để bên em gửi catalogue và thông tin chi tiết qua email cho mình nhé 📧",
       "assigned_to": null,
       "created_at": "2026-07-15T13:13:47.717Z",
-      "updated_at": "2026-07-15T16:11:18.644Z"
+      "updated_at": "2026-07-16T06:15:24.075Z"
     }
   },
   {
@@ -6055,7 +6265,7 @@
       "fb_user_name": "Lê Đình Tuyền",
       "fb_user_avatar": "https://platform-lookaside.fbsbx.com/platform/profilepic/?eai=Aa2ghfaQMXfE7c_AbF4kwuIk_yzEW7jbD6O9a4jJXqZaa-MFu2IZdNH2ASo5_OI43df3oFK4GaZPmQ&psid=4748159361949508&width=1024&ext=1786713461&hash=Aft0lWbyedbKCPVfsN5AJEP1",
       "detected_phone": "0985880201",
-      "detected_email": null,
+      "detected_email": "ledinhtuyen92@gmail.com",
       "detected_address": "220 định công, hà nội",
       "is_customer_converted": false,
       "customer": null,
@@ -6064,10 +6274,10 @@
       "has_unread_message": false,
       "unread_count": 0,
       "is_archived": false,
-      "last_message_at": "2026-07-15T17:16:01.217Z",
-      "last_message_preview": "[Đính kèm]",
+      "last_message_at": "2026-07-16T05:50:46Z",
+      "last_message_preview": "ledinhtuyen92@gmail.com",
       "created_at": "2026-07-15T13:17:34.787Z",
-      "updated_at": "2026-07-15T16:56:58.260Z",
+      "updated_at": "2026-07-16T10:07:01.189Z",
       "tags": []
     }
   },
@@ -6093,7 +6303,7 @@
       "last_message_at": "2026-04-03T08:39:26Z",
       "last_message_preview": "Bạn đã gửi một ảnh.",
       "created_at": "2026-07-15T13:17:37.756Z",
-      "updated_at": "2026-07-15T13:17:38.139Z",
+      "updated_at": "2026-07-16T10:07:04.062Z",
       "tags": []
     }
   },
@@ -6119,7 +6329,7 @@
       "last_message_at": "2026-03-02T11:33:57Z",
       "last_message_preview": "󰀀",
       "created_at": "2026-07-15T13:17:41.269Z",
-      "updated_at": "2026-07-15T16:58:37.831Z",
+      "updated_at": "2026-07-16T10:07:06.443Z",
       "tags": []
     }
   },
@@ -6145,7 +6355,7 @@
       "last_message_at": "2023-03-06T04:50:14Z",
       "last_message_preview": "chị để giảm ho thì e nghĩ chị nên ngâm tỏi+gừng+mật ong sẽ hiệu quả hơn đấy ạ",
       "created_at": "2026-07-15T13:17:43.248Z",
-      "updated_at": "2026-07-15T16:41:34.708Z",
+      "updated_at": "2026-07-16T10:07:07.725Z",
       "tags": []
     }
   },
@@ -6171,7 +6381,7 @@
       "last_message_at": "2022-12-30T05:49:11Z",
       "last_message_preview": "C ở đâu ạ",
       "created_at": "2026-07-15T13:17:45.559Z",
-      "updated_at": "2026-07-15T13:17:45.920Z",
+      "updated_at": "2026-07-16T10:07:09.873Z",
       "tags": []
     }
   },
@@ -6197,7 +6407,7 @@
       "last_message_at": "2022-04-02T13:24:45Z",
       "last_message_preview": "Mật nhà e cam kết nguyên chất k pha và mới quay ạ, c yên tâm nha",
       "created_at": "2026-07-15T13:17:46.619Z",
-      "updated_at": "2026-07-15T13:17:47.010Z",
+      "updated_at": "2026-07-16T10:07:11.004Z",
       "tags": []
     }
   },
@@ -8594,6 +8804,58 @@
     }
   },
   {
+    "model": "facebook_integration.facebookmessage",
+    "pk": 591,
+    "fields": {
+      "lead": 9,
+      "fb_message_id": "m_PwOwtfRFzV9SpB7vjVm2lD5XArWXuhqgvcgPG60c2RxKHQQQmdhOuiY4UrrKRTOah6BLS3TNADMOPM-d2Zc-2A",
+      "sender_type": "page",
+      "text": "Dạ chào bạn, để tiện chuyên viên tư vấn chi tiết và gửi bảng giá ưu đãi, bạn cho mình xin số điện thoại liên hệ với ạ ❤️",
+      "attachment_url": "",
+      "attachment_type": "",
+      "created_at": "2026-07-16T05:00:26.711Z"
+    }
+  },
+  {
+    "model": "facebook_integration.facebookmessage",
+    "pk": 592,
+    "fields": {
+      "lead": 9,
+      "fb_message_id": "m_6jC1O9HscTZDfQtNu_pM_z5XArWXuhqgvcgPG60c2RzltImALTZ73UF3RhvPaQ26cNNwTGfCGqSMTRHKG0SLIQ",
+      "sender_type": "page",
+      "text": "Dạ bạn cho mình xin địa chỉ Email để bên em gửi catalogue và thông tin chi tiết qua email cho mình nhé 📧",
+      "attachment_url": "",
+      "attachment_type": "",
+      "created_at": "2026-07-16T05:00:31.532Z"
+    }
+  },
+  {
+    "model": "facebook_integration.facebookmessage",
+    "pk": 593,
+    "fields": {
+      "lead": 9,
+      "fb_message_id": "m_IPHDJLKZuKzKKBA1v6geEj5XArWXuhqgvcgPG60c2RwhG8DEwECCUy2OmouvqiIuJMQjE98MU0zw6vQ_T2ub7Q",
+      "sender_type": "page",
+      "text": "Dạ bạn cho mình xin địa chỉ Email để bên em gửi catalogue và thông tin chi tiết qua email cho mình nhé 📧",
+      "attachment_url": "",
+      "attachment_type": "",
+      "created_at": "2026-07-16T05:00:38.263Z"
+    }
+  },
+  {
+    "model": "facebook_integration.facebookmessage",
+    "pk": 594,
+    "fields": {
+      "lead": 9,
+      "fb_message_id": "m_XkawOoz6d-psBeQoBCUo4T5XArWXuhqgvcgPG60c2RySu39EQkxn96N2RSf1IWzbWNUJsvwlQ1hlkmmI1r5ePw",
+      "sender_type": "customer",
+      "text": "ledinhtuyen92@gmail.com",
+      "attachment_url": null,
+      "attachment_type": "",
+      "created_at": "2026-07-16T05:50:39.798Z"
+    }
+  },
+  {
     "model": "facebook_integration.quickmediaasset",
     "pk": 1,
     "fields": {
@@ -8659,8 +8921,11 @@
       "company": 15,
       "name": "Phòng Kinh Doanh 1",
       "description": "",
-      "manager": null,
-      "created_at": "2026-07-09T02:24:43.977Z"
+      "manager": [
+        "kinhdoanh1"
+      ],
+      "created_at": "2026-07-09T02:24:43.977Z",
+      "is_sales_department": true
     }
   },
   {
@@ -8670,8 +8935,11 @@
       "company": 15,
       "name": "Phòng Kinh Doanh 2",
       "description": "",
-      "manager": null,
-      "created_at": "2026-07-09T02:24:53.707Z"
+      "manager": [
+        "kinhdoanh2"
+      ],
+      "created_at": "2026-07-09T02:24:53.707Z",
+      "is_sales_department": true
     }
   },
   {
@@ -8682,7 +8950,8 @@
       "name": "Ban Giám Đốc",
       "description": "",
       "manager": null,
-      "created_at": "2026-07-09T07:12:15.733Z"
+      "created_at": "2026-07-09T07:12:15.733Z",
+      "is_sales_department": false
     }
   },
   {
@@ -8693,7 +8962,8 @@
       "name": "Phòng Tài Chính - Kế Toán",
       "description": "",
       "manager": null,
-      "created_at": "2026-07-09T07:12:15.754Z"
+      "created_at": "2026-07-09T07:12:15.754Z",
+      "is_sales_department": false
     }
   },
   {
@@ -8704,7 +8974,8 @@
       "name": "Phòng Kho Vận & Cung Ứng",
       "description": "",
       "manager": null,
-      "created_at": "2026-07-09T07:12:15.789Z"
+      "created_at": "2026-07-09T07:12:15.789Z",
+      "is_sales_department": false
     }
   },
   {
@@ -8715,7 +8986,8 @@
       "name": "Phòng Sản Xuất & Kỹ Thuật",
       "description": "",
       "manager": null,
-      "created_at": "2026-07-09T07:12:15.805Z"
+      "created_at": "2026-07-09T07:12:15.805Z",
+      "is_sales_department": false
     }
   }
 ]

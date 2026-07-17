@@ -438,7 +438,7 @@ export default function CompanyManagement() {
             onChange={(e) => setSearchText(e.target.value)}
           />
         </div>
-        <Table
+        <Table scroll={{ x: 'max-content' }}
           id="company-table"
           columns={columns}
           dataSource={filteredCompanies}
@@ -478,7 +478,7 @@ export default function CompanyManagement() {
           </Form.Item>
 
           <Row gutter={12}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="workspace_id"
                 label="Workspace ID"
@@ -491,7 +491,7 @@ export default function CompanyManagement() {
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="tax_code"
                 label="Mã số thuế"
@@ -514,7 +514,7 @@ export default function CompanyManagement() {
             <Checkbox.Group style={{ width: '100%' }}>
               <Row gutter={[12, 12]}>
                 {systemModules.map(m => (
-                  <Col span={12} key={m.code}>
+                  <Col xs={24} md={12} key={m.code}>
                     <Checkbox value={m.code}>{m.name}</Checkbox>
                   </Col>
                 ))}
@@ -523,7 +523,7 @@ export default function CompanyManagement() {
           </Form.Item>
 
           <Row gutter={12}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="user_limit"
                 label="Gói / Giới hạn nhân viên"
@@ -540,7 +540,7 @@ export default function CompanyManagement() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="phone" label="Số điện thoại">
                 <Input size="large" placeholder="02438889999" />
               </Form.Item>
@@ -553,7 +553,7 @@ export default function CompanyManagement() {
                 👤 Khởi tạo Tài khoản Giám đốc ban đầu
               </div>
               <Row gutter={12}>
-                <Col span={12}>
+                <Col xs={24} md={12}>
                   <Form.Item
                     name="admin_username"
                     label="Tên đăng nhập"
@@ -562,7 +562,7 @@ export default function CompanyManagement() {
                     <Input size="large" placeholder="giamdoc_anphat" />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} md={12}>
                   <Form.Item
                     name="admin_password"
                     label="Mật khẩu"
@@ -573,7 +573,7 @@ export default function CompanyManagement() {
                 </Col>
               </Row>
               <Row gutter={12}>
-                <Col span={12}>
+                <Col xs={24} md={12}>
                   <Form.Item
                     name="admin_fullname"
                     label="Họ và tên Giám đốc"
@@ -581,7 +581,7 @@ export default function CompanyManagement() {
                     <Input size="large" placeholder="Nguyễn Văn A" />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} md={12}>
                   <Form.Item
                     name="admin_email"
                     label="Email liên hệ"

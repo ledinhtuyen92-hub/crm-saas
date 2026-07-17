@@ -271,12 +271,12 @@ export default function QuotationTemplateManagement() {
         return (
           <div key="header" style={{ marginBottom: 16, padding: '14px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
             <Row justify="space-between" align="middle">
-              <Col span={8}>
+              <Col xs={24} md={8}>
                 <div style={{ width: 56, height: 56, borderRadius: 6, background: '#e0e7ff', color: clr, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16 }}>
                   LOGO
                 </div>
               </Col>
-              <Col span={16} style={{ textAlign: 'right' }}>
+              <Col xs={24} md={16} style={{ textAlign: 'right' }}>
                 <div style={{ fontWeight: 700, color: clr, fontSize: 16 }}>TÊN CÔNG TY CỦA BẠN</div>
                 <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>MST: 0101234567 • Hotline: 1900 xxxx</div>
                 <div style={{ fontSize: 12, color: '#64748b' }}>Địa chỉ: Tòa nhà SaaS, TP. Hà Nội</div>
@@ -302,7 +302,7 @@ export default function QuotationTemplateManagement() {
         if (orientation === 'landscape' || sec.columns === 2) {
           return (
             <Row key="customer_info" gutter={16} style={{ marginBottom: 16 }}>
-              <Col span={12}>
+              <Col xs={24} md={12}>
                 <div style={{ padding: '10px 14px', background: '#f8fafc', border: `1px solid ${clr}40`, borderRadius: 6, height: '100%' }}>
                   <div style={{ fontWeight: 700, color: clr, fontSize: 13, marginBottom: 4 }}>🏢 BÊN BÁN (BÊN B): CÔNG TY CỦA BẠN</div>
                   <div style={{ fontSize: 12, color: '#334155' }}><strong>Đại diện:</strong> Nguyễn Anh Tuấn • <strong>Chức vụ:</strong> Giám đốc</div>
@@ -310,7 +310,7 @@ export default function QuotationTemplateManagement() {
                   <div style={{ fontSize: 12, color: '#334155' }}><strong>Địa chỉ:</strong> KĐT Xa La, Hà Đông, TP Hà Nội</div>
                 </div>
               </Col>
-              <Col span={12}>
+              <Col xs={24} md={12}>
                 <div style={{ padding: '10px 14px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, height: '100%' }}>
                   <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 13, marginBottom: 4 }}>👤 BÊN MUA (BÊN A): CÔNG TY KHÁCH HÀNG</div>
                   <div style={{ fontSize: 12, color: '#334155' }}><strong>Khách hàng:</strong> Công ty Kiến trúc và Nội thất K2</div>
@@ -412,7 +412,7 @@ export default function QuotationTemplateManagement() {
         const isLandSum = orientation === 'landscape'
         return (
           <Row key="summary" justify="end" style={{ marginBottom: 16 }}>
-            <Col span={11} style={{ textAlign: 'right', padding: '10px 14px', background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+            <Col xs={24} md={11} style={{ textAlign: 'right', padding: '10px 14px', background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
               <div style={{ fontSize: 12, color: '#64748b' }}>Cộng tiền hàng: {isLandSum ? '9,710,000 đ' : '10,000,000 đ'}</div>
               <div style={{ fontSize: 12, color: '#64748b' }}>Chiết khấu chung: -0 đ</div>
               <div style={{ fontSize: 15, fontWeight: 700, color: clr, marginTop: 4 }}>
@@ -436,13 +436,13 @@ export default function QuotationTemplateManagement() {
       case 'signatures':
         return (
           <Row key="signatures" justify="space-around" style={{ marginTop: 24, textAlign: 'center', paddingBottom: 16 }}>
-            <Col span={10}>
+            <Col xs={24} md={10}>
               <div style={{ fontWeight: 700, color: clr, fontSize: 13 }}>ĐẠI DIỆN CÔNG TY</div>
               <div style={{ fontSize: 11, color: '#64748b', fontStyle: 'italic' }}>(Ký, đóng dấu & ghi rõ họ tên)</div>
               <div style={{ height: 60 }} />
               <div style={{ fontWeight: 600, color: '#334155', fontSize: 12 }}>Người lập báo giá</div>
             </Col>
-            <Col span={10}>
+            <Col xs={24} md={10}>
               <div style={{ fontWeight: 700, color: clr, fontSize: 13 }}>ĐẠI DIỆN KHÁCH HÀNG</div>
               <div style={{ fontSize: 11, color: '#64748b', fontStyle: 'italic' }}>(Ký & ghi rõ họ tên)</div>
               <div style={{ height: 60 }} />
@@ -506,7 +506,7 @@ export default function QuotationTemplateManagement() {
         <Form form={form} layout="vertical" style={{ marginTop: 12 }}>
           {/* Top Row: General info */}
           <Row gutter={16}>
-            <Col span={9}>
+            <Col xs={24} md={9}>
               <Form.Item
                 name="name"
                 label="Tên mẫu báo giá"
@@ -515,7 +515,7 @@ export default function QuotationTemplateManagement() {
                 <Input placeholder="VD: Mẫu Chuẩn Hiện Đại - Xanh Navy" />
               </Form.Item>
             </Col>
-            <Col span={5}>
+            <Col xs={24} md={5}>
               <Form.Item
                 name="code"
                 label="Mã định danh (Code)"
@@ -524,7 +524,7 @@ export default function QuotationTemplateManagement() {
                 <Input placeholder="VD: modern_navy" disabled={!!editingTemplate} />
               </Form.Item>
             </Col>
-            <Col span={5}>
+            <Col xs={24} md={5}>
               <Form.Item name="is_default" label="Thiết lập mẫu" valuePropName="checked">
                 <Select>
                   <Option value={false}>Mẫu tùy chọn</Option>
@@ -532,7 +532,7 @@ export default function QuotationTemplateManagement() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={5}>
+            <Col xs={24} md={5}>
               <Form.Item name="layout_style" label="Nhóm phong cách">
                 <Select>
                   <Option value="modern_navy">Hiện đại (Modern)</Option>
@@ -544,12 +544,12 @@ export default function QuotationTemplateManagement() {
           </Row>
 
           <Row gutter={16}>
-            <Col span={14}>
+            <Col xs={24} md={14}>
               <Form.Item name="description" label="Mô tả ngắn">
                 <Input placeholder="Mô tả phong cách và đối tượng doanh nghiệp phù hợp..." />
               </Form.Item>
             </Col>
-            <Col span={10}>
+            <Col xs={24} md={10}>
               <Form.Item
                 name="footer_content"
                 label="Điều khoản gợi ý chuẩn cho công ty (Reference Terms)"

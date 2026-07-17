@@ -54,6 +54,7 @@ import {
   Typography,
   Upload,
   message,
+  theme
 } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -383,6 +384,7 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
 }
 
 export default function FacebookInboxPage() {
+  const { token } = theme.useToken()
   const { maintenanceMode, hasPermission, isCompanyAdmin } = useAuth()
   const canViewAllInbox = isCompanyAdmin || hasPermission('facebook.view_all_inbox')
   // Resizable columns
@@ -954,7 +956,7 @@ export default function FacebookInboxPage() {
   return (
     <div style={{ height: 'calc(100vh - 128px)', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
       {/* Header */}
-      <div style={{ padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <div style={{ padding: '10px 16px', background: token.colorBgContainer, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 22, color: '#1877f2', fontWeight: 900, flexShrink: 0 }}>𝐟</span>
         <span style={{ fontWeight: 700, fontSize: 15, flexShrink: 0 }}>Facebook Inbox</span>
         {pages.length > 1 && (
@@ -1792,7 +1794,7 @@ export default function FacebookInboxPage() {
               </Select>
             </Form.Item>
             <Row gutter={16}>
-              <Col span={12}>
+              <Col xs={24} md={12}>
                 <Form.Item
                   label="Số hội thoại tối đa"
                   tooltip="Số lượng hội thoại gần nhất kéo về (mặc định 50 - 200)"
@@ -1807,7 +1809,7 @@ export default function FacebookInboxPage() {
                   />
                 </Form.Item>
               </Col>
-              <Col span={12}>
+              <Col xs={24} md={12}>
                 <Form.Item
                   label="Số tin nhắn / hội thoại"
                   tooltip="Số tin nhắn gần nhất mỗi hội thoại để Sale hiểu ngữ cảnh (mặc định 50)"
@@ -1846,7 +1848,7 @@ export default function FacebookInboxPage() {
           <Card size="small" style={{ marginBottom: 16, background: '#f8fafc', borderColor: '#e2e8f0' }}>
             <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>⬆️ Tải lên mẫu mới (Hình ảnh, Video, Báo giá... có thể chọn cùng lúc nhiều ảnh)</div>
             <Row gutter={[12, 8]} align="middle">
-              <Col span={8}>
+              <Col xs={24} md={8}>
                 <Input
                   size="small"
                   placeholder="Tên gợi nhớ (VD: Báo giá 2026)..."
@@ -1854,14 +1856,14 @@ export default function FacebookInboxPage() {
                   onChange={e => setQuickMediaTitle(e.target.value)}
                 />
               </Col>
-              <Col span={5}>
+              <Col xs={24} md={5}>
                 <Select size="small" value={quickMediaType} onChange={setQuickMediaType} style={{ width: '100%' }}>
                   <Select.Option value="image">🖼️ Hình ảnh</Select.Option>
                   <Select.Option value="video">🎬 Video</Select.Option>
                   <Select.Option value="file">📄 Tài liệu / File</Select.Option>
                 </Select>
               </Col>
-              <Col span={6}>
+              <Col xs={24} md={6}>
                 <AutoComplete
                   size="small"
                   style={{ width: '100%' }}
@@ -1871,7 +1873,7 @@ export default function FacebookInboxPage() {
                   options={Array.from(new Set(['Chung', ...quickMediaList.map(i => i.folder || 'Chung')])).map(f => ({ value: f }))}
                 />
               </Col>
-              <Col span={5}>
+              <Col xs={24} md={5}>
                 <Upload
                   multiple={true}
                   beforeUpload={handleUploadQuickMedia}
@@ -1922,7 +1924,7 @@ export default function FacebookInboxPage() {
                 {quickMediaList
                   .filter(item => activeMediaFolderTab === 'all' || (item.folder || 'Chung') === activeMediaFolderTab)
                   .map(item => (
-                    <Col span={8} key={item.id}>
+                    <Col xs={24} md={8} key={item.id}>
                       <Card
                         size="small"
                         hoverable
@@ -2086,7 +2088,7 @@ export default function FacebookInboxPage() {
           <Card size="small" style={{ marginBottom: 16, background: '#fff7ed', borderColor: '#fed7aa' }}>
             <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13, color: '#9a3412' }}>➕ Thêm văn bản mẫu mới</div>
             <Row gutter={[8, 8]}>
-              <Col span={8}>
+              <Col xs={24} md={8}>
                 <Input
                   size="small"
                   placeholder="Phím tắt (VD: /hello)..."
@@ -2094,7 +2096,7 @@ export default function FacebookInboxPage() {
                   onChange={e => setQrShortcut(e.target.value)}
                 />
               </Col>
-              <Col span={16}>
+              <Col xs={24} md={16}>
                 <Input
                   size="small"
                   placeholder="Tiêu đề gợi nhớ (VD: Chào hỏi ban đầu)..."
@@ -2102,7 +2104,7 @@ export default function FacebookInboxPage() {
                   onChange={e => setQrTitle(e.target.value)}
                 />
               </Col>
-              <Col span={24}>
+              <Col xs={24} md={24}>
                 <Input.TextArea
                   size="small"
                   placeholder="Nội dung tin nhắn mẫu..."
@@ -2111,7 +2113,7 @@ export default function FacebookInboxPage() {
                   autoSize={{ minRows: 2, maxRows: 4 }}
                 />
               </Col>
-              <Col span={24} style={{ textAlign: 'right' }}>
+              <Col xs={24} md={24} style={{ textAlign: 'right' }}>
                 <Button size="small" type="primary" icon={<PlusOutlined />} loading={qrSaving} onClick={handleCreateQuickReply} style={{ background: '#f59e0b', borderColor: '#f59e0b' }}>
                   Tạo mẫu
                 </Button>

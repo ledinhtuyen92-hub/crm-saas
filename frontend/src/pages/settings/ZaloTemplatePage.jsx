@@ -215,7 +215,7 @@ export default function ZaloTemplatePage() {
       </div>
 
       <Card style={{ borderRadius: 12 }} bodyStyle={{ padding: 0 }}>
-        <Table
+        <Table scroll={{ x: 'max-content' }}
           columns={columns}
           dataSource={templates}
           rowKey="id"
@@ -246,12 +246,12 @@ export default function ZaloTemplatePage() {
         />
         <Form form={form} layout="vertical">
           <Row gutter={16}>
-            <Col span={14}>
+            <Col xs={24} md={14}>
               <Form.Item name="name" label="Tên gợi nhớ" rules={[{ required: true, message: 'Vui lòng nhập tên mẫu' }]}>
                 <Input placeholder="VD: Mẫu Xác nhận Đơn hàng" />
               </Form.Item>
             </Col>
-            <Col span={10}>
+            <Col xs={24} md={10}>
               <Form.Item name="zalo_template_id" label="Zalo Template ID" rules={[{ required: true, message: 'Bắt buộc' }]}>
                 <Input placeholder="ID từ Zalo (VD: 123456)" />
               </Form.Item>

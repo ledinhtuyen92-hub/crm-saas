@@ -70,7 +70,7 @@ export default function WarrantyPrintView({ warranty, companyInfo, companySettin
       </div>
 
       <Row gutter={40}>
-        <Col span={12}>
+        <Col xs={24} md={12}>
           <Title level={4} style={{ textAlign: 'center', marginBottom: 12, color: '#1e3a8a', fontWeight: 800 }}>
             THÔNG TIN
           </Title>
@@ -122,7 +122,7 @@ export default function WarrantyPrintView({ warranty, companyInfo, companySettin
           </div>
         </Col>
 
-        <Col span={12}>
+        <Col xs={24} md={12}>
           <Title level={4} style={{ textAlign: 'center', marginBottom: 8, color: '#1e3a8a', fontWeight: 800 }}>
             QUY ĐỊNH BẢO HÀNH
           </Title>

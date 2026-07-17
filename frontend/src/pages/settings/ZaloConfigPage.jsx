@@ -444,12 +444,12 @@ export default function ZaloConfigPage() {
           
           <div style={{ background: useSystemConfig ? '#f3f4f6' : 'transparent', padding: useSystemConfig ? 16 : 0, borderRadius: 8, marginBottom: 16 }}>
             <Row gutter={12}>
-              <Col span={12}>
+              <Col xs={24} md={12}>
                 <Form.Item name="app_id" label="App ID" rules={[{ required: !useSystemConfig, message: 'Bắt buộc' }]}>
                   <Input placeholder={useSystemConfig ? "Hệ thống tự điền" : "App ID từ Zalo Dev"} disabled={useSystemConfig} />
                 </Form.Item>
               </Col>
-              <Col span={12}>
+              <Col xs={24} md={12}>
                 <Form.Item name="oa_id" label="OA ID (Official Account ID)">
                   <Input placeholder="Nhập để xác thực tin nhắn đúng OA" />
                 </Form.Item>

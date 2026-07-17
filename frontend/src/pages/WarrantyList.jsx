@@ -369,7 +369,7 @@ export default function WarrantyList() {
         </Row>
       </Card>
 
-      <Table
+      <Table scroll={{ x: 'max-content' }}
         dataSource={warranties}
         columns={columns}
         rowKey="id"
@@ -387,7 +387,7 @@ export default function WarrantyList() {
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="order" label="Đơn hàng" rules={[{ required: !editingWarranty, message: 'Vui lòng chọn đơn hàng' }]}>
                 <Select disabled={!!editingWarranty || !canEdit} placeholder="Chọn đơn hàng" showSearch optionFilterProp="children">
                   {availableOrders.map(o => (
@@ -396,7 +396,7 @@ export default function WarrantyList() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="customer" label="Khách hàng" rules={[{ required: !editingWarranty, message: 'Vui lòng chọn khách hàng' }]}>
                 <Select disabled={!!editingWarranty || !canEdit} placeholder="Chọn khách hàng" showSearch optionFilterProp="children">
                   {availableCustomers.map(c => (
@@ -414,12 +414,12 @@ export default function WarrantyList() {
             </Select>
           </Form.Item>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="start_date" label="Ngày bắt đầu">
                 <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} disabled={!canEdit} />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="end_date" label="Ngày kết thúc">
                 <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} disabled={!canEdit} />
               </Form.Item>

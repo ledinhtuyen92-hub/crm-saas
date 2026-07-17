@@ -131,7 +131,7 @@ export default function SubscriptionPlanManager({ onPlansChange }) {
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>Thêm Gói Tùy chỉnh</Button>
       </div>
       
-      <Table 
+      <Table scroll={{ x: 'max-content' }} 
         columns={columns} 
         dataSource={plans} 
         rowKey="id" 

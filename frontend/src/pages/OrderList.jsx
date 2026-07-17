@@ -1733,7 +1733,7 @@ export default function OrderList() {
 
             <div style={{ padding: '16px', background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', borderRadius: '12px', border: '1px solid #bbf7d0', marginBottom: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
               <Row align="middle" justify="space-between">
-                <Col span={8}>
+                <Col xs={24} md={8}>
                   <Space direction="vertical" size={0}>
                     <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tình trạng thanh toán</Text>
                     <Tag color={selectedOrder.financial_status === 'fully_paid' ? 'green' : selectedOrder.financial_status === 'deposit_paid' ? 'blue' : 'orange'} style={{ marginTop: 4, fontWeight: 700, padding: '4px 12px', borderRadius: '6px', fontSize: 13, border: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
@@ -1745,7 +1745,7 @@ export default function OrderList() {
                     </Tag>
                   </Space>
                 </Col>
-                <Col span={6}>
+                <Col xs={24} md={6}>
                   <Space direction="vertical" size={0}>
                     <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Đã thu</Text>
                     <Text strong style={{ color: '#15803d', fontSize: 18, textShadow: '0 1px 2px rgba(21, 128, 61, 0.1)' }}>
@@ -1753,7 +1753,7 @@ export default function OrderList() {
                     </Text>
                   </Space>
                 </Col>
-                <Col span={6}>
+                <Col xs={24} md={6}>
                   <Space direction="vertical" size={0}>
                     <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Còn nợ</Text>
                     <Text strong style={{ color: selectedOrder.remaining_debt > 0 ? '#b91c1c' : '#15803d', fontSize: 18, textShadow: '0 1px 2px rgba(185, 28, 28, 0.1)' }}>
@@ -1761,7 +1761,7 @@ export default function OrderList() {
                     </Text>
                   </Space>
                 </Col>
-                <Col span={4} style={{ textAlign: 'right' }}>
+                <Col xs={24} md={4} style={{ textAlign: 'right' }}>
                   {(hasPermission('finance.create_receipt') || hasPermission('finance.view')) && selectedOrder.remaining_debt > 0 && (
                     <Button
                       type="primary"
@@ -1779,7 +1779,7 @@ export default function OrderList() {
             {/* CỔNG XUẤT KHO (DO GATE) */}
             <div style={{ padding: '16px', background: selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' : 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)', borderRadius: '12px', border: selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? '1px solid #bbf7d0' : '1px solid #fecdd3', marginBottom: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
               <Row align="middle" justify="space-between">
-                <Col span={16}>
+                <Col xs={24} md={16}>
                   <Space align="center" size={12}>
                     <div style={{ width: 40, height: 40, borderRadius: '50%', background: selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? '#22c55e' : '#f43f5e', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
                       {selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved' ? <CheckCircleOutlined style={{color: '#fff', fontSize: 20}} /> : <CloseCircleOutlined style={{color: '#fff', fontSize: 20}} />}
@@ -1794,7 +1794,7 @@ export default function OrderList() {
                     </Space>
                   </Space>
                 </Col>
-                <Col span={8} style={{ textAlign: 'right' }}>
+                <Col xs={24} md={8} style={{ textAlign: 'right' }}>
                   {selectedOrder.financial_status !== 'fully_paid' && selectedOrder.financial_status !== 'credit_approved' && canRequestCredit && (
                     <Button
                       danger={!selectedOrder.has_pending_credit_request}
@@ -1818,7 +1818,7 @@ export default function OrderList() {
                   Lịch sử thu tiền
                 </Text>
                 <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
-                  <Table
+                  <Table scroll={{ x: 'max-content' }}
                     dataSource={selectedOrder.payment_milestones?.flatMap(m => m.receipts || []) || []}
                     rowKey="id"
                     pagination={false}

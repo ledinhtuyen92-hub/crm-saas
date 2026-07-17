@@ -115,6 +115,11 @@ class Department(models.Model):
         verbose_name="Trưởng phòng",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    is_sales_department = models.BooleanField(
+        default=False,
+        verbose_name="Thống kê Doanh số Sales",
+        help_text="Bật để tính doanh số của phòng ban này vào báo cáo Sales Tốt/Yếu nhất."
+    )
 
     class Meta:
         ordering = ["name"]

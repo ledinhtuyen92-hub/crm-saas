@@ -552,12 +552,12 @@ export default function FacebookConfigPage() {
           )}
           <Divider>✅ Trạng thái & Tính năng</Divider>
           <Row gutter={16}>
-            <Col span={8}>
+            <Col xs={24} md={8}>
               <Form.Item name="is_active" label="Trạng thái" valuePropName="checked">
                 <Switch checkedChildren="Hoạt động" unCheckedChildren="Tạm dừng" />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col xs={24} md={8}>
               <Form.Item
                 name="auto_create_customer_from_phone"
                 label="Tự tạo KH từ SĐT"
@@ -567,7 +567,7 @@ export default function FacebookConfigPage() {
                 <Switch checkedChildren="🤖 Tự động" unCheckedChildren="👆 Thủ công" />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col xs={24} md={8}>
               <Form.Item
                 name="lead_cleanup_days"
                 label="Dọn dẹp Lead rác"

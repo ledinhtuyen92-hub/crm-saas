@@ -208,7 +208,7 @@ export default function CompanyGeneralSettings() {
           <Row gutter={24}>
             <Col xs={24} md={12}>
               <Row gutter={16}>
-                <Col span={24}>
+                <Col xs={24} md={24}>
                   <Form.Item
                     name="name"
                     label="Tên doanh nghiệp / Công ty"
@@ -217,27 +217,27 @@ export default function CompanyGeneralSettings() {
                     <Input placeholder="CÔNG TY CỔ PHẦN..." />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} md={12}>
                   <Form.Item name="tax_code" label="Mã số thuế (MST)">
                     <Input placeholder="0101234567" />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} md={12}>
                   <Form.Item name="phone" label="Số điện thoại / Hotline">
                     <Input placeholder="0243.888.9999 / 0988.xxx.xxx" />
                   </Form.Item>
                 </Col>
-                <Col span={24}>
+                <Col xs={24} md={24}>
                   <Form.Item name="address" label="Địa chỉ trụ sở">
                     <Input placeholder="Số 1, Đại Cồ Việt, Hà Nội..." />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} md={12}>
                   <Form.Item name="director_name" label="Họ tên Người đại diện / Giám đốc">
                     <Input placeholder="Ví dụ: Nguyễn Văn A..." />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} md={12}>
                   <Form.Item name="director_title" label="Chức danh ký báo giá">
                     <Input placeholder="Ví dụ: Giám đốc / Tổng Giám đốc..." />
                   </Form.Item>
@@ -352,7 +352,7 @@ export default function CompanyGeneralSettings() {
           style={{ maxWidth: 600 }}
         >
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="order_prefix"
                 label="Tiền tố mã chứng từ công ty (Prefix chung)"
@@ -362,7 +362,7 @@ export default function CompanyGeneralSettings() {
                 <Input placeholder="VD: ABC hoặc CTY1" maxLength={10} style={{ textTransform: 'uppercase' }} />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="timezone" label="Múi giờ hệ thống">
                 <Select>
                   <Option value="Asia/Ho_Chi_Minh">(GMT+07:00) Hà Nội, Bangkok, Jakarta</Option>
@@ -411,7 +411,7 @@ export default function CompanyGeneralSettings() {
           </Paragraph>
 
           <Row gutter={24}>
-            <Col span={24}>
+            <Col xs={24} md={24}>
               <Form.Item
                 name="default_warranty_content"
                 label={<Text strong>📝 Nội dung bảo hành (Hiển thị bên cột trái)</Text>}
@@ -422,7 +422,7 @@ export default function CompanyGeneralSettings() {
                 />
               </Form.Item>
             </Col>
-            <Col span={24}>
+            <Col xs={24} md={24}>
               <Form.Item
                 name="default_warranty_rules"
                 label={<Text strong>⚖️ Quy định bảo hành (Hiển thị bên cột phải)</Text>}
@@ -436,7 +436,7 @@ export default function CompanyGeneralSettings() {
           </Row>
 
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="custom_quotation_title"
                 label="Tiêu đề mẫu in Báo Giá (Tùy chỉnh)"
@@ -445,7 +445,7 @@ export default function CompanyGeneralSettings() {
                 <Input placeholder="VD: BÁO GIÁ DỊCH VỤ, HỢP ĐỒNG NGUYÊN TẮC..." style={{ textTransform: 'uppercase' }} />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="custom_order_title"
                 label="Tiêu đề mẫu in Đơn Hàng (Tùy chỉnh)"
@@ -751,7 +751,7 @@ export default function CompanyGeneralSettings() {
               {isLand ? (
                 <Row gutter={24} style={{ marginBottom: 20 }}>
                   {/* BÊN BÁN */}
-                  <Col span={12}>
+                  <Col xs={24} md={12}>
                     <div style={{ padding: '16px 20px', background: '#f8fafc', border: '1px solid #94a3b8', borderRadius: 8, height: '100%' }}>
                       <div style={{ fontWeight: 700, color: '#1e3a8a', fontSize: 14, marginBottom: 8, borderBottom: '1px solid #cbd5e1', paddingBottom: 6 }}>
                         🏢 BÊN BÁN (BÊN B): {companyInfo?.name || selectedTemplate?.company_info?.name || 'CÔNG TY CỦA BẠN'}
@@ -765,7 +765,7 @@ export default function CompanyGeneralSettings() {
                     </div>
                   </Col>
                   {/* BÊN MUA */}
-                  <Col span={12}>
+                  <Col xs={24} md={12}>
                     <div style={{ padding: '16px 20px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: 8, height: '100%', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
                       <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14, marginBottom: 8, borderBottom: '1px solid #e2e8f0', paddingBottom: 6 }}>
                         👤 BÊN MUA (BÊN A): CÔNG TY KHÁCH HÀNG
@@ -796,16 +796,16 @@ export default function CompanyGeneralSettings() {
                     </span>
                   </div>
                   <Row gutter={[20, 6]} style={{ fontSize: 13.5, color: '#1e293b', lineHeight: 1.7 }}>
-                    <Col span={12}>
+                    <Col xs={24} md={12}>
                       <strong>Khách hàng:</strong> <span style={{ fontWeight: 600, color: '#1e3a8a' }}>Anh Nguyễn Văn A — Công ty ABC</span>
                     </Col>
-                    <Col span={12}>
+                    <Col xs={24} md={12}>
                       <strong>Điện thoại:</strong> <span style={{ fontWeight: 600 }}>0988.123.456</span>
                     </Col>
-                    <Col span={12}>
+                    <Col xs={24} md={12}>
                       <strong>Địa chỉ:</strong> Số 10, Đường Phố Huế, Q. Hai Bà Trưng, Hà Nội
                     </Col>
-                    <Col span={12}>
+                    <Col xs={24} md={12}>
                       <strong>Email:</strong> contact@congtyabc.vn
                     </Col>
                   </Row>
@@ -908,7 +908,7 @@ export default function CompanyGeneralSettings() {
               />
 
               <Row justify="end" style={{ marginBottom: 24 }}>
-                <Col span={10} style={{ textAlign: 'right' }}>
+                <Col xs={24} md={10} style={{ textAlign: 'right' }}>
                   <div style={{ color: '#64748b' }}>Chiết khấu: {isLand ? '0 đ' : '-500,000 đ'}</div>
                   <div style={{ fontSize: 16, fontWeight: 700, color: themeClr, marginTop: 4 }}>
                     TỔNG THANH TOÁN: {isLand ? '9,710,000 đ' : '10,500,000 đ'}
@@ -939,12 +939,12 @@ export default function CompanyGeneralSettings() {
 
               {/* Signatures & Stamp preview */}
               <Row justify="space-between" style={{ marginTop: 32, textAlign: 'center' }}>
-                <Col span={10}>
+                <Col xs={24} md={10}>
                   <Text strong style={{ display: 'block', fontSize: 13, color: '#1e293b' }}>BÊN MUA / KHÁCH HÀNG</Text>
                   <Text type="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>(Ký, ghi rõ họ tên)</Text>
                   <div style={{ height: 80 }} />
                 </Col>
-                <Col span={10}>
+                <Col xs={24} md={10}>
                   <Text strong style={{ display: 'block', fontSize: 13, color: '#1e293b' }}>
                     {settings?.director_title || 'ĐẠI DIỆN CÔNG TY'}
                   </Text>

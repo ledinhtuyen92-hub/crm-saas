@@ -14,7 +14,9 @@ import {
   theme,
   Modal,
   Form,
+  Grid,
   Input,
+  Drawer,
   Button,
   message,
   Popover,
@@ -46,15 +48,21 @@ import {
   SafetyCertificateOutlined,
   WechatOutlined,
   MessageOutlined,
+  MenuOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
 const { Header, Sider, Content } = Layout
 const { Text, Title } = Typography
+const { useBreakpoint } = Grid
 
 function MainLayout({ children, isDarkMode, toggleTheme }) {
   const location = useLocation()
   const { token } = theme.useToken()
+  const screens = useBreakpoint()
+  const isMobile = screens.lg === false
+  const [drawerVisible, setDrawerVisible] = useState(false)
+  
   const { user, logout, isSuperAdmin, isCompanyAdmin, hasPermission, maintenanceMode, isModuleActive } = useAuth()
 
   // ── Menu items (tuỳ theo quyền) ────────────────────────────────
@@ -317,131 +325,153 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
     greetingMessage = 'Chào mừng bạn quay lại. Hôm nay có lịch hẹn khách hàng nào không?'
   }
 
-  return (
-    <Layout style={{ minHeight: '100vh', background: token.colorBgLayout }}>
-      <Sider
-        width={260}
-        theme="dark"
+  const siderContent = (
+    <>
+      {/* ── Logo ───────────────────────────────────────────────── */}
+      <div
         style={{
-          background: 'linear-gradient(180deg, #111827 0%, #172554 100%)',
-          boxShadow: '8px 0 24px rgba(15, 23, 42, 0.16)',
-          minHeight: '100vh',
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          zIndex: 100,
-          overflowY: 'auto',
+          height: 80,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 12,
+          padding: '0 20px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          flexShrink: 0,
         }}
       >
-        {/* ── Logo ───────────────────────────────────────────────── */}
         <div
           style={{
-            height: 80,
+            width: 36,
+            height: 36,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 12,
-            padding: '0 20px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-            flexShrink: 0,
+            borderRadius: 10,
+            color: '#ffffff',
+            background: 'linear-gradient(135deg, #38bdf8 0%, #2563eb 100%)',
+            boxShadow: '0 10px 24px rgba(37, 99, 235, 0.35)',
+          }}
+        >
+          <AppstoreOutlined style={{ fontSize: 20 }} />
+        </div>
+        <Title
+          level={4}
+          style={{ margin: 0, color: '#ffffff', fontWeight: 800, letterSpacing: 0 }}
+        >
+          CRM SaaS
+        </Title>
+      </div>
+
+      {/* ── Company or SuperAdmin Badge ─────────────────────────── */}
+      {isSuperAdmin ? (
+        <div
+          style={{
+            padding: '12px 16px',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
           }}
         >
           <div
             style={{
-              width: 36,
-              height: 36,
+              background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%)',
+              border: '1px solid rgba(249, 115, 22, 0.35)',
+              borderRadius: 8,
+              padding: '8px 12px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 10,
-              color: '#ffffff',
-              background: 'linear-gradient(135deg, #38bdf8 0%, #2563eb 100%)',
-              boxShadow: '0 10px 24px rgba(37, 99, 235, 0.35)',
+              gap: 10,
             }}
           >
-            <AppstoreOutlined style={{ fontSize: 20 }} />
-          </div>
-          <Title
-            level={4}
-            style={{ margin: 0, color: '#ffffff', fontWeight: 800, letterSpacing: 0 }}
-          >
-            CRM SaaS
-          </Title>
-        </div>
-
-        {/* ── Company or SuperAdmin Badge ─────────────────────────── */}
-        {isSuperAdmin ? (
-          <div
-            style={{
-              padding: '12px 16px',
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
-            }}
-          >
-            <div
-              style={{
-                background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%)',
-                border: '1px solid rgba(249, 115, 22, 0.35)',
-                borderRadius: 8,
-                padding: '8px 12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-              }}
-            >
-              <SettingOutlined style={{ color: '#fdba74', fontSize: 16 }} />
-              <div>
-                <Text style={{ color: '#fdba74', fontSize: 11, fontWeight: 800, display: 'block', letterSpacing: 0.5 }}>
-                  SYSTEM ADMIN
-                </Text>
-                <Text style={{ color: '#e5e7eb', fontSize: 11 }}>
-                  SaaS Platform Console
-                </Text>
-              </div>
-            </div>
-          </div>
-        ) : user?.company_name ? (
-          <div
-            style={{
-              padding: '10px 16px',
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
-            }}
-          >
-            <div
-              style={{
-                background: 'rgba(37, 99, 235, 0.2)',
-                borderRadius: 8,
-                padding: '6px 10px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <BankOutlined style={{ color: '#93c5fd', fontSize: 12 }} />
-              <Text style={{ color: '#93c5fd', fontSize: 12, fontWeight: 600 }}>
-                {user.company_name}
+            <SettingOutlined style={{ color: '#fdba74', fontSize: 16 }} />
+            <div>
+              <Text style={{ color: '#fdba74', fontSize: 11, fontWeight: 800, display: 'block', letterSpacing: 0.5 }}>
+                SYSTEM ADMIN
+              </Text>
+              <Text style={{ color: '#e5e7eb', fontSize: 11 }}>
+                SaaS Platform Console
               </Text>
             </div>
           </div>
-        ) : null}
-
-        <Menu
-          mode="inline"
-          theme="dark"
-          selectedKeys={[location.pathname]}
-          defaultOpenKeys={['settings-group']}
-          items={menuItems}
+        </div>
+      ) : user?.company_name ? (
+        <div
           style={{
-            borderRight: 0,
-            padding: '12px 12px',
-            background: 'transparent',
-            fontWeight: 600,
+            padding: '10px 16px',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
           }}
-        />
-      </Sider>
+        >
+          <div
+            style={{
+              background: 'rgba(37, 99, 235, 0.2)',
+              borderRadius: 8,
+              padding: '6px 10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <BankOutlined style={{ color: '#93c5fd', fontSize: 12 }} />
+            <Text style={{ color: '#93c5fd', fontSize: 12, fontWeight: 600 }}>
+              {user.company_name}
+            </Text>
+          </div>
+        </div>
+      ) : null}
+
+      <Menu
+        mode="inline"
+        theme="dark"
+        selectedKeys={[location.pathname]}
+        defaultOpenKeys={['settings-group']}
+        items={menuItems}
+        style={{
+          borderRight: 0,
+          padding: '12px 12px',
+          background: 'transparent',
+          fontWeight: 600,
+        }}
+        onClick={() => {
+          if (isMobile) setDrawerVisible(false)
+        }}
+      />
+    </>
+  )
+
+  return (
+    <Layout style={{ minHeight: '100vh', background: token.colorBgLayout }}>
+      {isMobile ? (
+        <Drawer
+          placement="left"
+          closable={false}
+          onClose={() => setDrawerVisible(false)}
+          open={drawerVisible}
+          styles={{ body: { padding: 0, background: 'linear-gradient(180deg, #111827 0%, #172554 100%)' } }}
+          width={260}
+        >
+          {siderContent}
+        </Drawer>
+      ) : (
+        <Sider
+          width={260}
+          theme="dark"
+          style={{
+            background: 'linear-gradient(180deg, #111827 0%, #172554 100%)',
+            boxShadow: '8px 0 24px rgba(15, 23, 42, 0.16)',
+            minHeight: '100vh',
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            zIndex: 100,
+            overflowY: 'auto',
+          }}
+        >
+          {siderContent}
+        </Sider>
+      )}
 
       {/* ── Main content area (offset by sider width) ────────────── */}
-      <Layout style={{ minWidth: 0, background: token.colorBgLayout, marginLeft: 260 }}>
+      <Layout style={{ minWidth: 0, background: token.colorBgLayout, marginLeft: isMobile ? 0 : 260 }}>
         <Header
           style={{
             height: 80,
@@ -454,7 +484,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
             boxShadow: isDarkMode
               ? '0 4px 18px rgba(0, 0, 0, 0.28)'
               : '0 4px 18px rgba(15, 23, 42, 0.08)',
-            padding: '0 24px',
+            padding: isMobile ? '0 16px' : '0 24px',
             position: 'sticky',
             top: 0,
             zIndex: 10,
@@ -469,6 +499,14 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
               minWidth: 0,
             }}
           >
+            {isMobile && (
+              <Button
+                type="text"
+                icon={<MenuOutlined style={{ fontSize: 20 }} />}
+                onClick={() => setDrawerVisible(true)}
+                style={{ marginLeft: -8 }}
+              />
+            )}
             <div
               style={{
                 width: 48,
@@ -477,7 +515,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                 background: isDarkMode 
                   ? 'linear-gradient(135deg, #1e3a8a 0%, #312e81 100%)' 
                   : 'linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%)',
-                display: 'flex',
+                display: isMobile ? 'none' : 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: isDarkMode 

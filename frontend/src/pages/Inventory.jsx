@@ -1149,7 +1149,7 @@ export default function Inventory() {
                       </Button>
                     </Row>
                   )}
-                  <Table
+                  <Table scroll={{ x: 'max-content' }}
                     dataSource={warehouses}
                     rowKey="id"
                     columns={[
@@ -1213,17 +1213,17 @@ export default function Inventory() {
       >
         <Form form={productForm} layout="vertical" style={{ marginTop: 16 }}>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="sku" label="Mã SKU" rules={[{ required: true, message: 'Vui lòng nhập mã SKU' }]}>
                 <Input placeholder="VD: SP-001, NHOM-XINGFA..." />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="name" label="Tên sản phẩm / dịch vụ" rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm' }]}>
                 <Input placeholder="VD: Cửa nhôm Xingfa 4 cánh..." />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="category" label="Danh mục sản phẩm" rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}>
                 <Select placeholder="Chọn danh mục...">
                   {categories.map((c) => (
@@ -1232,7 +1232,7 @@ export default function Inventory() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="unit" label="Đơn vị tính">
                 <Select>
                   <Option value="cái">Cái</Option>
@@ -1244,17 +1244,17 @@ export default function Inventory() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="price" label="Giá bán (VNĐ)" rules={[{ required: true, message: 'Vui lòng nhập giá bán' }]}>
                 <InputNumber min={0} step={10000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="cost_price" label="Giá nhập / Giá vốn (VNĐ)">
                 <InputNumber min={0} step={10000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} />
               </Form.Item>
             </Col>
-            <Col span={24}>
+            <Col xs={24} md={24}>
               <Form.Item label="Hình ảnh sản phẩm (Tải lên ảnh mẫu cửa / sản phẩm)">
                 <Upload
                   beforeUpload={(file) => {
@@ -1297,12 +1297,12 @@ export default function Inventory() {
                 )}
               </Form.Item>
             </Col>
-            <Col span={24}>
+            <Col xs={24} md={24}>
               <Form.Item name="description" label="Mô tả chi tiết">
                 <TextArea rows={3} placeholder="Mô tả quy cách, thông số kỹ thuật..." />
               </Form.Item>
             </Col>
-            <Col span={24}>
+            <Col xs={24} md={24}>
               <Form.Item name="is_active" valuePropName="checked" label="Trạng thái kinh doanh">
                 <Switch checkedChildren="Đang kinh doanh" unCheckedChildren="Ngừng kinh doanh" />
               </Form.Item>
@@ -1366,7 +1366,7 @@ export default function Inventory() {
       >
         <Form form={txnForm} layout="vertical" style={{ marginTop: 16 }}>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="type" label="Loại giao dịch" rules={[{ required: true }]}>
                 <Select placeholder="Chọn loại giao dịch" disabled={txnModalMode === 'export'}>
                   {txnModalMode === 'export' ? (
@@ -1380,7 +1380,7 @@ export default function Inventory() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="warehouse" label="Kho hàng" rules={[{ required: true, message: 'Chọn kho' }]}>
                 <Select placeholder="Chọn kho...">
                   {warehouses.map((w) => (
@@ -1389,7 +1389,7 @@ export default function Inventory() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={24}>
+            <Col xs={24} md={24}>
               <Form.Item name="product" label="Sản phẩm" rules={[{ required: true, message: 'Chọn sản phẩm' }]}>
                 <Select showSearch optionFilterProp="children" placeholder="Chọn sản phẩm...">
                   {products.map((p) => (
@@ -1398,17 +1398,17 @@ export default function Inventory() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="quantity" label="Số lượng" rules={[{ required: true, message: 'Nhập số lượng' }]}>
                 <InputNumber min={1} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="unit_cost" label="Đơn giá nhập (VNĐ)">
                 <InputNumber min={0} step={10000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} />
               </Form.Item>
             </Col>
-            <Col span={24}>
+            <Col xs={24} md={24}>
               <Form.Item name="note" label="Ghi chú phiếu kho">
                 <Input placeholder="VD: Nhập lô hàng từ nhà cung cấp Xingfa Aluminium..." />
               </Form.Item>
@@ -1539,20 +1539,20 @@ export default function Inventory() {
               style={{ marginBottom: 16 }}
             />
             <Row gutter={[16, 16]}>
-              <Col span={24}>
+              <Col xs={24} md={24}>
                 <Text type="secondary">Sản phẩm cần xuất:</Text>
                 <div>
                   <Text strong style={{ fontSize: 16 }}>{selectedExportTxn.product_name}</Text>
                   <Tag color="blue" style={{ marginLeft: 8 }}>SKU: {selectedExportTxn.product_sku}</Tag>
                 </div>
               </Col>
-              <Col span={24}>
+              <Col xs={24} md={24}>
                 <Text type="secondary">Số lượng cần xuất:</Text>
                 <div>
                   <Text strong style={{ fontSize: 18, color: '#dc2626' }}>{selectedExportTxn.quantity}</Text> {products.find(p => p.id === selectedExportTxn.product)?.unit}
                 </div>
               </Col>
-              <Col span={24}>
+              <Col xs={24} md={24}>
                 <Text type="secondary">Chọn Kho để xuất hàng:</Text>
                 <Select
                   style={{ width: '100%', marginTop: 8 }}

@@ -15,6 +15,7 @@ import {
   Row,
   Select,
   Space,
+  Switch,
   Table,
   Tag,
   Tooltip,
@@ -76,6 +77,7 @@ export default function DepartmentManagement() {
       name: department?.name ?? '',
       description: department?.description ?? '',
       manager: department?.manager ?? null,
+      is_sales_department: department?.is_sales_department ?? false,
     })
     setModalOpen(true)
   }
@@ -142,6 +144,14 @@ export default function DepartmentManagement() {
         <Text strong style={{ color: managerName ? token.colorPrimary : token.colorTextDisabled }}>
           {managerName || 'Chưa phân công'}
         </Text>
+      ),
+    },
+    {
+      title: 'Thống kê Doanh số',
+      key: 'is_sales_department',
+      align: 'center',
+      render: (_, record) => (
+        record.is_sales_department ? <Tag color="green">Có</Tag> : <Text type="secondary">Không</Text>
       ),
     },
     {
@@ -215,7 +225,7 @@ export default function DepartmentManagement() {
       </div>
 
       <Card style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(15,23,42,0.08)' }}>
-        <Table
+        <Table scroll={{ x: 'max-content' }}
           id="department-table"
           columns={columns}
           dataSource={departments}
@@ -271,6 +281,14 @@ export default function DepartmentManagement() {
                 label: `${u.full_name} (${u.username})`,
               }))}
             />
+          </Form.Item>
+
+          <Form.Item
+            name="is_sales_department"
+            valuePropName="checked"
+            help="Bật tùy chọn này để hệ thống tính doanh số của các nhân viên trong phòng ban này vào bảng xếp hạng Sales Tốt/Yếu nhất."
+          >
+            <Switch checkedChildren="Có thống kê" unCheckedChildren="Không" />
           </Form.Item>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 24 }}>

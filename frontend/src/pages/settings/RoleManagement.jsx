@@ -268,7 +268,7 @@ export default function RoleManagement() {
       </div>
 
       <Card style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(15,23,42,0.08)' }}>
-        <Table
+        <Table scroll={{ x: 'max-content' }}
           id="role-table"
           columns={columns}
           dataSource={roles}
@@ -301,7 +301,7 @@ export default function RoleManagement() {
           style={{ marginTop: 16 }}
         >
           <Row gutter={12}>
-            <Col span={14}>
+            <Col xs={24} md={14}>
               <Form.Item
                 name="name"
                 label="Tên vai trò / Chức danh"
@@ -310,7 +310,7 @@ export default function RoleManagement() {
                 <Input size="large" placeholder="Vd: Nhân viên Sale, Kế toán, Trưởng phòng..." />
               </Form.Item>
             </Col>
-            <Col span={10}>
+            <Col xs={24} md={10}>
               <Form.Item name="description" label="Mô tả">
                 <Input size="large" placeholder="Mô tả ngắn về vai trò..." />
               </Form.Item>
@@ -386,7 +386,7 @@ export default function RoleManagement() {
                   >
                     <Row gutter={[0, 6]}>
                       {perms.map((p) => (
-                        <Col span={12} key={p.id}>
+                        <Col xs={24} md={12} key={p.id}>
                           <Checkbox value={p.id}>
                             <Text style={{ fontSize: 13 }}>{p.name}</Text>
                           </Checkbox>

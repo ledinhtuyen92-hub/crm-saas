@@ -1523,7 +1523,7 @@ export default function QuotationList() {
         }}
         bodyStyle={{ padding: 0 }}
       >
-        <Table
+        <Table scroll={{ x: 'max-content' }}
           columns={columns}
           dataSource={filteredQuotations}
           rowKey="id"

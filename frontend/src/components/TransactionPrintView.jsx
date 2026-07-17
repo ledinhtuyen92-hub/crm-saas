@@ -100,7 +100,7 @@ const TransactionPrintView = ({ transaction, company }) => {
       
       {/* Header */}
       <Row justify="space-between" align="middle" style={{ marginBottom: 20 }}>
-        <Col span={14}>
+        <Col xs={24} md={14}>
           <Space align="start" size="middle">
             {effectiveCompany?.logo && (
               <img
@@ -132,17 +132,17 @@ const TransactionPrintView = ({ transaction, company }) => {
       {/* Info Info */}
       <div style={{ marginBottom: 20, fontSize: 14, lineHeight: '1.8' }}>
         <Row>
-          <Col span={24}>
+          <Col xs={24} md={24}>
             <Text>- Họ và tên người {isImport ? 'giao hàng' : 'nhận hàng'}: ......................................................................................................................</Text>
           </Col>
-          <Col span={24}>
+          <Col xs={24} md={24}>
             <Text>- Kho hàng: <Text strong>{transaction.warehouse_name || '..........................................'}</Text></Text>
           </Col>
-          <Col span={24}>
+          <Col xs={24} md={24}>
             <Text>- Lý do {isImport ? 'nhập' : 'xuất'}: {transaction.note || '.............................................................................................................................'}</Text>
           </Col>
           {transaction.reference_order && (
-            <Col span={24}>
+            <Col xs={24} md={24}>
               <Text>- Kèm theo Đơn hàng số: <Text strong>{transaction.reference_order}</Text></Text>
             </Col>
           )}
@@ -150,7 +150,7 @@ const TransactionPrintView = ({ transaction, company }) => {
       </div>
 
       {/* Table */}
-      <Table
+      <Table scroll={{ x: 'max-content' }}
         dataSource={tableData}
         columns={columns}
         pagination={false}
@@ -161,7 +161,7 @@ const TransactionPrintView = ({ transaction, company }) => {
 
       {isImport && (
         <Row style={{ marginTop: 12 }}>
-          <Col span={24}>
+          <Col xs={24} md={24}>
             <Text style={{ fontSize: 14 }}>- Tổng số tiền (Viết bằng chữ): ...............................................................................................................................</Text>
           </Col>
         </Row>
@@ -169,20 +169,20 @@ const TransactionPrintView = ({ transaction, company }) => {
 
       {/* Signatures */}
       <Row style={{ marginTop: 50, textAlign: 'center', fontSize: 14 }}>
-        <Col span={6}>
+        <Col xs={24} md={6}>
           <Text strong>Người lập phiếu</Text>
           <div style={{ fontStyle: 'italic', fontSize: 12 }}>(Ký, họ tên)</div>
           <div style={{ marginTop: 80 }}><Text>{transaction.created_by_name}</Text></div>
         </Col>
-        <Col span={6}>
+        <Col xs={24} md={6}>
           <Text strong>Người {isImport ? 'giao hàng' : 'nhận hàng'}</Text>
           <div style={{ fontStyle: 'italic', fontSize: 12 }}>(Ký, họ tên)</div>
         </Col>
-        <Col span={6}>
+        <Col xs={24} md={6}>
           <Text strong>Thủ kho</Text>
           <div style={{ fontStyle: 'italic', fontSize: 12 }}>(Ký, họ tên)</div>
         </Col>
-        <Col span={6}>
+        <Col xs={24} md={6}>
           <Text strong>Kế toán trưởng</Text>
           <div style={{ fontStyle: 'italic', fontSize: 12 }}>(Ký, họ tên)</div>
         </Col>
