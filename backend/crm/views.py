@@ -164,11 +164,11 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             )
 
         from users.models import User
-        from django.db.models import Count
+        from django.db.models import Max, F
 
         company = request.user.company
 
-        # Lấy danh sách Sale đang hoạt động
+        # Lấy danh sách Sale đang hoạt động, sắp xếp theo thời gian nhận Lead gần nhất (ai chờ lâu nhất / mới vào thì ưu tiên trước)
         sale_users = list(
             User.objects.filter(
                 company=company,
@@ -177,8 +177,8 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 is_superuser=False,
                 role__is_auto_assign_target=True,
             ).annotate(
-                customer_count=Count("assigned_customers")
-            ).order_by("customer_count")  # Gán cho người ít khách nhất trước
+                last_lead_time=Max("assigned_customers__created_at")
+            ).order_by(F("last_lead_time").asc(nulls_first=True))
         )
 
         if not sale_users:

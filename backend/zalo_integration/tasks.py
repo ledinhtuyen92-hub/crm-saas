@@ -169,17 +169,36 @@ def send_birthday_zns_to_customers(self):
     
     today = timezone.now().date()
     
+    # Kiểm tra chế độ bảo trì toàn hệ thống
+    from users.models import SystemSettings
+    if SystemSettings.load().maintenance_mode:
+        logger.info("[ZaloTask:SendBirthdayZNS] Hệ thống đang ở chế độ bảo trì, tạm dừng tự động gửi ZNS sinh nhật.")
+        return {"success": True, "sent_count": 0}
+
     # 1. Tìm các cấu hình OA có bật tự động gửi sinh nhật và đang active
-    configs = ZaloOaConfig.objects.filter(is_active=True, auto_send_birthday_zns=True)
+    configs = ZaloOaConfig.objects.filter(is_active=True, auto_send_birthday_zns=True).select_related('company')
     if not configs.exists():
         logger.info("[ZaloTask:SendBirthdayZNS] Không có công ty nào bật tính năng này.")
         return {"success": True, "sent_count": 0}
 
-    company_ids = configs.values_list('company_id', flat=True)
+    valid_company_ids = []
+    for config in configs:
+        company = config.company
+        if not company or not company.is_active:
+            continue
+        if not hasattr(company, "settings") or not company.settings:
+            continue
+        if "zalo" not in (company.settings.active_modules or []):
+            continue
+        valid_company_ids.append(company.id)
+
+    if not valid_company_ids:
+        logger.info("[ZaloTask:SendBirthdayZNS] Không có công ty hợp lệ (hoặc module Zalo bị tắt).")
+        return {"success": True, "sent_count": 0}
     
-    # 2. Tìm các Customer có sinh nhật hôm nay thuộc các công ty đó
+    # 2. Tìm các Customer có sinh nhật hôm nay thuộc các công ty hợp lệ đó
     birthday_customers = Customer.objects.filter(
-        company_id__in=company_ids,
+        company_id__in=valid_company_ids,
         birthday__day=today.day,
         birthday__month=today.month,
         phone__isnull=False
@@ -191,6 +210,16 @@ def send_birthday_zns_to_customers(self):
 
     sent_count = 0
     for customer in birthday_customers:
+        # Chống gửi lặp lại trong cùng ngày hôm nay cho khách hàng
+        if ZaloMessageLog.objects.filter(
+            company_id=customer.company_id,
+            customer=customer,
+            template__template_type=ZaloMessageTemplate.TYPE_BIRTHDAY,
+            sent_at__date=today
+        ).exists():
+            logger.info(f"[ZaloTask:SendBirthdayZNS] Khách hàng #{customer.id} ({customer.phone}) đã được gửi ZNS chúc mừng sinh nhật hôm nay.")
+            continue
+
         # Tìm template birthday của công ty
         template = ZaloMessageTemplate.objects.filter(
             company_id=customer.company_id,

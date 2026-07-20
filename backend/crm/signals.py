@@ -23,6 +23,32 @@ def track_customer_assignment(sender, instance, **kwargs):
         instance._original_assigned_to_id = None
 
 
+@receiver(pre_save, sender="crm.Customer")
+def auto_assign_customer(sender, instance, **kwargs):
+    """Tự động phân bổ Lead xoay vòng đều đặn (True Round-robin) dựa trên thời gian nhận Lead gần nhất."""
+    if not instance.pk and not instance.assigned_to:
+        company = instance.company
+        if company and hasattr(company, "settings") and company.settings.lead_routing == "round_robin":
+            from users.models import User
+            from django.db.models import Max, F
+
+            sale_user = (
+                User.objects.filter(
+                    company=company,
+                    is_active=True,
+                    is_company_admin=False,
+                    is_superuser=False,
+                    role__is_auto_assign_target=True,
+                )
+                .annotate(last_lead_time=Max("assigned_customers__created_at"))
+                .order_by(F("last_lead_time").asc(nulls_first=True))
+                .first()
+            )
+            if sale_user:
+                instance.assigned_to = sale_user
+                logger.info("Auto-assigned lead '%s' to user '%s'", instance.name, sale_user.username)
+
+
 @receiver(post_save, sender="crm.Customer")
 def on_customer_saved(sender, instance, created, **kwargs):
     """

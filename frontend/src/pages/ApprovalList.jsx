@@ -1,5 +1,5 @@
-import { CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, EyeOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons'
-import { Badge, Button, Card, Col, Divider, Form, Input, Modal, Row, Select, Space, Table, Tag, Typography, message, Tabs, Steps } from 'antd'
+import { CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, EyeOutlined, CheckOutlined, CloseOutlined, DeleteOutlined } from '@ant-design/icons'
+import { Alert, Badge, Button, Card, Col, Divider, Form, Input, Modal, Row, Select, Space, Table, Tag, Tooltip, Typography, message, Tabs, Steps } from 'antd'
 import dayjs from 'dayjs'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -16,7 +16,9 @@ const statusConfig = {
 }
 
 export default function ApprovalList() {
-  const { user, hasPermission } = useAuth()
+  const { user, hasPermission, isCompanyAdmin } = useAuth()
+  const canDelete = isCompanyAdmin || user?.is_superuser || hasPermission('approvals.delete')
+
   const [activeTab, setActiveTab] = useState('to_approve')
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(false)
@@ -30,6 +32,12 @@ export default function ApprovalList() {
   const [comment, setComment] = useState('')
   const [processing, setProcessing] = useState(false)
   const [selectedStepId, setSelectedStepId] = useState(null)
+
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false)
+  const [targetDeleteMode, setTargetDeleteMode] = useState('single') // 'single' | 'all'
+  const [selectedDeleteReq, setSelectedDeleteReq] = useState(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   const fetchRequests = useCallback(async () => {
     setLoading(true)
@@ -70,6 +78,32 @@ export default function ApprovalList() {
       message.error(err.response?.data?.detail || 'Lỗi xử lý phê duyệt')
     } finally {
       setProcessing(false)
+    }
+  }
+
+  const openDeleteModal = (mode, req = null) => {
+    setTargetDeleteMode(mode)
+    setSelectedDeleteReq(req)
+    setDeleteConfirmText('')
+    setDeleteModalVisible(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    setDeleting(true)
+    try {
+      if (targetDeleteMode === 'single') {
+        await api.delete(`/approvals/requests/${selectedDeleteReq.id}/`)
+        message.success('Đã xóa yêu cầu phê duyệt thành công.')
+      } else {
+        const res = await api.post(`/approvals/requests/bulk-delete/`, { delete_all: true })
+        message.success(res.data?.detail || 'Đã xóa toàn bộ yêu cầu phê duyệt thành công.')
+      }
+      setDeleteModalVisible(false)
+      fetchRequests()
+    } catch (err) {
+      message.error(err.response?.data?.detail || 'Lỗi khi xóa yêu cầu phê duyệt')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -122,6 +156,7 @@ export default function ApprovalList() {
           if (user.is_superuser || user.is_company_admin) canAct = true
           if (hasPermission('orders.approve') && record.title?.toLowerCase().includes('đơn hàng')) canAct = true
           if (hasPermission('sales.approve') && record.title?.toLowerCase().includes('báo giá')) canAct = true
+          if (hasPermission('approvals.approve') && !record.title?.toLowerCase().includes('đơn hàng') && !record.title?.toLowerCase().includes('báo giá')) canAct = true
         }
 
         return (
@@ -137,6 +172,17 @@ export default function ApprovalList() {
               </>
             )}
             <Button type="text" icon={<EyeOutlined style={{ color: '#2563eb' }} />} onClick={() => setSelectedReq(record)} />
+            {canDelete && (
+              <Tooltip title={record.status === 'pending' ? 'Không thể xóa yêu cầu đang ở trạng thái chờ duyệt' : 'Xóa yêu cầu'}>
+                <Button 
+                  type="text" 
+                  danger 
+                  icon={<DeleteOutlined />} 
+                  disabled={record.status === 'pending'}
+                  onClick={() => openDeleteModal('single', record)} 
+                />
+              </Tooltip>
+            )}
           </Space>
         )
       }
@@ -170,6 +216,15 @@ export default function ApprovalList() {
               <Select.Option value="rejected">Từ chối</Select.Option>
               <Select.Option value="canceled">Đã hủy</Select.Option>
             </Select>
+            {canDelete && (
+              <Button 
+                danger 
+                icon={<DeleteOutlined />} 
+                onClick={() => openDeleteModal('all')}
+              >
+                Xóa toàn bộ
+              </Button>
+            )}
           </Space>
         </Col>
       </Row>
@@ -255,6 +310,47 @@ export default function ApprovalList() {
             onChange={e => setComment(e.target.value)} 
             placeholder="Lý do từ chối hoặc ghi chú duyệt..." 
             style={{ marginTop: 8 }}
+          />
+        </div>
+      </Modal>
+
+      {/* Modal Confirm Delete with Keyword */}
+      <Modal
+        title={targetDeleteMode === 'single' ? 'Xác nhận xóa yêu cầu phê duyệt' : 'Xác nhận xóa toàn bộ phê duyệt'}
+        open={deleteModalVisible}
+        onCancel={() => setDeleteModalVisible(false)}
+        onOk={handleConfirmDelete}
+        confirmLoading={deleting}
+        okText="Xác nhận xóa"
+        cancelText="Hủy"
+        okButtonProps={{ 
+          danger: true, 
+          disabled: !['XÓA', 'XOÁ', 'XOA', 'DELETE'].includes(deleteConfirmText.trim().toUpperCase()) 
+        }}
+      >
+        <div style={{ marginTop: 16 }}>
+          <Alert
+            type="warning"
+            showIcon
+            message="Cảnh báo an toàn dữ liệu"
+            description={
+              targetDeleteMode === 'single'
+                ? `Bạn có chắc chắn muốn xóa vĩnh viễn yêu cầu phê duyệt "${selectedDeleteReq?.title}" không? Hành động này không thể khôi phục.`
+                : `Bạn có chắc chắn muốn xóa TOÀN BỘ lịch sử yêu cầu phê duyệt của công ty không? (Lưu ý: Các yêu cầu đang ở trạng thái "Chờ duyệt" sẽ được hệ thống tự động giữ lại theo quy định an toàn). Hành động này không thể khôi phục!`
+            }
+            style={{ marginBottom: 16 }}
+          />
+          <Text strong>Vui lòng gõ chữ <Tag color="error">Xóa</Tag> (hoặc <Tag color="error">XÓA</Tag> / <Tag color="error">XOA</Tag>) vào ô bên dưới để xác nhận hành động:</Text>
+          <Input 
+            value={deleteConfirmText} 
+            onChange={e => setDeleteConfirmText(e.target.value)} 
+            placeholder="Nhập chữ Xóa..." 
+            style={{ marginTop: 8 }}
+            onPressEnter={() => {
+              if (['XÓA', 'XOÁ', 'XOA', 'DELETE'].includes(deleteConfirmText.trim().toUpperCase())) {
+                handleConfirmDelete()
+              }
+            }}
           />
         </div>
       </Modal>

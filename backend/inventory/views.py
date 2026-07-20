@@ -153,6 +153,7 @@ class ProductViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     queryset = Product.objects.select_related("company", "category").order_by("name")
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    pagination_class = None
     
     action_permissions = {
         "list": ["products.view", "sales.view", "sales.create", "orders.view", "orders.create", "crm.view"],
@@ -355,6 +356,7 @@ class WarehouseViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     queryset = Warehouse.objects.select_related("company").order_by("name")
     serializer_class = WarehouseSerializer
     permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    pagination_class = None
     
     action_permissions = {
         "list": "inventory.manage_warehouse",
@@ -394,7 +396,7 @@ class WarehouseViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                     target_stock, _ = StockLevel.objects.select_for_update().get_or_create(
                         product=stock.product,
                         warehouse=target_warehouse,
-                        defaults={"quantity": 0, "company": self.request.user.company}
+                        defaults={"quantity": 0}
                     )
                     target_stock.quantity += stock.quantity
                     target_stock.save(update_fields=["quantity"])
@@ -419,8 +421,10 @@ class WarehouseViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 
-class StockLevelViewSet(viewsets.ReadOnlyModelViewSet):
-    """Xem tồn kho — filter qua product.company."""
+from rest_framework import mixins
+
+class StockLevelViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet):
+    """Xem và cập nhật (ngưỡng cảnh báo) tồn kho — filter qua product.company."""
     module_code = "inventory"
 
     queryset = StockLevel.objects.select_related(
@@ -428,10 +432,13 @@ class StockLevelViewSet(viewsets.ReadOnlyModelViewSet):
     ).order_by("product__name", "warehouse__name")
     serializer_class = StockLevelSerializer
     permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    pagination_class = None
     
     action_permissions = {
         "list": "inventory.view",
         "retrieve": "inventory.view",
+        "update": "inventory.manage_warehouse",
+        "partial_update": "inventory.manage_warehouse",
     }
 
     def get_queryset(self):
@@ -441,12 +448,25 @@ class StockLevelViewSet(viewsets.ReadOnlyModelViewSet):
         qs = self.queryset.filter(product__company=user.company)
         # Filter cảnh báo tồn kho thấp
         if self.request.query_params.get("low_stock") == "true":
-            # Lọc thủ công vì is_low_stock là property
-            low_stock_ids = [s.id for s in qs if s.is_low_stock]
+            threshold_str = self.request.query_params.get("low_stock_threshold")
+            if threshold_str is not None and threshold_str.isdigit():
+                threshold = int(threshold_str)
+                # Thoả mãn 1 trong 2: bé hơn ngưỡng chung VÀ/HOẶC bé hơn ngưỡng riêng của sản phẩm đó
+                low_stock_ids = [s.id for s in qs if s.quantity <= threshold or s.is_low_stock]
+            else:
+                # Lọc thủ công vì is_low_stock là property
+                low_stock_ids = [s.id for s in qs if s.is_low_stock]
             qs = qs.filter(id__in=low_stock_ids)
         warehouse_id = self.request.query_params.get("warehouse_id")
         if warehouse_id:
             qs = qs.filter(warehouse_id=warehouse_id)
+        search_query = self.request.query_params.get("search")
+        if search_query:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(product__name__icontains=search_query) |
+                Q(product__code__icontains=search_query)
+            )
         return qs
 
 
@@ -477,13 +497,26 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         txn_type = self.request.query_params.get("type")
         if txn_type:
             qs = qs.filter(type=txn_type)
+        search_query = self.request.query_params.get("search")
+        if search_query:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(transaction_code__icontains=search_query) |
+                Q(product__name__icontains=search_query) |
+                Q(product__code__icontains=search_query) |
+                Q(reference_order__order_number__icontains=search_query) |
+                Q(note__icontains=search_query)
+            )
         return qs
 
     def destroy(self, request, *args, **kwargs):
-        return Response(
-            {"detail": "Xoá từng giao dịch kho không được phép theo chuẩn ERP. Xin vui lòng tạo Phiếu Điều Chỉnh để bù trừ sai lệch tồn kho."},
-            status=status.HTTP_405_METHOD_NOT_ALLOWED
-        )
+        user_perms = self.request.user.get_permission_codes()
+        if not request.user.is_company_admin and not request.user.is_superuser and "inventory.delete_history" not in user_perms:
+            return Response(
+                {"detail": "Bạn không có quyền xóa lịch sử giao dịch kho."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().destroy(request, *args, **kwargs)
 
     @transaction.atomic
     def perform_create(self, serializer):
@@ -505,6 +538,8 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             raise PermissionDenied("Bạn không có quyền nhập kho.")
         if txn_type == "adjust" and "inventory.adjust" not in user_perms:
             raise PermissionDenied("Bạn không có quyền điều chỉnh tồn kho.")
+        if txn_type == "transfer" and "inventory.transfer" not in user_perms:
+            raise PermissionDenied("Bạn không có quyền điều chuyển kho.")
         if txn_type == "export" and not reference_order and "inventory.manual_export" not in user_perms:
             raise PermissionDenied("Bạn không có quyền tạo xuất kho thủ công.")
 
@@ -536,7 +571,7 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             stock, _ = StockLevel.objects.select_for_update().get_or_create(
                 product=product,
                 warehouse=warehouse,
-                defaults={"quantity": 0, "company": company},
+                defaults={"quantity": 0},
             )
             if txn_type == "import":
                 stock.quantity += quantity
@@ -547,6 +582,20 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             elif txn_type == "export" and not reference_order:
                 stock.quantity = max(0, stock.quantity - quantity)
                 stock.save(update_fields=["quantity"])
+            elif txn_type == "transfer":
+                stock.quantity = max(0, stock.quantity - quantity)
+                stock.save(update_fields=["quantity"])
+                
+                # Cộng tồn kho cho target_warehouse
+                target_warehouse = serializer.validated_data.get("target_warehouse")
+                if target_warehouse:
+                    target_stock, _ = StockLevel.objects.select_for_update().get_or_create(
+                        product=product,
+                        warehouse=target_warehouse,
+                        defaults={"quantity": 0},
+                    )
+                    target_stock.quantity += quantity
+                    target_stock.save(update_fields=["quantity"])
 
     @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated, ActionBasedPermission])
     @transaction.atomic
@@ -574,7 +623,7 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         stock, _ = StockLevel.objects.select_for_update().get_or_create(
             product=txn.product,
             warehouse=warehouse,
-            defaults={"quantity": 0, "company": txn.company}
+            defaults={"quantity": 0}
         )
         
         if stock.quantity < txn.quantity:
@@ -621,10 +670,143 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["delete"], url_path="clear-history")
     def clear_history(self, request):
-        if not request.user.is_company_admin and not request.user.is_superuser:
+        user_perms = self.request.user.get_permission_codes()
+        if not request.user.is_company_admin and not request.user.is_superuser and "inventory.delete_history" not in user_perms:
             return Response(
-                {"detail": "Chỉ Admin công ty mới có quyền xóa toàn bộ lịch sử giao dịch kho."},
+                {"detail": "Bạn không có quyền xóa lịch sử giao dịch kho."},
                 status=status.HTTP_403_FORBIDDEN
             )
         count, _ = self.get_queryset().delete()
         return Response({"detail": f"Đã xóa {count} giao dịch kho thành công."})
+
+    @action(detail=False, methods=["delete"], url_path="delete-by-code")
+    def delete_by_code(self, request):
+        user_perms = self.request.user.get_permission_codes()
+        if not request.user.is_company_admin and not request.user.is_superuser and "inventory.delete_history" not in user_perms:
+            return Response(
+                {"detail": "Bạn không có quyền xóa lịch sử giao dịch kho."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        code = request.query_params.get("code")
+        if not code:
+            return Response({"detail": "Thiếu mã phiếu (transaction_code)."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        qs = self.get_queryset().filter(transaction_code=code)
+        if not qs.exists():
+            return Response({"detail": "Không tìm thấy giao dịch nào với mã này."}, status=status.HTTP_404_NOT_FOUND)
+            
+        count, _ = qs.delete()
+        return Response({"detail": f"Đã xóa {count} giao dịch thuộc phiếu {code}."})
+
+    @action(detail=False, methods=["post"], url_path="bulk-create")
+    @transaction.atomic
+    def bulk_create(self, request):
+        """Tạo giao dịch kho hàng loạt (cùng 1 mã phiếu)."""
+        from core.numbering import generate_transaction_code
+        from orders.models import Order
+        from .models import StockLevel, InventoryTransaction, Product, Warehouse
+
+        company = request.user.company
+        data = request.data
+        txn_type = data.get("type")
+        warehouse_id = data.get("warehouse")
+        target_warehouse_id = data.get("target_warehouse")
+        note = data.get("note", "")
+        items = data.get("items", [])
+
+        if not items or not isinstance(items, list):
+            return Response({"detail": "Danh sách sản phẩm không hợp lệ."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Kiểm tra quyền chi tiết theo loại giao dịch
+        from rest_framework.exceptions import PermissionDenied
+        user_perms = self.request.user.get_permission_codes()
+        if txn_type == "import" and "inventory.import" not in user_perms:
+            raise PermissionDenied("Bạn không có quyền nhập kho.")
+        if txn_type == "adjust" and "inventory.adjust" not in user_perms:
+            raise PermissionDenied("Bạn không có quyền điều chỉnh tồn kho.")
+        if txn_type == "transfer" and "inventory.transfer" not in user_perms:
+            raise PermissionDenied("Bạn không có quyền điều chuyển kho.")
+        if txn_type == "export" and "inventory.manual_export" not in user_perms:
+            raise PermissionDenied("Bạn không có quyền tạo xuất kho thủ công.")
+
+        # Lấy thông tin kho
+        warehouse = Warehouse.objects.filter(id=warehouse_id, company=company).first() if warehouse_id else None
+        target_warehouse = Warehouse.objects.filter(id=target_warehouse_id, company=company).first() if target_warehouse_id else None
+
+        if not warehouse:
+            return Response({"warehouse": "Vui lòng chọn Kho xuất."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if txn_type == "transfer":
+            if not target_warehouse:
+                return Response({"target_warehouse": "Vui lòng chọn Kho nhận."}, status=status.HTTP_400_BAD_REQUEST)
+            if warehouse.id == target_warehouse.id:
+                return Response({"target_warehouse": "Kho xuất và Kho nhận không được trùng nhau."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Sinh mã phiếu tự động
+        transaction_code = generate_transaction_code(company, txn_type)
+
+        created_transactions = []
+        for index, item in enumerate(items):
+            product_id = item.get("product")
+            quantity = int(item.get("quantity", 0))
+            unit_cost = item.get("unit_cost", 0)
+
+            product = Product.objects.filter(id=product_id, company=company).first()
+            if not product:
+                return Response({"detail": f"Sản phẩm ID {product_id} không tồn tại."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if quantity <= 0:
+                return Response({"detail": f"Số lượng sản phẩm '{product.name}' phải lớn hơn 0."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Khóa và lấy stock hiện tại
+            stock, _ = StockLevel.objects.select_for_update().get_or_create(
+                product=product,
+                warehouse=warehouse,
+                defaults={"quantity": 0},
+            )
+
+            # Kiểm tra tồn kho cho export và transfer
+            if txn_type in ["export", "transfer"] and stock.quantity < quantity:
+                return Response(
+                    {"detail": f"Sản phẩm '{product.name}' không đủ tồn kho! Tồn kho hiện tại: {stock.quantity}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Cập nhật StockLevel
+            if txn_type == "import":
+                stock.quantity += quantity
+            elif txn_type == "adjust":
+                stock.quantity = quantity
+            elif txn_type in ["export", "transfer"]:
+                stock.quantity -= quantity
+            
+            stock.save(update_fields=["quantity"])
+
+            if txn_type == "transfer":
+                target_stock, _ = StockLevel.objects.select_for_update().get_or_create(
+                    product=product,
+                    warehouse=target_warehouse,
+                    defaults={"quantity": 0},
+                )
+                target_stock.quantity += quantity
+                target_stock.save(update_fields=["quantity"])
+
+            # Tạo record
+            txn = InventoryTransaction(
+                company=company,
+                transaction_code=transaction_code,
+                type=txn_type,
+                status=InventoryTransaction.STATUS_COMPLETED,
+                product=product,
+                warehouse=warehouse,
+                target_warehouse=target_warehouse if txn_type == "transfer" else None,
+                quantity=quantity,
+                unit_cost=unit_cost,
+                note=note,
+                created_by=request.user
+            )
+            txn.save()
+            created_transactions.append(txn)
+
+        serializer = self.get_serializer(created_transactions, many=True)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

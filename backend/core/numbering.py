@@ -9,10 +9,10 @@ from django.db import transaction
 
 def _generate_code(model_class, field_name: str, company, prefix: str) -> str:
     """
-    Sinh mã tự động dạng PREFIX-YYYYMMDD-SEQ.
+    Sinh mã tự động dạng PREFIX-DDMMYYYY-SEQ.
     Thread-safe với select_for_update().
     """
-    today_str = date.today().strftime("%Y%m%d")
+    today_str = date.today().strftime("%d%m%Y")
     base_prefix = f"{prefix}-{today_str}-"
 
     with transaction.atomic():
@@ -44,7 +44,7 @@ def _generate_code(model_class, field_name: str, company, prefix: str) -> str:
 
 def derive_code_from_source(source_code: str, model_class, field_name: str, company, target_doc_code: str) -> str:
     """
-    Cố gắng tạo mã mới có cùng hậu tố (YYYYMMDD-SEQ) với mã nguồn để dễ theo dõi.
+    Cố gắng tạo mã mới có cùng hậu tố (DDMMYYYY-SEQ) với mã nguồn để dễ theo dõi.
     Nếu mã đó đã tồn tại, sẽ fallback về _generate_code.
     """
     if not source_code:
@@ -90,14 +90,14 @@ def resolve_doc_prefix(company, default_doc_code: str) -> str:
 
 
 def generate_order_number(company) -> str:
-    """Sinh mã đơn hàng: {COMPANY_PREFIX}-DH-{YYYYMMDD}-{SEQ}."""
+    """Sinh mã đơn hàng: {COMPANY_PREFIX}-DH-{DDMMYYYY}-{SEQ}."""
     from orders.models import Order
     prefix = resolve_doc_prefix(company, "DH")
     return _generate_code(Order, "order_number", company, prefix)
 
 
 def generate_quotation_number(company) -> str:
-    """Sinh mã báo giá: {COMPANY_PREFIX}-BG-{YYYYMMDD}-{SEQ}."""
+    """Sinh mã báo giá: {COMPANY_PREFIX}-BG-{DDMMYYYY}-{SEQ}."""
     from sales.models import Quotation
     prefix = resolve_doc_prefix(company, "BG")
     return _generate_code(Quotation, "quotation_number", company, prefix)
@@ -106,27 +106,42 @@ def generate_quotation_number(company) -> str:
 def generate_transaction_code(company, txn_type: str) -> str:
     """
     Sinh mã phiếu kho:
-    - import → {COMPANY_PREFIX}-IMP-YYYYMMDD-SEQ
-    - export → {COMPANY_PREFIX}-EXP-YYYYMMDD-SEQ
-    - adjust → {COMPANY_PREFIX}-ADJ-YYYYMMDD-SEQ
+    - import → {COMPANY_PREFIX}-IMP-DDMMYYYY-SEQ
+    - export → {COMPANY_PREFIX}-EXP-DDMMYYYY-SEQ
+    - adjust → {COMPANY_PREFIX}-ADJ-DDMMYYYY-SEQ
+    - transfer → {COMPANY_PREFIX}-TRF-DDMMYYYY-SEQ
     """
     from inventory.models import InventoryTransaction
-    prefix_map = {"import": "IMP", "export": "EXP", "adjust": "ADJ"}
+    prefix_map = {"import": "IMP", "export": "EXP", "adjust": "ADJ", "transfer": "TRF"}
     base_code = prefix_map.get(txn_type, "TXN")
     prefix = resolve_doc_prefix(company, base_code)
     return _generate_code(InventoryTransaction, "transaction_code", company, prefix)
 
 
 def generate_receipt_code(company) -> str:
-    """Sinh mã phiếu thu: {COMPANY_PREFIX}-PT-{YYYYMMDD}-{SEQ}."""
+    """Sinh mã phiếu thu: {COMPANY_PREFIX}-PT-{DDMMYYYY}-{SEQ}."""
     from finance.models import PaymentReceipt
     prefix = resolve_doc_prefix(company, "PT")
     return _generate_code(PaymentReceipt, "receipt_code", company, prefix)
 
 
 def generate_production_order_code(company) -> str:
-    """Sinh mã lệnh sản xuất: {COMPANY_PREFIX}-LSX-{YYYYMMDD}-{SEQ}."""
+    """Sinh mã lệnh sản xuất: {COMPANY_PREFIX}-LSX-{DDMMYYYY}-{SEQ}."""
     from production.models import ProductionOrder
     prefix = resolve_doc_prefix(company, "LSX")
     return _generate_code(ProductionOrder, "production_order_code", company, prefix)
+
+
+def generate_delivery_code(company) -> str:
+    """Sinh mã phiếu giao hàng: {COMPANY_PREFIX}-GH-{DDMMYYYY}-{SEQ}."""
+    from delivery.models import DeliveryOrder
+    prefix = resolve_doc_prefix(company, "GH")
+    return _generate_code(DeliveryOrder, "delivery_code", company, prefix)
+
+
+def generate_warranty_code(company) -> str:
+    """Sinh mã phiếu bảo hành: {COMPANY_PREFIX}-BH-{DDMMYYYY}-{SEQ}."""
+    from delivery.models import WarrantyCard
+    prefix = resolve_doc_prefix(company, "BH")
+    return _generate_code(WarrantyCard, "warranty_code", company, prefix)
 

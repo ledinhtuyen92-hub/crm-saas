@@ -264,6 +264,18 @@ def get_default_modules():
     return [m["code"] for m in get_available_modules()]
 
 
+def get_default_pipeline_labels():
+    return {
+        "new": "Khách mới",
+        "potential": "Tiềm năng",
+        "active": "Đang hoạt động",
+        "has_order": "Đã có đơn hàng",
+        "repeat_order": "Mua thêm đơn hàng",
+        "lost": "Đã mất",
+        "inactive": "Không hoạt động",
+    }
+
+
 class CompanySettings(models.Model):
     """Cấu hình nghiệp vụ của công ty — 1:1 với Company."""
 
@@ -302,6 +314,11 @@ class CompanySettings(models.Model):
         blank=True,
         verbose_name="Các phân hệ kích hoạt",
         help_text="Danh sách mã phân hệ được phép sử dụng (vd: crm, sales, products, inventory, production, orders)",
+    )
+    pipeline_status_labels = models.JSONField(
+        default=get_default_pipeline_labels,
+        blank=True,
+        verbose_name="Tên tùy chỉnh các trạng thái Pipeline",
     )
     quotation_template = models.ForeignKey(
         "sales.QuotationTemplate",

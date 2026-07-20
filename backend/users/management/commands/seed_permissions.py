@@ -58,6 +58,8 @@ PERMISSIONS = [
     {"code": "inventory.approve_export", "name": "Duyệt lệnh xuất kho", "module": "inventory"},
     {"code": "inventory.manual_export", "name": "Tạo phiếu xuất kho thủ công", "module": "inventory"},
     {"code": "inventory.manage_warehouse", "name": "Quản lý kho hàng", "module": "inventory"},
+    {"code": "inventory.transfer", "name": "Tạo phiếu điều chuyển kho", "module": "inventory"},
+    {"code": "inventory.delete_history", "name": "Xoá lịch sử giao dịch kho", "module": "inventory"},
 
     # ── Production (Sản xuất) ─────────────────────────────────────
     {"code": "production.view", "name": "Xem lệnh sản xuất", "module": "production"},
@@ -91,6 +93,7 @@ PERMISSIONS = [
 
     # ── Approvals (Phê duyệt) ─────────────────────────────────────
     {"code": "approvals.approve", "name": "Duyệt/Từ chối yêu cầu", "module": "approvals"},
+    {"code": "approvals.delete", "name": "Xóa yêu cầu / lịch sử phê duyệt", "module": "approvals"},
 
     # ── Finance (Tài chính & Kế toán) ─────────────────────────────
     {"code": "finance.view", "name": "Xem danh sách giao dịch tài chính", "module": "finance"},
@@ -106,6 +109,7 @@ PERMISSIONS = [
     {"code": "zalo.manage_templates", "name": "Quản lý mẫu in & cấu hình tự động ZNS", "module": "zalo"},
     {"code": "zalo.chat", "name": "Chat trực tiếp với khách hàng trên Zalo", "module": "zalo"},
     {"code": "zalo.create_customer", "name": "Tạo khách hàng từ hội thoại Zalo", "module": "zalo"},
+    {"code": "zalo.delete_conversation", "name": "Xóa hội thoại Zalo", "module": "zalo"},
 
     # ── Facebook Integration (Tích hợp Facebook Multi-Page) ────────
     {"code": "facebook.view_inbox", "name": "Xem Hộp thư Facebook (Multi-Page Inbox)", "module": "facebook"},
@@ -113,6 +117,7 @@ PERMISSIONS = [
     {"code": "facebook.chat", "name": "Chat trực tiếp với khách hàng trên Facebook", "module": "facebook"},
     {"code": "facebook.create_customer", "name": "Tạo khách hàng từ hội thoại Facebook", "module": "facebook"},
     {"code": "facebook.manage_config", "name": "Quản lý kết nối Trang Facebook & Cấu hình tự động quét SĐT", "module": "facebook"},
+    {"code": "facebook.delete_conversation", "name": "Xóa hội thoại Facebook", "module": "facebook"},
 ]
 
 # [FUTURE RESERVED PERMISSIONS - MỞ RỘNG SAU NÀY]

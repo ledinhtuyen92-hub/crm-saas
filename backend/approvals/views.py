@@ -40,6 +40,12 @@ class ApprovalRequestViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                     if user.has_perm_code('sales.approve'):
                         from sales.models import Quotation
                         q_filter |= Q(content_type=ContentType.objects.get_for_model(Quotation))
+                    if user.has_perm_code('approvals.approve'):
+                        from orders.models import Order
+                        from sales.models import Quotation
+                        order_ct = ContentType.objects.get_for_model(Order)
+                        quote_ct = ContentType.objects.get_for_model(Quotation)
+                        q_filter |= ~Q(content_type__in=[order_ct, quote_ct])
                 
                 qs = qs.filter(q_filter).distinct()
 
@@ -55,6 +61,59 @@ class ApprovalRequestViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company, requester=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        user = request.user
+        has_perm = (
+            user.is_superuser
+            or user.is_company_admin
+            or (user.role and user.role.permissions.filter(code="approvals.delete").exists())
+        )
+        if not has_perm:
+            return Response(
+                {"detail": "Bạn không có quyền xóa yêu cầu phê duyệt."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        instance = self.get_object()
+        if instance.status == ApprovalRequest.STATUS_PENDING or instance.status == "pending":
+            return Response(
+                {"detail": "Không thể xóa yêu cầu phê duyệt đang ở trạng thái chờ duyệt!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().destroy(request, *args, **kwargs)
+
+    @action(detail=False, methods=["post"], url_path="bulk-delete")
+    def bulk_delete(self, request):
+        user = request.user
+        has_perm = (
+            user.is_superuser
+            or user.is_company_admin
+            or (user.role and user.role.permissions.filter(code="approvals.delete").exists())
+        )
+        if not has_perm:
+            return Response(
+                {"detail": "Bạn không có quyền xóa yêu cầu phê duyệt."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        delete_all = request.data.get("delete_all", False)
+        ids = request.data.get("ids", [])
+
+        if delete_all:
+            qs = ApprovalRequest.objects.filter(company=user.company).exclude(status=ApprovalRequest.STATUS_PENDING).exclude(status="pending")
+            deleted_count, _ = qs.delete()
+            return Response({"detail": f"Đã xóa thành công {deleted_count} yêu cầu phê duyệt (đã loại trừ các yêu cầu đang chờ duyệt)."})
+        else:
+            if not ids or not isinstance(ids, list):
+                return Response({"detail": "Danh sách ID không hợp lệ."}, status=status.HTTP_400_BAD_REQUEST)
+            qs = ApprovalRequest.objects.filter(company=user.company, id__in=ids)
+            if qs.filter(Q(status=ApprovalRequest.STATUS_PENDING) | Q(status="pending")).exists():
+                return Response(
+                    {"detail": "Trong danh sách chọn có yêu cầu đang ở trạng thái chờ duyệt, không thể xóa!"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            deleted_count, _ = qs.delete()
+            return Response({"detail": f"Đã xóa thành công {deleted_count} yêu cầu phê duyệt."})
 
     @action(detail=True, methods=["post"], url_path="approve-step")
     def approve_step(self, request, pk=None):
@@ -85,6 +144,8 @@ class ApprovalRequestViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             if ct_model == 'order' and user.has_perm_code('orders.approve'):
                 can_approve = True
             elif ct_model == 'quotation' and user.has_perm_code('sales.approve'):
+                can_approve = True
+            elif ct_model not in ['order', 'quotation'] and user.has_perm_code('approvals.approve'):
                 can_approve = True
 
         if not can_approve:
@@ -145,6 +206,15 @@ class ApprovalRequestViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             can_approve = True
         elif user.is_superuser or user.is_company_admin:
             can_approve = True
+
+        if not can_approve and hasattr(user, 'has_perm_code'):
+            ct_model = approval_req.content_type.model
+            if ct_model == 'order' and user.has_perm_code('orders.approve'):
+                can_approve = True
+            elif ct_model == 'quotation' and user.has_perm_code('sales.approve'):
+                can_approve = True
+            elif ct_model not in ['order', 'quotation'] and user.has_perm_code('approvals.approve'):
+                can_approve = True
 
         if not can_approve:
             return Response({"detail": "Bạn không có quyền từ chối bước này."}, status=status.HTTP_403_FORBIDDEN)

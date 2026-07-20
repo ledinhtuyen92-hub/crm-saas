@@ -87,6 +87,15 @@ export default function CompanyGeneralSettings() {
         custom_order_title: settingsRes.data.custom_order_title || '',
         default_warranty_content: settingsRes.data.default_warranty_content || '',
         default_warranty_rules: settingsRes.data.default_warranty_rules || '',
+        pipeline_status_labels: settingsRes.data.pipeline_status_labels || {
+          new: 'Khách mới',
+          potential: 'Tiềm năng',
+          active: 'Đang hoạt động',
+          has_order: 'Đã có đơn hàng',
+          repeat_order: 'Mua thêm đơn hàng',
+          lost: 'Đã mất',
+          inactive: 'Không hoạt động',
+        },
       })
     } catch (err) {
       console.error('Failed to fetch company settings:', err)
@@ -455,6 +464,51 @@ export default function CompanyGeneralSettings() {
                 help="Nếu để trống sẽ dùng mặc định (VD: ĐƠN HÀNG SẢN XUẤT)"
               >
                 <Input placeholder="VD: HỢP ĐỒNG THI CÔNG, ĐƠN ĐẶT HÀNG..." style={{ textTransform: 'uppercase' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider dashed />
+
+          <Title level={5} style={{ color: '#2563eb', marginTop: 16 }}>🎯 Tùy Chỉnh Tên Trạng Thái Quy Trình (Pipeline CRM)</Title>
+          <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+            Admin có thể đổi tên hiển thị các trạng thái quy trình bán hàng cho phù hợp với đặc thù nghiệp vụ doanh nghiệp. Tên mới sẽ hiển thị cho toàn bộ nhân viên.
+          </Paragraph>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name={['pipeline_status_labels', 'new']} label="Trạng thái: Khách mới (new)">
+                <Input placeholder="VD: Khách mới" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name={['pipeline_status_labels', 'potential']} label="Trạng thái: Tiềm năng (potential)">
+                <Input placeholder="VD: Tiềm năng" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name={['pipeline_status_labels', 'active']} label="Trạng thái: Đang hoạt động (active)">
+                <Input placeholder="VD: Đang giao dịch" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name={['pipeline_status_labels', 'has_order']} label="Trạng thái: Đã có đơn hàng (has_order) ⚡">
+                <Input placeholder="VD: Đã có đơn hàng" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name={['pipeline_status_labels', 'repeat_order']} label="Trạng thái: Mua thêm đơn hàng (repeat_order) ⚡">
+                <Input placeholder="VD: Mua thêm đơn hàng" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name={['pipeline_status_labels', 'lost']} label="Trạng thái: Đã mất (lost)">
+                <Input placeholder="VD: Thất bại" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name={['pipeline_status_labels', 'inactive']} label="Trạng thái: Không hoạt động (inactive)">
+                <Input placeholder="VD: Ngừng giao dịch" />
               </Form.Item>
             </Col>
           </Row>

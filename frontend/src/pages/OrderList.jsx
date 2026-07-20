@@ -59,7 +59,7 @@ const statusConfig = {
 
 export default function OrderList() {
   const { token } = theme.useToken()
-  const { isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
+  const { isCompanyAdmin, hasPermission, checkMaintenance, isModuleActive } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
   const location = useLocation()
 
@@ -265,6 +265,21 @@ export default function OrderList() {
       }
     } catch (err) {
       const msg = err.response?.data?.detail || 'Lỗi khi trình duyệt xuất kho nợ!'
+      messageApi.error(msg)
+    }
+  }
+
+  const handleReRequestExport = async (orderId) => {
+    if (checkMaintenance()) return
+    try {
+      await api.post(`/orders/orders/${orderId}/re-request-export/`)
+      messageApi.success('Đã gửi lại yêu cầu xuất kho thành công!')
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, needs_export_request: false } : o)))
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder((prev) => ({ ...prev, needs_export_request: false }))
+      }
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Lỗi khi yêu cầu xuất kho lại!'
       messageApi.error(msg)
     }
   }
@@ -1743,14 +1758,16 @@ export default function OrderList() {
         onClose={() => setDrawerVisible(false)}
         extra={
           <Space>
-            <Button
-              type="primary"
-              icon={<MessageOutlined />}
-              onClick={() => setZnsModalVisible(true)}
-              style={{ background: '#10b981', borderColor: '#10b981' }}
-            >
-              Gửi ZNS
-            </Button>
+            {(isModuleActive('zalo') && (isCompanyAdmin || hasPermission('zalo.send_zns'))) && (
+              <Button
+                type="primary"
+                icon={<MessageOutlined />}
+                onClick={() => setZnsModalVisible(true)}
+                style={{ background: '#10b981', borderColor: '#10b981' }}
+              >
+                Gửi ZNS
+              </Button>
+            )}
             {canExportPdf && (
               <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrintOrPDF} style={{ background: '#10b981', borderColor: '#10b981' }}>
                 In Đơn Hàng
@@ -1850,6 +1867,26 @@ export default function OrderList() {
                 </Col>
               </Row>
             </div>
+
+            {selectedOrder.needs_export_request && (
+              <div style={{ padding: '16px', background: '#fef2f2', borderRadius: '12px', border: '1px solid #fca5a5', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Space size={12}>
+                  <AlertOutlined style={{ color: '#ef4444', fontSize: 20 }} />
+                  <Space direction="vertical" size={0}>
+                    <Text strong style={{ color: '#b91c1c' }}>Đơn hàng bị thiếu lệnh xuất kho!</Text>
+                    <Text type="secondary" style={{ color: '#991b1b', fontSize: 13 }}>Kho đã từ chối xuất hàng hoặc dữ liệu giao dịch đã bị xóa. Vui lòng yêu cầu lại.</Text>
+                  </Space>
+                </Space>
+                <Button 
+                  type="primary" 
+                  danger 
+                  onClick={() => handleReRequestExport(selectedOrder.id)}
+                  style={{ fontWeight: 600, borderRadius: '8px', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }}
+                >
+                  Yêu cầu xuất lại
+                </Button>
+              </div>
+            )}
 
             {/* LỊCH SỬ THU TIỀN */}
             {(selectedOrder.payment_milestones?.flatMap(m => m.receipts || []) || []).length > 0 && (

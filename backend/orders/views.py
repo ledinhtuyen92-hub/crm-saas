@@ -229,6 +229,28 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @action(detail=True, methods=["post"], url_path="re-request-export")
+    def re_request_export(self, request, pk=None):
+        """POST /api/orders/{id}/re-request-export/ — Gửi lại lệnh xuất kho sau khi bị từ chối."""
+        order = self.get_object()
+
+        if not request.user.is_company_admin and request.user != order.created_by:
+            return Response(
+                {"detail": "Chỉ người tạo đơn hoặc Quản trị viên mới được yêu cầu xuất kho lại."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if order.status != Order.STATUS_APPROVED:
+            return Response(
+                {"detail": "Đơn hàng phải ở trạng thái Đã duyệt mới có thể yêu cầu xuất kho."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+            
+        from orders.signals import _create_pending_inventory_export
+        _create_pending_inventory_export(order)
+        
+        return Response({"detail": "Đã gửi lại yêu cầu xuất kho thành công."}, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=["post"], url_path="cancel")
     def cancel(self, request, pk=None):
         """POST /api/orders/{id}/cancel/ — Hủy đơn hàng."""

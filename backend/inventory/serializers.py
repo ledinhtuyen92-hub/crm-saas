@@ -115,7 +115,9 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
-    created_by_name = serializers.CharField(source="created_by.full_name", read_only=True)
+    target_warehouse_name = serializers.CharField(source="target_warehouse.name", read_only=True)
+    created_by_name = serializers.CharField(source="created_by.get_full_name", read_only=True)
+    reference_order_number = serializers.CharField(source="reference_order.order_number", read_only=True)
     company_info = serializers.SerializerMethodField()
 
     class Meta:
@@ -133,9 +135,12 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
             "product_sku",
             "warehouse",
             "warehouse_name",
+            "target_warehouse",
+            "target_warehouse_name",
             "quantity",
             "unit_cost",
             "reference_order",
+            "reference_order_number",
             "note",
             "created_by",
             "created_by_name",
@@ -144,8 +149,32 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id", "company", "transaction_code", "type_display", "status_display", "product_name", "product_sku",
-            "warehouse_name", "created_by", "created_by_name", "created_at", "company_info",
+            "warehouse_name", "target_warehouse_name", "created_by", "created_by_name", "created_at", "company_info",
+            "reference_order_number",
         ]
+
+    def validate(self, data):
+        txn_type = data.get('type')
+        warehouse = data.get('warehouse')
+        target_warehouse = data.get('target_warehouse')
+        quantity = data.get('quantity', 0)
+        product = data.get('product')
+
+        if txn_type == InventoryTransaction.TYPE_TRANSFER:
+            if not warehouse:
+                raise serializers.ValidationError({"warehouse": "Vui lòng chọn Kho xuất."})
+            if not target_warehouse:
+                raise serializers.ValidationError({"target_warehouse": "Vui lòng chọn Kho nhận."})
+            if warehouse.id == target_warehouse.id:
+                raise serializers.ValidationError({"target_warehouse": "Kho xuất và Kho nhận không được trùng nhau."})
+            
+            # Check stock
+            from .models import StockLevel
+            stock = StockLevel.objects.filter(warehouse=warehouse, product=product).first()
+            if not stock or stock.quantity < quantity:
+                raise serializers.ValidationError({"quantity": f"Số lượng tồn kho không đủ. Tồn kho hiện tại: {stock.quantity if stock else 0}"})
+        
+        return data
 
     def get_company_info(self, obj):
         return get_company_info_dict(self, obj)

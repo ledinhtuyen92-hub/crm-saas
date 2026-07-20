@@ -47,6 +47,7 @@ class OrderSerializer(serializers.ModelSerializer):
     company_info = serializers.SerializerMethodField()
     has_pending_credit_request = serializers.SerializerMethodField()
     payment_milestones = OrderPaymentMilestoneSerializer(many=True, read_only=True)
+    needs_export_request = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -91,6 +92,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "updated_at",
             "company_info",
             "has_pending_credit_request",
+            "needs_export_request",
             "payment_milestones",
         ]
         read_only_fields = [
@@ -105,6 +107,18 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_company_info(self, obj):
         return get_company_info_dict(self, obj)
+
+    def get_needs_export_request(self, obj):
+        if obj.status != "approved":
+            return False
+        try:
+            from inventory.models import InventoryTransaction
+            active_exports = InventoryTransaction.objects.filter(
+                reference_order=obj, type=InventoryTransaction.TYPE_EXPORT
+            ).exclude(status=InventoryTransaction.STATUS_REJECTED).exists()
+            return not active_exports
+        except Exception:
+            return False
 
     def get_has_pending_credit_request(self, obj):
         try:

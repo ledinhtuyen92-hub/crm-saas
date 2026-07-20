@@ -97,6 +97,24 @@ export function AuthProvider({ children }) {
   const isCompanyAdmin = user?.is_company_admin === true || user?.is_superuser === true
   const isAuthenticated = !!user
 
+  const pipelineStatusLabels = useMemo(() => {
+    const defaults = {
+      new: 'Mới (Lead)',
+      potential: 'Tiềm năng',
+      active: 'Đang giao dịch',
+      has_order: 'Đã có đơn hàng',
+      repeat_order: 'Mua thêm đơn hàng',
+      lost: 'Thất bại',
+      inactive: 'Ngừng giao dịch',
+    }
+    return { ...defaults, ...(user?.pipeline_status_labels || {}) }
+  }, [user])
+
+  const getPipelineLabel = useCallback(
+    (statusKey) => pipelineStatusLabels[statusKey] || statusKey,
+    [pipelineStatusLabels]
+  )
+
   // ── Kiểm tra chế độ bảo trì trước khi mở form/nhập liệu ─────────────
   const checkMaintenance = useCallback(() => {
     if (maintenanceMode && !user?.is_superuser) {
@@ -125,8 +143,10 @@ export function AuthProvider({ children }) {
       refreshSettings: fetchPublicSettings,
       activeModules,
       isModuleActive,
+      pipelineStatusLabels,
+      getPipelineLabel,
     }),
-    [user, loading, isAuthenticated, isSuperAdmin, isCompanyAdmin, maintenanceMode, checkMaintenance, login, logout, hasPermission, fetchPublicSettings, activeModules, isModuleActive],
+    [user, loading, isAuthenticated, isSuperAdmin, isCompanyAdmin, maintenanceMode, checkMaintenance, login, logout, hasPermission, fetchPublicSettings, activeModules, isModuleActive, pipelineStatusLabels, getPipelineLabel],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

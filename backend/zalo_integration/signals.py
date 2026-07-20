@@ -19,19 +19,40 @@ def trigger_zns_on_payment_receipt(sender, instance, created, **kwargs):
     if not created:
         return
 
+    from users.models import SystemSettings
+    if SystemSettings.load().maintenance_mode:
+        return
+
     company = instance.company
+    if not company or not company.is_active:
+        return
+    if not hasattr(company, "settings") or not company.settings:
+        return
+    if "zalo" not in (company.settings.active_modules or []):
+        return
+
     config = ZaloOaConfig.objects.filter(company=company, is_active=True).first()
     if not config or not config.auto_send_payment_zns:
         return
 
-    customer = instance.customer
+    customer = getattr(instance, "customer", None) or (instance.order.customer if hasattr(instance, "order") and instance.order else None)
     if not customer or not customer.phone:
         return
 
-    # Tìm mẫu ZNS loại 'payment_receipt' (hoặc 'care' làm fallback)
+    receipt_code = instance.receipt_code if hasattr(instance, "receipt_code") else f"PT-{instance.id}"
+
+    # Chống gửi lặp lại cho cùng 1 mã phiếu thu
+    if ZaloMessageLog.objects.filter(
+        company=company,
+        customer=customer,
+        params_sent__receipt_code=receipt_code,
+    ).exists():
+        return
+
+    # Tìm mẫu ZNS loại 'payment_receipt' (hoặc 'order_confirm', 'care' làm fallback)
     template = ZaloMessageTemplate.objects.filter(
         company=company,
-        template_type__in=[ZaloMessageTemplate.TYPE_CARE, ZaloMessageTemplate.TYPE_CUSTOM],
+        template_type__in=[ZaloMessageTemplate.TYPE_CARE, ZaloMessageTemplate.TYPE_ORDER_CONFIRM, ZaloMessageTemplate.TYPE_CUSTOM],
         is_active=True
     ).first()
 
@@ -43,7 +64,7 @@ def trigger_zns_on_payment_receipt(sender, instance, created, **kwargs):
     params = {
         "customer_name": customer.name,
         "amount": str(instance.amount),
-        "receipt_code": instance.receipt_code if hasattr(instance, "receipt_code") else f"PT-{instance.id}"
+        "receipt_code": receipt_code
     }
 
     # Tạo Message Log
@@ -70,7 +91,18 @@ def trigger_zns_on_order_completed(sender, instance, **kwargs):
     if instance.status != Order.STATUS_COMPLETED:
         return
 
+    from users.models import SystemSettings
+    if SystemSettings.load().maintenance_mode:
+        return
+
     company = instance.company
+    if not company or not company.is_active:
+        return
+    if not hasattr(company, "settings") or not company.settings:
+        return
+    if "zalo" not in (company.settings.active_modules or []):
+        return
+
     config = ZaloOaConfig.objects.filter(company=company, is_active=True).first()
     if not config or not config.auto_send_delivery_zns:
         return
@@ -79,14 +111,18 @@ def trigger_zns_on_order_completed(sender, instance, **kwargs):
     if not customer or not customer.phone:
         return
 
-    # Chống gửi nhiều lần nếu update liên tục
-    # Kiểm tra xem order này đã gửi ZNS completed chưa bằng cách check log gần đây
-    # Để an toàn, tạm thời ta chấp nhận gửi 1 lần khi status vừa chuyển sang completed.
-    # TODO: Thêm check logic để tránh spam
-    
+    # Chống gửi nhiều lần nếu update liên tục (hoặc save lặp lại sau khi hoàn thành)
+    # Kiểm tra xem order này đã từng gửi ZNS completed chưa bằng cách check log cũ
+    if ZaloMessageLog.objects.filter(
+        company=company,
+        customer=customer,
+        params_sent__order_number=instance.order_number,
+    ).exists():
+        return
+
     template = ZaloMessageTemplate.objects.filter(
         company=company,
-        template_type__in=[ZaloMessageTemplate.TYPE_DELIVERY_WARRANTY, ZaloMessageTemplate.TYPE_CARE, ZaloMessageTemplate.TYPE_ORDER_CONFIRM],
+        template_type__in=[ZaloMessageTemplate.TYPE_DELIVERY_WARRANTY, ZaloMessageTemplate.TYPE_CARE, ZaloMessageTemplate.TYPE_ORDER_CONFIRM, ZaloMessageTemplate.TYPE_CUSTOM],
         is_active=True
     ).first()
 

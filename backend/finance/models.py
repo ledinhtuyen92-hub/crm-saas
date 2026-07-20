@@ -156,6 +156,10 @@ class PaymentReceipt(models.Model):
     def __str__(self):
         return f"{self.receipt_code} - {self.amount}đ ({self.order.order_number})"
 
+    @property
+    def customer(self):
+        return self.order.customer if (self.order_id and hasattr(self, "order") and self.order) else None
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         # Đồng bộ trạng thái milestone

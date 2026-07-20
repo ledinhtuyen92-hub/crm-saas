@@ -15,6 +15,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from users.permissions import (
+    IsActiveUserAndCompany,
+    CheckDataMaintenanceMode,
+    IsModuleActivePermission,
+    ActionBasedPermission,
+)
+
 from .models import (
     SocialLead, ZaloMessageLog, ZaloMessageTemplate, ZaloOaConfig,
     ZaloLeadTag, ZaloLeadNote, ZaloQuickReply
@@ -247,6 +254,22 @@ class ZaloWebhookView(APIView):
 
 class ZaloOaConfigViewSet(viewsets.ModelViewSet):
     """CRUD cho cấu hình Zalo OA. Filter nghiêm ngặt theo company."""
+    module_code = "zalo"
+    permission_classes = [
+        IsAuthenticated,
+        IsActiveUserAndCompany,
+        CheckDataMaintenanceMode,
+        IsModuleActivePermission,
+        ActionBasedPermission,
+    ]
+    action_permissions = {
+        "list": ["zalo.config", "zalo.manage_templates", "zalo.send_zns", "zalo.view"],
+        "retrieve": ["zalo.config", "zalo.manage_templates", "zalo.send_zns", "zalo.view"],
+        "create": "zalo.config",
+        "update": "zalo.config",
+        "partial_update": "zalo.config",
+        "destroy": "zalo.config",
+    }
 
     def get_queryset(self):
         return ZaloOaConfig.objects.filter(company=self.request.user.company)
@@ -414,6 +437,27 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
     Quản lý Social Leads — Tầng 1 của Phễu.
     Filter nghiêm ngặt theo company.
     """
+    module_code = "zalo"
+    permission_classes = [
+        IsAuthenticated,
+        IsActiveUserAndCompany,
+        CheckDataMaintenanceMode,
+        IsModuleActivePermission,
+        ActionBasedPermission,
+    ]
+    action_permissions = {
+        "list": ["zalo.view", "crm.view_all", "crm.view_assigned"],
+        "retrieve": ["zalo.view", "crm.view_all", "crm.view_assigned"],
+        "create": "zalo.view",
+        "update": "zalo.view",
+        "partial_update": "zalo.view",
+        "destroy": "zalo.delete_conversation",
+        "reply": "zalo.view",
+        "convert_to_customer": "zalo.view",
+        "messages": ["zalo.view", "crm.view_all", "crm.view_assigned"],
+        "notes": ["zalo.view", "crm.view_all", "crm.view_assigned"],
+        "assign": "zalo.view",
+    }
 
     def get_queryset(self):
         user = self.request.user
@@ -532,10 +576,14 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
         )
 
     def destroy(self, request, *args, **kwargs):
-        role_name = request.user.role.name.lower() if request.user.role and request.user.role.name else ""
-        if not ("giám đốc" in role_name or "admin" in role_name or "quản trị" in role_name or request.user.is_superuser):
+        has_perm = (
+            request.user.is_superuser
+            or request.user.is_company_admin
+            or (request.user.role and request.user.role.permissions.filter(code="zalo.delete_conversation").exists())
+        )
+        if not has_perm:
             return Response(
-                {"error": "Bạn là Nhân viên Sale, không được phép xóa hội thoại Zalo để đảm bảo an toàn dữ liệu khách hàng."},
+                {"error": "Bạn không có quyền xóa hội thoại Zalo. Vui lòng liên hệ quản trị viên để được cấp quyền."},
                 status=status.HTTP_403_FORBIDDEN,
             )
         return super().destroy(request, *args, **kwargs)
@@ -813,6 +861,24 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
 class ZaloMessageTemplateViewSet(viewsets.ModelViewSet):
     """Quản lý mẫu ZNS. Filter theo company."""
     serializer_class = ZaloMessageTemplateSerializer
+    module_code = "zalo"
+    permission_classes = [
+        IsAuthenticated,
+        IsActiveUserAndCompany,
+        CheckDataMaintenanceMode,
+        IsModuleActivePermission,
+        ActionBasedPermission,
+    ]
+    action_permissions = {
+        "list": ["zalo.manage_templates", "zalo.send_zns", "zalo.config"],
+        "retrieve": ["zalo.manage_templates", "zalo.send_zns", "zalo.config"],
+        "create": "zalo.manage_templates",
+        "update": "zalo.manage_templates",
+        "partial_update": "zalo.manage_templates",
+        "destroy": "zalo.manage_templates",
+        "send_zns": "zalo.send_zns",
+        "bulk_send": "zalo.send_zns",
+    }
 
     def get_queryset(self):
         qs = ZaloMessageTemplate.objects.filter(company=self.request.user.company)
@@ -943,6 +1009,18 @@ class ZaloMessageTemplateViewSet(viewsets.ModelViewSet):
 class ZaloMessageLogViewSet(viewsets.ReadOnlyModelViewSet):
     """Lịch sử gửi ZNS — chỉ đọc."""
     serializer_class = ZaloMessageLogSerializer
+    module_code = "zalo"
+    permission_classes = [
+        IsAuthenticated,
+        IsActiveUserAndCompany,
+        CheckDataMaintenanceMode,
+        IsModuleActivePermission,
+        ActionBasedPermission,
+    ]
+    action_permissions = {
+        "list": ["zalo.view", "zalo.send_zns", "crm.view_all", "crm.view_assigned", "sales.view_all", "sales.view_assigned"],
+        "retrieve": ["zalo.view", "zalo.send_zns", "crm.view_all", "crm.view_assigned", "sales.view_all", "sales.view_assigned"],
+    }
 
     def get_queryset(self):
         qs = ZaloMessageLog.objects.filter(
@@ -961,6 +1039,22 @@ class ZaloMessageLogViewSet(viewsets.ReadOnlyModelViewSet):
 class ZaloLeadTagViewSet(viewsets.ModelViewSet):
     """Quản lý nhãn hội thoại Zalo theo công ty."""
     serializer_class = ZaloLeadTagSerializer
+    module_code = "zalo"
+    permission_classes = [
+        IsAuthenticated,
+        IsActiveUserAndCompany,
+        CheckDataMaintenanceMode,
+        IsModuleActivePermission,
+        ActionBasedPermission,
+    ]
+    action_permissions = {
+        "list": ["zalo.view", "zalo.config"],
+        "retrieve": ["zalo.view", "zalo.config"],
+        "create": ["zalo.view", "zalo.config"],
+        "update": ["zalo.view", "zalo.config"],
+        "partial_update": ["zalo.view", "zalo.config"],
+        "destroy": ["zalo.view", "zalo.config"],
+    }
 
     def get_queryset(self):
         return ZaloLeadTag.objects.filter(company=self.request.user.company).order_by("name")
@@ -974,6 +1068,22 @@ class ZaloLeadTagViewSet(viewsets.ModelViewSet):
 class ZaloQuickReplyViewSet(viewsets.ModelViewSet):
     """Quản lý tin nhắn mẫu Zalo theo công ty."""
     serializer_class = ZaloQuickReplySerializer
+    module_code = "zalo"
+    permission_classes = [
+        IsAuthenticated,
+        IsActiveUserAndCompany,
+        CheckDataMaintenanceMode,
+        IsModuleActivePermission,
+        ActionBasedPermission,
+    ]
+    action_permissions = {
+        "list": ["zalo.view", "zalo.config"],
+        "retrieve": ["zalo.view", "zalo.config"],
+        "create": ["zalo.view", "zalo.config"],
+        "update": ["zalo.view", "zalo.config"],
+        "partial_update": ["zalo.view", "zalo.config"],
+        "destroy": ["zalo.view", "zalo.config"],
+    }
 
     def get_queryset(self):
         return ZaloQuickReply.objects.filter(company=self.request.user.company).order_by("title")

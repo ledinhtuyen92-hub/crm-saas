@@ -159,6 +159,7 @@ class UserSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source="department.name", read_only=True)
     permissions = serializers.SerializerMethodField()
     active_modules = serializers.SerializerMethodField()
+    pipeline_status_labels = serializers.SerializerMethodField()
     managed_department_ids = serializers.SerializerMethodField()
 
     company_id = serializers.IntegerField(write_only=True, required=False)
@@ -176,6 +177,7 @@ class UserSerializer(serializers.ModelSerializer):
             "company",
             "company_name",
             "active_modules",
+            "pipeline_status_labels",
             "role",
             "role_name",
             "permissions",
@@ -188,7 +190,7 @@ class UserSerializer(serializers.ModelSerializer):
             "company_id",
             "managed_department_ids",
         ]
-        read_only_fields = ["created_at", "permissions", "is_superuser", "company", "active_modules"]
+        read_only_fields = ["created_at", "permissions", "is_superuser", "company", "active_modules", "pipeline_status_labels"]
 
     def get_permissions(self, obj):
         """Trả về danh sách permission code của user."""
@@ -198,6 +200,12 @@ class UserSerializer(serializers.ModelSerializer):
         if obj.company and hasattr(obj.company, 'settings'):
             return obj.company.settings.active_modules
         return []
+
+    def get_pipeline_status_labels(self, obj):
+        if obj.company and hasattr(obj.company, 'settings') and obj.company.settings.pipeline_status_labels:
+            return obj.company.settings.pipeline_status_labels
+        from users.models import get_default_pipeline_labels
+        return get_default_pipeline_labels()
 
     def get_managed_department_ids(self, obj):
         return list(obj.managed_departments.values_list("id", flat=True))
@@ -543,7 +551,7 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CompanySettings
-        fields = ["id", "order_prefix", "lead_routing", "timezone", "quotation_template", "default_quotation_terms", "quotation_template_detail", "custom_quotation_title", "custom_order_title", "default_warranty_content", "default_warranty_rules"]
+        fields = ["id", "order_prefix", "lead_routing", "timezone", "active_modules", "pipeline_status_labels", "quotation_template", "default_quotation_terms", "quotation_template_detail", "custom_quotation_title", "custom_order_title", "default_warranty_content", "default_warranty_rules"]
 
     def get_quotation_template_detail(self, obj):
         if obj.quotation_template:

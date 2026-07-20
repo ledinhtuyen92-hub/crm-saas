@@ -40,6 +40,11 @@ api.interceptors.response.use(
     const originalRequest = error.config
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // Bỏ qua lỗi 401 từ API login để giao diện Login.jsx tự bắt và hiện thông báo
+      if (originalRequest.url.includes('/login/')) {
+        return Promise.reject(error)
+      }
+
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject })

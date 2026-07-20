@@ -306,10 +306,12 @@ class InventoryTransaction(models.Model):
     TYPE_IMPORT = "import"
     TYPE_EXPORT = "export"
     TYPE_ADJUST = "adjust"
+    TYPE_TRANSFER = "transfer"
     TYPE_CHOICES = [
         (TYPE_IMPORT, "Nhập kho"),
         (TYPE_EXPORT, "Xuất kho"),
         (TYPE_ADJUST, "Điều chỉnh"),
+        (TYPE_TRANSFER, "Điều chuyển"),
     ]
 
     STATUS_PENDING = "pending"
@@ -348,9 +350,18 @@ class InventoryTransaction(models.Model):
         "inventory.Warehouse",
         on_delete=models.PROTECT,
         related_name="inventory_transactions",
-        verbose_name="Kho hàng",
+        verbose_name="Kho hàng (Kho xuất)",
         null=True,  # Cho phép null ban đầu nếu chờ duyệt thủ kho mới chọn kho
         blank=True,
+    )
+    target_warehouse = models.ForeignKey(
+        "inventory.Warehouse",
+        on_delete=models.PROTECT,
+        related_name="transfer_in_transactions",
+        verbose_name="Kho nhận",
+        null=True,
+        blank=True,
+        help_text="Chỉ áp dụng khi loại phiếu là Điều chuyển kho.",
     )
     status = models.CharField(
         max_length=20,
@@ -391,10 +402,6 @@ class InventoryTransaction(models.Model):
         verbose_name_plural = "Phiếu kho"
         ordering = ["-created_at"]
         constraints = [
-            models.UniqueConstraint(
-                fields=["company", "transaction_code"],
-                name="unique_transaction_code_per_company",
-            ),
             models.CheckConstraint(
                 check=models.Q(quantity__gt=0),
                 name="inventory_transaction_quantity_gt_0",

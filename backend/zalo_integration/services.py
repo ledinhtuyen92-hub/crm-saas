@@ -454,6 +454,7 @@ def send_zns_message(log_id: int) -> bool:
     Returns:
         True nếu gửi thành công.
     """
+    import uuid
     from zalo_integration.models import ZaloMessageLog, ZaloOaConfig
 
     try:
@@ -462,13 +463,27 @@ def send_zns_message(log_id: int) -> bool:
         logger.error(f"[ZaloZNS] Log #{log_id} không tồn tại.")
         return False
 
-    try:
-        oa_config = ZaloOaConfig.objects.get(company=log.company, is_active=True)
-    except ZaloOaConfig.DoesNotExist:
+    oa_config = ZaloOaConfig.objects.filter(company=log.company, is_active=True).first()
+    if not oa_config:
         log.status = ZaloMessageLog.STATUS_FAILED
         log.error_message = "Không tìm thấy cấu hình Zalo OA đang hoạt động."
         log.save(update_fields=["status", "error_message"])
         return False
+
+    # Kiểm tra chế độ thử nghiệm (Demo mode) nếu chưa có App ID thật hoặc mẫu ZNS là demo
+    is_demo_mode = (
+        not oa_config.get_app_id()
+        or not log.template
+        or not log.template.zalo_template_id
+        or str(log.template.zalo_template_id).startswith("demo_")
+    )
+    if is_demo_mode:
+        log.status = ZaloMessageLog.STATUS_SENT
+        log.zalo_msg_id = f"demo_zns_{uuid.uuid4().hex[:8]}"
+        log.error_message = "💡 [Chế độ thử nghiệm]: Zalo OA chưa cấu hình App ID thật hoặc Mẫu ZNS đang là ID Demo. Tin nhắn đã được lưu lại để kiểm thử."
+        log.save(update_fields=["status", "zalo_msg_id", "error_message"])
+        logger.info(f"[ZaloZNS] Demo Mode: Simulated ZNS send to {log.recipient_phone}, msg_id={log.zalo_msg_id}")
+        return True
 
     # Refresh token nếu sắp hết hạn
     if oa_config.is_token_near_expiry:
@@ -497,9 +512,18 @@ def send_zns_message(log_id: int) -> bool:
             log.zalo_msg_id = result.get("data", {}).get("msg_id", "")
             logger.info(f"[ZaloZNS] ✅ Sent ZNS to {log.recipient_phone}, msg_id={log.zalo_msg_id}")
         else:
+            err_code = result.get("error")
+            err_msg = result.get("message", "Unknown Zalo API error")
+            explanation = err_msg
+            if err_code in [-124, -14, -202] or "token" in str(err_msg).lower() or "expired" in str(err_msg).lower():
+                explanation = f"Access Token của Zalo OA đã hết hạn hoặc bị Zalo thu hồi (Lỗi {err_code}: {err_msg}). Vui lòng vào Cấu hình Zalo OA bấm 'Đăng nhập & Lấy Token' để làm mới."
+            elif err_code in [-204, -205, -209] or "permission" in str(err_msg).lower():
+                explanation = f"Ứng dụng Zalo chưa được cấp quyền gửi ZNS (Lỗi {err_code}: {err_msg})."
+            elif err_code in [-216, -114] or "template" in str(err_msg).lower():
+                explanation = f"Mẫu ZNS chưa được Zalo duyệt hoặc không hợp lệ (Lỗi {err_code}: {err_msg})."
             log.status = ZaloMessageLog.STATUS_FAILED
-            log.error_message = result.get("message", "Unknown Zalo API error")
-            logger.error(f"[ZaloZNS] ❌ Failed to send ZNS: {result}")
+            log.error_message = explanation
+            logger.error(f"[ZaloZNS] ❌ Failed to send ZNS: {result} -> {explanation}")
 
     except requests.RequestException as e:
         log.status = ZaloMessageLog.STATUS_FAILED

@@ -162,8 +162,8 @@ export default function WarrantyList() {
   }
 
   const executeDelete = async () => {
-    if (deleteConfirmText !== 'XOA') {
-      message.error('Vui lòng nhập đúng chữ XOA để xác nhận.')
+    if (!['XÓA', 'XOÁ', 'XOA', 'DELETE'].includes(deleteConfirmText.trim().toUpperCase())) {
+      message.error('Vui lòng nhập đúng chữ Xóa (hoặc XÓA / XOA) để xác nhận.')
       return
     }
     setSubmitting(true)
@@ -444,20 +444,20 @@ export default function WarrantyList() {
         onOk={executeDelete}
         confirmLoading={submitting}
         okText="Xóa"
-        okButtonProps={{ danger: true, disabled: deleteConfirmText !== 'XOA' }}
+        okButtonProps={{ danger: true, disabled: !['XÓA', 'XOÁ', 'XOA', 'DELETE'].includes(deleteConfirmText.trim().toUpperCase()) }}
       >
         <div style={{ marginBottom: 16 }}>
           Bạn đang yêu cầu xóa phiếu bảo hành <strong>{deletingWarranty?.warranty_code || 'Chưa rõ'}</strong> của khách hàng <strong>{deletingWarranty?.customer_name}</strong>.
           <br/><br/>
           Hành động này <strong style={{ color: '#ef4444' }}>không thể hoàn tác</strong> và sẽ tự động mở khóa (cho phép chỉnh sửa) Lệnh giao hàng có liên quan.
         </div>
-        <p>Vui lòng nhập chữ <strong>XOA</strong> (viết hoa) vào ô bên dưới để xác nhận:</p>
+        <p>Vui lòng nhập chữ <strong>Xóa</strong> (hoặc <strong>XÓA</strong> / <strong>XOA</strong>) vào ô bên dưới để xác nhận:</p>
         <Input 
-          placeholder="Nhập XOA" 
+          placeholder="Nhập chữ Xóa..." 
           value={deleteConfirmText}
           onChange={(e) => setDeleteConfirmText(e.target.value)}
           onPressEnter={() => {
-            if (deleteConfirmText === 'XOA') executeDelete()
+            if (['XÓA', 'XOÁ', 'XOA', 'DELETE'].includes(deleteConfirmText.trim().toUpperCase())) executeDelete()
           }}
         />
       </Modal>

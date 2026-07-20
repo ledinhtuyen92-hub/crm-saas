@@ -54,10 +54,10 @@ class DeliveryOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         company = self.request.user.company
         instance = serializer.save(company=company)
-        from core.numbering import resolve_doc_prefix, _generate_code
-        prefix = resolve_doc_prefix(company, "GH")
-        instance.delivery_code = _generate_code(DeliveryOrder, "delivery_code", company, prefix)
-        instance.save(update_fields=["delivery_code"])
+        if not instance.delivery_code:
+            from core.numbering import generate_delivery_code
+            instance.delivery_code = generate_delivery_code(company)
+            instance.save(update_fields=["delivery_code"])
 
     def perform_update(self, serializer):
         instance = self.get_object()
@@ -86,8 +86,6 @@ class DeliveryOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         
         serializer = self.get_serializer(delivery)
         return Response(serializer.data)
-        company = self.request.user.company
-        serializer.save(company=company)
 
 
 class WarrantyCardViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
@@ -139,7 +137,7 @@ class WarrantyCardViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         company = self.request.user.company
         instance = serializer.save(company=company)
-        from core.numbering import resolve_doc_prefix, _generate_code
-        prefix = resolve_doc_prefix(company, "BH")
-        instance.warranty_code = _generate_code(WarrantyCard, "warranty_code", company, prefix)
-        instance.save(update_fields=["warranty_code"])
+        if not instance.warranty_code:
+            from core.numbering import generate_warranty_code
+            instance.warranty_code = generate_warranty_code(company)
+            instance.save(update_fields=["warranty_code"])

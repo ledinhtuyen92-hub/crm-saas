@@ -23,6 +23,7 @@ import {
   Typography,
   message,
   Upload,
+  Switch,
 } from 'antd'
 import {
   HistoryOutlined,
@@ -45,6 +46,7 @@ import {
   FileTextOutlined,
   FileDoneOutlined,
   MessageOutlined,
+  SettingOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import api from '../utils/api'
@@ -65,7 +67,7 @@ const STATUS_MAP = {
   has_order: { label: 'Đã có đơn hàng', color: 'purple' },
   repeat_order: { label: 'Mua thêm đơn hàng', color: 'magenta' },
   lost: { label: 'Thất bại', color: 'red' },
-  inactive: { label: 'Ngừng giao dịch', color: 'default' },
+  inactive: { label: 'Ngừng giao dịch', color: 'gray' },
 }
 
 const SOURCE_MAP = {
@@ -103,17 +105,29 @@ const INTERACTION_RESULTS = {
 }
 
 function CustomerList() {
-  const { isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
+  const { isCompanyAdmin, hasPermission, checkMaintenance, isModuleActive, pipelineStatusLabels = {}, getPipelineLabel, refreshSettings } = useAuth()
   const navigate = useNavigate()
   const [customers, setCustomers] = useState([])
   const [salesUsers, setSalesUsers] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const getStatusItem = useCallback((key) => {
+    const base = STATUS_MAP[key] || { label: key, color: 'gray' }
+    return {
+      ...base,
+      label: getPipelineLabel ? getPipelineLabel(key, base.label) : (pipelineStatusLabels[key] || base.label)
+    }
+  }, [getPipelineLabel, pipelineStatusLabels])
+
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [assignedToFilter, setAssignedToFilter] = useState('')
+
+  // Auto Assign Toggle State
+  const [autoAssignEnabled, setAutoAssignEnabled] = useState(false)
+  const [togglingAutoAssign, setTogglingAutoAssign] = useState(false)
 
   // Modal Add / Edit Customer
   const [isModalVisible, setIsModalVisible] = useState(false)
@@ -150,6 +164,27 @@ function CustomerList() {
 
   // Tags Management
   const [tagModalVisible, setTagModalVisible] = useState(false)
+
+  // Pipeline status customization modal
+  const [pipelineModalVisible, setPipelineModalVisible] = useState(false)
+  const [pipelineForm] = Form.useForm()
+  const [savingPipeline, setSavingPipeline] = useState(false)
+
+  const handleSavePipelineLabels = async (values) => {
+    if (checkMaintenance()) return
+    setSavingPipeline(true)
+    try {
+      await api.patch('users/company-settings/', { pipeline_status_labels: values })
+      message.success('Cập nhật tên Trạng thái Pipeline thành công!')
+      setPipelineModalVisible(false)
+      if (refreshSettings) await refreshSettings()
+      fetchCustomers()
+    } catch {
+      message.error('Lỗi khi cập nhật tên Trạng thái Pipeline.')
+    } finally {
+      setSavingPipeline(false)
+    }
+  }
 
   // Import
   const [importModalVisible, setImportModalVisible] = useState(false)
@@ -203,6 +238,20 @@ function CustomerList() {
     }
   }, [])
 
+  const fetchCompanySettings = useCallback(async () => {
+    if (!isCompanyAdmin) return
+    try {
+      const res = await api.get('/users/company-settings/')
+      if (res.data && res.data.lead_routing === 'round_robin') {
+        setAutoAssignEnabled(true)
+      } else {
+        setAutoAssignEnabled(false)
+      }
+    } catch {
+      // ignore
+    }
+  }, [isCompanyAdmin])
+
   useEffect(() => {
     fetchCustomers()
   }, [fetchCustomers])
@@ -210,7 +259,8 @@ function CustomerList() {
   useEffect(() => {
     fetchSalesUsers()
     fetchAllTags()
-  }, [fetchSalesUsers, fetchAllTags])
+    fetchCompanySettings()
+  }, [fetchSalesUsers, fetchAllTags, fetchCompanySettings])
 
   // ── Handlers: Add / Edit Customer ──────────────────────────────────
   const handleOpenAddModal = () => {
@@ -398,6 +448,25 @@ function CustomerList() {
     })
   }
 
+  const handleToggleAutoAssign = async (checked) => {
+    setTogglingAutoAssign(true)
+    try {
+      await api.patch('/users/company-settings/', {
+        lead_routing: checked ? 'round_robin' : 'manual',
+      })
+      setAutoAssignEnabled(checked)
+      message.success(
+        checked
+          ? 'Đã BẬT chế độ tự động chia khách hàng mới.'
+          : 'Đã TẮT chế độ tự động chia khách hàng.'
+      )
+    } catch {
+      message.error('Không thể cập nhật cấu hình tự động phân bổ.')
+    } finally {
+      setTogglingAutoAssign(false)
+    }
+  }
+
   // ── Handlers: Drawer Details & Timeline ────────────────────────────
   const handleOpenDrawer = async (record) => {
     setCurrentCustomer(record)
@@ -560,7 +629,7 @@ function CustomerList() {
       dataIndex: 'status',
       key: 'status',
       render: (status) => {
-        const item = STATUS_MAP[status] || { label: status, color: 'default' }
+        const item = getStatusItem(status)
         return <Tag color={item.color}>{item.label}</Tag>
       },
     },
@@ -674,6 +743,21 @@ function CustomerList() {
         </div>
 
         <Space wrap style={{ flex: 1, justifyContent: 'flex-end' }}>
+          {isCompanyAdmin && (
+            <Tooltip title="Khi BẬT, hệ thống tự động chia đều khách hàng mới (từ Facebook, Zalo hoặc nhập mới) cho Sale có ít khách nhất">
+              <Space style={{ background: '#eff6ff', padding: '4px 12px', borderRadius: 8, border: '1px solid #bfdbfe', marginRight: 4 }}>
+                <Text strong style={{ fontSize: 13, color: '#1e40af' }}>Tự động chia khách:</Text>
+                <Switch
+                  checked={autoAssignEnabled}
+                  loading={togglingAutoAssign}
+                  onChange={handleToggleAutoAssign}
+                  checkedChildren="BẬT"
+                  unCheckedChildren="TẮT"
+                />
+              </Space>
+            </Tooltip>
+          )}
+
           {(hasPermission('crm.auto_assign')) && (
             <Tooltip title="Tự động chia đều khách hàng chưa phân công cho Sale">
               <Button
@@ -685,15 +769,17 @@ function CustomerList() {
             </Tooltip>
           )}
 
-          <Button 
-            type="primary" 
-            style={{ background: '#10b981', borderColor: '#10b981' }}
-            icon={<MessageOutlined />}
-            disabled={selectedRowKeys.length === 0}
-            onClick={() => { if (!checkMaintenance()) setBulkZnsModalVisible(true) }}
-          >
-            Gửi ZNS Hàng loạt {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length})` : ''}
-          </Button>
+          {(isModuleActive('zalo') && (isCompanyAdmin || hasPermission('zalo.send_zns'))) && (
+            <Button 
+              type="primary" 
+              style={{ background: '#10b981', borderColor: '#10b981' }}
+              icon={<MessageOutlined />}
+              disabled={selectedRowKeys.length === 0}
+              onClick={() => { if (!checkMaintenance()) setBulkZnsModalVisible(true) }}
+            >
+              Gửi ZNS Hàng loạt {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length})` : ''}
+            </Button>
+          )}
 
           {(hasPermission('crm.import')) && (
             <Button
@@ -719,6 +805,16 @@ function CustomerList() {
               onClick={() => { if (!checkMaintenance()) setTagModalVisible(true) }}
             >
               Quản lý Tags
+            </Button>
+          )}
+
+          {isCompanyAdmin && (
+            <Button
+              icon={<SettingOutlined />}
+              onClick={() => { if (!checkMaintenance()) setPipelineModalVisible(true) }}
+              style={{ borderColor: '#2563eb', color: '#2563eb' }}
+            >
+              Tùy chỉnh Trạng thái Pipeline
             </Button>
           )}
 
@@ -760,11 +856,14 @@ function CustomerList() {
               allowClear
             >
               <Option value="">Tất cả trạng thái</Option>
-              {Object.entries(STATUS_MAP).map(([key, item]) => (
-                <Option key={key} value={key}>
-                  <Badge color={item.color} text={item.label} />
-                </Option>
-              ))}
+              {Object.entries(STATUS_MAP).map(([key, item]) => {
+                const sItem = getStatusItem(key)
+                return (
+                  <Option key={key} value={key}>
+                    <Badge color={sItem.color} text={sItem.label} />
+                  </Option>
+                )
+              })}
             </Select>
           </Col>
           {(hasPermission('crm.assign') || hasPermission('crm.auto_assign') || hasPermission('crm.view_all')) && (
@@ -892,13 +991,30 @@ function CustomerList() {
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="status" label="Trạng thái quy trình (Pipeline)" initialValue="new">
-                <Select>
-                  {Object.entries(STATUS_MAP).map(([key, item]) => (
-                    <Option key={key} value={key}>
-                      <Badge color={item.color} text={item.label} />
-                    </Option>
-                  ))}
+              <Form.Item
+                name="status"
+                label={
+                  <Space>
+                    <span>Trạng thái quy trình (Pipeline)</span>
+                    {editingCustomer && (editingCustomer.status === 'has_order' || editingCustomer.status === 'repeat_order') && (
+                      <Tag color="purple" style={{ fontSize: 11 }}>🔒 Tự động từ Đơn hàng</Tag>
+                    )}
+                  </Space>
+                }
+                initialValue="new"
+                extra={editingCustomer && (editingCustomer.status === 'has_order' || editingCustomer.status === 'repeat_order') ? "🔒 Khách hàng đã đạt trạng thái Đã có đơn hàng/Mua thêm đơn hàng do hệ thống tự động ghi nhận từ Đơn hàng. KHÔNG ĐƯỢC PHÉP ĐỔI thủ công để tránh sai lệch dữ liệu." : null}
+              >
+                <Select disabled={editingCustomer && (editingCustomer.status === 'has_order' || editingCustomer.status === 'repeat_order')}>
+                  {Object.entries(STATUS_MAP).map(([key, item]) => {
+                    const sItem = getStatusItem(key)
+                    const isSystemAutomated = key === 'has_order' || key === 'repeat_order'
+                    const disabled = isSystemAutomated
+                    return (
+                      <Option key={key} value={key} disabled={disabled}>
+                        <Badge color={sItem.color} text={disabled ? `${sItem.label} 🔒 (Hệ thống tự cập nhật)` : sItem.label} />
+                      </Option>
+                    )
+                  })}
                 </Select>
               </Form.Item>
             </Col>
@@ -965,8 +1081,8 @@ function CustomerList() {
             <TeamOutlined style={{ color: '#1649c9' }} />
             <Text strong>{currentCustomer?.name}</Text>
             {currentCustomer && (
-              <Tag color={STATUS_MAP[currentCustomer.status]?.color || 'default'}>
-                {STATUS_MAP[currentCustomer.status]?.label || currentCustomer.status}
+              <Tag color={getStatusItem(currentCustomer.status).color}>
+                {getStatusItem(currentCustomer.status).label}
               </Tag>
             )}
           </Space>
@@ -977,14 +1093,16 @@ function CustomerList() {
         extra={
           currentCustomer && (
             <Space>
-              <Button
-                type="primary"
-                icon={<MessageOutlined />}
-                onClick={() => setZnsModalVisible(true)}
-                style={{ background: '#10b981', borderColor: '#10b981' }}
-              >
-                Gửi ZNS
-              </Button>
+              {(isModuleActive('zalo') && (isCompanyAdmin || hasPermission('zalo.send_zns'))) && (
+                <Button
+                  type="primary"
+                  icon={<MessageOutlined />}
+                  onClick={() => setZnsModalVisible(true)}
+                  style={{ background: '#10b981', borderColor: '#10b981' }}
+                >
+                  Gửi ZNS
+                </Button>
+              )}
               <Button
                 type="primary"
                 icon={<FileAddOutlined />}
@@ -1303,6 +1421,71 @@ function CustomerList() {
             <Text type="success">Đã chọn file: {importFile.name}</Text>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        title="🎯 Tùy chỉnh tên hiển thị Trạng thái Pipeline CRM"
+        open={pipelineModalVisible}
+        onCancel={() => setPipelineModalVisible(false)}
+        onOk={() => pipelineForm.submit()}
+        confirmLoading={savingPipeline}
+        width={650}
+        afterOpenChange={(open) => {
+          if (open) {
+            pipelineForm.setFieldsValue({
+              new: pipelineStatusLabels.new || 'Khách mới',
+              potential: pipelineStatusLabels.potential || 'Tiềm năng',
+              active: pipelineStatusLabels.active || 'Đang hoạt động',
+              has_order: pipelineStatusLabels.has_order || 'Đã có đơn hàng',
+              repeat_order: pipelineStatusLabels.repeat_order || 'Mua thêm đơn hàng',
+              lost: pipelineStatusLabels.lost || 'Đã mất',
+              inactive: pipelineStatusLabels.inactive || 'Không hoạt động',
+            })
+          }
+        }}
+      >
+        <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+          Thay đổi tên gọi hiển thị của các bước trong quy trình chăm sóc khách hàng cho phù hợp với đặc thù nghiệp vụ của công ty bạn. Tên mới sẽ tự động cập nhật ngay trên toàn hệ thống.
+        </Paragraph>
+        <Form form={pipelineForm} layout="vertical" onFinish={handleSavePipelineLabels}>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item name="new" label="1. Khách mới (new)">
+                <Input placeholder="VD: Khách mới / Lead nóng" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="potential" label="2. Tiềm năng (potential)">
+                <Input placeholder="VD: Tiềm năng / Đang tìm hiểu" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="active" label="3. Đang hoạt động (active)">
+                <Input placeholder="VD: Đang giao dịch / Tư vấn mẫu" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="has_order" label="4. Đã có đơn hàng (has_order) ⚡">
+                <Input placeholder="VD: Đã có đơn hàng" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="repeat_order" label="5. Mua thêm đơn hàng (repeat_order) ⚡">
+                <Input placeholder="VD: Mua thêm đơn hàng / Khách quen" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="lost" label="6. Đã mất (lost)">
+                <Input placeholder="VD: Thất bại / Hủy quan tâm" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="inactive" label="7. Không hoạt động (inactive)">
+                <Input placeholder="VD: Ngừng giao dịch" />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
       </Modal>
 
       <TagManagementModal 

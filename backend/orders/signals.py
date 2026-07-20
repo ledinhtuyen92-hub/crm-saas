@@ -9,7 +9,7 @@ Kích hoạt khi Order.status thay đổi sang 'approved':
 import logging
 
 from django.db import transaction
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, post_delete
 from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
@@ -31,6 +31,14 @@ def track_order_status_change(sender, instance, **kwargs):
             instance._original_status = None
     else:
         instance._original_status = None
+
+
+@receiver(post_delete, sender="orders.Order")
+def on_order_deleted(sender, instance, **kwargs):
+    """
+    Khi xóa đơn hàng, cần đồng bộ lại trạng thái Khách hàng
+    """
+    sync_customer_pipeline_status(instance.customer)
 
 
 @receiver(post_save, sender="orders.Order")
@@ -62,6 +70,10 @@ def on_order_saved(sender, instance, created, **kwargs):
     elif instance.status == Order.STATUS_CANCELLED:
         _handle_order_cancelled(instance)
 
+    # Nếu đơn hàng bị mất trạng thái approved (ví dụ: chuyển sang canceled, draft), đồng bộ lại Khách hàng
+    if original_status == Order.STATUS_APPROVED and instance.status != Order.STATUS_APPROVED:
+        sync_customer_pipeline_status(instance.customer)
+
 
 def _notify_managers_new_order(order):
     """Gửi thông báo cho Quản lý và Kế toán khi có đơn hàng mới."""
@@ -85,6 +97,36 @@ def _notify_managers_new_order(order):
     except Exception as exc:
         logger.error("Failed to notify managers for new order %s: %s", order.order_number, exc)
 
+def sync_customer_pipeline_status(customer):
+    """
+    Đồng bộ lại trạng thái Khách hàng (Pipeline) dựa trên số lượng đơn hàng đã duyệt.
+    """
+    if not customer:
+        return
+    try:
+        from orders.models import Order
+        from crm.models import Customer
+        approved_count = customer.orders.filter(status=Order.STATUS_APPROVED).count()
+        
+        # Nếu có từ 2 đơn trở lên -> Khách hàng quay lại (Mua thêm)
+        if approved_count >= 2:
+            if customer.status != Customer.STATUS_REPEAT_ORDER:
+                customer.status = Customer.STATUS_REPEAT_ORDER
+                customer.save(update_fields=['status'])
+        # Nếu mới có 1 đơn -> Khách hàng mới chốt (Đã có đơn hàng)
+        elif approved_count == 1:
+            if customer.status != Customer.STATUS_HAS_ORDER:
+                customer.status = Customer.STATUS_HAS_ORDER
+                customer.save(update_fields=['status'])
+        else:
+            # approved_count == 0
+            # Chỉ lùi trạng thái về 'Đang hoạt động' nếu khách hàng đang bị đánh dấu là đã có đơn hàng
+            if customer.status in [Customer.STATUS_HAS_ORDER, Customer.STATUS_REPEAT_ORDER]:
+                customer.status = Customer.STATUS_ACTIVE
+                customer.save(update_fields=['status'])
+    except Exception as exc:
+        logger.error("Failed to sync customer pipeline status for customer %s: %s", customer.id, exc)
+
 
 @transaction.atomic
 def _handle_order_approved(order):
@@ -104,24 +146,7 @@ def _handle_order_approved(order):
         logger.error("Failed to send approved notification for order %s: %s", order.order_number, exc)
 
     # 5. Tự động chuyển trạng thái Khách hàng (Pipeline)
-    try:
-        from crm.models import Customer
-        customer = order.customer
-        approved_count = customer.orders.filter(status=order.STATUS_APPROVED).count()
-        
-        # Nếu có từ 2 đơn trở lên -> Khách hàng quay lại (Mua thêm)
-        if approved_count >= 2:
-            if customer.status != Customer.STATUS_REPEAT_ORDER:
-                customer.status = Customer.STATUS_REPEAT_ORDER
-                customer.save(update_fields=['status'])
-        # Nếu mới có 1 đơn -> Khách hàng mới chốt (Đã có đơn hàng)
-        elif approved_count == 1:
-            if customer.status != Customer.STATUS_HAS_ORDER:
-                customer.status = Customer.STATUS_HAS_ORDER
-                customer.save(update_fields=['status'])
-    except Exception as exc:
-        logger.error("Failed to update customer status pipeline for order %s: %s", order.order_number, exc)
-
+    sync_customer_pipeline_status(order.customer)
 
 def check_and_trigger_mo_gate(order):
     """Cổng kiểm soát MO: Chỉ khởi tạo lệnh sản xuất khi đơn đã cọc hoặc thanh toán đủ hoặc được duyệt ngoại lệ."""
@@ -165,12 +190,22 @@ def _create_pending_inventory_export(order):
         from core.numbering import generate_transaction_code
         from inventory.models import InventoryTransaction
 
+        txn_code = None
+
         for item in order.items.select_related("product").all():
-            # Kiểm tra xem đã tạo lệnh pending cho item này chưa (tránh duplicate)
-            if InventoryTransaction.objects.filter(reference_order=order, product=item.product, type=InventoryTransaction.TYPE_EXPORT).exists():
+            # Kiểm tra xem đã tạo lệnh pending hoặc completed cho item này chưa (bỏ qua các lệnh đã bị từ chối)
+            if InventoryTransaction.objects.filter(
+                reference_order=order, product=item.product, type=InventoryTransaction.TYPE_EXPORT
+            ).exclude(status=InventoryTransaction.STATUS_REJECTED).exists():
                 continue
 
-            txn_code = generate_transaction_code(order.company, "export")
+            if not txn_code:
+                existing_txn = InventoryTransaction.objects.filter(reference_order=order, type=InventoryTransaction.TYPE_EXPORT).first()
+                if existing_txn:
+                    txn_code = existing_txn.transaction_code
+                else:
+                    txn_code = generate_transaction_code(order.company, "export")
+
             InventoryTransaction.objects.create(
                 company=order.company,
                 transaction_code=txn_code,

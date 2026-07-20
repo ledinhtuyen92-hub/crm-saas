@@ -81,7 +81,7 @@ class CustomerSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.CharField(source="assigned_to.full_name", read_only=True)
     created_by = AssignedUserSerializer(read_only=True)
     created_by_name = serializers.CharField(source="created_by.full_name", read_only=True, allow_null=True)
-    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    status_display = serializers.SerializerMethodField()
     source_display = serializers.CharField(source="get_source_display", read_only=True)
     quotation_count = serializers.IntegerField(read_only=True)
     order_count = serializers.IntegerField(read_only=True)
@@ -122,6 +122,26 @@ class CustomerSerializer(serializers.ModelSerializer):
             "status_display", "source_display",
             "created_at", "updated_at",
         ]
+
+    def get_status_display(self, obj):
+        if obj.company and hasattr(obj.company, 'settings') and obj.company.settings.pipeline_status_labels:
+            custom_label = obj.company.settings.pipeline_status_labels.get(obj.status)
+            if custom_label:
+                return custom_label
+        return obj.get_status_display()
+
+    def validate_status(self, value):
+        if self.instance and self.instance.status in [Customer.STATUS_HAS_ORDER, Customer.STATUS_REPEAT_ORDER]:
+            if value != self.instance.status:
+                raise serializers.ValidationError(
+                    "Khách hàng này đã đạt trạng thái 'Đã có đơn hàng/Mua thêm đơn hàng' do hệ thống tự động ghi nhận từ Đơn hàng. KHÔNG ĐƯỢC PHÉP ĐỔI thủ công sang trạng thái khác để tránh sai lệch dữ liệu."
+                )
+            return value
+        if value in [Customer.STATUS_HAS_ORDER, Customer.STATUS_REPEAT_ORDER]:
+            raise serializers.ValidationError(
+                "Trạng thái 'Đã có đơn hàng' và 'Mua thêm đơn hàng' là trạng thái được hệ thống TỰ ĐỘNG CẬP NHẬT khi Đơn hàng được duyệt. Bạn không được phép chọn thủ công."
+            )
+        return value
 
     def validate_phone(self, value):
         request = self.context.get("request")

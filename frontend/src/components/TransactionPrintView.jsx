@@ -79,24 +79,30 @@ const TransactionPrintView = ({ transaction, company }) => {
     })
   }
 
-  // Dữ liệu bảng (chỉ có 1 sản phẩm cho mỗi phiếu vì cấu trúc CSDL hiện tại)
-  const tableData = [
-    {
-      key: transaction.id,
-      product_sku: transaction.product_sku,
-      product_name: transaction.product_name,
-      quantity: transaction.quantity,
-      unit_cost: transaction.unit_cost
-    }
-  ]
+  // Dữ liệu bảng: lấy từ transaction.items nếu có, ngược lại lấy 1 dòng từ transaction
+  const tableData = transaction.items && transaction.items.length > 0
+    ? transaction.items.map(item => ({
+        key: item.id,
+        product_sku: item.product_sku,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_cost: item.unit_cost
+      }))
+    : [{
+        key: transaction.id,
+        product_sku: transaction.product_sku,
+        product_name: transaction.product_name,
+        quantity: transaction.quantity,
+        unit_cost: transaction.unit_cost
+      }]
 
   // Tính tổng
-  const totalAmount = transaction.quantity * (transaction.unit_cost || 0)
+  const totalAmount = tableData.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unit_cost || 0)), 0)
 
   const effectiveCompany = transaction.company_info || company
 
   return (
-    <div className="printable-transaction-content" style={{ fontFamily: '"Times New Roman", Times, serif', color: '#000', padding: '20px 40px', background: '#fff', width: '100%', minHeight: 'auto' }}>
+    <div className="printable-transaction-content" style={{ fontFamily: '"Times New Roman", Times, serif', color: '#000', padding: '0px', background: '#fff', width: '100%', minHeight: 'auto' }}>
       
       {/* Header */}
       <Row justify="space-between" align="middle" style={{ marginBottom: 20 }}>
@@ -136,14 +142,19 @@ const TransactionPrintView = ({ transaction, company }) => {
             <Text>- Họ và tên người {isImport ? 'giao hàng' : 'nhận hàng'}: ......................................................................................................................</Text>
           </Col>
           <Col xs={24} md={24}>
-            <Text>- Kho hàng: <Text strong>{transaction.warehouse_name || '..........................................'}</Text></Text>
+            <Text>- Kho hàng {transaction.type === 'transfer' ? '(Kho xuất)' : ''}: <Text strong>{transaction.warehouse_name || '..........................................'}</Text></Text>
           </Col>
+          {transaction.type === 'transfer' && (
+            <Col xs={24} md={24}>
+              <Text>- Kho nhận: <Text strong>{transaction.target_warehouse_name || '..........................................'}</Text></Text>
+            </Col>
+          )}
           <Col xs={24} md={24}>
             <Text>- Lý do {isImport ? 'nhập' : 'xuất'}: {transaction.note || '.............................................................................................................................'}</Text>
           </Col>
           {transaction.reference_order && (
             <Col xs={24} md={24}>
-              <Text>- Kèm theo Đơn hàng số: <Text strong>{transaction.reference_order}</Text></Text>
+              <Text>- Kèm theo Đơn hàng số: <Text strong>{transaction.reference_order_number || transaction.reference_order}</Text></Text>
             </Col>
           )}
         </Row>
@@ -162,33 +173,43 @@ const TransactionPrintView = ({ transaction, company }) => {
       {isImport && (
         <Row style={{ marginTop: 12 }}>
           <Col xs={24} md={24}>
-            <Text style={{ fontSize: 14 }}>- Tổng số tiền (Viết bằng chữ): ...............................................................................................................................</Text>
+            <Text style={{ fontSize: 14 }}>- Tổng số tiền (Viết bằng chữ): <Text strong>{totalAmount > 0 ? '(Bằng chữ...)' : '...............................................................................................................................'}</Text></Text>
           </Col>
         </Row>
       )}
 
       {/* Signatures */}
-      <Row style={{ marginTop: 50, textAlign: 'center', fontSize: 14 }}>
-        <Col xs={24} md={6}>
+      <div className="signature-section" style={{ marginTop: 30, textAlign: 'center', fontSize: 14, display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+        <div style={{ flex: 1 }}>
           <Text strong>Người lập phiếu</Text>
           <div style={{ fontStyle: 'italic', fontSize: 12 }}>(Ký, họ tên)</div>
-          <div style={{ marginTop: 80 }}><Text>{transaction.created_by_name}</Text></div>
-        </Col>
-        <Col xs={24} md={6}>
+          <div style={{ marginTop: 60 }}><Text>{transaction.created_by_name}</Text></div>
+        </div>
+        <div style={{ flex: 1 }}>
           <Text strong>Người {isImport ? 'giao hàng' : 'nhận hàng'}</Text>
           <div style={{ fontStyle: 'italic', fontSize: 12 }}>(Ký, họ tên)</div>
-        </Col>
-        <Col xs={24} md={6}>
+        </div>
+        <div style={{ flex: 1 }}>
           <Text strong>Thủ kho</Text>
           <div style={{ fontStyle: 'italic', fontSize: 12 }}>(Ký, họ tên)</div>
-        </Col>
-        <Col xs={24} md={6}>
+        </div>
+        <div style={{ flex: 1 }}>
           <Text strong>Kế toán trưởng</Text>
           <div style={{ fontStyle: 'italic', fontSize: 12 }}>(Ký, họ tên)</div>
-        </Col>
-      </Row>
+        </div>
+      </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page {
+            size: A4 landscape;
+            margin: 10mm;
+          }
+          .printable-transaction-content {
+            width: 100% !important;
+            max-width: none !important;
+          }
+        }
         .transaction-print-table .ant-table-thead > tr > th {
           background-color: #f0f2f5 !important;
           color: #000 !important;
@@ -198,10 +219,10 @@ const TransactionPrintView = ({ transaction, company }) => {
         }
         .transaction-print-table .ant-table-tbody > tr > td {
           border-color: #000 !important;
-          color: #000 !important;
+          padding: 8px !important;
         }
         .transaction-print-table {
-          border-color: #000 !important;
+          border: 1px solid #000 !important;
         }
       `}} />
     </div>

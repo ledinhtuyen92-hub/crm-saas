@@ -33,11 +33,21 @@ function Login() {
         navigate('/dashboard')
       }
     } catch (error) {
+      if (error.response?.status === 401) {
+        messageApi.error('Sai tài khoản, mật khẩu hoặc tài khoản không tồn tại trên hệ thống.')
+        return
+      }
+
       const data = error.response?.data
       if (data && typeof data === 'object') {
         // Hiển thị lỗi theo từng field
         const msgs = Object.values(data).flat().join(' ')
-        messageApi.error(msgs)
+        // Xử lý thông báo mặc định của DRF bằng tiếng Anh
+        if (msgs.includes('No active account found with the given credentials')) {
+          messageApi.error('Sai tài khoản, mật khẩu hoặc tài khoản không tồn tại trên hệ thống.')
+        } else {
+          messageApi.error(msgs)
+        }
       } else {
         messageApi.error('Không thể đăng nhập. Vui lòng kiểm tra lại thông tin.')
       }

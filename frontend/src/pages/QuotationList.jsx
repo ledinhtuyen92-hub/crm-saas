@@ -1024,7 +1024,7 @@ export default function QuotationList() {
               Trình duyệt
             </Button>
           ) : null}
-          {record.status === 'pending_approval' && (hasPermission('sales.approve') || hasPermission('approvals.approve')) && (
+          {record.status === 'pending_approval' && hasPermission('sales.approve') && (
             <Space size={4}>
               <Tooltip title="Duyệt báo giá">
                 <Button

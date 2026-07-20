@@ -275,7 +275,7 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="quick-approve")
     def quick_approve(self, request, pk=None):
         quotation = self.get_object()
-        if not (request.user.is_superuser or request.user.is_company_admin or request.user.has_permission("sales.approve") or request.user.has_permission("approvals.approve")):
+        if not (request.user.is_superuser or request.user.is_company_admin or request.user.has_permission("sales.approve")):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Bạn không có quyền duyệt báo giá.")
         if quotation.status != Quotation.STATUS_PENDING_APPROVAL:
@@ -312,7 +312,7 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="quick-reject")
     def quick_reject(self, request, pk=None):
         quotation = self.get_object()
-        if not (request.user.is_superuser or request.user.is_company_admin or request.user.has_permission("sales.approve") or request.user.has_permission("approvals.approve")):
+        if not (request.user.is_superuser or request.user.is_company_admin or request.user.has_permission("sales.approve")):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Bạn không có quyền từ chối báo giá.")
         if quotation.status != Quotation.STATUS_PENDING_APPROVAL:

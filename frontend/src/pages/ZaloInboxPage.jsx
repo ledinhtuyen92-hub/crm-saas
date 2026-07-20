@@ -185,7 +185,7 @@ function LeadListItem({ lead, selected, onClick }) {
 export default function ZaloInboxPage() {
   const { token } = theme.useToken()
   const { user, isCompanyAdmin, maintenanceMode, hasPermission } = useAuth()
-  const canDeleteConversation = isCompanyAdmin || user?.is_superuser || user?.role_name?.toLowerCase().includes('giám đốc') || user?.role_name?.toLowerCase().includes('admin') || user?.role_name?.toLowerCase().includes('quản trị')
+  const canDeleteConversation = isCompanyAdmin || user?.is_superuser || hasPermission('zalo.delete_conversation')
   // Sale có thể xem toàn bộ hội thoại nếu là admin hoặc có quyền zalo.view_all_inbox
   const canViewAllInbox = isCompanyAdmin || hasPermission('zalo.view_all_inbox')
 

@@ -7,12 +7,13 @@ import logging
 import uuid
 from django.core.files.storage import default_storage
 
-from django.http import HttpResponse
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from users.permissions import ActionBasedPermission
 
 from .models import (
     FacebookLead, FacebookMessage, FacebookPageConfig, QuickMediaAsset,
@@ -293,12 +294,15 @@ class FacebookPageConfigViewSet(viewsets.ModelViewSet):
 
 # ── ViewSet: FacebookLead ─────────────────────────────────────────────────────
 
-class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
+class FacebookLeadViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
     """
     Danh sách hội thoại Facebook và chi tiết.
     Yêu cầu quyền: facebook.view_inbox
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, ActionBasedPermission]
+    action_permissions = {
+        "destroy": "facebook.delete_conversation",
+    }
 
     def get_queryset(self):
         user = self.request.user
@@ -407,10 +411,14 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
-        role_name = request.user.role.name.lower() if request.user.role and request.user.role.name else ""
-        if not ("giám đốc" in role_name or "admin" in role_name or "quản trị" in role_name or request.user.is_superuser):
+        has_perm = (
+            request.user.is_superuser
+            or request.user.is_company_admin
+            or (request.user.role and request.user.role.permissions.filter(code="facebook.delete_conversation").exists())
+        )
+        if not has_perm:
             return Response(
-                {"error": "Bạn là Nhân viên Sale, không được phép xóa hội thoại Facebook để đảm bảo an toàn dữ liệu khách hàng."},
+                {"error": "Bạn không có quyền xóa hội thoại Facebook. Vui lòng liên hệ quản trị viên để được cấp quyền."},
                 status=status.HTTP_403_FORBIDDEN,
             )
         return super().destroy(request, *args, **kwargs)

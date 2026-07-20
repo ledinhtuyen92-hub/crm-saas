@@ -385,7 +385,8 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
 
 export default function FacebookInboxPage() {
   const { token } = theme.useToken()
-  const { maintenanceMode, hasPermission, isCompanyAdmin } = useAuth()
+  const { user, maintenanceMode, hasPermission, isCompanyAdmin } = useAuth()
+  const canDeleteConversation = isCompanyAdmin || user?.is_superuser || hasPermission('facebook.delete_conversation')
   const canViewAllInbox = isCompanyAdmin || hasPermission('facebook.view_all_inbox')
   // Resizable columns
   const [leftColWidth, setLeftColWidth] = useState(270)
@@ -1479,6 +1480,35 @@ export default function FacebookInboxPage() {
                       Quét liên hệ
                     </Button>
                   </Tooltip>
+                  {canDeleteConversation && (
+                    <Tooltip title="Xóa hội thoại">
+                      <Button
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        onClick={() => {
+                          Modal.confirm({
+                            title: 'Xóa hội thoại này?',
+                            content: 'Toàn bộ tin nhắn với khách hàng này sẽ bị xóa vĩnh viễn.',
+                            okText: 'Xóa',
+                            okType: 'danger',
+                            cancelText: 'Hủy',
+                            onOk: async () => {
+                              if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì dữ liệu. Chức năng này tạm thời bị khóa!'); return }
+                              try {
+                                await api.delete(`/facebook/leads/${selectedLead.id}/`)
+                                message.success('Đã xóa hội thoại')
+                                setSelectedLead(null)
+                                fetchLeads()
+                              } catch (err) {
+                                message.error(err.response?.data?.error || 'Lỗi khi xóa hội thoại')
+                              }
+                            }
+                          })
+                        }}
+                      />
+                    </Tooltip>
+                  )}
                 </div>
               </div>
 
