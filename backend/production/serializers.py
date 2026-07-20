@@ -1,7 +1,23 @@
 from rest_framework import serializers
 
-from .models import ProductionOrder, ProductionStep
+from .models import Factory, ProductionOrder, ProductionStep
 
+
+class FactorySerializer(serializers.ModelSerializer):
+    company = serializers.PrimaryKeyRelatedField(read_only=True)
+    linked_warehouse_name = serializers.CharField(source="linked_warehouse.name", read_only=True)
+
+    class Meta:
+        model = Factory
+        fields = [
+            "id",
+            "company",
+            "name",
+            "location",
+            "linked_warehouse",
+            "linked_warehouse_name",
+            "is_active",
+        ]
 
 class ProductionStepSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source="get_status_display", read_only=True)
@@ -29,6 +45,7 @@ class ProductionOrderSerializer(serializers.ModelSerializer):
     steps = ProductionStepSerializer(many=True, read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     order_number = serializers.CharField(source="order.order_number", read_only=True)
+    factory_name = serializers.CharField(source="factory.name", read_only=True)
     delivery_status = serializers.SerializerMethodField()
 
     class Meta:
@@ -39,6 +56,8 @@ class ProductionOrderSerializer(serializers.ModelSerializer):
             "order",
             "production_order_code",
             "order_number",
+            "factory",
+            "factory_name",
             "status",
             "status_display",
             "delivery_status",
@@ -50,7 +69,7 @@ class ProductionOrderSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = [
-            "id", "company", "production_order_code", "order_number", 
+            "id", "company", "production_order_code", "order_number", "factory_name",
             "status_display", "delivery_status", "created_at", "updated_at"
         ]
 

@@ -51,7 +51,7 @@ const { TextArea } = Input
 // Trạng thái đơn hàng
 const statusConfig = {
   pending: { label: 'Chờ duyệt', color: 'warning', icon: <ClockCircleOutlined /> },
-  approved: { label: 'Đã chấp thuận', color: 'processing', icon: <CheckCircleOutlined /> },
+  approved: { label: 'Đã được duyệt', color: 'processing', icon: <CheckCircleOutlined /> },
   rejected: { label: 'Đã từ chối', color: 'error', icon: <CloseCircleOutlined /> },
   cancelled: { label: 'Đã hủy', color: 'default', icon: <MinusCircleOutlined /> },
   completed: { label: 'Hoàn thành', color: 'success', icon: <CheckCircleOutlined /> },
@@ -95,6 +95,10 @@ export default function OrderList() {
   const [receiptModalVisible, setReceiptModalVisible] = useState(false)
   const [receiptSubmitting, setReceiptSubmitting] = useState(false)
   const [receiptForm] = Form.useForm()
+
+  const [approvers, setApprovers] = useState([])
+  const [approverModalVisible, setApproverModalVisible] = useState(false)
+  const [approverForm] = Form.useForm()
 
   const [selectedReceiptForPrint, setSelectedReceiptForPrint] = useState(null)
   const receiptPrintRef = useRef(null)
@@ -254,15 +258,30 @@ export default function OrderList() {
     }
   }
 
-  const handleRequestCreditApproval = async (orderId) => {
+  const openApproverModal = async () => {
     if (checkMaintenance()) return
     try {
-      await api.post(`/orders/orders/${orderId}/request_credit_approval/`)
-      messageApi.success('Đã gửi yêu cầu phê duyệt xuất kho nợ tới Giám đốc trong Approval Center!')
-      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, has_pending_credit_request: true } : o)))
-      if (selectedOrder?.id === orderId) {
-        setSelectedOrder((prev) => ({ ...prev, has_pending_credit_request: true }))
-      }
+      const res = await api.get('/users/users/')
+      const userList = res.data.results || res.data || []
+      const validApprovers = userList.filter(u => u.is_company_admin || u.is_superuser || (u.permissions && u.permissions.includes('finance.approve_credit')))
+      setApprovers(validApprovers.length > 0 ? validApprovers : userList.filter(u => u.is_company_admin || u.is_superuser))
+      approverForm.resetFields()
+      setApproverModalVisible(true)
+    } catch (err) {
+      messageApi.error('Lỗi tải danh sách người duyệt.')
+    }
+  }
+
+  const handleRequestCreditApproval = async (values) => {
+    if (checkMaintenance()) return
+    try {
+      await api.post(`/orders/orders/${selectedOrder.id}/request_credit_approval/`, {
+        approver_id: values.approver_id,
+      })
+      messageApi.success('Đã gửi yêu cầu phê duyệt xuất kho nợ tới người duyệt!')
+      setApproverModalVisible(false)
+      setOrders((prev) => prev.map((o) => (o.id === selectedOrder.id ? { ...o, has_pending_credit_request: true } : o)))
+      setSelectedOrder((prev) => ({ ...prev, has_pending_credit_request: true }))
     } catch (err) {
       const msg = err.response?.data?.detail || 'Lỗi khi trình duyệt xuất kho nợ!'
       messageApi.error(msg)
@@ -1479,7 +1498,7 @@ export default function OrderList() {
               style={{ width: '100%' }}
             >
               <Option value="pending"><Badge status="warning" text="Chờ duyệt" /></Option>
-              <Option value="approved"><Badge status="processing" text="Đã chấp nhận" /></Option>
+              <Option value="approved"><Badge status="processing" text="Đã được duyệt" /></Option>
               <Option value="rejected"><Badge status="error" text="Đã từ chối" /></Option>
               <Option value="cancelled"><Badge status="default" text="Đã hủy" /></Option>
               <Option value="completed"><Badge status="success" text="Hoàn thành" /></Option>
@@ -1557,7 +1576,7 @@ export default function OrderList() {
               <Form.Item name="status" label="Trạng thái">
                 <Select disabled={!canApprove}>
                   <Option value="pending">Chờ duyệt</Option>
-                  <Option value="approved">Đã chấp nhận</Option>
+                  <Option value="approved">Đã được duyệt</Option>
                   <Option value="rejected">Đã từ chối</Option>
                   <Option value="cancelled">Đã hủy</Option>
                   <Option value="completed">Hoàn thành</Option>
@@ -1858,7 +1877,7 @@ export default function OrderList() {
                       type={selectedOrder.has_pending_credit_request ? 'default' : 'primary'}
                       size="middle"
                       disabled={selectedOrder.has_pending_credit_request}
-                      onClick={() => handleRequestCreditApproval(selectedOrder.id)}
+                      onClick={openApproverModal}
                       style={{ borderRadius: '8px', fontWeight: 600, boxShadow: selectedOrder.has_pending_credit_request ? 'none' : '0 4px 12px rgba(225, 29, 72, 0.3)' }}
                     >
                       {selectedOrder.has_pending_credit_request ? '⏳ Đang chờ duyệt nợ' : '🛡️ Trình Duyệt Nợ'}
@@ -1868,7 +1887,7 @@ export default function OrderList() {
               </Row>
             </div>
 
-            {selectedOrder.needs_export_request && (
+            {selectedOrder.needs_export_request && (selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved') && (
               <div style={{ padding: '16px', background: '#fef2f2', borderRadius: '12px', border: '1px solid #fca5a5', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Space size={12}>
                   <AlertOutlined style={{ color: '#ef4444', fontSize: 20 }} />
@@ -2010,6 +2029,30 @@ export default function OrderList() {
           </Form.Item>
           <Form.Item name="note" label="Ghi chú Kế toán">
             <TextArea rows={2} placeholder="Nhập ghi chú giao dịch, số UNC..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Modal Chọn người duyệt nợ */}
+      <Modal
+        title="Chọn người duyệt nợ"
+        open={approverModalVisible}
+        onCancel={() => setApproverModalVisible(false)}
+        onOk={() => approverForm.submit()}
+        okText="Gửi yêu cầu"
+        cancelText="Hủy"
+      >
+        <Form form={approverForm} layout="vertical" onFinish={handleRequestCreditApproval}>
+          <Form.Item 
+            name="approver_id" 
+            label="Người duyệt (Giám đốc / Kế toán trưởng)"
+            rules={[{ required: true, message: 'Vui lòng chọn người duyệt!' }]}
+          >
+            <Select placeholder="Chọn người duyệt...">
+              {approvers.map(u => (
+                <Option key={u.id} value={u.id}>{u.fullname || u.username}</Option>
+              ))}
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

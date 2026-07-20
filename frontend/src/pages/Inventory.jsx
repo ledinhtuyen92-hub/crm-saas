@@ -60,6 +60,7 @@ export default function Inventory() {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [warehouses, setWarehouses] = useState([])
+  const [factories, setFactories] = useState([])
   const [stockLevels, setStockLevels] = useState([])
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(false)
@@ -102,6 +103,7 @@ export default function Inventory() {
   const [exportApproveModalVisible, setExportApproveModalVisible] = useState(false)
   const [selectedExportTxn, setSelectedExportTxn] = useState(null)
   const [approveWarehouseIds, setApproveWarehouseIds] = useState({})
+  const [approveFactoryId, setApproveFactoryId] = useState(null)
 
   const [clearTxnModalVisible, setClearTxnModalVisible] = useState(false)
   const [clearConfirmText, setClearConfirmText] = useState('')
@@ -151,9 +153,14 @@ export default function Inventory() {
   const fetchWarehouses = useCallback(async () => {
     await Promise.resolve()
     try {
-      const res = await api.get('/inventory/warehouses/')
-      const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
-      setWarehouses(data)
+      const [whRes, facRes] = await Promise.all([
+        api.get('/inventory/warehouses/'),
+        api.get('/production/factories/')
+      ])
+      const whData = Array.isArray(whRes.data) ? whRes.data : whRes.data?.results ?? []
+      const facData = Array.isArray(facRes.data) ? facRes.data : facRes.data?.results ?? []
+      setWarehouses(whData)
+      setFactories(facData)
     } catch {
       // ignore
     }
@@ -309,6 +316,7 @@ export default function Inventory() {
   const handleOpenApproveExport = (txn) => {
     setSelectedExportTxn(txn)
     setApproveWarehouseIds({})
+    setApproveFactoryId(null)
     fetchStockLevels()
     setExportApproveModalVisible(true)
   }
@@ -337,7 +345,10 @@ export default function Inventory() {
     setSubmitting(true)
     try {
       await Promise.all(txnsToApprove.map(txn => 
-        api.post(`/inventory/transactions/${txn.id}/approve/`, { warehouse_id: approveWarehouseIds[txn.id] })
+        api.post(`/inventory/transactions/${txn.id}/approve/`, { 
+          warehouse_id: approveWarehouseIds[txn.id],
+          factory_id: approveFactoryId
+        })
       ))
       messageApi.success('Duyệt xuất kho thành công!')
       setExportApproveModalVisible(false)
@@ -1976,6 +1987,12 @@ export default function Inventory() {
                           } else {
                             messageApi.success('Đã áp dụng kho xuất cho tất cả sản phẩm.')
                           }
+                          
+                          // Auto-suggest factory based on linked_warehouse
+                          const linkedFactory = factories.find(f => f.linked_warehouse === val)
+                          if (linkedFactory) {
+                            setApproveFactoryId(linkedFactory.id)
+                          }
                         }}
                       >
                         {warehouses.map(w => (
@@ -2008,7 +2025,13 @@ export default function Inventory() {
                           style={{ width: '100%', marginTop: 8 }}
                           placeholder="--- Chọn kho ---"
                           value={approveWarehouseIds[txn.id]}
-                          onChange={(val) => setApproveWarehouseIds(prev => ({ ...prev, [txn.id]: val }))}
+                          onChange={(val) => {
+                            setApproveWarehouseIds(prev => ({ ...prev, [txn.id]: val }))
+                            if (!approveFactoryId) {
+                              const linkedFactory = factories.find(f => f.linked_warehouse === val)
+                              if (linkedFactory) setApproveFactoryId(linkedFactory.id)
+                            }
+                          }}
                         >
                           {warehouses.map(w => {
                             const stock = stockLevels.find(s => Number(s.warehouse) === Number(w.id) && Number(s.product) === Number(txn.product))
@@ -2035,6 +2058,28 @@ export default function Inventory() {
                 </>
               )
             })()}
+
+            {selectedExportTxn.reference_order && (
+              <div style={{ marginTop: 16, padding: '12px 16px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fde68a' }}>
+                <Text strong style={{ color: '#92400e' }}>Nhà máy sản xuất (Nhận lệnh sản xuất & vật tư này):</Text>
+                <Select
+                  style={{ width: '100%', marginTop: 8 }}
+                  placeholder="--- Chọn nhà máy sản xuất ---"
+                  value={approveFactoryId}
+                  onChange={setApproveFactoryId}
+                  allowClear
+                >
+                  {factories.map(f => (
+                    <Option key={f.id} value={f.id}>
+                      {f.name} {f.linked_warehouse ? `(Kho liên kết: ${f.linked_warehouse_name})` : ''}
+                    </Option>
+                  ))}
+                </Select>
+                <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 4 }}>
+                  Hệ thống sẽ chuyển vật tư và tự động sinh Lệnh Sản Xuất cho Nhà máy này.
+                </Text>
+              </div>
+            )}
           </div>
         )}
       </Modal>

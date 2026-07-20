@@ -31,6 +31,7 @@ import {
 } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
 
@@ -54,6 +55,7 @@ const stepStatusConfig = {
 export default function ProductionList() {
   const { isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
+  const navigate = useNavigate()
 
   // Data
   const [productionOrders, setProductionOrders] = useState([])
@@ -446,22 +448,34 @@ export default function ProductionList() {
           </Text>
         </Col>
         <Col>
-          {canCreate && (
-            <Button
-              type="primary"
-              size="large"
-              icon={<PlusOutlined />}
-              onClick={() => openModal()}
-              style={{
-                borderRadius: 10,
-                fontWeight: 600,
-                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)',
-              }}
-            >
-              Tạo Lệnh Sản Xuất Mới
-            </Button>
-          )}
+          <Space>
+            {(isCompanyAdmin || hasPermission('production.manage_factory')) && (
+              <Button
+                size="large"
+                icon={<SettingOutlined />}
+                onClick={() => navigate('/settings/factories')}
+                style={{ borderRadius: 10 }}
+              >
+                Cài đặt Nhà máy
+              </Button>
+            )}
+            {canCreate && (
+              <Button
+                type="primary"
+                size="large"
+                icon={<PlusOutlined />}
+                onClick={() => openModal()}
+                style={{
+                  borderRadius: 10,
+                  fontWeight: 600,
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)',
+                }}
+              >
+                Tạo Lệnh Sản Xuất Mới
+              </Button>
+            )}
+          </Space>
         </Col>
       </Row>
 

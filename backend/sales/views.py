@@ -128,9 +128,20 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         from orders.serializers import OrderSerializer
 
         quotation = self.get_object()
-        if quotation.status != Quotation.STATUS_ACCEPTED:
+        
+        bypass_signature = request.user.is_superuser or request.user.is_company_admin or (
+            request.user.role and request.user.role.permissions.filter(code="sales.bypass_customer_signature").exists()
+        )
+
+        if not bypass_signature and quotation.status != Quotation.STATUS_ACCEPTED:
             return Response(
-                {"detail": "Chỉ có thể tạo đơn hàng từ báo giá đã được chấp nhận."},
+                {"detail": "Chỉ có thể tạo đơn hàng từ báo giá đã được khách hàng xác nhận (Ký đồng ý)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+            
+        if bypass_signature and quotation.status in [Quotation.STATUS_REJECTED, Quotation.STATUS_PENDING_APPROVAL]:
+            return Response(
+                {"detail": "Không thể tạo đơn hàng từ báo giá đang chờ duyệt hoặc bị từ chối."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

@@ -31,6 +31,7 @@ PERMISSIONS = [
     {"code": "sales.delete", "name": "Xóa báo giá", "module": "sales"},
     {"code": "sales.approve", "name": "Duyệt báo giá", "module": "sales"},
     {"code": "sales.require_approval", "name": "Bắt buộc trình duyệt (không cho gửi trực tiếp)", "module": "sales"},
+    {"code": "sales.bypass_customer_signature", "name": "Bỏ qua yêu cầu khách ký xác nhận (cho phép tạo đơn ngay)", "module": "sales"},
     {"code": "sales.export_pdf", "name": "Xuất PDF báo giá", "module": "sales"},
     {"code": "sales.view_all", "name": "Xem tất cả báo giá (không giới hạn bởi phòng ban/người tạo)", "module": "sales"},
 
@@ -62,6 +63,7 @@ PERMISSIONS = [
     {"code": "inventory.delete_history", "name": "Xoá lịch sử giao dịch kho", "module": "inventory"},
 
     # ── Production (Sản xuất) ─────────────────────────────────────
+    {"code": "production.manage_factory", "name": "Quản lý thiết lập nhà máy", "module": "production"},
     {"code": "production.view", "name": "Xem lệnh sản xuất", "module": "production"},
     {"code": "production.create", "name": "Tạo lệnh sản xuất", "module": "production"},
     {"code": "production.edit", "name": "Chỉnh sửa lệnh sản xuất", "module": "production"},
@@ -100,6 +102,7 @@ PERMISSIONS = [
     {"code": "finance.create_receipt", "name": "Tạo giao dịch thu/chi mới", "module": "finance"},
     {"code": "finance.delete", "name": "Xóa phiếu thu / giao dịch", "module": "finance"},
     {"code": "finance.request_credit", "name": "Trình duyệt xuất kho nợ", "module": "finance"},
+    {"code": "finance.approve_credit", "name": "Phê duyệt nợ xuất kho (Tín dụng)", "module": "finance"},
 
     # ── Zalo Integration (Tích hợp Zalo OA) ───────────────────────
     {"code": "zalo.view", "name": "Xem danh sách hội thoại (Zalo Inbox)", "module": "zalo"},

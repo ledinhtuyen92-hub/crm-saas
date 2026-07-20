@@ -65,6 +65,31 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
   
   const { user, logout, isSuperAdmin, isCompanyAdmin, hasPermission, maintenanceMode, isModuleActive } = useAuth()
 
+  // ── Thông báo ──────────────────────────────────────────────────
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [pendingInventoryCount, setPendingInventoryCount] = useState(0)
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0)
+  const [pendingSalesCount, setPendingSalesCount] = useState(0)
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0)
+  const [pendingProductionCount, setPendingProductionCount] = useState(0)
+  const [pendingDeliveryCount, setPendingDeliveryCount] = useState(0)
+  const [notifications, setNotifications] = useState([])
+  const [notifVisible, setNotifVisible] = useState(false)
+
+  React.useEffect(() => {
+    if (user) {
+      api.get('/notifications/unread-count/').then(res => {
+        setUnreadCount(res.data.unread_count || 0)
+        setPendingInventoryCount(res.data.pending_inventory_count || 0)
+        setPendingApprovalCount(res.data.pending_approval_count || 0)
+        setPendingSalesCount(res.data.pending_sales_count || 0)
+        setPendingOrdersCount(res.data.pending_orders_count || 0)
+        setPendingProductionCount(res.data.pending_production_count || 0)
+        setPendingDeliveryCount(res.data.pending_delivery_count || 0)
+      }).catch(() => {})
+    }
+  }, [user])
+
   // ── Menu items (tuỳ theo quyền) ────────────────────────────────
   const menuItems = isSuperAdmin
     ? [
@@ -103,7 +128,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
         ...(isModuleActive('approvals') ? [{
           key: '/approvals',
           icon: <CheckCircleOutlined />,
-          label: <Link to="/approvals">Phê duyệt</Link>,
+          label: <Link to="/approvals">Phê duyệt {pendingApprovalCount > 0 && <Badge count={pendingApprovalCount} style={{ marginLeft: 8 }} />}</Link>,
         }] : []),
         ...(isModuleActive('crm') && hasPermission('crm.view') ? [{
           key: '/customers',
@@ -118,27 +143,27 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
         ...(isModuleActive('sales') && hasPermission('sales.view') ? [{
           key: '/quotations',
           icon: <ShoppingCartOutlined />,
-          label: <Link to="/quotations">Bán hàng (Báo giá)</Link>,
+          label: <Link to="/quotations">Bán hàng (Báo giá) {pendingSalesCount > 0 && <Badge count={pendingSalesCount} style={{ marginLeft: 8 }} />}</Link>,
         }] : []),
         ...(isModuleActive('orders') && hasPermission('orders.view') ? [{
           key: '/orders',
           icon: <FileDoneOutlined />,
-          label: <Link to="/orders">Đơn hàng</Link>,
+          label: <Link to="/orders">Đơn hàng {pendingOrdersCount > 0 && <Badge count={pendingOrdersCount} style={{ marginLeft: 8 }} />}</Link>,
         }] : []),
         ...(isModuleActive('inventory') && hasPermission('inventory.view') ? [{
           key: '/inventory',
           icon: <DatabaseOutlined />,
-          label: <Link to="/inventory">Kho vận</Link>,
+          label: <Link to="/inventory">Kho vận {pendingInventoryCount > 0 && <Badge count={pendingInventoryCount} style={{ marginLeft: 8 }} />}</Link>,
         }] : []),
         ...(isModuleActive('production') && hasPermission('production.view') ? [{
           key: '/production',
           icon: <ToolOutlined />,
-          label: <Link to="/production">Sản xuất</Link>,
+          label: <Link to="/production">Sản xuất {pendingProductionCount > 0 && <Badge count={pendingProductionCount} style={{ marginLeft: 8 }} />}</Link>,
         }] : []),
         ...(isModuleActive('delivery') && hasPermission('delivery.view') ? [{
           key: '/delivery',
           icon: <CarOutlined />,
-          label: <Link to="/delivery">Giao hàng</Link>,
+          label: <Link to="/delivery">Giao hàng {pendingDeliveryCount > 0 && <Badge count={pendingDeliveryCount} style={{ marginLeft: 8 }} />}</Link>,
         }] : []),
         ...(isModuleActive('warranty') && hasPermission('warranty.view') ? [{
           key: '/warranty',
@@ -226,18 +251,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
     }
   }
 
-  // ── Thông báo ──────────────────────────────────────────────────
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [notifications, setNotifications] = useState([])
-  const [notifVisible, setNotifVisible] = useState(false)
 
-  React.useEffect(() => {
-    if (user) {
-      api.get('/notifications/unread-count/').then(res => {
-        setUnreadCount(res.data.unread_count || 0)
-      }).catch(() => {})
-    }
-  }, [user])
 
   const handleNotifVisibleChange = (newVisible) => {
     setNotifVisible(newVisible)

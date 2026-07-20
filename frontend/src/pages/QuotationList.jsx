@@ -956,7 +956,15 @@ export default function QuotationList() {
       align: 'right',
       render: (_, record) => (
         <Space>
-          {record.status === 'accepted' && (() => {
+          {(() => {
+            const hasBypass = hasPermission('sales.bypass_customer_signature');
+            
+            const canCreateOrder = record.status === 'accepted' || 
+              (hasBypass && ['approved', 'sent'].includes(record.status)) ||
+              (hasBypass && record.status === 'draft' && !requireApproval);
+            
+            if (!canCreateOrder) return null;
+
             if (record.order_status === 'pending') {
               return (
                 <Tooltip title="Đơn hàng đang chờ quản lý phê duyệt">
@@ -987,7 +995,9 @@ export default function QuotationList() {
             return (
               <Popconfirm
                 title="Xác nhận tạo đơn hàng?"
-                description="Bạn có chắc chắn muốn chuyển đổi báo giá này thành Đơn hàng chính thức không?"
+                description={hasBypass && record.status !== 'accepted' 
+                  ? "Khách hàng chưa ký xác nhận nhưng bạn có quyền Bỏ qua. Xác nhận tạo Đơn hàng?" 
+                  : "Bạn có chắc chắn muốn chuyển đổi báo giá này thành Đơn hàng chính thức không?"}
                 onConfirm={() => handleConvertToOrder(record.id)}
                 okText="Đồng ý tạo"
                 cancelText="Hủy"
@@ -1863,7 +1873,7 @@ export default function QuotationList() {
         })()}
         extra={
           <Space>
-            {selectedQuotation?.public_token && selectedQuotation?.status !== 'pending_approval' && (!requireApproval || ['approved', 'sent', 'accepted'].includes(selectedQuotation?.status)) && (() => {
+            {selectedQuotation?.public_token && (isCompanyAdmin || !hasPermission('sales.bypass_customer_signature')) && selectedQuotation?.status !== 'pending_approval' && (!requireApproval || ['approved', 'sent', 'accepted'].includes(selectedQuotation?.status)) && (() => {
               const expiresAt = selectedQuotation.public_link_expires_at
               const isExpired = expiresAt && dayjs(expiresAt).isBefore(dayjs())
               

@@ -12,7 +12,7 @@ class Order(models.Model):
     STATUS_COMPLETED = "completed"
     STATUS_CHOICES = [
         (STATUS_PENDING, "Chờ duyệt"),
-        (STATUS_APPROVED, "Đã chấp thuận"),
+        (STATUS_APPROVED, "Đã được duyệt"),
         (STATUS_REJECTED, "Đã từ chối"),
         (STATUS_CANCELLED, "Đã hủy"),
         (STATUS_COMPLETED, "Hoàn thành"),

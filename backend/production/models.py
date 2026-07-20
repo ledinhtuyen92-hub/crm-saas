@@ -1,6 +1,41 @@
 from django.db import models
 
 
+class Factory(models.Model):
+    """Nhà máy sản xuất / Xưởng — cô lập theo từng công ty."""
+
+    company = models.ForeignKey(
+        "users.Company",
+        on_delete=models.CASCADE,
+        related_name="factories",
+        verbose_name="Công ty",
+    )
+    name = models.CharField(max_length=150, verbose_name="Tên nhà máy")
+    location = models.CharField(max_length=255, blank=True, verbose_name="Địa chỉ nhà máy")
+    linked_warehouse = models.ForeignKey(
+        "inventory.Warehouse",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="linked_factories",
+        verbose_name="Kho liên kết",
+        help_text="Kho vật tư mặc định cho nhà máy này",
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Đang hoạt động")
+
+    class Meta:
+        verbose_name = "Nhà máy"
+        verbose_name_plural = "Nhà máy"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "name"],
+                name="unique_factory_per_company",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.company.name})"
+
 class ProductionOrder(models.Model):
     """Lệnh sản xuất — được tạo tự động hoặc thủ công sau khi đơn hàng được duyệt."""
 
@@ -34,6 +69,14 @@ class ProductionOrder(models.Model):
         on_delete=models.PROTECT,
         related_name="production_orders",
         verbose_name="Đơn hàng",
+    )
+    factory = models.ForeignKey(
+        Factory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="production_orders",
+        verbose_name="Nhà máy thực hiện",
     )
     status = models.CharField(
         max_length=20,

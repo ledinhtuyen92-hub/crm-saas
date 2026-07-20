@@ -359,8 +359,8 @@ class WarehouseViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     pagination_class = None
     
     action_permissions = {
-        "list": "inventory.manage_warehouse",
-        "retrieve": "inventory.manage_warehouse",
+        "list": ["inventory.manage_warehouse", "inventory.view", "production.manage_factory"],
+        "retrieve": ["inventory.manage_warehouse", "inventory.view", "production.manage_factory"],
         "create": "inventory.manage_warehouse",
         "update": "inventory.manage_warehouse",
         "partial_update": "inventory.manage_warehouse",
@@ -549,7 +549,7 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             if reference_order.status != Order.STATUS_APPROVED:
                 from rest_framework import serializers as drf_serializers
                 raise drf_serializers.ValidationError(
-                    {"reference_order": "Đơn hàng chưa ở trạng thái 'Đã chấp thuận', không thể xuất kho."}
+                    {"reference_order": "Đơn hàng chưa ở trạng thái 'Đã được duyệt', không thể xuất kho."}
                 )
             allowed_fin_statuses = [Order.FIN_STATUS_FULLY_PAID, Order.FIN_STATUS_CREDIT_APPROVED]
             if reference_order.financial_status not in allowed_fin_statuses:
@@ -649,6 +649,15 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         txn.status = txn.STATUS_COMPLETED
         txn.save(update_fields=["warehouse", "status"])
         
+        # Kích hoạt Lệnh Sản Xuất cho Đơn hàng
+        if txn.reference_order:
+            try:
+                from orders.signals import _create_production_order
+                _create_production_order(txn.reference_order, factory_id=request.data.get("factory_id"))
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Lỗi khi auto-create MO từ kho: {e}")
+        
         return Response({"detail": "Đã duyệt và xuất kho thành công."})
 
     @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated, ActionBasedPermission])
@@ -666,7 +675,27 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         txn.status = txn.STATUS_REJECTED
         txn.save(update_fields=["status"])
         
-        return Response({"detail": "Đã hủy lệnh xuất kho."})
+        # Nếu phiếu xuất thuộc về 1 Đơn hàng đã được Duyệt, giữ nguyên trạng thái 'approved'
+        # (Đơn vẫn được giám đốc duyệt, chỉ là kho chưa xuất được do thiếu hàng/cần điều chuyển)
+        # Sale bây giờ có thể bấm "Üyêu cầu xuất kho lại" để thủ kho duyệt lại
+        if txn.reference_order and txn.reference_order.status == 'approved':
+            order = txn.reference_order
+            # Hủy ApprovalRequest đang chờ (nếu có) của đơn nợ (finance.approve_credit)
+            # nhưng KHAI KHAI đồng đạm trạng thái đơn hàng
+            try:
+                from approvals.models import ApprovalRequest
+                from django.contrib.contenttypes.models import ContentType
+                ct = ContentType.objects.get_for_model(order)
+                ApprovalRequest.objects.filter(
+                    content_type=ct,
+                    object_id=order.id,
+                    status=ApprovalRequest.STATUS_PENDING,
+                    title__startswith="Duyệt xuất kho nợ"
+                ).update(status=ApprovalRequest.STATUS_CANCELLED)
+            except Exception:
+                pass
+
+        return Response({"detail": "Đã hủy lệnh xuất kho. Sale có thể yêu cầu xuất kho lại."})
 
     @action(detail=False, methods=["delete"], url_path="clear-history")
     def clear_history(self, request):

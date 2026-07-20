@@ -35,6 +35,7 @@ import QuotationTemplateManagement from './pages/admin/QuotationTemplateManageme
 import RoleManagement from './pages/settings/RoleManagement'
 import UserManagement from './pages/settings/UserManagement'
 import DepartmentManagement from './pages/settings/DepartmentManagement'
+import FactoryManagement from './pages/settings/FactoryManagement'
 import CompanyGeneralSettings from './pages/settings/CompanyGeneralSettings'
 import ZaloInboxPage from './pages/ZaloInboxPage'
 import ZaloConfigPage from './pages/settings/ZaloConfigPage'
@@ -223,6 +224,14 @@ function App() {
                   <CompanyAdminRoute>
                     <DepartmentManagement />
                   </CompanyAdminRoute>
+                }
+              />
+              <Route
+                path="/settings/factories"
+                element={
+                  <PermissionRoute permissionCode="production.manage_factory">
+                    <FactoryManagement />
+                  </PermissionRoute>
                 }
               />
 

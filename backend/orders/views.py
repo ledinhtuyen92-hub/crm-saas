@@ -66,6 +66,28 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             
         return qs
 
+    def destroy(self, request, *args, **kwargs):
+        order = self.get_object()
+        
+        # Kiểm tra Lệnh xuất kho (InventoryTransaction)
+        # Chỉ cho phép xóa nếu KHÔNG có phiếu kho nào, hoặc tất cả đều đã bị Hủy/Từ chối
+        has_active_inventory = order.inventory_transactions.exclude(status='rejected').exists()
+        if has_active_inventory:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"detail": "Không thể xóa đơn hàng. Vui lòng Hủy hoặc Từ chối lệnh xuất kho trước."})
+            
+        # Kiểm tra Lệnh sản xuất (ProductionOrder)
+        if hasattr(order, 'production_order') and order.production_order.status != 'cancelled':
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"detail": "Không thể xóa đơn hàng. Đang có Lệnh sản xuất chưa bị hủy."})
+            
+        # Kiểm tra Lệnh giao hàng (DeliveryOrder)
+        if hasattr(order, 'delivery_order') and order.delivery_order.status not in ['failed']:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"detail": "Không thể xóa đơn hàng. Đang có Lệnh giao hàng chưa bị hủy hoặc thất bại."})
+
+        return super().destroy(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         from core.numbering import generate_order_number
         company = self.request.user.company
@@ -342,13 +364,30 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        approver_id = request.data.get("approver_id")
+        if not approver_id:
+            return Response({"detail": "Vui lòng chọn người duyệt nợ."}, status=status.HTTP_400_BAD_REQUEST)
+
         from approvals.models import ApprovalRequest, ApprovalStep
         from users.models import User
+        from django.db.models import Q
 
-        # Tìm người duyệt là Giám đốc (is_company_admin hoặc role Giám đốc)
-        approver = User.objects.filter(company=order.company, is_company_admin=True).first()
+        approver = User.objects.filter(
+            id=approver_id,
+            company=order.company,
+            is_active=True
+        ).first()
+
         if not approver:
-            approver = User.objects.filter(company=order.company, is_superuser=True).first()
+            return Response({"detail": "Người duyệt không hợp lệ hoặc đã bị vô hiệu hóa."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Kiểm tra quyền duyệt nợ
+        if not approver.is_company_admin and not approver.is_superuser:
+            if not approver.role or not approver.role.permissions.filter(code="finance.approve_credit").exists():
+                return Response(
+                    {"detail": "Người duyệt được chọn không có quyền phê duyệt nợ (finance.approve_credit)."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         req = ApprovalRequest.objects.create(
             company=order.company,
@@ -367,7 +406,7 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         )
 
         return Response(
-            {"detail": "Đã gửi yêu cầu trình duyệt xuất kho nợ tới Giám đốc!"},
+            {"detail": "Đã gửi yêu cầu trình duyệt xuất kho nợ tới người duyệt!"},
             status=status.HTTP_201_CREATED,
         )
 

@@ -3,8 +3,31 @@ from rest_framework import permissions, viewsets
 from users.views import TenantQuerySetMixin
 from users.permissions import ActionBasedPermission
 
-from .models import ProductionOrder, ProductionStep
-from .serializers import ProductionOrderSerializer, ProductionStepSerializer
+from .models import Factory, ProductionOrder, ProductionStep
+from .serializers import FactorySerializer, ProductionOrderSerializer, ProductionStepSerializer
+
+
+class FactoryViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
+    """Quản lý danh sách nhà máy — cô lập theo company."""
+    module_code = "production"
+
+    queryset = Factory.objects.select_related("company", "linked_warehouse").order_by("name")
+    serializer_class = FactorySerializer
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+
+    action_permissions = {
+        "list": ["production.view", "inventory.approve_export", "production.manage_factory"],
+        "retrieve": ["production.view", "inventory.approve_export", "production.manage_factory"],
+        "create": "production.manage_factory",
+        "update": "production.manage_factory",
+        "partial_update": "production.manage_factory",
+        "destroy": "production.manage_factory",
+    }
+
+    def perform_create(self, serializer):
+        company = self.request.user.company
+        serializer.save(company=company)
+
 
 
 class ProductionOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):

@@ -158,14 +158,14 @@ def check_and_trigger_mo_gate(order):
         order.FIN_STATUS_CREDIT_APPROVED,
     ]
     if order.financial_status in allowed_statuses:
-        _create_production_order(order)
+        # Lệnh sản xuất (MO) chỉ được tạo sau khi Kho đã cấp vật tư thành công.
         _create_pending_inventory_export(order)
     else:
         logger.info("Order %s approved but waiting for deposit payment to open MO & Export Gate.", order.order_number)
 
 
-def _create_production_order(order):
-    """Tự động tạo ProductionOrder sau khi đơn được duyệt."""
+def _create_production_order(order, factory_id=None):
+    """Tự động tạo ProductionOrder sau khi kho cấp vật tư."""
     try:
         from production.models import ProductionOrder
         from core.numbering import derive_code_from_source
@@ -176,6 +176,7 @@ def _create_production_order(order):
             ProductionOrder.objects.create(
                 company=order.company,
                 order=order,
+                factory_id=factory_id,
                 production_order_code=po_code,
                 status=ProductionOrder.STATUS_PENDING,
             )
@@ -185,43 +186,75 @@ def _create_production_order(order):
 
 
 def _create_pending_inventory_export(order):
-    """Tạo lệnh xuất kho ở trạng thái chờ duyệt (pending) khi đủ điều kiện tài chính."""
+    """
+    Tạo hoặc tái tạo lệnh xuất kho ở trạng thái chờ duyệt (pending).
+
+    Logic tái sử dụng phiếu xuất cũ:
+    - Nếu đơn hàng đã có phiếu xuất kho bị hủy (rejected), giữ nguyên mã phiếu cũ
+      và CẬP NHẬT lại (update) các dòng bị rejected thành pending.
+    - Không tạo thêm dòng mới nếu dòng cũ đã tồn tại, tránh trùng lặp sản phẩm.
+    """
     try:
         from core.numbering import generate_transaction_code
         from inventory.models import InventoryTransaction
 
-        txn_code = None
+        # Lấy mã phiếu xuất kho cũ (dù đã bị hủy) để tái sử dụng — đảm bảo mã phiếu nhất quán
+        existing_rejected = InventoryTransaction.objects.filter(
+            reference_order=order,
+            type=InventoryTransaction.TYPE_EXPORT,
+            status=InventoryTransaction.STATUS_REJECTED
+        ).first()
+        txn_code = existing_rejected.transaction_code if existing_rejected else None
 
         for item in order.items.select_related("product").all():
-            # Kiểm tra xem đã tạo lệnh pending hoặc completed cho item này chưa (bỏ qua các lệnh đã bị từ chối)
+            # Nếu đã có dòng pending hoặc completed cho sản phẩm này → bỏ qua
             if InventoryTransaction.objects.filter(
                 reference_order=order, product=item.product, type=InventoryTransaction.TYPE_EXPORT
             ).exclude(status=InventoryTransaction.STATUS_REJECTED).exists():
                 continue
 
-            if not txn_code:
-                existing_txn = InventoryTransaction.objects.filter(reference_order=order, type=InventoryTransaction.TYPE_EXPORT).first()
-                if existing_txn:
-                    txn_code = existing_txn.transaction_code
-                else:
-                    txn_code = generate_transaction_code(order.company, "export")
-
-            InventoryTransaction.objects.create(
-                company=order.company,
-                transaction_code=txn_code,
-                type=InventoryTransaction.TYPE_EXPORT,
-                status=InventoryTransaction.STATUS_PENDING,
-                product=item.product,
-                warehouse=None,  # Chờ thủ kho chọn
-                quantity=item.quantity,
-                unit_cost=0,
+            # Kiểm tra có dòng rejected cũ cho sản phẩm này không
+            rejected_row = InventoryTransaction.objects.filter(
                 reference_order=order,
-                note=f"Lệnh xuất kho chờ duyệt cho đơn hàng {order.order_number}",
-                created_by=order.approved_by,
-            )
-        logger.info("Auto-created pending InventoryTransaction(s) for order %s", order.order_number)
+                product=item.product,
+                type=InventoryTransaction.TYPE_EXPORT,
+                status=InventoryTransaction.STATUS_REJECTED
+            ).first()
+
+            if not txn_code:
+                txn_code = generate_transaction_code(order.company, "export")
+
+            if rejected_row:
+                # TÁI SỬ DỤNG dòng cũ: reset về pending và cập nhật số lượng theo đơn hiện tại
+                rejected_row.status = InventoryTransaction.STATUS_PENDING
+                rejected_row.quantity = item.quantity
+                rejected_row.warehouse = None   # Chờ thủ kho chọn kho xuất
+                rejected_row.unit_cost = 0
+                rejected_row.transaction_code = txn_code  # Giữ nguyên mã phiếu cũ
+                rejected_row.note = f"Yêu cầu xuất kho lại cho đơn hàng {order.order_number}"
+                rejected_row.save(update_fields=[
+                    "status", "quantity", "warehouse", "unit_cost", "transaction_code", "note"
+                ])
+            else:
+                # Sản phẩm mới (chưa từng có phiếu xuất): tạo mới
+                InventoryTransaction.objects.create(
+                    company=order.company,
+                    transaction_code=txn_code,
+                    type=InventoryTransaction.TYPE_EXPORT,
+                    status=InventoryTransaction.STATUS_PENDING,
+                    product=item.product,
+                    warehouse=None,
+                    quantity=item.quantity,
+                    unit_cost=0,
+                    reference_order=order,
+                    note=f"Lệnh xuất kho chờ duyệt cho đơn hàng {order.order_number}",
+                    created_by=order.approved_by,
+                )
+        logger.info("Auto-created/updated pending InventoryTransaction(s) for order %s", order.order_number)
     except Exception as exc:
-        logger.error("Failed to create pending InventoryTransaction for order %s: %s", order.order_number, exc)
+        logger.error("Failed to create/update pending InventoryTransaction for order %s: %s", order.order_number, exc)
+
+
 
 
 def _handle_order_rejected(order):
