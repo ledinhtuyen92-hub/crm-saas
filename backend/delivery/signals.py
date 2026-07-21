@@ -28,9 +28,8 @@ def auto_create_delivery_order(sender, instance, created, **kwargs):
             }
         )
         if created_delivery:
-            # Generate code
-            from core.numbering import derive_code_from_source
-            delivery.delivery_code = derive_code_from_source(instance.order.order_number, DeliveryOrder, "delivery_code", instance.company, "GH")
+            from core.numbering import derive_code_from_order
+            delivery.delivery_code = derive_code_from_order(instance.order.order_number, instance.company, "gh")
             delivery.save(update_fields=["delivery_code"])
             logger.info(f"Auto-created DeliveryOrder {delivery.delivery_code} for Order {instance.order.order_number}")
     else:

@@ -5,6 +5,10 @@ from users.permissions import ActionBasedPermission
 
 from .models import Factory, ProductionOrder, ProductionStep
 from .serializers import FactorySerializer, ProductionOrderSerializer, ProductionStepSerializer
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from orders.serializers import OrderSerializer
+from inventory.serializers import InventoryTransactionSerializer
 
 
 class FactoryViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
@@ -47,14 +51,50 @@ class ProductionOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         "update": "production.edit",
         "partial_update": "production.edit",
         "destroy": "production.delete",
+        "order_details": "production.view",
+        "export_details": "production.view",
     }
+
+    @action(detail=True, methods=['get'])
+    def order_details(self, request, pk=None):
+        instance = self.get_object()
+        if not instance.order:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Không tìm thấy đơn hàng liên kết.")
+        # Return order details bypass standard view permissions
+        serializer = OrderSerializer(instance.order, context={'request': request})
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def export_details(self, request, pk=None):
+        instance = self.get_object()
+        if not instance.order:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Không tìm thấy đơn hàng liên kết.")
+            
+        from inventory.models import InventoryTransaction
+        txn = InventoryTransaction.objects.filter(
+            reference_order=instance.order, 
+            type=InventoryTransaction.TYPE_EXPORT
+        ).order_by('-created_at').first()
+        
+        if not txn:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Không tìm thấy phiếu xuất kho liên kết.")
+            
+        # Return export details bypass standard view permissions
+        serializer = InventoryTransactionSerializer(txn, context={'request': request})
+        return Response(serializer.data)
 
     def get_queryset(self):
         qs = super().get_queryset()
         # Filter theo trạng thái nếu có
         prod_status = self.request.query_params.get("status")
         if prod_status:
-            qs = qs.filter(status=prod_status)
+            if prod_status == "undelivered":
+                qs = qs.filter(status="completed", order__delivery_order__isnull=True)
+            else:
+                qs = qs.filter(status=prod_status)
         return qs
 
     def perform_create(self, serializer):

@@ -510,3 +510,33 @@ class SystemSettings(models.Model):
 
     def __str__(self):
         return "System Settings"
+
+
+class CompanySequence(models.Model):
+    """
+    Bộ đếm số thứ tự TRUNG TÂM cho toàn bộ hệ thống.
+    Mỗi (company, prefix, date_str) có một bộ đếm riêng.
+    Số chỉ tăng, không bao giờ giảm dù chứng từ bị xóa.
+    Đảm bảo mã chứng từ luôn liên tục, không trùng lặp, không lùi số.
+    """
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name="sequences",
+        verbose_name="Công ty",
+    )
+    prefix = models.CharField(max_length=30, verbose_name="Tiền tố mã (vd: DH, EXP, LSX)")
+    date_str = models.CharField(max_length=8, verbose_name="Ngày (DDMMYYYY)")
+    last_seq = models.PositiveIntegerField(default=0, verbose_name="Số thứ tự cuối cùng đã cấp")
+
+    class Meta:
+        verbose_name = "Bộ đếm số thứ tự"
+        verbose_name_plural = "Bộ đếm số thứ tự"
+        unique_together = [("company", "prefix", "date_str")]
+        indexes = [
+            models.Index(fields=["company", "prefix", "date_str"]),
+        ]
+
+    def __str__(self):
+        return f"{self.company.name} | {self.prefix}-{self.date_str} → {self.last_seq:03d}"
+

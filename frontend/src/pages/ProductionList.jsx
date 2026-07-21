@@ -3,12 +3,16 @@ import {
   ClockCircleOutlined,
   DeleteOutlined,
   EditOutlined,
+  FilePdfOutlined,
   PlayCircleOutlined,
   PlusOutlined,
+  PrinterOutlined,
   SearchOutlined,
   SettingOutlined,
   ToolOutlined,
   UserOutlined,
+  EyeOutlined,
+  ExportOutlined,
 } from '@ant-design/icons'
 import {
   Button,
@@ -26,7 +30,9 @@ import {
   Space,
   Table,
   Tag,
+  Tooltip,
   Typography,
+  Descriptions,
   message,
 } from 'antd'
 import dayjs from 'dayjs'
@@ -34,6 +40,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
+import TransactionPrintView from '../components/TransactionPrintView'
+import QuotationPrintView from '../components/QuotationPrintView'
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -53,7 +61,7 @@ const stepStatusConfig = {
 }
 
 export default function ProductionList() {
-  const { isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
+  const { isCompanyAdmin, hasPermission, checkMaintenance, user } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
   const navigate = useNavigate()
 
@@ -62,6 +70,8 @@ export default function ProductionList() {
   const [orders, setOrders] = useState([])
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(false)
+  const [templates, setTemplates] = useState([])
+  const [companyTemplate, setCompanyTemplate] = useState(null)
 
   // Filters
   const [searchText, setSearchText] = useState('')
@@ -79,6 +89,52 @@ export default function ProductionList() {
   const [stepModalVisible, setStepModalVisible] = useState(false)
   const [editingStep, setEditingStep] = useState(null)
   const [stepForm] = Form.useForm()
+
+  // View Modals/Drawers
+  const [viewOrderVisible, setViewOrderVisible] = useState(false)
+  const [viewOrderData, setViewOrderData] = useState(null)
+  const [viewExportVisible, setViewExportVisible] = useState(false)
+  const [viewExportData, setViewExportData] = useState(null)
+
+  const handleViewOrder = async (record) => {
+    try {
+      setLoading(true)
+      const res = await api.get(`/production/orders/${record.id}/order_details/`)
+      setViewOrderData(res.data)
+      setViewOrderVisible(true)
+    } catch (err) {
+      messageApi.error(err.response?.data?.detail || 'Không thể lấy thông tin đơn hàng')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreateDeliveryOrder = async (orderId) => {
+    if (checkMaintenance()) return
+    try {
+      setLoading(true)
+      await api.post('/delivery/orders/', { order: orderId, status: 'pending' })
+      messageApi.success('Đã tạo phiếu giao hàng thành công!')
+      fetchProductionOrders()
+    } catch (err) {
+      messageApi.error(err.response?.data?.detail || 'Lỗi khi tạo phiếu giao hàng')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleViewExport = async (record) => {
+    try {
+      setLoading(true)
+      const res = await api.get(`/production/orders/${record.id}/export_details/`)
+      setViewExportData(res.data)
+      setViewExportVisible(true)
+    } catch (err) {
+      messageApi.error(err.response?.data?.detail || 'Không thể lấy thông tin phiếu xuất kho')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Permissions
   const canCreate = hasPermission('production.create')
@@ -106,18 +162,210 @@ export default function ProductionList() {
   const fetchOrdersAndUsers = useCallback(async () => {
     await Promise.resolve()
     try {
-      const [ordRes, usrRes] = await Promise.all([
+      const [ordRes, usrRes, tmplRes, compTmplRes] = await Promise.all([
         api.get('/orders/orders/', { params: { status: 'approved' } }),
         api.get('/users/users/').catch(() => ({ data: [] })),
+        api.get('/sales/quotation-templates/active/').catch(() => ({ data: [] })),
+        api.get('/sales/quotation-templates/my-company-template/').catch(() => ({ data: null })),
       ])
       const ordData = Array.isArray(ordRes.data) ? ordRes.data : ordRes.data?.results ?? []
       const usrData = Array.isArray(usrRes.data) ? usrRes.data : usrRes.data?.results ?? []
+      const tmplData = Array.isArray(tmplRes.data) ? tmplRes.data : tmplRes.data?.results ?? []
       setOrders(ordData)
       setUsers(usrData)
+      setTemplates(tmplData)
+      setCompanyTemplate(compTmplRes.data || null)
     } catch {
       // ignore
     }
   }, [])
+
+  const getEffectiveTemplate = (order) => {
+    if (order?.custom_data?.template_snapshot?.code) {
+      return order.custom_data.template_snapshot
+    }
+    if (order?.quotation_detail?.custom_data?.template_snapshot?.code) {
+      return order.quotation_detail.custom_data.template_snapshot
+    }
+    if (companyTemplate) {
+      return companyTemplate
+    }
+    const defaultSys = templates.find((t) => t.is_default)
+    return defaultSys || null
+  }
+
+  const handlePrintOrderPDF = () => {
+    if (!viewOrderData) return
+    const contentEl = document.querySelector('.printable-quotation-content')
+    const dNum = viewOrderData.order_number || 'Don_Hang_SX'
+    const effTmpl = getEffectiveTemplate(viewOrderData)
+    const isLand = effTmpl?.layout_config?.paper_orientation === 'landscape' || effTmpl?.code === 'production_landscape_a4'
+
+    if (!contentEl) {
+      const oldTitle = document.title
+      document.title = dNum
+      window.print()
+      document.title = oldTitle
+      return
+    }
+
+    const styleTags = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map((el) => el.outerHTML)
+      .join('\n')
+
+    // Clone DOM và patch inline style để override React styles
+    const cloned = contentEl.cloneNode(true)
+
+    // Thu nhỏ margin của tiêu đề/phần mô tả để tiết kiệm không gian
+    const titleSection = cloned.querySelector('[style*="textAlign: center"], [style*="text-align: center"]')
+    if (titleSection) {
+      titleSection.style.margin = '8px 0 12px'
+    }
+
+    // Ép signature-block bám vào nội dung, không nhảy trang
+    const sigBlock = cloned.querySelector('.signature-block')
+    if (sigBlock) {
+      sigBlock.style.marginTop = '12px'
+      sigBlock.style.pageBreakBefore = 'avoid'
+      sigBlock.style.breakBefore = 'avoid'
+      sigBlock.style.pageBreakInside = 'avoid'
+      sigBlock.style.breakInside = 'avoid'
+    }
+
+    // Thu nhỏ khoảng trống placeholder ký tên nếu có (height: 130px → 60px)
+    const emptySpacers = cloned.querySelectorAll('[style*="height: 130"]')
+    emptySpacers.forEach(el => { el.style.height = '60px' })
+
+    const printWin = window.open('', '_blank', 'width=1280,height=900')
+    if (!printWin) {
+      const oldTitle = document.title
+      document.title = dNum
+      window.print()
+      document.title = oldTitle
+      return
+    }
+
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${dNum}</title>
+        ${styleTags}
+        <style>
+          @page {
+            size: A4 landscape;
+            margin: 6mm;
+          }
+          * { box-sizing: border-box; }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            font-family: Inter, ui-sans-serif, system-ui, Arial, sans-serif !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .printable-quotation-content {
+            width: 1060px !important;
+            max-width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .signature-block {
+            page-break-before: avoid !important;
+            break-before: avoid !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-top: 12px !important;
+          }
+          .ant-table-wrapper, .ant-table, .ant-table-container, .ant-table-tbody {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          /* Scale toàn bộ nội dung để vừa 1 trang nếu quá cao */
+          @media print {
+            body {
+              transform-origin: top left;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${cloned.outerHTML}
+        <script>
+          setTimeout(() => { window.print(); window.close(); }, 600);
+        <\/script>
+      </body>
+      </html>
+    `)
+    printWin.document.close()
+  }
+
+  const handlePrintExportPDF = () => {
+    if (!viewExportData) return
+    const contentEl = document.querySelector('.printable-transaction-content')
+    const dNum = viewExportData.transaction_code || viewExportData.code || 'Phieu_Xuat_Kho'
+
+    if (!contentEl) {
+      const oldTitle = document.title
+      document.title = dNum
+      window.print()
+      document.title = oldTitle
+      return
+    }
+
+    const styleTags = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map((el) => el.outerHTML)
+      .join('\n')
+
+    const printWin = window.open('', '_blank', 'width=1000,height=800')
+    if (!printWin) {
+      const oldTitle = document.title
+      document.title = dNum
+      window.print()
+      document.title = oldTitle
+      return
+    }
+
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${dNum}</title>
+        ${styleTags}
+        <style>
+          @page { size: A4 portrait; margin: 10mm; }
+          * { box-sizing: border-box; }
+          html, body {
+            margin: 0 !important; padding: 0 !important;
+            background: #ffffff !important;
+            font-family: "Times New Roman", Times, serif !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .printable-transaction-content { width: 100% !important; margin: 0 auto !important; }
+        </style>
+      </head>
+      <body>
+        ${contentEl.outerHTML}
+        <script>
+          setTimeout(() => { window.print(); window.close(); }, 400);
+        <\/script>
+      </body>
+      </html>
+    `)
+    printWin.document.close()
+  }
 
   useEffect(() => {
     fetchProductionOrders()
@@ -341,9 +589,14 @@ export default function ProductionList() {
             >
               {r.production_order_code || `LSX-${r.id ? r.id.toString().padStart(4, '0') : '0000'}`}
             </Text>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Đơn hàng: <Tag color="blue">{r.order_number || `DH-${r.order}`}</Tag>
+            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 2 }}>
+              Đơn hàng: <Tag color="blue" style={{ margin: 0 }}>{r.order_number || `DH-${r.order}`}</Tag>
             </Text>
+            {r.export_transaction_code && (
+              <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
+                Xuất kho: <Tag color="purple" style={{ margin: 0 }}>{r.export_transaction_code}</Tag>
+              </Text>
+            )}
           </div>
         </Space>
       ),
@@ -352,10 +605,39 @@ export default function ProductionList() {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (st) => {
+      render: (st, r) => {
         const cfg = statusConfig[st] || { label: st, color: 'default' }
-        return <Tag color={cfg.color} icon={cfg.icon}>{cfg.label}</Tag>
+        const hasDeliveryPerm = isCompanyAdmin || hasPermission('delivery', 'edit')
+        
+        return (
+          <Space direction="vertical" size={4} align="center">
+            <Tag color={cfg.color} icon={cfg.icon} style={{ margin: 0 }}>{cfg.label}</Tag>
+            {st === 'completed' && !r.delivery_status && (
+              hasDeliveryPerm ? (
+                <Tooltip title="Nhấn để tạo Phiếu giao hàng">
+                  <Button 
+                    type="primary" 
+                    danger 
+                    size="small" 
+                    onClick={() => handleCreateDeliveryOrder(r.order)}
+                    style={{ fontSize: 11, height: 22, padding: '0 6px' }}
+                  >
+                    Hàng chưa được giao
+                  </Button>
+                </Tooltip>
+              ) : (
+                <Tag color="error" style={{ margin: 0 }}>Hàng chưa được giao</Tag>
+              )
+            )}
+          </Space>
+        )
       },
+    },
+    {
+      title: 'Nhà máy',
+      dataIndex: 'factory_name',
+      key: 'factory',
+      render: (val) => val ? <Text strong style={{ color: '#4b5563' }}>{val}</Text> : <Text type="secondary">—</Text>,
     },
     {
       title: 'Tiến độ công đoạn',
@@ -395,6 +677,24 @@ export default function ProductionList() {
       align: 'right',
       render: (_, record) => (
         <Space>
+          <Tooltip title="Xem đơn hàng">
+            <Button
+              type="text"
+              icon={<EyeOutlined style={{ color: '#2563eb' }} />}
+              onClick={() => handleViewOrder(record)}
+            />
+          </Tooltip>
+
+          {record.export_transaction_code && (
+            <Tooltip title="Xem phiếu xuất kho">
+              <Button
+                type="text"
+                icon={<ExportOutlined style={{ color: '#8b5cf6' }} />}
+                onClick={() => handleViewExport(record)}
+              />
+            </Tooltip>
+          )}
+
           <Button
             type="primary"
             size="small"
@@ -409,11 +709,13 @@ export default function ProductionList() {
           </Button>
 
           {canEdit && (
-            <Button
-              type="text"
-              icon={<EditOutlined style={{ color: '#d97706' }} />}
-              onClick={() => openModal(record)}
-            />
+            <Tooltip title="Sửa lệnh SX">
+              <Button
+                type="text"
+                icon={<EditOutlined style={{ color: '#d97706' }} />}
+                onClick={() => openModal(record)}
+              />
+            </Tooltip>
           )}
 
           {canDelete && (
@@ -503,6 +805,7 @@ export default function ProductionList() {
               <Option value="pending">Chờ sản xuất</Option>
               <Option value="in_progress">Đang sản xuất</Option>
               <Option value="completed">Hoàn thành</Option>
+              <Option value="undelivered">Hàng chưa được giao</Option>
               <Option value="cancelled">Đã hủy</Option>
             </Select>
           </Col>
@@ -533,7 +836,7 @@ export default function ProductionList() {
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="order" label="Đơn hàng liên kết" rules={[{ required: true, message: 'Vui lòng chọn đơn hàng' }]}>
             <Select showSearch optionFilterProp="children" placeholder="Chọn đơn hàng đã được chấp thuận..." disabled={!!editingPO}>
-              {orders.map((o) => (
+              {orders.filter(o => editingPO || !o.has_production_order).map((o) => (
                 <Option key={o.id} value={o.id}>{o.order_number} — Khách: {o.customer_name}</Option>
               ))}
             </Select>
@@ -560,7 +863,25 @@ export default function ProductionList() {
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="end_date" label="Ngày kết thúc dự kiến">
+              <Form.Item 
+                name="end_date" 
+                label="Ngày kết thúc dự kiến"
+                dependencies={['start_date']}
+                rules={[
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      const startDate = getFieldValue('start_date');
+                      if (!startDate || !value) {
+                        return Promise.resolve();
+                      }
+                      if (value.isBefore(startDate, 'day')) {
+                        return Promise.reject(new Error('Ngày kết thúc không được trước ngày bắt đầu!'));
+                      }
+                      return Promise.resolve();
+                    },
+                  }),
+                ]}
+              >
                 <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
               </Form.Item>
             </Col>
@@ -731,6 +1052,64 @@ export default function ProductionList() {
             </Col>
           </Row>
         </Form>
+      </Modal>
+
+      {/* Drawer: View Order Details */}
+      <Drawer
+        title="Thông tin đơn hàng"
+        width={Math.min(900, window.innerWidth < 768 ? window.innerWidth : window.innerWidth * 0.78)}
+        open={viewOrderVisible}
+        onClose={() => setViewOrderVisible(false)}
+        styles={{ body: { padding: window.innerWidth < 768 ? '12px' : '24px' } }}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setViewOrderVisible(false)}>Đóng</Button>
+            <Button
+              type="primary"
+              icon={<FilePdfOutlined />}
+              onClick={handlePrintOrderPDF}
+              style={{ background: '#dc2626', borderColor: '#dc2626' }}
+            >
+              Tải PDF / In
+            </Button>
+          </div>
+        }
+      >
+        {viewOrderData && (
+          <QuotationPrintView 
+            quotation={viewOrderData} 
+            type="order" 
+            effectiveTemplate={getEffectiveTemplate(viewOrderData)} 
+            hidePricing={true}
+            hideCustomerInfo={true}
+          />
+        )}
+      </Drawer>
+
+      {/* Modal: View Export Details */}
+      <Modal
+        title="Chi tiết phiếu xuất kho"
+        open={viewExportVisible}
+        onCancel={() => setViewExportVisible(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setViewExportVisible(false)}>Đóng</Button>
+            <Button
+              type="primary"
+              icon={<FilePdfOutlined />}
+              onClick={handlePrintExportPDF}
+              style={{ background: '#dc2626', borderColor: '#dc2626' }}
+            >
+              Tải PDF / In
+            </Button>
+          </div>
+        }
+        width={Math.min(900, window.innerWidth < 768 ? window.innerWidth - 16 : window.innerWidth * 0.78)}
+        style={{ top: 20 }}
+      >
+        <div style={{ maxHeight: '80vh', overflowY: 'auto', paddingRight: 8 }}>
+          <TransactionPrintView transaction={viewExportData} company={user?.company} />
+        </div>
       </Modal>
     </div>
   )

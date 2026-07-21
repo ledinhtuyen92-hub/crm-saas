@@ -119,6 +119,9 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source="created_by.get_full_name", read_only=True)
     reference_order_number = serializers.CharField(source="reference_order.order_number", read_only=True)
     company_info = serializers.SerializerMethodField()
+    factory_name = serializers.CharField(source="factory.name", read_only=True, allow_null=True)
+    has_production_order = serializers.SerializerMethodField()
+    production_order_code = serializers.SerializerMethodField()
 
     class Meta:
         model = InventoryTransaction
@@ -146,11 +149,14 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
             "created_by_name",
             "created_at",
             "company_info",
+            "factory_name",
+            "has_production_order",
+            "production_order_code",
         ]
         read_only_fields = [
             "id", "company", "transaction_code", "type_display", "status_display", "product_name", "product_sku",
             "warehouse_name", "target_warehouse_name", "created_by", "created_by_name", "created_at", "company_info",
-            "reference_order_number",
+            "reference_order_number", "factory_name", "has_production_order", "production_order_code",
         ]
 
     def validate(self, data):
@@ -178,3 +184,20 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
 
     def get_company_info(self, obj):
         return get_company_info_dict(self, obj)
+
+    def get_has_production_order(self, obj):
+        """Trả về True nếu phiếu xuất kho đã hoàn thành và có lệnh SX liên kết."""
+        if obj.type != obj.TYPE_EXPORT or obj.status != obj.STATUS_COMPLETED:
+            return None  # Chỉ áp dụng cho phiếu xuất đã hoàn thành
+        if not obj.reference_order:
+            return None
+        return obj.reference_order.production_orders.exists()
+
+    def get_production_order_code(self, obj):
+        """Trả về mã lệnh SX liên kết (nếu có)."""
+        if obj.type != obj.TYPE_EXPORT or obj.status != obj.STATUS_COMPLETED:
+            return None
+        if not obj.reference_order:
+            return None
+        po = obj.reference_order.production_orders.first()
+        return po.production_order_code if po else None

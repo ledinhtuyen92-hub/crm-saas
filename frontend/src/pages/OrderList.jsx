@@ -75,6 +75,8 @@ export default function OrderList() {
   // Filters
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [financialFilter, setFinancialFilter] = useState('')
+  const [exportFilter, setExportFilter] = useState('')
 
   // Modal Add / Edit
   const [modalVisible, setModalVisible] = useState(false)
@@ -319,6 +321,8 @@ export default function OrderList() {
     try {
       const params = {}
       if (statusFilter) params.status = statusFilter
+      if (financialFilter) params.financial_status = financialFilter
+      if (exportFilter) params.export_status = exportFilter
       const res = await api.get('/orders/orders/', { params })
       const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
       setOrders(data)
@@ -327,7 +331,7 @@ export default function OrderList() {
     } finally {
       setLoading(false)
     }
-  }, [statusFilter, messageApi])
+  }, [statusFilter, financialFilter, exportFilter, messageApi])
 
   const fetchCustomersAndProducts = useCallback(async () => {
     await Promise.resolve()
@@ -1277,6 +1281,15 @@ export default function OrderList() {
                       : r.financial_status_display || 'Chờ cọc')}
               </Tag>
             )}
+            {r.needs_export_request && ['fully_paid', 'deposit_paid', 'credit_approved'].includes(r.financial_status) && (
+              <Tag color="error" style={{ fontSize: 11, cursor: 'pointer' }} onClick={(e) => {
+                e.stopPropagation()
+                setSelectedOrder(r)
+                setDrawerVisible(true)
+              }}>
+                ⚠️ Bị từ chối xuất kho
+              </Tag>
+            )}
           </Space>
         )
       },
@@ -1353,7 +1366,7 @@ export default function OrderList() {
             }}
           />
 
-          {canEdit && (isCompanyAdmin || record.status === 'pending' || record.status === 'rejected') && (
+          {canEdit && record.status !== 'cancelled' && record.status !== 'completed' && (
             <Button
               type="text"
               icon={<EditOutlined style={{ color: '#d97706' }} />}
@@ -1478,8 +1491,8 @@ export default function OrderList() {
         }}
         bodyStyle={{ padding: 16 }}
       >
-        <Row gutter={16} align="middle">
-          <Col xs={24} sm={12} md={8}>
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} sm={12} md={7}>
             <Input
               placeholder="Tìm theo mã đơn hàng, tên khách hàng..."
               prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
@@ -1489,9 +1502,9 @@ export default function OrderList() {
               style={{ borderRadius: 8 }}
             />
           </Col>
-          <Col xs={24} sm={12} md={6}>
+          <Col xs={24} sm={12} md={5}>
             <Select
-              placeholder="Lọc theo trạng thái"
+              placeholder="Tình trạng Đơn hàng"
               value={statusFilter || undefined}
               onChange={(val) => setStatusFilter(val || '')}
               allowClear
@@ -1502,6 +1515,32 @@ export default function OrderList() {
               <Option value="rejected"><Badge status="error" text="Đã từ chối" /></Option>
               <Option value="cancelled"><Badge status="default" text="Đã hủy" /></Option>
               <Option value="completed"><Badge status="success" text="Hoàn thành" /></Option>
+            </Select>
+          </Col>
+          <Col xs={24} sm={12} md={7}>
+            <Select
+              placeholder="Thanh toán & Công nợ"
+              value={financialFilter || undefined}
+              onChange={(val) => setFinancialFilter(val || '')}
+              allowClear
+              style={{ width: '100%' }}
+            >
+              <Option value="unpaid"><Badge status="default" text="Chờ thanh toán / Chờ cọc" /></Option>
+              <Option value="deposit_paid"><Badge status="processing" text="Đã cọc (Đủ ĐK sản xuất)" /></Option>
+              <Option value="fully_paid"><Badge status="success" text="Đã thanh toán đủ (Đủ ĐK XK)" /></Option>
+              <Option value="credit_approved"><Badge status="warning" text="Duyệt xuất nợ ngoại lệ" /></Option>
+              <Option value="pending_credit"><Badge status="error" text="Đang chờ duyệt kho nợ" /></Option>
+            </Select>
+          </Col>
+          <Col xs={24} sm={12} md={5}>
+            <Select
+              placeholder="Vận hành Kho"
+              value={exportFilter || undefined}
+              onChange={(val) => setExportFilter(val || '')}
+              allowClear
+              style={{ width: '100%' }}
+            >
+              <Option value="rejected"><Badge status="error" text="Bị từ chối xuất kho" /></Option>
             </Select>
           </Col>
         </Row>
@@ -1887,7 +1926,7 @@ export default function OrderList() {
               </Row>
             </div>
 
-            {selectedOrder.needs_export_request && (selectedOrder.financial_status === 'fully_paid' || selectedOrder.financial_status === 'credit_approved') && (
+            {selectedOrder.needs_export_request && ['fully_paid', 'deposit_paid', 'credit_approved'].includes(selectedOrder.financial_status) && (
               <div style={{ padding: '16px', background: '#fef2f2', borderRadius: '12px', border: '1px solid #fca5a5', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Space size={12}>
                   <AlertOutlined style={{ color: '#ef4444', fontSize: 20 }} />

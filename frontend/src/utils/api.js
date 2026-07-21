@@ -35,7 +35,17 @@ const processQueue = (error, token = null) => {
 }
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Tự động trigger refresh notifications mỗi khi có thao tác thay đổi dữ liệu thành công
+    const method = response.config?.method?.toLowerCase()
+    if (['post', 'put', 'patch', 'delete'].includes(method)) {
+      // Bỏ qua các endpoint không liên quan đến thông báo công việc (VD: chat)
+      if (!response.config.url.includes('/messages/') && !response.config.url.includes('/chat/')) {
+        window.dispatchEvent(new Event('refresh-notifications'))
+      }
+    }
+    return response
+  },
   async (error) => {
     const originalRequest = error.config
 

@@ -157,6 +157,11 @@ const TransactionPrintView = ({ transaction, company }) => {
               <Text>- Kèm theo Đơn hàng số: <Text strong>{transaction.reference_order_number || transaction.reference_order}</Text></Text>
             </Col>
           )}
+          {transaction.type === 'export' && transaction.factory_name && (
+            <Col xs={24} md={24}>
+              <Text>- Giao tới Nhà máy sản xuất: <Text strong>{transaction.factory_name}</Text></Text>
+            </Col>
+          )}
         </Row>
       </div>
 

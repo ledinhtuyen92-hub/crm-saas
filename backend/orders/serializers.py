@@ -48,6 +48,7 @@ class OrderSerializer(serializers.ModelSerializer):
     has_pending_credit_request = serializers.SerializerMethodField()
     payment_milestones = OrderPaymentMilestoneSerializer(many=True, read_only=True)
     needs_export_request = serializers.SerializerMethodField()
+    has_production_order = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -94,6 +95,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "has_pending_credit_request",
             "needs_export_request",
             "payment_milestones",
+            "has_production_order",
         ]
         read_only_fields = [
             "id", "company", "order_number", "status_display", "financial_status_display",
@@ -103,10 +105,15 @@ class OrderSerializer(serializers.ModelSerializer):
             "items", "created_at", "updated_at", "company_info", "quotation_detail",
             "has_pending_credit_request",
             "payment_milestones",
+            "needs_export_request",
+            "has_production_order",
         ]
 
     def get_company_info(self, obj):
         return get_company_info_dict(self, obj)
+
+    def get_has_production_order(self, obj):
+        return obj.production_orders.exists()
 
     def get_needs_export_request(self, obj):
         if obj.status != "approved":

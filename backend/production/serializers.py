@@ -47,6 +47,7 @@ class ProductionOrderSerializer(serializers.ModelSerializer):
     order_number = serializers.CharField(source="order.order_number", read_only=True)
     factory_name = serializers.CharField(source="factory.name", read_only=True)
     delivery_status = serializers.SerializerMethodField()
+    export_transaction_code = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductionOrder
@@ -56,6 +57,7 @@ class ProductionOrderSerializer(serializers.ModelSerializer):
             "order",
             "production_order_code",
             "order_number",
+            "export_transaction_code",
             "factory",
             "factory_name",
             "status",
@@ -73,7 +75,28 @@ class ProductionOrderSerializer(serializers.ModelSerializer):
             "status_display", "delivery_status", "created_at", "updated_at"
         ]
 
+    def validate(self, data):
+        start_date = data.get('start_date') or (self.instance.start_date if self.instance else None)
+        end_date = data.get('end_date') or (self.instance.end_date if self.instance else None)
+
+        if start_date and end_date and start_date > end_date:
+            raise serializers.ValidationError({
+                "end_date": "Ngày kết thúc dự kiến không được trước ngày bắt đầu sản xuất."
+            })
+        return data
+
     def get_delivery_status(self, obj):
         if obj.order and hasattr(obj.order, 'delivery_order'):
             return obj.order.delivery_order.status
+        return None
+
+    def get_export_transaction_code(self, obj):
+        if obj.order:
+            # Import inside to avoid circular import if necessary
+            from inventory.models import InventoryTransaction
+            txn = InventoryTransaction.objects.filter(
+                reference_order=obj.order, type=InventoryTransaction.TYPE_EXPORT
+            ).order_by('-created_at').first()
+            if txn:
+                return txn.transaction_code
         return None

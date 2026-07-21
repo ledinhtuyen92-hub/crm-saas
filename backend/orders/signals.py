@@ -168,11 +168,12 @@ def _create_production_order(order, factory_id=None):
     """Tự động tạo ProductionOrder sau khi kho cấp vật tư."""
     try:
         from production.models import ProductionOrder
-        from core.numbering import derive_code_from_source
+        from core.numbering import derive_code_from_order
 
         # Kiểm tra tránh duplicate
         if not ProductionOrder.objects.filter(order=order).exists():
-            po_code = derive_code_from_source(order.order_number, ProductionOrder, "production_order_code", order.company, "LSX")
+            # Thừa kế hậu tố từ mã đơn hàng: DH-21072026-001 → LSX-21072026-001
+            po_code = derive_code_from_order(order.order_number, order.company, "lsx")
             ProductionOrder.objects.create(
                 company=order.company,
                 order=order,
@@ -180,77 +181,61 @@ def _create_production_order(order, factory_id=None):
                 production_order_code=po_code,
                 status=ProductionOrder.STATUS_PENDING,
             )
-            logger.info("Auto-created ProductionOrder for order %s", order.order_number)
+            logger.info("Auto-created ProductionOrder for order %s with code %s", order.order_number, po_code)
     except Exception as exc:
         logger.error("Failed to create ProductionOrder for order %s: %s", order.order_number, exc)
+
 
 
 def _create_pending_inventory_export(order):
     """
     Tạo hoặc tái tạo lệnh xuất kho ở trạng thái chờ duyệt (pending).
 
-    Logic tái sử dụng phiếu xuất cũ:
-    - Nếu đơn hàng đã có phiếu xuất kho bị hủy (rejected), giữ nguyên mã phiếu cũ
-      và CẬP NHẬT lại (update) các dòng bị rejected thành pending.
-    - Không tạo thêm dòng mới nếu dòng cũ đã tồn tại, tránh trùng lặp sản phẩm.
+    Logic mã phiếu:
+    - Thừa kế hậu tố từ mã đơn hàng (DH-21072026-001 → EXP-21072026-001).
+    - Xóa các dòng rejected cũ trước khi tạo mới để tránh trùng sản phẩm.
+    - Đảm bảo hậu tố phiếu xuất luôn khớp với đơn hàng tương ứng.
     """
     try:
-        from core.numbering import generate_transaction_code
+        from core.numbering import derive_code_from_order
         from inventory.models import InventoryTransaction
 
-        # Lấy mã phiếu xuất kho cũ (dù đã bị hủy) để tái sử dụng — đảm bảo mã phiếu nhất quán
-        existing_rejected = InventoryTransaction.objects.filter(
+        # Xóa toàn bộ dòng rejected cũ của đơn hàng này để tạo phiếu mới sạch
+        InventoryTransaction.objects.filter(
             reference_order=order,
             type=InventoryTransaction.TYPE_EXPORT,
             status=InventoryTransaction.STATUS_REJECTED
-        ).first()
-        txn_code = existing_rejected.transaction_code if existing_rejected else None
+        ).delete()
+
+        # Kiểm tra xem đã có dòng pending/completed nào chưa (để tránh tạo trùng)
+        pending_or_done = InventoryTransaction.objects.filter(
+            reference_order=order,
+            type=InventoryTransaction.TYPE_EXPORT,
+        ).exclude(status=InventoryTransaction.STATUS_REJECTED)
+
+        if pending_or_done.exists():
+            # Đã có phiếu đang chờ duyệt hoặc hoàn thành → không tạo thêm
+            return
+
+        # Sinh mã phiếu: thừa kế hậu tố từ mã đơn hàng
+        # VD: FUJI-DH-21072026-001 → FUJI-EXP-21072026-001
+        txn_code = derive_code_from_order(order.order_number, order.company, "export")
 
         for item in order.items.select_related("product").all():
-            # Nếu đã có dòng pending hoặc completed cho sản phẩm này → bỏ qua
-            if InventoryTransaction.objects.filter(
-                reference_order=order, product=item.product, type=InventoryTransaction.TYPE_EXPORT
-            ).exclude(status=InventoryTransaction.STATUS_REJECTED).exists():
-                continue
-
-            # Kiểm tra có dòng rejected cũ cho sản phẩm này không
-            rejected_row = InventoryTransaction.objects.filter(
-                reference_order=order,
-                product=item.product,
+            InventoryTransaction.objects.create(
+                company=order.company,
+                transaction_code=txn_code,
                 type=InventoryTransaction.TYPE_EXPORT,
-                status=InventoryTransaction.STATUS_REJECTED
-            ).first()
-
-            if not txn_code:
-                txn_code = generate_transaction_code(order.company, "export")
-
-            if rejected_row:
-                # TÁI SỬ DỤNG dòng cũ: reset về pending và cập nhật số lượng theo đơn hiện tại
-                rejected_row.status = InventoryTransaction.STATUS_PENDING
-                rejected_row.quantity = item.quantity
-                rejected_row.warehouse = None   # Chờ thủ kho chọn kho xuất
-                rejected_row.unit_cost = 0
-                rejected_row.transaction_code = txn_code  # Giữ nguyên mã phiếu cũ
-                rejected_row.note = f"Yêu cầu xuất kho lại cho đơn hàng {order.order_number}"
-                rejected_row.save(update_fields=[
-                    "status", "quantity", "warehouse", "unit_cost", "transaction_code", "note"
-                ])
-            else:
-                # Sản phẩm mới (chưa từng có phiếu xuất): tạo mới
-                InventoryTransaction.objects.create(
-                    company=order.company,
-                    transaction_code=txn_code,
-                    type=InventoryTransaction.TYPE_EXPORT,
-                    status=InventoryTransaction.STATUS_PENDING,
-                    product=item.product,
-                    warehouse=None,
-                    quantity=item.quantity,
-                    unit_cost=0,
-                    reference_order=order,
-                    note=f"Lệnh xuất kho chờ duyệt cho đơn hàng {order.order_number}",
-                    created_by=order.approved_by,
-                )
-        logger.info("Auto-created/updated pending InventoryTransaction(s) for order %s", order.order_number)
+                status=InventoryTransaction.STATUS_PENDING,
+                product=item.product,
+                warehouse=None,
+                quantity=item.quantity,
+                unit_cost=0,
+                reference_order=order,
+                note=f"Lệnh xuất kho chờ duyệt cho đơn hàng {order.order_number}",
+                created_by=order.approved_by,
+            )
+        logger.info("Auto-created pending InventoryTransaction(s) for order %s with code %s", order.order_number, txn_code)
     except Exception as exc:
         logger.error("Failed to create/update pending InventoryTransaction for order %s: %s", order.order_number, exc)
 

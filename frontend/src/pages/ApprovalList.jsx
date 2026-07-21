@@ -74,6 +74,7 @@ export default function ApprovalList() {
       message.success(`Đã ${actionType === 'approve' ? 'duyệt' : 'từ chối'} thành công.`)
       setModalVisible(false)
       fetchRequests()
+      window.dispatchEvent(new Event('refresh-notifications'))
     } catch (err) {
       message.error(err.response?.data?.detail || 'Lỗi xử lý phê duyệt')
     } finally {
@@ -100,6 +101,7 @@ export default function ApprovalList() {
       }
       setDeleteModalVisible(false)
       fetchRequests()
+      window.dispatchEvent(new Event('refresh-notifications'))
     } catch (err) {
       message.error(err.response?.data?.detail || 'Lỗi khi xóa yêu cầu phê duyệt')
     } finally {

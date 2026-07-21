@@ -77,7 +77,9 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
   const [notifVisible, setNotifVisible] = useState(false)
 
   React.useEffect(() => {
-    if (user) {
+    if (!user) return
+
+    const fetchCounts = () => {
       api.get('/notifications/unread-count/').then(res => {
         setUnreadCount(res.data.unread_count || 0)
         setPendingInventoryCount(res.data.pending_inventory_count || 0)
@@ -87,6 +89,20 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
         setPendingProductionCount(res.data.pending_production_count || 0)
         setPendingDeliveryCount(res.data.pending_delivery_count || 0)
       }).catch(() => {})
+    }
+
+    // Gọi lần đầu
+    fetchCounts()
+
+    // Lắng nghe sự kiện để cập nhật tức thì (ngay sau khi duyệt/xóa)
+    window.addEventListener('refresh-notifications', fetchCounts)
+
+    // Lặp lại mỗi 30 giây
+    const intervalId = setInterval(fetchCounts, 30000)
+
+    return () => {
+      clearInterval(intervalId)
+      window.removeEventListener('refresh-notifications', fetchCounts)
     }
   }, [user])
 

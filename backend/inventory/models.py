@@ -386,6 +386,15 @@ class InventoryTransaction(models.Model):
         verbose_name="Đơn hàng liên kết",
         help_text="Liên kết với đơn hàng khi type=export.",
     )
+    factory = models.ForeignKey(
+        "production.Factory",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="inventory_transactions",
+        verbose_name="Nhà máy sản xuất",
+        help_text="Nhà máy nhận vật tư khi xuất kho.",
+    )
     note = models.TextField(blank=True, verbose_name="Ghi chú")
     created_by = models.ForeignKey(
         "users.User",

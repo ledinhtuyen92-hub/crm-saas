@@ -52,7 +52,7 @@ const computeProductSTT = (data, index, field = 'product') => {
   return count
 }
 
-export default function QuotationPrintView({ quotation, type = 'quotation', effectiveTemplate, isCompanyAdmin, products = [], renderCustomerSignature }) {
+export default function QuotationPrintView({ quotation, type = 'quotation', effectiveTemplate, isCompanyAdmin, products = [], renderCustomerSignature, hidePricing = false, hideCustomerInfo = false }) {
   if (!quotation) return null
   
   const isLand = effectiveTemplate?.layout_config?.paper_orientation === 'landscape' || effectiveTemplate?.code === 'production_landscape_a4'
@@ -145,88 +145,92 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
             <span style={{ color: '#334155', fontSize: 13.5 }}>Ngày {type === 'order' ? 'tạo' : 'báo giá'}: <strong>{dayjs(quotation.created_at).format('DD/MM/YYYY')}</strong></span>
           </Space>
         </div>
-        <div
-          style={{
-            color: '#475569',
-            fontSize: 14,
-            fontStyle: 'italic',
-            maxWidth: 680,
-            margin: '0 auto',
-            lineHeight: '1.6',
-          }}
-        >
-          Kính gửi Quý khách hàng, chúng tôi xin trân trọng gửi bảng {type === 'order' ? 'đơn hàng' : 'báo giá'} các hạng mục sản phẩm / dịch vụ chi tiết dưới đây:
-        </div>
+        {!hideCustomerInfo && (
+          <div
+            style={{
+              color: '#475569',
+              fontSize: 14,
+              fontStyle: 'italic',
+              maxWidth: 680,
+              margin: '0 auto',
+              lineHeight: '1.6',
+            }}
+          >
+            Kính gửi Quý khách hàng, chúng tôi xin trân trọng gửi bảng {type === 'order' ? 'đơn hàng' : 'báo giá'} các hạng mục sản phẩm / dịch vụ chi tiết dưới đây:
+          </div>
+        )}
       </div>
 
-      {isLand ? (
-        <Row gutter={16} style={{ marginBottom: 20 }}>
-          <Col xs={24} sm={12}>
-            <Card size="small" style={{ background: '#f8fafc', borderColor: '#cbd5e1', borderRadius: 10, height: '100%' }}>
-              <div style={{ fontWeight: 700, color: '#1e3a8a', fontSize: 13.5, marginBottom: 8, borderBottom: '1px solid #e2e8f0', paddingBottom: 4 }}>
-                🏢 BÊN BÁN (BÊN B): {quotation?.company_info?.name || effectiveTemplate?.company_info?.name || 'CÔNG TY CỦA BẠN'}
-              </div>
-              <div style={{ fontSize: 13, color: '#334155', lineHeight: '1.7' }}>
-                <div><strong>Đại diện:</strong> {quotation?.company_info?.director_name || effectiveTemplate?.company_info?.director_name || 'Nguyễn Anh Tuấn'} • <strong>Chức vụ:</strong> {quotation?.company_info?.director_title || effectiveTemplate?.company_info?.director_title || 'Giám đốc'}</div>
-                <div><strong>Mã số thuế:</strong> {quotation?.company_info?.tax_code || effectiveTemplate?.company_info?.tax_code || '0111100289'}</div>
-                <div><strong>Điện thoại:</strong> {quotation?.company_info?.phone || effectiveTemplate?.company_info?.phone || '0961442882'}</div>
-                <div><strong>Địa chỉ:</strong> {quotation?.company_info?.address || effectiveTemplate?.company_info?.address || 'Hà Đông, Hà Nội'}</div>
-              </div>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Card size="small" style={{ background: '#eff6ff', borderColor: '#bfdbfe', borderRadius: 10, height: '100%' }}>
-              <div style={{ fontWeight: 700, color: '#1d4ed8', fontSize: 13.5, marginBottom: 8, borderBottom: '1px solid #bfdbfe', paddingBottom: 4 }}>
-                👤 BÊN MUA (BÊN A): {quotation.customer_name || 'Khách hàng lẻ'}
-              </div>
-              <div style={{ fontSize: 13, color: '#334155', lineHeight: '1.7' }}>
-                <div><strong>Khách hàng:</strong> {quotation.customer_name || 'Khách hàng lẻ'}</div>
-                <div><strong>Số điện thoại:</strong> <Text strong>{quotation.customer_phone || '—'}</Text></div>
-                <div><strong>Email / MST:</strong> {quotation.customer_email || '—'}</div>
-                <div><strong>Địa chỉ:</strong> {quotation.customer_address || quotation.customer_city || '—'}</div>
-                <div>
-                  <strong>Ngày lắp đặt dự kiến:</strong>{' '}
-                  <strong style={{ color: '#2563eb' }}>
-                    {quotation.installation_date ? dayjs(quotation.installation_date).format('DD/MM/YYYY') : 'Chưa xác định'}
-                  </strong>
+      {!hideCustomerInfo && (
+        isLand ? (
+          <Row gutter={16} style={{ marginBottom: 20 }}>
+            <Col xs={24} sm={12}>
+              <Card size="small" style={{ background: '#f8fafc', borderColor: '#cbd5e1', borderRadius: 10, height: '100%' }}>
+                <div style={{ fontWeight: 700, color: '#1e3a8a', fontSize: 13.5, marginBottom: 8, borderBottom: '1px solid #e2e8f0', paddingBottom: 4 }}>
+                  🏢 BÊN BÁN (BÊN B): {quotation?.company_info?.name || effectiveTemplate?.company_info?.name || 'CÔNG TY CỦA BẠN'}
                 </div>
-              </div>
-            </Card>
-          </Col>
-        </Row>
-      ) : (
-        <div
-          style={{
-            marginBottom: 18,
-            padding: '12px 18px',
-            background: '#eff6ff',
-            border: '1px solid #bfdbfe',
-            borderRadius: 8,
-          }}
-        >
-          <div style={{ fontWeight: 700, color: '#1d4ed8', fontSize: 13.5, marginBottom: 8, borderBottom: '1px solid #dbeafe', paddingBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-            <span>👤 THÔNG TIN KHÁCH HÀNG / ĐỐI TÁC</span>
-            {quotation.installation_date && (
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#2563eb' }}>
-                📅 Ngày lắp đặt dự kiến: {dayjs(quotation.installation_date).format('DD/MM/YYYY')}
-              </span>
-            )}
-          </div>
-          <Row gutter={[20, 6]} style={{ fontSize: 13.5, color: '#1e293b', lineHeight: 1.7 }}>
-            <Col xs={24} sm={12}>
-              <strong>Khách hàng:</strong> <span style={{ fontWeight: 600, color: '#1e3a8a' }}>{quotation.customer_name || 'Khách hàng lẻ'}</span>
+                <div style={{ fontSize: 13, color: '#334155', lineHeight: '1.7' }}>
+                  <div><strong>Đại diện:</strong> {quotation?.company_info?.director_name || effectiveTemplate?.company_info?.director_name || 'Nguyễn Anh Tuấn'} • <strong>Chức vụ:</strong> {quotation?.company_info?.director_title || effectiveTemplate?.company_info?.director_title || 'Giám đốc'}</div>
+                  <div><strong>Mã số thuế:</strong> {quotation?.company_info?.tax_code || effectiveTemplate?.company_info?.tax_code || '0111100289'}</div>
+                  <div><strong>Điện thoại:</strong> {quotation?.company_info?.phone || effectiveTemplate?.company_info?.phone || '0961442882'}</div>
+                  <div><strong>Địa chỉ:</strong> {quotation?.company_info?.address || effectiveTemplate?.company_info?.address || 'Hà Đông, Hà Nội'}</div>
+                </div>
+              </Card>
             </Col>
             <Col xs={24} sm={12}>
-              <strong>Điện thoại:</strong> <span style={{ fontWeight: 600 }}>{quotation.customer_phone || '—'}</span>
-            </Col>
-            <Col xs={24} sm={12}>
-              <strong>Địa chỉ:</strong> {quotation.customer_address || quotation.customer_city || '—'}
-            </Col>
-            <Col xs={24} sm={12}>
-              <strong>Email:</strong> {quotation.customer_email || '—'}
+              <Card size="small" style={{ background: '#eff6ff', borderColor: '#bfdbfe', borderRadius: 10, height: '100%' }}>
+                <div style={{ fontWeight: 700, color: '#1d4ed8', fontSize: 13.5, marginBottom: 8, borderBottom: '1px solid #bfdbfe', paddingBottom: 4 }}>
+                  👤 BÊN MUA (BÊN A): {quotation.customer_name || 'Khách hàng lẻ'}
+                </div>
+                <div style={{ fontSize: 13, color: '#334155', lineHeight: '1.7' }}>
+                  <div><strong>Khách hàng:</strong> {quotation.customer_name || 'Khách hàng lẻ'}</div>
+                  <div><strong>Số điện thoại:</strong> <Text strong>{quotation.customer_phone || '—'}</Text></div>
+                  <div><strong>Email / MST:</strong> {quotation.customer_email || '—'}</div>
+                  <div><strong>Địa chỉ:</strong> {quotation.customer_address || quotation.customer_city || '—'}</div>
+                  <div>
+                    <strong>Ngày lắp đặt dự kiến:</strong>{' '}
+                    <strong style={{ color: '#2563eb' }}>
+                      {quotation.installation_date ? dayjs(quotation.installation_date).format('DD/MM/YYYY') : 'Chưa xác định'}
+                    </strong>
+                  </div>
+                </div>
+              </Card>
             </Col>
           </Row>
-        </div>
+        ) : (
+          <div
+            style={{
+              marginBottom: 18,
+              padding: '12px 18px',
+              background: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              borderRadius: 8,
+            }}
+          >
+            <div style={{ fontWeight: 700, color: '#1d4ed8', fontSize: 13.5, marginBottom: 8, borderBottom: '1px solid #dbeafe', paddingBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <span>👤 THÔNG TIN KHÁCH HÀNG / ĐỐI TÁC</span>
+              {quotation.installation_date && (
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#2563eb' }}>
+                  📅 Ngày lắp đặt dự kiến: {dayjs(quotation.installation_date).format('DD/MM/YYYY')}
+                </span>
+              )}
+            </div>
+            <Row gutter={[20, 6]} style={{ fontSize: 13.5, color: '#1e293b', lineHeight: 1.7 }}>
+              <Col xs={24} sm={12}>
+                <strong>Khách hàng:</strong> <span style={{ fontWeight: 600, color: '#1e3a8a' }}>{quotation.customer_name || 'Khách hàng lẻ'}</span>
+              </Col>
+              <Col xs={24} sm={12}>
+                <strong>Điện thoại:</strong> <span style={{ fontWeight: 600 }}>{quotation.customer_phone || '—'}</span>
+              </Col>
+              <Col xs={24} sm={12}>
+                <strong>Địa chỉ:</strong> {quotation.customer_address || quotation.customer_city || '—'}
+              </Col>
+              <Col xs={24} sm={12}>
+                <strong>Email:</strong> {quotation.customer_email || '—'}
+              </Col>
+            </Row>
+          </div>
+        )
       )}
 
       <Title level={5}>Danh sách hạng mục báo giá</Title>
@@ -339,7 +343,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
               width: 60,
               render: (_, r) => <Text>{r.unit || r.custom_data?.unit || 'bộ'}</Text>,
             },
-            {
+            !hidePricing && {
               title: 'ĐƠN GIÁ/BỘ',
               dataIndex: 'unit_price',
               key: 'unit_price',
@@ -347,7 +351,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
               width: 120,
               render: (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`,
             },
-            {
+            !hidePricing && {
               title: 'TỔNG TIỀN',
               key: 'total',
               align: 'right',
@@ -357,7 +361,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
                 return <Text strong style={{ color: '#16a34a' }}>{tot.toLocaleString('vi-VN')} đ</Text>
               },
             },
-          ] : [
+          ].filter(Boolean) : [
             {
               title: 'STT',
               key: 'stt',
@@ -396,7 +400,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
               width: 48,
               render: (v) => <Text strong>{v || 1}</Text>,
             },
-            {
+            !hidePricing && {
               title: 'Đơn giá',
               dataIndex: 'unit_price',
               key: 'unit_price',
@@ -404,7 +408,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
               width: 110,
               render: (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`,
             },
-            {
+            !hidePricing && {
               title: 'CK%',
               dataIndex: 'discount_percent',
               key: 'discount_percent',
@@ -412,7 +416,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
               width: 50,
               render: (v) => v > 0 ? <Text type="warning">{v}%</Text> : null,
             },
-            {
+            !hidePricing && {
               title: 'Thành tiền',
               key: 'total',
               align: 'right',
@@ -422,65 +426,69 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
                 return <Text strong style={{ color: '#16a34a' }}>{tot.toLocaleString('vi-VN')} đ</Text>
               },
             },
-          ]
+          ].filter(Boolean)
         }
       />
 
       <Divider />
-      <Row gutter={24}>
-        <Col xs={24} md={12}>
-          {quotation.payment_terms_schedule && quotation.payment_terms_schedule.length > 0 && (
-            <div>
-              <Text strong style={{ fontSize: 13, textDecoration: 'underline' }}>Tiến độ thanh toán:</Text>
-              <ul style={{ paddingLeft: 20, marginTop: 8, fontSize: 13, color: '#334155' }}>
-                {quotation.payment_terms_schedule.map((term, idx) => (
-                  <li key={idx} style={{ marginBottom: 4 }}>
-                    {term.title} ({term.percentage}%): <Text strong style={{ color: '#0f172a' }}>{(Number(quotation.total_amount || 0) * (term.percentage / 100)).toLocaleString('vi-VN')} đ</Text>
-                  </li>
-                ))}
-              </ul>
+      {!hidePricing && (
+        <Row gutter={24}>
+          <Col xs={24} md={12}>
+            {quotation.payment_terms_schedule && quotation.payment_terms_schedule.length > 0 && (
+              <div>
+                <Text strong style={{ fontSize: 13, textDecoration: 'underline' }}>Tiến độ thanh toán:</Text>
+                <ul style={{ paddingLeft: 20, marginTop: 8, fontSize: 13, color: '#334155' }}>
+                  {quotation.payment_terms_schedule.map((term, idx) => (
+                    <li key={idx} style={{ marginBottom: 4 }}>
+                      {term.title} ({term.percentage}%): <Text strong style={{ color: '#0f172a' }}>{(Number(quotation.total_amount || 0) * (term.percentage / 100)).toLocaleString('vi-VN')} đ</Text>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </Col>
+          <Col xs={24} md={12} style={{ textAlign: 'right' }}>
+            <div><Text>Tổng Phí Trước Thuế:</Text> <Text strong>{Number(quotation.subtotal || 0).toLocaleString('vi-VN')} đ</Text></div>
+            {Number(quotation.vat_rate || 0) > 0 && (
+              <div><Text>Thuế VAT ({quotation.vat_rate}%):</Text> <Text strong>+{Number(quotation.vat_amount || 0).toLocaleString('vi-VN')} đ</Text></div>
+            )}
+            {Number(quotation.shipping_fee || 0) > 0 && (
+              <div><Text>Phí vận chuyển:</Text> <Text strong>+{Number(quotation.shipping_fee).toLocaleString('vi-VN')} đ</Text></div>
+            )}
+            {Number(quotation.installation_fee || 0) > 0 && (
+              <div><Text>Phí thi công / lắp đặt:</Text> <Text strong>+{Number(quotation.installation_fee).toLocaleString('vi-VN')} đ</Text></div>
+            )}
+            {Number(quotation.discount_total || 0) > 0 && (
+              <div><Text>Chiết khấu chung:</Text> <Text strong>-{Number(quotation.discount_total || 0).toLocaleString('vi-VN')} đ</Text></div>
+            )}
+            <div style={{ marginTop: 8 }}>
+              <Text>TỔNG THANH TOÁN:</Text>{' '}
+              <Title level={4} style={{ display: 'inline', color: '#16a34a', margin: 0 }}>
+                {Number(quotation.total_amount || 0).toLocaleString('vi-VN')} đ
+              </Title>
+            </div>
+          </Col>
+        </Row>
+      )}
+
+      {!hideCustomerInfo && (
+        <div style={{ marginTop: 24 }}>
+          {quotation.delivery_time && (
+            <div style={{ marginBottom: 4 }}>
+              <Text>Thời gian giao hàng / thi công: </Text>
+              <Text strong>{quotation.delivery_time}</Text>
             </div>
           )}
-        </Col>
-        <Col xs={24} md={12} style={{ textAlign: 'right' }}>
-          <div><Text>Tổng Phí Trước Thuế:</Text> <Text strong>{Number(quotation.subtotal || 0).toLocaleString('vi-VN')} đ</Text></div>
-          {Number(quotation.vat_rate || 0) > 0 && (
-            <div><Text>Thuế VAT ({quotation.vat_rate}%):</Text> <Text strong>+{Number(quotation.vat_amount || 0).toLocaleString('vi-VN')} đ</Text></div>
+          {quotation.validity_days && (
+            <div style={{ marginBottom: 4 }}>
+              <Text>Báo giá có giá trị trong vòng: </Text>
+              <Text strong>{quotation.validity_days} ngày</Text>
+            </div>
           )}
-          {Number(quotation.shipping_fee || 0) > 0 && (
-            <div><Text>Phí vận chuyển:</Text> <Text strong>+{Number(quotation.shipping_fee).toLocaleString('vi-VN')} đ</Text></div>
-          )}
-          {Number(quotation.installation_fee || 0) > 0 && (
-            <div><Text>Phí thi công / lắp đặt:</Text> <Text strong>+{Number(quotation.installation_fee).toLocaleString('vi-VN')} đ</Text></div>
-          )}
-          {Number(quotation.discount_total || 0) > 0 && (
-            <div><Text>Chiết khấu chung:</Text> <Text strong>-{Number(quotation.discount_total || 0).toLocaleString('vi-VN')} đ</Text></div>
-          )}
-          <div style={{ marginTop: 8 }}>
-            <Text>TỔNG THANH TOÁN:</Text>{' '}
-            <Title level={4} style={{ display: 'inline', color: '#16a34a', margin: 0 }}>
-              {Number(quotation.total_amount || 0).toLocaleString('vi-VN')} đ
-            </Title>
-          </div>
-        </Col>
-      </Row>
+        </div>
+      )}
 
-      <div style={{ marginTop: 24 }}>
-        {quotation.delivery_time && (
-          <div style={{ marginBottom: 4 }}>
-            <Text>Thời gian giao hàng / thi công: </Text>
-            <Text strong>{quotation.delivery_time}</Text>
-          </div>
-        )}
-        {quotation.validity_days && (
-          <div style={{ marginBottom: 4 }}>
-            <Text>Báo giá có giá trị trong vòng: </Text>
-            <Text strong>{quotation.validity_days} ngày</Text>
-          </div>
-        )}
-      </div>
-
-      {(quotation.notes || effectiveTemplate?.company_default_terms || effectiveTemplate?.footer_content) && (
+      {!hidePricing && (quotation.notes || effectiveTemplate?.company_default_terms || effectiveTemplate?.footer_content) && (
         <Card size="small" style={{ marginTop: 12, background: '#f8fafc', borderColor: '#e2e8f0' }}>
           <Text strong style={{ color: '#0f172a' }}>Ghi chú & Điều khoản khác:</Text>
           <Paragraph style={{ margin: '8px 0 0', color: '#334155', whiteSpace: 'pre-wrap' }}>
@@ -490,63 +498,102 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
       )}
 
       {/* Khối Chữ Ký & Con Dấu */}
-      <Row justify="space-between" className="signature-block" style={{ marginTop: 40, textAlign: 'center', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-        <Col xs={24} md={10}>
-          <Text strong style={{ display: 'block', fontSize: 13, color: '#1e293b' }}>BÊN MUA / KHÁCH HÀNG</Text>
-          <Text type="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>(Ký, ghi rõ họ tên)</Text>
-          
-          {renderCustomerSignature ? (
-            renderCustomerSignature()
-          ) : (
-            quotation?.status === 'accepted' && quotation?.signature_image ? (
-              <div style={{ height: 145, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
-                <img 
-                  src={quotation.signature_image} 
-                  alt="Customer Signature" 
-                  style={{ height: 100, objectFit: 'contain' }}
-                />
-                <Text strong style={{ fontSize: 14, color: '#0f172a', marginTop: 8 }}>{quotation.customer_name_signed}</Text>
-                <Tag color="green" style={{ marginTop: 4 }}>Đã ký: {dayjs(quotation.signed_at).format('DD/MM/YYYY HH:mm')}</Tag>
-              </div>
-            ) : (
-              <div style={{ height: 130 }} />
-            )
-          )}
-        </Col>
-        <Col xs={24} md={10} style={{ position: 'relative' }}>
-          <Text strong style={{ display: 'block', fontSize: 13, color: '#1e293b' }}>
-            {quotation?.company_info?.director_title || effectiveTemplate?.company_info?.director_title || 'ĐẠI DIỆN CÔNG TY'}
-          </Text>
-          <Text type="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>(Ký, đóng dấu)</Text>
-          <div style={{ height: 145, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', marginTop: 12 }}>
-            {(() => {
-              const stImg = quotation?.company_info?.stamp || quotation?.company_info?.stamp_image || effectiveTemplate?.company_info?.stamp || effectiveTemplate?.company_info?.stamp_image
-              const sigImg = quotation?.company_info?.signature || quotation?.company_info?.director_signature || effectiveTemplate?.company_info?.signature || effectiveTemplate?.company_info?.director_signature
-              return (
-                <>
-                  {stImg && (
-                    <img
-                      src={stImg}
-                      alt="Stamp"
-                      style={{ height: 135, maxWidth: 165, position: 'absolute', opacity: 0.88, zIndex: 1, objectFit: 'contain' }}
-                    />
-                  )}
-                  {sigImg && (
-                    <img
-                      src={sigImg}
-                      alt="Signature"
-                      style={{ height: 115, maxWidth: 200, position: 'relative', zIndex: 2, objectFit: 'contain' }}
-                    />
-                  )}
-                </>
-              )
-            })()}
+      {hideCustomerInfo ? (
+        // Chỉ hiển thị chữ ký công ty bên phải cho xưởng sản xuất
+        <div className="signature-block" style={{ marginTop: 40, display: 'flex', justifyContent: 'flex-end', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+          <div style={{ width: '40%', textAlign: 'center', position: 'relative' }}>
+            <Text strong style={{ display: 'block', fontSize: 13, color: '#1e293b' }}>
+              {quotation?.company_info?.director_title || effectiveTemplate?.company_info?.director_title || 'ĐẠI DIỆN CÔNG TY'}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>(Ký, đóng dấu)</Text>
+            <div style={{ height: 145, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', marginTop: 12 }}>
+              {(() => {
+                const stImg = quotation?.company_info?.stamp || quotation?.company_info?.stamp_image || effectiveTemplate?.company_info?.stamp || effectiveTemplate?.company_info?.stamp_image
+                const sigImg = quotation?.company_info?.signature || quotation?.company_info?.director_signature || effectiveTemplate?.company_info?.signature || effectiveTemplate?.company_info?.director_signature
+                return (
+                  <>
+                    {stImg && (
+                      <img
+                        src={stImg}
+                        alt="Stamp"
+                        style={{ height: 135, maxWidth: 165, position: 'absolute', opacity: 0.88, zIndex: 1, objectFit: 'contain' }}
+                      />
+                    )}
+                    {sigImg && (
+                      <img
+                        src={sigImg}
+                        alt="Signature"
+                        style={{ height: 115, maxWidth: 200, position: 'relative', zIndex: 2, objectFit: 'contain' }}
+                      />
+                    )}
+                  </>
+                )
+              })()}
+            </div>
+            <Text strong style={{ display: 'block', fontSize: 15, color: '#0f172a', marginTop: 8 }}>
+              {quotation?.company_info?.director_name || effectiveTemplate?.company_info?.director_name || ''}
+            </Text>
           </div>
-          <Text strong style={{ display: 'block', fontSize: 15, color: '#0f172a', marginTop: 8 }}>
-            {quotation?.company_info?.director_name || effectiveTemplate?.company_info?.director_name || ''}
-          </Text>
-        </Col>
-      </Row>
+        </div>
+      ) : (
+        <Row justify="space-between" className="signature-block" style={{ marginTop: 40, textAlign: 'center', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+          <Col xs={24} md={10}>
+            <Text strong style={{ display: 'block', fontSize: 13, color: '#1e293b' }}>BÊN MUA / KHÁCH HÀNG</Text>
+            <Text type="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>(Ký, ghi rõ họ tên)</Text>
+            
+            {renderCustomerSignature ? (
+              renderCustomerSignature()
+            ) : (
+              quotation?.status === 'accepted' && quotation?.signature_image ? (
+                <div style={{ height: 145, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
+                  <img 
+                    src={quotation.signature_image} 
+                    alt="Customer Signature" 
+                    style={{ height: 100, objectFit: 'contain' }}
+                  />
+                  <Text strong style={{ fontSize: 14, color: '#0f172a', marginTop: 8 }}>{quotation.customer_name_signed}</Text>
+                  <Tag color="green" style={{ marginTop: 4 }}>Đã ký: {dayjs(quotation.signed_at).format('DD/MM/YYYY HH:mm')}</Tag>
+                </div>
+              ) : (
+                <div style={{ height: 130 }} />
+              )
+            )}
+          </Col>
+          <Col xs={24} md={10} style={{ position: 'relative' }}>
+            <Text strong style={{ display: 'block', fontSize: 13, color: '#1e293b' }}>
+              {quotation?.company_info?.director_title || effectiveTemplate?.company_info?.director_title || 'ĐẠI DIỆN CÔNG TY'}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>(Ký, đóng dấu)</Text>
+            <div style={{ height: 145, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', marginTop: 12 }}>
+              {(() => {
+                const stImg = quotation?.company_info?.stamp || quotation?.company_info?.stamp_image || effectiveTemplate?.company_info?.stamp || effectiveTemplate?.company_info?.stamp_image
+                const sigImg = quotation?.company_info?.signature || quotation?.company_info?.director_signature || effectiveTemplate?.company_info?.signature || effectiveTemplate?.company_info?.director_signature
+                return (
+                  <>
+                    {stImg && (
+                      <img
+                        src={stImg}
+                        alt="Stamp"
+                        style={{ height: 135, maxWidth: 165, position: 'absolute', opacity: 0.88, zIndex: 1, objectFit: 'contain' }}
+                      />
+                    )}
+                    {sigImg && (
+                      <img
+                        src={sigImg}
+                        alt="Signature"
+                        style={{ height: 115, maxWidth: 200, position: 'relative', zIndex: 2, objectFit: 'contain' }}
+                      />
+                    )}
+                  </>
+                )
+              })()}
+            </div>
+            <Text strong style={{ display: 'block', fontSize: 15, color: '#0f172a', marginTop: 8 }}>
+              {quotation?.company_info?.director_name || effectiveTemplate?.company_info?.director_name || ''}
+            </Text>
+          </Col>
+        </Row>
+      )}
     </div>
   )
 }

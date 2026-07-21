@@ -6,6 +6,7 @@ import {
   DatabaseOutlined,
   DeleteOutlined,
   EditOutlined,
+  ExclamationCircleOutlined,
   HistoryOutlined,
   InboxOutlined,
   MinusOutlined,
@@ -41,6 +42,7 @@ import {
 } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
 import ProductTemplateTab from './inventory/ProductTemplateTab'
@@ -67,6 +69,16 @@ export default function Inventory() {
 
   // Filters
   const [searchText, setSearchText] = useState('')
+  const location = useLocation()
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const searchQuery = params.get('search')
+    if (searchQuery) {
+      setSearchText(searchQuery)
+      setActiveTab('transactions')
+    }
+  }, [location.search])
   const [stockSearchText, setStockSearchText] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [warehouseFilter, setWarehouseFilter] = useState('')
@@ -113,6 +125,10 @@ export default function Inventory() {
   const [deleteSingleConfirmText, setDeleteSingleConfirmText] = useState('')
 
   const [selectedTxnForPrint, setSelectedTxnForPrint] = useState(null)
+
+  // Recreate production order modal
+  const [recreateMOTxn, setRecreateMOTxn] = useState(null)
+  const [recreateMOLoading, setRecreateMOLoading] = useState(false)
 
   const [submitting, setSubmitting] = useState(false)
 
@@ -280,7 +296,11 @@ export default function Inventory() {
         match = match && txn.type === txnTypeFilter
       }
       if (txnStatusFilter) {
-        match = match && txn.status === txnStatusFilter
+        if (txnStatusFilter === 'deleted_mo') {
+          match = match && txn.type === 'export' && txn.status === 'completed' && txn.reference_order && txn.has_production_order === false
+        } else {
+          match = match && txn.status === txnStatusFilter
+        }
       }
       if (txnWarehouseFilter) {
         match = match && txn.warehouse === txnWarehouseFilter
@@ -291,7 +311,8 @@ export default function Inventory() {
         const prod = products.find((p) => p.id === txn.product)
         const name = (prod?.name || txn.product_name || '').toLowerCase()
         const sku = (prod?.sku || txn.product_sku || '').toLowerCase()
-        match = match && (code.includes(kw) || name.includes(kw) || sku.includes(kw))
+        const refOrder = (txn.reference_order_number || '').toLowerCase()
+        match = match && (code.includes(kw) || name.includes(kw) || sku.includes(kw) || refOrder.includes(kw))
       }
       return match
     })
@@ -312,6 +333,9 @@ export default function Inventory() {
 
   const pendingExports = transactions.filter((txn) => txn.type === 'export' && txn.status === 'pending')
   const pendingOrdersCount = new Set(pendingExports.map(t => t.transaction_code)).size
+
+  // Kiểm tra xem trong lịch sử có phiếu xuất kho nào có nhà máy không
+  const hasFactoryInHistory = transactions.some(t => t.factory_name)
 
   const handleOpenApproveExport = (txn) => {
     setSelectedExportTxn(txn)
@@ -353,6 +377,7 @@ export default function Inventory() {
       messageApi.success('Duyệt xuất kho thành công!')
       setExportApproveModalVisible(false)
       fetchTransactions()
+      window.dispatchEvent(new Event('refresh-notifications'))
       fetchStockLevels()
     } catch (err) {
       messageApi.error(err.response?.data?.detail || 'Không đủ tồn kho hoặc lỗi hệ thống.')
@@ -367,8 +392,33 @@ export default function Inventory() {
       await Promise.all(txnsToReject.map(t => api.post(`/inventory/transactions/${t.id}/reject/`)))
       messageApi.success('Đã từ chối lệnh xuất kho.')
       fetchTransactions()
+      window.dispatchEvent(new Event('refresh-notifications'))
     } catch (err) {
       messageApi.error('Từ chối thất bại.')
+    }
+  }
+
+  const handleRecreateMO = async () => {
+    if (!recreateMOTxn) return
+    setRecreateMOLoading(true)
+    try {
+      // Nếu là nhóm phiếu (items), dùng id của phiếu đầu tiên
+      const txnId = recreateMOTxn.items ? recreateMOTxn.items[0].id : recreateMOTxn.id
+      const res = await api.post(`/inventory/transactions/${txnId}/recreate-production-order/`)
+      const poCode = res.data?.production_order_code
+      messageApi.success(
+        poCode
+          ? `✅ Đã tạo lại Lệnh Sản Xuất: ${poCode}`
+          : '✅ Đã tạo lại Lệnh Sản Xuất thành công.'
+      )
+      setRecreateMOTxn(null)
+      fetchTransactions()
+      window.dispatchEvent(new Event('refresh-notifications'))
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Tạo lại lệnh sản xuất thất bại.'
+      messageApi.error(msg)
+    } finally {
+      setRecreateMOLoading(false)
     }
   }
 
@@ -977,7 +1027,16 @@ export default function Inventory() {
       title: 'Mã phiếu',
       dataIndex: 'transaction_code',
       key: 'transaction_code',
-      render: (val) => <Tag color="purple" style={{ fontWeight: 600 }}>{val}</Tag>,
+      render: (val, r) => (
+        <Space direction="vertical" size={2}>
+          <Tag color="purple" style={{ fontWeight: 600, margin: 0 }}>{val}</Tag>
+          {r.reference_order_number && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              ĐH: {r.reference_order_number}
+            </Text>
+          )}
+        </Space>
+      ),
     },
     {
       title: 'Trạng thái',
@@ -986,7 +1045,30 @@ export default function Inventory() {
       render: (val, r) => {
         if (r.status === 'pending') return <Tag color="warning">{val || 'Chờ duyệt'}</Tag>
         if (r.status === 'rejected') return <Tag color="default">{val || 'Đã hủy'}</Tag>
-        return <Tag color="success">{val || 'Hoàn thành'}</Tag>
+        // Phiếu xuất hoàn thành: kiểm tra lệnh SX
+        const completedTag = <Tag color="success">{val || 'Hoàn thành'}</Tag>
+        if (r.type === 'export' && r.status === 'completed' && r.reference_order && r.has_production_order === false) {
+          const canRecreateMO = isCompanyAdmin || hasPermission('production.create')
+          return (
+            <Space size={4} wrap>
+              {completedTag}
+              <Tag
+                color="red"
+                icon={<ExclamationCircleOutlined />}
+                style={{
+                  cursor: canRecreateMO ? 'pointer' : 'not-allowed',
+                  fontWeight: 600,
+                  opacity: canRecreateMO ? 1 : 0.75,
+                }}
+                title={canRecreateMO ? 'Nhấn để tạo lại Lệnh Sản Xuất' : 'Bạn không có quyền tạo lệnh sản xuất'}
+                onClick={() => canRecreateMO && setRecreateMOTxn(r)}
+              >
+                Lệnh SX bị xóa!
+              </Tag>
+            </Space>
+          )
+        }
+        return completedTag
       },
     },
     {
@@ -1054,6 +1136,12 @@ export default function Inventory() {
       key: 'note',
       render: (v) => <Text type="secondary">{v || '—'}</Text>,
     },
+    ...(hasFactoryInHistory ? [{
+      title: 'Nhà máy sản xuất',
+      dataIndex: 'factory_name',
+      key: 'factory_name',
+      render: (v) => v ? <Tag color="orange">{v}</Tag> : null,
+    }] : []),
     {
       title: 'Ngày tạo',
       dataIndex: 'created_at',
@@ -1216,7 +1304,7 @@ export default function Inventory() {
                     <Col xs={24} lg={18}>
                       <Space wrap>
                         <Input
-                          placeholder="Tìm mã phiếu, tên/mã SP..."
+                          placeholder="Tìm mã phiếu, mã ĐH, SP..."
                           prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
                           value={txnSearchText}
                           onChange={(e) => setTxnSearchText(e.target.value)}
@@ -1244,6 +1332,7 @@ export default function Inventory() {
                           <Option value="completed">Hoàn thành</Option>
                           <Option value="pending">Chờ duyệt</Option>
                           <Option value="rejected">Đã hủy</Option>
+                          <Option value="deleted_mo">Lệnh SX bị xóa!</Option>
                         </Select>
                         <Select
                           placeholder="Chọn kho hàng..."
@@ -1934,6 +2023,52 @@ export default function Inventory() {
         </div>
       </Modal>
 
+      {/* ── Modal Tạo lại Lệnh Sản Xuất ──────────────────────────────── */}
+      <Modal
+        title={
+          <Space>
+            <ExclamationCircleOutlined style={{ color: '#dc2626', fontSize: 20 }} />
+            <Text strong style={{ fontSize: 17 }}>Tạo lại Lệnh Sản Xuất</Text>
+          </Space>
+        }
+        open={!!recreateMOTxn}
+        onCancel={() => setRecreateMOTxn(null)}
+        onOk={handleRecreateMO}
+        confirmLoading={recreateMOLoading}
+        okText="Tạo lại Lệnh SX"
+        cancelText="Hủy"
+        okButtonProps={{ style: { background: '#dc2626', borderColor: '#dc2626' } }}
+      >
+        {recreateMOTxn && (
+          <div style={{ padding: '8px 0' }}>
+            <Alert
+              type="warning"
+              showIcon
+              message="Lệnh Sản Xuất đã bị xóa hoặc chưa tồn tại"
+              description="Khi phiếu xuất kho được duyệt, hệ thống sẽ tự tạo Lệnh Sản Xuất liên kết. Tuy nhiên lệnh này đã bị xóa. Bạn có muốn tạo lại không?"
+              style={{ marginBottom: 16 }}
+            />
+            <div style={{ padding: '10px 14px', background: '#fef2f2', borderRadius: 6, border: '1px solid #fecaca' }}>
+              <Text strong>Phiếu xuất kho: </Text>
+              <Tag color="purple">{recreateMOTxn.transaction_code}</Tag>
+              <br />
+              <Text strong>Đơn hàng liên kết: </Text>
+              <Tag color="blue">{recreateMOTxn.reference_order_number || 'N/A'}</Tag>
+              {recreateMOTxn.factory_name && (
+                <>
+                  <br />
+                  <Text strong>Nhà máy: </Text>
+                  <Tag color="orange">{recreateMOTxn.factory_name}</Tag>
+                </>
+              )}
+            </div>
+            <Text type="secondary" style={{ display: 'block', marginTop: 12 }}>
+              Lệnh SX mới sẽ được tạo tự động với mã phù hợp và liên kết với đơn hàng trên.
+            </Text>
+          </div>
+        )}
+      </Modal>
+
       {/* Modal Approve Export */}
       <Modal
         title={
@@ -2059,7 +2194,7 @@ export default function Inventory() {
               )
             })()}
 
-            {selectedExportTxn.reference_order && (
+            {selectedExportTxn.reference_order && factories.length > 0 && (
               <div style={{ marginTop: 16, padding: '12px 16px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fde68a' }}>
                 <Text strong style={{ color: '#92400e' }}>Nhà máy sản xuất (Nhận lệnh sản xuất & vật tư này):</Text>
                 <Select

@@ -645,15 +645,22 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 pass
                 
         # Update transaction
+        factory_id = request.data.get("factory_id")
+        factory_obj = None
+        if factory_id:
+            from production.models import Factory
+            factory_obj = Factory.objects.filter(id=factory_id).first()
+        
         txn.warehouse = warehouse
         txn.status = txn.STATUS_COMPLETED
-        txn.save(update_fields=["warehouse", "status"])
+        txn.factory = factory_obj
+        txn.save(update_fields=["warehouse", "status", "factory"])
         
         # Kích hoạt Lệnh Sản Xuất cho Đơn hàng
-        if txn.reference_order:
+        if txn.reference_order and factory_obj:
             try:
                 from orders.signals import _create_production_order
-                _create_production_order(txn.reference_order, factory_id=request.data.get("factory_id"))
+                _create_production_order(txn.reference_order, factory_id=factory_id)
             except Exception as e:
                 import logging
                 logging.getLogger(__name__).error(f"Lỗi khi auto-create MO từ kho: {e}")
@@ -696,6 +703,54 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 pass
 
         return Response({"detail": "Đã hủy lệnh xuất kho. Sale có thể yêu cầu xuất kho lại."})
+
+    @action(detail=True, methods=["post"], url_path="recreate-production-order",
+            permission_classes=[permissions.IsAuthenticated, ActionBasedPermission])
+    def recreate_production_order(self, request, pk=None):
+        """
+        Tạo lại Lệnh Sản Xuất cho phiếu xuất kho đã hoàn thành
+        khi lệnh SX bị xóa mất hoặc chưa được tạo.
+        Yêu cầu quyền: production.create hoặc Company Admin.
+        """
+        txn = self.get_object()
+
+        # Kiểm tra quyền: phải là Company Admin hoặc có quyền tạo lệnh SX
+        user = request.user
+        if not user.is_company_admin and not user.is_superuser:
+            user_perms = user.get_permission_codes()
+            if "production.create" not in user_perms:
+                return Response(
+                    {"detail": "Bạn không có quyền tạo lệnh sản xuất."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        # Chỉ áp dụng cho phiếu xuất đã hoàn thành và có liên kết đơn hàng
+        if txn.type != InventoryTransaction.TYPE_EXPORT:
+            return Response({"detail": "Chỉ có thể tạo lại lệnh SX từ phiếu xuất kho."}, status=status.HTTP_400_BAD_REQUEST)
+        if txn.status != InventoryTransaction.STATUS_COMPLETED:
+            return Response({"detail": "Phiếu xuất kho chưa hoàn thành, không thể tạo lệnh SX."}, status=status.HTTP_400_BAD_REQUEST)
+        if not txn.reference_order:
+            return Response({"detail": "Phiếu xuất kho này không liên kết với đơn hàng nào."}, status=status.HTTP_400_BAD_REQUEST)
+
+        order = txn.reference_order
+        # Kiểm tra đã có lệnh SX chưa
+        if order.production_orders.exists():
+            return Response({"detail": "Lệnh sản xuất đã tồn tại cho đơn hàng này."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            from orders.signals import _create_production_order
+            factory_id = txn.factory_id  # Lấy từ phiếu xuất (nếu có gắn nhà máy)
+            _create_production_order(order, factory_id=factory_id)
+            # Lấy mã lệnh SX vừa tạo để trả về
+            po = order.production_orders.first()
+            return Response({
+                "detail": f"Đã tạo lại Lệnh Sản Xuất thành công.",
+                "production_order_code": po.production_order_code if po else None,
+            })
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Lỗi tạo lại ProductionOrder từ kho: {e}")
+            return Response({"detail": f"Lỗi khi tạo lại lệnh SX: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=["delete"], url_path="clear-history")
     def clear_history(self, request):

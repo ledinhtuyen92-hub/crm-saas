@@ -54,9 +54,9 @@ class DeliveryOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         company = self.request.user.company
         instance = serializer.save(company=company)
-        if not instance.delivery_code:
-            from core.numbering import generate_delivery_code
-            instance.delivery_code = generate_delivery_code(company)
+        if not instance.delivery_code and instance.order:
+            from core.numbering import derive_code_from_order
+            instance.delivery_code = derive_code_from_order(instance.order.order_number, company, "gh")
             instance.save(update_fields=["delivery_code"])
 
     def perform_update(self, serializer):

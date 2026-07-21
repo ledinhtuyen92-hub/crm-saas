@@ -53,7 +53,43 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         order_status = self.request.query_params.get("status")
         if order_status:
             qs = qs.filter(status=order_status)
-            
+
+        # Filter theo thanh toán & công nợ
+        fin_status = self.request.query_params.get("financial_status")
+        if fin_status == "pending_credit":
+            from approvals.models import ApprovalRequest
+            from django.contrib.contenttypes.models import ContentType
+            from django.db.models import Exists, OuterRef
+            ct = ContentType.objects.get_for_model(qs.model)
+            pending_requests = ApprovalRequest.objects.filter(
+                content_type=ct, 
+                object_id=OuterRef('pk'), 
+                status=ApprovalRequest.STATUS_PENDING,
+                title__startswith="Duyệt xuất kho nợ"
+            )
+            qs = qs.filter(Exists(pending_requests))
+        elif fin_status:
+            qs = qs.filter(financial_status=fin_status)
+
+        # Filter theo vận hành kho
+        export_status = self.request.query_params.get("export_status")
+        if export_status == "rejected":
+            from inventory.models import InventoryTransaction
+            from django.db.models import Exists, OuterRef
+            active_exports = InventoryTransaction.objects.filter(
+                reference_order=OuterRef('pk'),
+                type=InventoryTransaction.TYPE_EXPORT
+            ).exclude(status=InventoryTransaction.STATUS_REJECTED)
+            rejected_exports = InventoryTransaction.objects.filter(
+                reference_order=OuterRef('pk'),
+                type=InventoryTransaction.TYPE_EXPORT,
+                status=InventoryTransaction.STATUS_REJECTED
+            )
+            qs = qs.filter(
+                status="approved",
+                financial_status__in=["fully_paid", "deposit_paid", "credit_approved"]
+            ).filter(~Exists(active_exports), Exists(rejected_exports))
+
         # Tìm kiếm theo tên khách, SĐT khách, mã đơn hàng
         search = self.request.query_params.get("search")
         if search:
@@ -133,13 +169,13 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             if hasattr(instance, 'production_order') and instance.production_order.status in ['in_progress', 'completed'] and new_status in ['pending', 'rejected', 'cancelled']:
                 from rest_framework.exceptions import ValidationError
                 raise ValidationError({"status": "Không thể chuyển về chờ duyệt/hủy khi Lệnh sản xuất đang thực hiện hoặc đã hoàn thành."})
-        if old_status in ["pending", "rejected"]:
+        if old_status in ["pending", "rejected", "approved"]:
             serializer.validated_data["status"] = "pending"
             
         order = serializer.save()
         order.generate_payment_milestones()
 
-        if old_status in ["pending", "rejected"]:
+        if old_status in ["pending", "rejected", "approved"]:
             try:
                 from approvals.models import ApprovalRequest, ApprovalStep
                 from django.contrib.contenttypes.models import ContentType
