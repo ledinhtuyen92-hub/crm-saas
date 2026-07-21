@@ -24,7 +24,7 @@ class DeliveryOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     action_permissions = {
         "list": "delivery.view",
         "retrieve": "delivery.view",
-        "create": "delivery.edit",
+        "create": "delivery.create",
         "update": "delivery.edit",
         "partial_update": "delivery.edit",
         "destroy": "delivery.delete",
@@ -87,6 +87,55 @@ class DeliveryOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         serializer = self.get_serializer(delivery)
         return Response(serializer.data)
 
+    @action(detail=True, methods=["post"])
+    def recreate_warranty(self, request, pk=None):
+        from rest_framework.exceptions import PermissionDenied
+        # Chỉ những ai là admin công ty hoặc có quyền tạo mới phiếu bảo hành mới được phép
+        user_perms = request.user.get_permission_codes()
+        if not (request.user.is_company_admin or "warranty.create" in user_perms):
+            raise PermissionDenied("Bạn không có quyền tạo phiếu bảo hành.")
+
+        delivery = self.get_object()
+        if delivery.status != "delivered":
+            return Response({"detail": "Lệnh giao hàng chưa hoàn thành, không thể tạo phiếu bảo hành."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if hasattr(delivery.order, "warranty_card") and delivery.order.warranty_card:
+            return Response({"detail": "Đơn hàng này đã có Phiếu bảo hành."}, status=status.HTTP_400_BAD_REQUEST)
+
+        import datetime
+        from django.utils import timezone
+        months = delivery.order.warranty_months if hasattr(delivery.order, 'warranty_months') and delivery.order.warranty_months else 12
+        start_date = delivery.actual_date or timezone.now().date()
+        
+        month = start_date.month - 1 + months
+        year = start_date.year + month // 12
+        month = month % 12 + 1
+        day = min(start_date.day, [31,
+            29 if year % 4 == 0 and not year % 400 == 0 else 28,
+            31,30,31,30,31,31,30,31,30,31][month-1])
+        end_date = datetime.date(year, month, day)
+
+        company_settings = getattr(delivery.company, "settings", None)
+        default_content = company_settings.default_warranty_content if company_settings else ""
+        default_rules = company_settings.default_warranty_rules if company_settings else ""
+
+        warranty = WarrantyCard.objects.create(
+            order=delivery.order,
+            company=delivery.company,
+            customer=delivery.order.customer,
+            status="active",
+            start_date=start_date,
+            end_date=end_date,
+            terms=f"Bảo hành {months} tháng kể từ ngày giao hàng.",
+            warranty_content=default_content,
+            warranty_rules=default_rules,
+        )
+        from core.numbering import derive_code_from_order
+        warranty.warranty_code = derive_code_from_order(delivery.order.order_number, delivery.company, "bh")
+        warranty.save(update_fields=["warranty_code"])
+        
+        return Response({"detail": "Đã tạo phiếu bảo hành thành công."})
+
 
 class WarrantyCardViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     """Quản lý Phiếu bảo hành."""
@@ -101,7 +150,7 @@ class WarrantyCardViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     action_permissions = {
         "list": "warranty.view",
         "retrieve": "warranty.view",
-        "create": "warranty.edit",
+        "create": "warranty.create",
         "update": "warranty.edit",
         "partial_update": "warranty.edit",
         "destroy": "warranty.delete",
@@ -136,8 +185,51 @@ class WarrantyCardViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         company = self.request.user.company
-        instance = serializer.save(company=company)
+        order = serializer.validated_data.get('order')
+        end_date = serializer.validated_data.get('end_date')
+        
+        status = "active"
+        if end_date:
+            from django.utils import timezone
+            today = timezone.now().date()
+            if end_date < today:
+                status = "expired"
+
+        company_settings = getattr(company, "settings", None)
+        warranty_content = serializer.validated_data.get('warranty_content', '')
+        if not warranty_content and company_settings:
+            warranty_content = company_settings.default_warranty_content or ""
+            
+        warranty_rules = serializer.validated_data.get('warranty_rules', '')
+        if not warranty_rules and company_settings:
+            warranty_rules = company_settings.default_warranty_rules or ""
+
+        instance = serializer.save(
+            company=company,
+            customer=order.customer if order else None,
+            status=status,
+            warranty_content=warranty_content,
+            warranty_rules=warranty_rules
+        )
         if not instance.warranty_code:
-            from core.numbering import generate_warranty_code
-            instance.warranty_code = generate_warranty_code(company)
+            if instance.order:
+                from core.numbering import derive_code_from_order
+                instance.warranty_code = derive_code_from_order(instance.order.order_number, company, "bh")
+            else:
+                from core.numbering import generate_warranty_code
+                instance.warranty_code = generate_warranty_code(company)
             instance.save(update_fields=["warranty_code"])
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        end_date = serializer.validated_data.get('end_date', instance.end_date)
+        
+        status = "active"
+        if end_date:
+            from django.utils import timezone
+            today = timezone.now().date()
+            if end_date < today:
+                status = "expired"
+        
+        # Ensure customer doesn't get detached, though it's read_only now.
+        serializer.save(status=status)

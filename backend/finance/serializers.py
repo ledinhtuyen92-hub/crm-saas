@@ -22,6 +22,7 @@ class PaymentReceiptSerializer(serializers.ModelSerializer):
             "note",
             "created_by",
             "created_by_name",
+            "attachments",
             "created_at",
         ]
         read_only_fields = ["id", "company", "receipt_code", "created_by", "created_by_name", "created_at"]

@@ -100,6 +100,7 @@ PERMISSIONS = [
     # ── Finance (Tài chính & Kế toán) ─────────────────────────────
     {"code": "finance.view", "name": "Xem danh sách giao dịch tài chính", "module": "finance"},
     {"code": "finance.create_receipt", "name": "Tạo giao dịch thu/chi mới", "module": "finance"},
+    {"code": "finance.print_receipt", "name": "In phiếu thu", "module": "finance"},
     {"code": "finance.delete", "name": "Xóa phiếu thu / giao dịch", "module": "finance"},
     {"code": "finance.request_credit", "name": "Trình duyệt xuất kho nợ", "module": "finance"},
     {"code": "finance.approve_credit", "name": "Phê duyệt nợ xuất kho (Tín dụng)", "module": "finance"},

@@ -113,7 +113,7 @@ export default function ProductionList() {
     if (checkMaintenance()) return
     try {
       setLoading(true)
-      await api.post('/delivery/orders/', { order: orderId, status: 'pending' })
+      await api.post('/delivery/deliveries/', { order: orderId, status: 'pending' })
       messageApi.success('Đã tạo phiếu giao hàng thành công!')
       fetchProductionOrders()
     } catch (err) {
@@ -607,7 +607,7 @@ export default function ProductionList() {
       key: 'status',
       render: (st, r) => {
         const cfg = statusConfig[st] || { label: st, color: 'default' }
-        const hasDeliveryPerm = isCompanyAdmin || hasPermission('delivery', 'edit')
+        const hasDeliveryPerm = isCompanyAdmin || hasPermission('delivery.create')
         
         return (
           <Space direction="vertical" size={4} align="center">

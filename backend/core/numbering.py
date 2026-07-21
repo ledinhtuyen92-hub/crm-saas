@@ -82,6 +82,7 @@ def derive_code_from_order(source_order_number: str, company, target_doc_type: s
                 from inventory.models import InventoryTransaction
                 from production.models import ProductionOrder
                 from delivery.models import DeliveryOrder, WarrantyCard
+                from orders.models import Order
 
                 model_map = {
                     "EXP": (InventoryTransaction, "transaction_code"),
@@ -91,6 +92,7 @@ def derive_code_from_order(source_order_number: str, company, target_doc_type: s
                     "LSX": (ProductionOrder, "production_order_code"),
                     "GH":  (DeliveryOrder, "delivery_code"),
                     "BH":  (WarrantyCard, "warranty_code"),
+                    "DH":  (Order, "order_number"),
                 }
                 model_info = model_map.get(base_doc)
                 is_taken = False

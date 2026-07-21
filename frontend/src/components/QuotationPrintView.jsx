@@ -234,7 +234,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
       )}
 
       <Title level={5}>Danh sách hạng mục báo giá</Title>
-      <Table scroll={{ x: 'max-content' }}
+      <Table scroll={{ x: 1200 }}
         dataSource={quotation.items || []}
         rowKey="id"
         pagination={false}
@@ -432,7 +432,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
 
       <Divider />
       {!hidePricing && (
-        <Row gutter={24}>
+        <Row gutter={24} className="print-row-nowrap" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
           <Col xs={24} md={12}>
             {quotation.payment_terms_schedule && quotation.payment_terms_schedule.length > 0 && (
               <div>
@@ -444,6 +444,20 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+            {type === 'order' && (
+              <div style={{ marginTop: 12, padding: '10px 14px', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: 8, width: 'fit-content' }}>
+                <div style={{ marginBottom: 4, fontSize: 13 }}>
+                  <Text type="secondary" style={{ display: 'inline-block', width: 110 }}>Đã thanh toán:</Text>
+                  <Text strong style={{ color: '#16a34a' }}>{Number(quotation.paid_amount || 0).toLocaleString('vi-VN')} đ</Text>
+                </div>
+                <div style={{ fontSize: 13 }}>
+                  <Text type="secondary" style={{ display: 'inline-block', width: 110 }}>Còn nợ:</Text>
+                  <Text strong style={{ color: quotation.remaining_debt > 0 ? '#ef4444' : '#16a34a' }}>
+                    {Number(quotation.remaining_debt || 0).toLocaleString('vi-VN')} đ
+                  </Text>
+                </div>
               </div>
             )}
           </Col>
@@ -472,7 +486,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
       )}
 
       {!hideCustomerInfo && (
-        <div style={{ marginTop: 24 }}>
+        <div style={{ marginTop: 24, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
           {quotation.delivery_time && (
             <div style={{ marginBottom: 4 }}>
               <Text>Thời gian giao hàng / thi công: </Text>
@@ -489,7 +503,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
       )}
 
       {!hidePricing && (quotation.notes || effectiveTemplate?.company_default_terms || effectiveTemplate?.footer_content) && (
-        <Card size="small" style={{ marginTop: 12, background: '#f8fafc', borderColor: '#e2e8f0' }}>
+        <Card size="small" style={{ marginTop: 12, background: '#f8fafc', borderColor: '#e2e8f0', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
           <Text strong style={{ color: '#0f172a' }}>Ghi chú & Điều khoản khác:</Text>
           <Paragraph style={{ margin: '8px 0 0', color: '#334155', whiteSpace: 'pre-wrap' }}>
             {quotation.notes || effectiveTemplate?.company_default_terms || effectiveTemplate?.footer_content}
@@ -536,7 +550,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
           </div>
         </div>
       ) : (
-        <Row justify="space-between" className="signature-block" style={{ marginTop: 40, textAlign: 'center', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+        <Row justify="space-between" className="signature-block print-row-nowrap" style={{ marginTop: 40, textAlign: 'center', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
           <Col xs={24} md={10}>
             <Text strong style={{ display: 'block', fontSize: 13, color: '#1e293b' }}>BÊN MUA / KHÁCH HÀNG</Text>
             <Text type="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>(Ký, ghi rõ họ tên)</Text>

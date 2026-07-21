@@ -80,12 +80,12 @@ def handle_delivery_order_completed(sender, instance, created, **kwargs):
                 "warranty_rules": default_rules,
             }
         )
-        if created_warranty:
+        if created_warranty or not warranty.warranty_code:
             # Generate warranty code
-            from core.numbering import derive_code_from_source
-            warranty.warranty_code = derive_code_from_source(instance.order.order_number, WarrantyCard, "warranty_code", instance.company, "BH")
+            from core.numbering import derive_code_from_order
+            warranty.warranty_code = derive_code_from_order(instance.order.order_number, instance.company, "bh")
             warranty.save(update_fields=["warranty_code"])
-            logger.info(f"Auto-created WarrantyCard {warranty.warranty_code} for Order {instance.order.order_number}")
+            logger.info(f"Auto-created/updated WarrantyCard {warranty.warranty_code} for Order {instance.order.order_number}")
 
         # 2. Cập nhật Đơn hàng -> Hoàn thành
         order = instance.order

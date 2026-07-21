@@ -146,6 +146,9 @@ class PaymentReceipt(models.Model):
         related_name="created_receipts",
         verbose_name="Người lập phiếu",
     )
+    attachments = models.JSONField(
+        default=list, blank=True, null=True, verbose_name="Chứng từ đính kèm"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

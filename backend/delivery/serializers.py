@@ -7,7 +7,13 @@ class DeliveryOrderSerializer(serializers.ModelSerializer):
     order_number = serializers.CharField(source="order.order_number", read_only=True)
     customer_name = serializers.CharField(source="order.customer.name", read_only=True)
     customer_phone = serializers.CharField(source="order.customer.phone", read_only=True)
+    order_remaining_debt = serializers.FloatField(source="order.remaining_debt", read_only=True)
+    order_total_amount = serializers.FloatField(source="order.total_amount", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    has_warranty = serializers.SerializerMethodField()
+
+    def get_has_warranty(self, obj):
+        return hasattr(obj.order, 'warranty_card') and obj.order.warranty_card is not None
 
     class Meta:
         model = DeliveryOrder
@@ -18,9 +24,12 @@ class DeliveryOrderSerializer(serializers.ModelSerializer):
             "order_number",
             "customer_name",
             "customer_phone",
+            "order_remaining_debt",
+            "order_total_amount",
             "delivery_code",
             "status",
             "status_display",
+            "has_warranty",
             "shipper_user",
             "shipper_name",
             "shipper_phone",
@@ -39,6 +48,8 @@ class WarrantyCardSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source="customer.name", read_only=True)
     customer_phone = serializers.CharField(source="customer.phone", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    customer = serializers.PrimaryKeyRelatedField(read_only=True)
+    status = serializers.CharField(read_only=True)
 
     class Meta:
         model = WarrantyCard

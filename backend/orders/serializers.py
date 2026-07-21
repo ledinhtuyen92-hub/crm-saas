@@ -49,6 +49,7 @@ class OrderSerializer(serializers.ModelSerializer):
     payment_milestones = OrderPaymentMilestoneSerializer(many=True, read_only=True)
     needs_export_request = serializers.SerializerMethodField()
     has_production_order = serializers.SerializerMethodField()
+    has_pending_export = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -96,6 +97,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "needs_export_request",
             "payment_milestones",
             "has_production_order",
+            "has_pending_export",
         ]
         read_only_fields = [
             "id", "company", "order_number", "status_display", "financial_status_display",
@@ -107,6 +109,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "payment_milestones",
             "needs_export_request",
             "has_production_order",
+            "has_pending_export",
         ]
 
     def get_company_info(self, obj):
@@ -124,6 +127,15 @@ class OrderSerializer(serializers.ModelSerializer):
                 reference_order=obj, type=InventoryTransaction.TYPE_EXPORT
             ).exclude(status=InventoryTransaction.STATUS_REJECTED).exists()
             return not active_exports
+        except Exception:
+            return False
+
+    def get_has_pending_export(self, obj):
+        try:
+            from inventory.models import InventoryTransaction
+            return InventoryTransaction.objects.filter(
+                reference_order=obj, type=InventoryTransaction.TYPE_EXPORT, status=InventoryTransaction.STATUS_PENDING
+            ).exists()
         except Exception:
             return False
 

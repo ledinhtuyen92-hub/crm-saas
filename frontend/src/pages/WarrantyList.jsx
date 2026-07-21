@@ -61,7 +61,7 @@ export default function WarrantyList() {
 
   const fetchDataForForm = async () => {
     try {
-      const resOrders = await api.get('/orders/orders/', { params: { limit: 100 } })
+      const resOrders = await api.get('/orders/orders/', { params: { limit: 100, status: 'completed', without_warranty: 'true' } })
       setAvailableOrders(Array.isArray(resOrders.data) ? resOrders.data : resOrders.data?.results ?? [])
       
       const resCustomers = await api.get('/crm/customers/', { params: { limit: 100 } })
@@ -387,32 +387,21 @@ export default function WarrantyList() {
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
-            <Col xs={24} md={12}>
+            <Col xs={24} md={24}>
               <Form.Item name="order" label="Đơn hàng" rules={[{ required: !editingWarranty, message: 'Vui lòng chọn đơn hàng' }]}>
                 <Select disabled={!!editingWarranty || !canEdit} placeholder="Chọn đơn hàng" showSearch optionFilterProp="children">
+                  {editingWarranty && !availableOrders.find(o => o.id === editingWarranty.order) ? (
+                    <Option key={editingWarranty.order} value={editingWarranty.order}>
+                      {editingWarranty.order_number}
+                    </Option>
+                  ) : null}
                   {availableOrders.map(o => (
                     <Option key={o.id} value={o.id}>{o.order_number}</Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="customer" label="Khách hàng" rules={[{ required: !editingWarranty, message: 'Vui lòng chọn khách hàng' }]}>
-                <Select disabled={!!editingWarranty || !canEdit} placeholder="Chọn khách hàng" showSearch optionFilterProp="children">
-                  {availableCustomers.map(c => (
-                    <Option key={c.id} value={c.id}>{c.full_name} - {c.phone}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
           </Row>
-          <Form.Item name="status" label="Trạng thái">
-            <Select disabled={!canEdit}>
-              {Object.entries(statusConfig).map(([key, c]) => (
-                <Option key={key} value={key}>{c.label}</Option>
-              ))}
-            </Select>
-          </Form.Item>
           <Row gutter={16}>
             <Col xs={24} md={12}>
               <Form.Item name="start_date" label="Ngày bắt đầu">
@@ -427,12 +416,6 @@ export default function WarrantyList() {
           </Row>
           <Form.Item name="terms" label="Điều khoản/Ghi chú ngắn">
             <Input.TextArea rows={2} disabled={!canEdit} />
-          </Form.Item>
-          <Form.Item name="warranty_content" label="Nội dung bảo hành (Cột trái mẫu in)">
-            <Input.TextArea rows={4} disabled={!canEdit} />
-          </Form.Item>
-          <Form.Item name="warranty_rules" label="Quy định bảo hành (Cột phải mẫu in)">
-            <Input.TextArea rows={4} disabled={!canEdit} />
           </Form.Item>
         </Form>
       </Modal>

@@ -988,6 +988,7 @@ export default function Inventory() {
       title: 'Ghi chú',
       dataIndex: 'note',
       key: 'note',
+      width: 250,
     },
     {
       title: 'Hành động',
@@ -1134,6 +1135,7 @@ export default function Inventory() {
       title: 'Ghi chú',
       dataIndex: 'note',
       key: 'note',
+      width: 250,
       render: (v) => <Text type="secondary">{v || '—'}</Text>,
     },
     ...(hasFactoryInHistory ? [{
@@ -1365,7 +1367,7 @@ export default function Inventory() {
                     rowKey="id"
                     loading={loading}
                     pagination={{ pageSize: 10 }}
-                    scroll={{ x: 1050 }}
+                    scroll={{ x: 'max-content' }}
                     expandable={{
                       expandedRowRender: (record) => {
                         if (!record.items || record.items.length <= 1) return null;
@@ -1465,7 +1467,7 @@ export default function Inventory() {
                     rowKey="id"
                     loading={loading}
                     pagination={{ pageSize: 10 }}
-                    scroll={{ x: 800 }}
+                    scroll={{ x: 'max-content' }}
                     expandable={{
                       expandedRowRender: (record) => {
                         if (!record.items || record.items.length <= 1) return null;

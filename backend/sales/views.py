@@ -123,7 +123,7 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="create-order")
     def create_order(self, request, pk=None):
         from django.db import transaction
-        from core.numbering import derive_code_from_source
+        from core.numbering import derive_code_from_order
         from orders.models import Order, OrderItem
         from orders.serializers import OrderSerializer
 
@@ -146,7 +146,7 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             )
 
         with transaction.atomic():
-            order_number = derive_code_from_source(quotation.quotation_number, Order, "order_number", quotation.company, "DH")
+            order_number = derive_code_from_order(quotation.quotation_number, quotation.company, "dh")
             order = Order.objects.create(
                 company=quotation.company,
                 order_number=order_number,

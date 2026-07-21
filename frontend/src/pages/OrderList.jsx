@@ -12,6 +12,8 @@ import {
   PlusOutlined,
   PrinterOutlined,
   SearchOutlined,
+  UploadOutlined,
+  PictureOutlined,
 } from '@ant-design/icons'
 import {
   Badge,
@@ -21,7 +23,9 @@ import {
   DatePicker,
   Divider,
   Drawer,
+  Empty,
   Form,
+  Image,
   Input,
   InputNumber,
   Modal,
@@ -29,11 +33,16 @@ import {
   Row,
   Select,
   Space,
+  Spin,
+  Steps,
   Table,
+  Tabs,
   Tag,
+  Tooltip,
   Typography,
   message,
   theme,
+  Upload,
 } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState, useRef } from 'react'
@@ -59,7 +68,7 @@ const statusConfig = {
 
 export default function OrderList() {
   const { token } = theme.useToken()
-  const { isCompanyAdmin, hasPermission, checkMaintenance, isModuleActive } = useAuth()
+  const { user, isCompanyAdmin, hasPermission, checkMaintenance, isModuleActive } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
   const location = useLocation()
 
@@ -68,6 +77,11 @@ export default function OrderList() {
   const [customers, setCustomers] = useState([])
   const [products, setProducts] = useState([])
   const [znsModalVisible, setZnsModalVisible] = useState(false)
+  const [printingOrder, setPrintingOrder] = useState(null)
+  const [printingReceipt, setPrintingReceipt] = useState(null)
+  const [receiptPrintVisible, setReceiptPrintVisible] = useState(false)
+  const [previewAttachments, setPreviewAttachments] = useState([])
+  const [previewVisible, setPreviewVisible] = useState(false)
   const [loading, setLoading] = useState(false)
   const [templates, setTemplates] = useState([])
   const [companyTemplate, setCompanyTemplate] = useState(null)
@@ -97,6 +111,8 @@ export default function OrderList() {
   const [receiptModalVisible, setReceiptModalVisible] = useState(false)
   const [receiptSubmitting, setReceiptSubmitting] = useState(false)
   const [receiptForm] = Form.useForm()
+  const [receiptFileList, setReceiptFileList] = useState([])
+  const [receiptUploading, setReceiptUploading] = useState(false)
 
   const [approvers, setApprovers] = useState([])
   const [approverModalVisible, setApproverModalVisible] = useState(false)
@@ -161,7 +177,9 @@ export default function OrderList() {
 
   const openReceiptModal = () => {
     if (checkMaintenance()) return
+    setReceiptFileList([])
     receiptForm.resetFields()
+    setReceiptModalVisible(true)
     
     let defaultMilestoneId = null
     let defaultAmount = selectedOrder?.remaining_debt || selectedOrder?.total_amount || 0
@@ -215,6 +233,36 @@ export default function OrderList() {
     }
   }
 
+  const handleUploadReceipt = async (file) => {
+    setReceiptUploading(true)
+    const formData = new FormData()
+    formData.append('file', file)
+    try {
+      const res = await api.post('/core/upload/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      if (res.data && res.data.url) {
+        setReceiptFileList(prev => [...prev, {
+          uid: file.uid,
+          name: file.name,
+          status: 'done',
+          url: res.data.url
+        }])
+      } else {
+        messageApi.error('Lỗi khi tải ảnh lên.')
+      }
+    } catch {
+      messageApi.error('Lỗi khi tải ảnh lên.')
+    } finally {
+      setReceiptUploading(false)
+    }
+    return false // Prevent default upload behavior
+  }
+  
+  const handleRemoveReceiptFile = (file) => {
+    setReceiptFileList(prev => prev.filter(item => item.uid !== file.uid))
+  }
+
   const handleCreateReceipt = async (values) => {
     setReceiptSubmitting(true)
     try {
@@ -224,6 +272,7 @@ export default function OrderList() {
         amount: values.amount,
         payment_method: values.payment_method,
         note: values.note,
+        attachments: receiptFileList.map(f => f.url)
       })
       messageApi.success('Lập phiếu thu thành công! Hệ thống đã tự động cập nhật cổng kiểm soát.')
       setReceiptModalVisible(false)
@@ -295,9 +344,9 @@ export default function OrderList() {
     try {
       await api.post(`/orders/orders/${orderId}/re-request-export/`)
       messageApi.success('Đã gửi lại yêu cầu xuất kho thành công!')
-      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, needs_export_request: false } : o)))
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, needs_export_request: false, has_pending_export: true } : o)))
       if (selectedOrder?.id === orderId) {
-        setSelectedOrder((prev) => ({ ...prev, needs_export_request: false }))
+        setSelectedOrder((prev) => ({ ...prev, needs_export_request: false, has_pending_export: true }))
       }
     } catch (err) {
       const msg = err.response?.data?.detail || 'Lỗi khi yêu cầu xuất kho lại!'
@@ -420,7 +469,7 @@ export default function OrderList() {
             }
           }
           @page {
-            size: A4 ${isLand ? 'landscape' : 'portrait'};
+            size: ${isLand ? 'landscape' : 'portrait'};
             margin: 8mm;
           }
           * { box-sizing: border-box; }
@@ -437,12 +486,22 @@ export default function OrderList() {
             print-color-adjust: exact !important;
           }
           .printable-quotation-content {
-            width: ${isLand ? '1060px' : '730px'} !important;
-            max-width: 100% !important;
+            width: 100% !important;
+            min-width: 1024px !important;
+            max-width: none !important;
             height: auto !important;
             overflow: visible !important;
             margin: 0 auto !important;
             padding: 0 !important;
+          }
+          @media print {
+            .print-row-nowrap {
+               flex-wrap: nowrap !important;
+            }
+            .print-row-nowrap > .ant-col {
+               flex: 1 1 50% !important;
+               max-width: 50% !important;
+            }
           }
         </style>
       </head>
@@ -1287,7 +1346,16 @@ export default function OrderList() {
                 setSelectedOrder(r)
                 setDrawerVisible(true)
               }}>
-                ⚠️ Bị từ chối xuất kho
+                ⚠️ Chưa có lệnh XK
+              </Tag>
+            )}
+            {r.has_pending_export && (
+              <Tag color="error" style={{ fontSize: 11, cursor: 'pointer' }} onClick={(e) => {
+                e.stopPropagation()
+                setSelectedOrder(r)
+                setDrawerVisible(true)
+              }}>
+                ⚠️ Đang đợi duyệt xuất kho
               </Tag>
             )}
           </Space>
@@ -1540,7 +1608,8 @@ export default function OrderList() {
               allowClear
               style={{ width: '100%' }}
             >
-              <Option value="rejected"><Badge status="error" text="Bị từ chối xuất kho" /></Option>
+              <Option value="rejected"><Badge status="error" text="Chưa có lệnh XK" /></Option>
+              <Option value="pending_export"><Badge status="error" text="Đang đợi duyệt xuất kho" /></Option>
             </Select>
           </Col>
         </Row>
@@ -1877,7 +1946,7 @@ export default function OrderList() {
                   </Space>
                 </Col>
                 <Col xs={24} md={4} style={{ textAlign: 'right' }}>
-                  {(hasPermission('finance.create_receipt') || hasPermission('finance.view')) && selectedOrder.remaining_debt > 0 && (
+                  {hasPermission('finance.create_receipt') && selectedOrder.remaining_debt > 0 && (
                     <Button
                       type="primary"
                       icon={<PlusOutlined />}
@@ -1926,7 +1995,7 @@ export default function OrderList() {
               </Row>
             </div>
 
-            {selectedOrder.needs_export_request && ['fully_paid', 'deposit_paid', 'credit_approved'].includes(selectedOrder.financial_status) && (
+            {(isCompanyAdmin || selectedOrder.created_by === user?.id) && selectedOrder.needs_export_request && ['fully_paid', 'deposit_paid', 'credit_approved'].includes(selectedOrder.financial_status) && (
               <div style={{ padding: '16px', background: '#fef2f2', borderRadius: '12px', border: '1px solid #fca5a5', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Space size={12}>
                   <AlertOutlined style={{ color: '#ef4444', fontSize: 20 }} />
@@ -1968,9 +2037,24 @@ export default function OrderList() {
                         key: 'action',
                         render: (_, record) => (
                           <Space>
-                            <Button type="link" size="small" icon={<PrinterOutlined />} onClick={() => handlePrintReceipt(record)}>
-                              In phiếu
-                            </Button>
+                            {hasPermission('finance.print_receipt') && (
+                              <Button type="link" size="small" icon={<PrinterOutlined />} onClick={() => handlePrintReceipt(record)}>
+                                In phiếu
+                              </Button>
+                            )}
+                            {record.attachments && record.attachments.length > 0 && (
+                              <Button
+                                type="link"
+                                size="small"
+                                icon={<PictureOutlined />}
+                                onClick={() => {
+                                  setPreviewAttachments(record.attachments)
+                                  setPreviewVisible(true)
+                                }}
+                              >
+                                Xem chứng từ ({record.attachments.length})
+                              </Button>
+                            )}
                             {hasPermission('finance.delete') && (
                               <Popconfirm
                                 title="Xác nhận xóa phiếu thu này?"
@@ -2069,6 +2153,23 @@ export default function OrderList() {
           <Form.Item name="note" label="Ghi chú Kế toán">
             <TextArea rows={2} placeholder="Nhập ghi chú giao dịch, số UNC..." />
           </Form.Item>
+          <Form.Item label="Chứng từ đính kèm (Ảnh UNC, v.v...)">
+            <Upload
+              listType="picture-card"
+              multiple
+              fileList={receiptFileList}
+              beforeUpload={handleUploadReceipt}
+              onRemove={handleRemoveReceiptFile}
+              accept="image/*,.pdf"
+            >
+              {receiptUploading ? <Spin /> : (
+                <div>
+                  <PlusOutlined />
+                  <div style={{ marginTop: 8 }}>Tải lên</div>
+                </div>
+              )}
+            </Upload>
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -2103,6 +2204,19 @@ export default function OrderList() {
           company={selectedOrder?.company_info}
           order={selectedOrder}
         />
+      </div>
+
+      <div style={{ display: 'none' }}>
+        <Image.PreviewGroup
+          preview={{
+            visible: previewVisible,
+            onVisibleChange: (vis) => setPreviewVisible(vis),
+          }}
+        >
+          {previewAttachments.map((url, i) => (
+            <Image key={i} src={url} />
+          ))}
+        </Image.PreviewGroup>
       </div>
 
       {selectedOrder && selectedOrder.customer && (

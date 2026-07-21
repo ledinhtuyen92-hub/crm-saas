@@ -560,6 +560,9 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
         # Sinh mã phiếu tự động
         transaction_code = generate_transaction_code(company, txn_type)
+        if txn_type == "export" and not reference_order:
+            transaction_code += "M"
+            
         serializer.save(
             company=company,
             created_by=self.request.user,
@@ -828,6 +831,8 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
         # Sinh mã phiếu tự động
         transaction_code = generate_transaction_code(company, txn_type)
+        if txn_type == "export":
+            transaction_code += "M"
 
         created_transactions = []
         for index, item in enumerate(items):

@@ -62,7 +62,7 @@ export default function DeliveryList() {
 
   const fetchDataForForm = async () => {
     try {
-      const resOrders = await api.get('/orders/orders/', { params: { limit: 100, status: 'approved' } })
+      const resOrders = await api.get('/orders/orders/', { params: { limit: 100, ready_for_delivery: 'true' } })
       setAvailableOrders(Array.isArray(resOrders.data) ? resOrders.data : resOrders.data?.results ?? [])
       
       const resShippers = await api.get('/users/users/', { params: { role: 'shipper', limit: 100 } })
@@ -215,6 +215,25 @@ export default function DeliveryList() {
     }
   }
 
+  const handleRecreateWarranty = async (id) => {
+    if (checkMaintenance()) return
+    Modal.confirm({
+      title: 'Tạo lại Phiếu bảo hành',
+      content: 'Đơn hàng này chưa có Phiếu bảo hành. Bạn có muốn tự động tạo mới Phiếu bảo hành ngay bây giờ không?',
+      okText: 'Tạo mới',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          await api.post(`/delivery/deliveries/${id}/recreate_warranty/`)
+          message.success('Đã tạo phiếu bảo hành thành công!')
+          fetchDeliveries()
+        } catch (error) {
+          message.error(error.response?.data?.detail || 'Lỗi khi tạo phiếu bảo hành.')
+        }
+      }
+    })
+  }
+
   const handleViewOrder = async (record) => {
     if (checkMaintenance()) return
     try {
@@ -283,12 +302,40 @@ export default function DeliveryList() {
       ),
     },
     {
+      title: 'Công nợ',
+      key: 'debt',
+      render: (_, r) => (
+        <div style={{ fontSize: 13 }}>
+          {r.order_remaining_debt > 0 ? (
+            <Text type="danger" strong>
+              {Number(r.order_remaining_debt).toLocaleString('vi-VN')} đ
+            </Text>
+          ) : (
+            <Text type="success" strong>Đã thu đủ</Text>
+          )}
+        </div>
+      ),
+    },
+    {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (st) => {
+      render: (st, r) => {
         const c = statusConfig[st] || { label: st, color: 'default' }
-        return <Tag color={c.color}>{c.label}</Tag>
+        return (
+          <Space direction="vertical" size={2}>
+            <Tag color={c.color}>{c.label}</Tag>
+            {st === 'delivered' && r.has_warranty === false && (
+              (isCompanyAdmin || hasPermission('warranty.create')) ? (
+                <Button type="primary" danger size="small" style={{ fontSize: 11, padding: '0 8px', marginTop: 4 }} onClick={() => handleRecreateWarranty(r.id)}>
+                  Tạo phiếu BH
+                </Button>
+              ) : (
+                <Text type="danger" style={{ fontSize: 11, display: 'block', lineHeight: 1.2, textAlign: 'center', marginTop: 4 }}>Chưa có phiếu BH</Text>
+              )
+            )}
+          </Space>
+        )
       },
     },
     {
@@ -480,9 +527,14 @@ export default function DeliveryList() {
           </Form.Item>
           <Form.Item name="status" label="Trạng thái">
             <Select disabled={!canEdit}>
-              {Object.entries(statusConfig).map(([key, c]) => (
-                <Option key={key} value={key}>{c.label}</Option>
-              ))}
+              <Option value="pending">{statusConfig['pending'].label}</Option>
+              <Option value="in_transit">{statusConfig['in_transit'].label}</Option>
+              {editingDelivery && editingDelivery.status === 'delivered' && (
+                 <Option value="delivered">{statusConfig['delivered'].label}</Option>
+              )}
+              {editingDelivery && editingDelivery.status === 'failed' && (
+                 <Option value="failed">{statusConfig['failed'].label}</Option>
+              )}
             </Select>
           </Form.Item>
           <Row gutter={16}>

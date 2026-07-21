@@ -89,6 +89,15 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 status="approved",
                 financial_status__in=["fully_paid", "deposit_paid", "credit_approved"]
             ).filter(~Exists(active_exports), Exists(rejected_exports))
+        elif export_status == "pending_export":
+            from inventory.models import InventoryTransaction
+            from django.db.models import Exists, OuterRef
+            pending_exports = InventoryTransaction.objects.filter(
+                reference_order=OuterRef('pk'),
+                type=InventoryTransaction.TYPE_EXPORT,
+                status=InventoryTransaction.STATUS_PENDING
+            )
+            qs = qs.filter(Exists(pending_exports))
 
         # Tìm kiếm theo tên khách, SĐT khách, mã đơn hàng
         search = self.request.query_params.get("search")
@@ -99,6 +108,14 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 Q(customer__name__icontains=search) |
                 Q(customer__phone__icontains=search)
             )
+
+        without_warranty = self.request.query_params.get("without_warranty")
+        if without_warranty == "true":
+            qs = qs.filter(warranty_card__isnull=True)
+
+        ready_for_delivery = self.request.query_params.get("ready_for_delivery")
+        if ready_for_delivery == "true":
+            qs = qs.filter(production_order__status="completed", delivery_order__isnull=True)
             
         return qs
 

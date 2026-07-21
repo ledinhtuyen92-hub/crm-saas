@@ -3,9 +3,11 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import HttpResponse
+from .views import UploadAPIView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/core/upload/', UploadAPIView.as_view(), name='core-upload'),
     # ── Auth & Users ──────────────────────────────────────────────────
     path('api/users/', include('users.urls')),
     # ── Business Modules ──────────────────────────────────────────────
