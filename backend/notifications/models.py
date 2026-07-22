@@ -111,6 +111,12 @@ class InternalAnnouncement(models.Model):
         default="normal",
         verbose_name="Độ ưu tiên",
     )
+    category = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Loại thông báo"
+    )
     is_pinned = models.BooleanField(
         default=False,
         verbose_name="Đã ghim",

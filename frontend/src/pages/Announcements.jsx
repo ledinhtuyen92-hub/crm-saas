@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
     Card, Table, Button, Space, Tag, Modal, Form, 
-    Input, Upload, Switch, message, Popconfirm, Typography, Select, Drawer, Badge
+    Input, Upload, Switch, message, Popconfirm, Typography, Select, Drawer, Badge, Divider
 } from 'antd';
 import { 
     NotificationOutlined, PlusOutlined, DeleteOutlined, 
     UploadOutlined, PushpinOutlined, PushpinFilled,
-    EyeOutlined, PaperClipOutlined
+    EyeOutlined, PaperClipOutlined, EditOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import JoditEditor from 'jodit-react';
@@ -32,6 +32,9 @@ const Announcements = () => {
     // Filter lists
     const [usersList, setUsersList] = useState([]);
     const [departmentsList, setDepartmentsList] = useState([]);
+    const [categoriesList, setCategoriesList] = useState([]);
+    const [newCategory, setNewCategory] = useState('');
+    const [editingId, setEditingId] = useState(null);
 
     // Modal Create
     const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -51,6 +54,7 @@ const Announcements = () => {
             if (canCreate) {
                 promises.push(api.get('/users/users/', { params: { limit: 1000 } }));
                 promises.push(api.get('/users/departments/', { params: { limit: 1000 } }));
+                promises.push(announcementApi.getCategories());
             }
             
             const results = await Promise.all(promises);
@@ -71,6 +75,7 @@ const Announcements = () => {
                     label: d.name,
                     value: d.id
                 })));
+                setCategoriesList(results[3]?.data || []);
             }
         } catch (error) {
             console.error('Fetch data error:', error);
@@ -84,13 +89,14 @@ const Announcements = () => {
         fetchData();
     }, [page, pageSize]);
 
-    const handleCreate = async (values) => {
+    const handleSubmit = async (values) => {
         setSubmitting(true);
         try {
             const formData = new FormData();
             formData.append('title', values.title);
             formData.append('content', values.content);
             if (values.priority) formData.append('priority', values.priority);
+            if (values.category) formData.append('category', values.category);
             if (values.is_pinned !== undefined) formData.append('is_pinned', values.is_pinned);
             
             formData.append('is_all_company', isAllCompany);
@@ -109,15 +115,21 @@ const Announcements = () => {
                 formData.append('attachments', file.originFileObj || file);
             });
 
-            await announcementApi.create(formData);
-            message.success('Tạo thông báo thành công');
+            if (editingId) {
+                await announcementApi.update(editingId, formData);
+                message.success('Cập nhật thông báo thành công');
+            } else {
+                await announcementApi.create(formData);
+                message.success('Tạo thông báo thành công');
+            }
             setCreateModalVisible(false);
+            setEditingId(null);
             form.resetFields();
             setFileList([]);
             setIsAllCompany(true);
             fetchData(); // reload
         } catch (error) {
-            message.error('Có lỗi xảy ra khi tạo thông báo');
+            message.error('Có lỗi xảy ra khi lưu thông báo');
         } finally {
             setSubmitting(false);
         }
@@ -133,6 +145,22 @@ const Announcements = () => {
         }
     };
 
+    const handleEdit = (record) => {
+        setEditingId(record.id);
+        setIsAllCompany(record.is_all_company);
+        form.setFieldsValue({
+            title: record.title,
+            content: record.content,
+            priority: record.priority,
+            category: record.category,
+            is_pinned: record.is_pinned,
+            target_users: record.target_users || [],
+            departments: record.departments || []
+        });
+        setFileList([]);
+        setCreateModalVisible(true);
+    };
+
     const handleViewDetail = async (record) => {
         try {
             const res = await announcementApi.get(record.id);
@@ -140,12 +168,13 @@ const Announcements = () => {
             setDetailVisible(true);
             
             // Nếu chưa đọc thì mark as read
-            if (!record.read_info || !record.read_info.is_read) {
+            if (!record.is_read) {
                 await announcementApi.markRead(record.id);
                 // Trigger global update if needed, and update local list
+                window.dispatchEvent(new Event('refresh-notifications'));
                 setAnnouncements(prev => prev.map(a => 
                     a.id === record.id 
-                    ? { ...a, read_info: { ...a.read_info, is_read: true } }
+                    ? { ...a, is_read: true }
                     : a
                 ));
             }
@@ -160,7 +189,7 @@ const Announcements = () => {
             dataIndex: 'title',
             key: 'title',
             render: (text, record) => {
-                const isRead = record.read_info?.is_read;
+                const isRead = record.is_read;
                 return (
                     <Space>
                         {record.is_pinned ? <PushpinFilled style={{ color: '#f5222d' }} /> : null}
@@ -169,6 +198,13 @@ const Announcements = () => {
                     </Space>
                 );
             }
+        },
+        {
+            title: 'Loại',
+            dataIndex: 'category',
+            key: 'category',
+            width: 150,
+            render: (text) => text ? <Tag color="cyan">{text}</Tag> : <span style={{ color: '#ccc' }}>--</span>
         },
         {
             title: 'Độ ưu tiên',
@@ -198,8 +234,8 @@ const Announcements = () => {
         },
         {
             title: 'Người đăng',
-            dataIndex: ['created_by', 'full_name'],
-            key: 'created_by',
+            dataIndex: 'created_by_name',
+            key: 'created_by_name',
             width: 180,
             render: (text) => text || 'Hệ thống'
         },
@@ -214,6 +250,13 @@ const Announcements = () => {
                         icon={<EyeOutlined />} 
                         onClick={() => handleViewDetail(record)} 
                     />
+                    {canCreate && (
+                        <Button
+                            type="text"
+                            icon={<EditOutlined style={{ color: '#faad14' }} />}
+                            onClick={() => handleEdit(record)}
+                        />
+                    )}
                     {canDelete && (
                         <Popconfirm
                             title="Xóa thông báo"
@@ -281,18 +324,21 @@ const Announcements = () => {
                         },
                         showSizeChanger: true
                     }}
+                    scroll={{ x: 'max-content' }}
                 />
             </Card>
 
             {/* Modal Create Announcement */}
             <Modal
-                title="Đăng thông báo mới"
+                title={editingId ? "Cập nhật thông báo" : "Đăng thông báo mới"}
                 open={createModalVisible}
                 onOk={() => form.submit()}
                 onCancel={() => {
                     setCreateModalVisible(false);
+                    setEditingId(null);
                     form.resetFields();
                     setFileList([]);
+                    setIsAllCompany(true);
                 }}
                 confirmLoading={submitting}
                 width={800}
@@ -301,7 +347,7 @@ const Announcements = () => {
                 <Form
                     form={form}
                     layout="vertical"
-                    onFinish={handleCreate}
+                    onFinish={handleSubmit}
                     initialValues={{
                         priority: 'normal',
                         is_pinned: false,
@@ -309,14 +355,7 @@ const Announcements = () => {
                         departments: []
                     }}
                 >
-                    <Form.Item label="Gửi toàn công ty (Tất cả)">
-                        <Switch 
-                            checked={isAllCompany} 
-                            onChange={(checked) => setIsAllCompany(checked)} 
-                            checkedChildren="Bật" 
-                            unCheckedChildren="Tắt"
-                        />
-                    </Form.Item>
+
                     <Form.Item
                         name="title"
                         label="Tiêu đề"
@@ -334,12 +373,56 @@ const Announcements = () => {
                     </Form.Item>
 
                     <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                        <Form.Item name="category" label="Loại thông báo" style={{ minWidth: 200, flex: 1 }}>
+                            <Select
+                                placeholder="Chọn hoặc nhập loại mới"
+                                showSearch
+                                allowClear
+                                dropdownRender={(menu) => (
+                                    <>
+                                        {menu}
+                                        <Divider style={{ margin: '8px 0' }} />
+                                        <Space style={{ padding: '0 8px 4px' }}>
+                                            <Input
+                                                placeholder="Loại mới..."
+                                                value={newCategory}
+                                                onChange={(e) => setNewCategory(e.target.value)}
+                                                onKeyDown={(e) => e.stopPropagation()}
+                                            />
+                                            <Button type="text" icon={<PlusOutlined />} onClick={() => {
+                                                if (newCategory && !categoriesList.includes(newCategory)) {
+                                                    setCategoriesList([...categoriesList, newCategory]);
+                                                    form.setFieldValue('category', newCategory);
+                                                    setNewCategory('');
+                                                }
+                                            }}>
+                                                Tạo
+                                            </Button>
+                                        </Space>
+                                    </>
+                                )}
+                            >
+                                {categoriesList.map(cat => (
+                                    <Select.Option key={cat} value={cat}>{cat}</Select.Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+
                         <Form.Item name="priority" label="Độ ưu tiên" style={{ minWidth: 150 }}>
                             <Select>
                                 <Select.Option value="low">Thấp</Select.Option>
                                 <Select.Option value="normal">Thường</Select.Option>
                                 <Select.Option value="high">Cao</Select.Option>
                             </Select>
+                        </Form.Item>
+
+                        <Form.Item label="Gửi toàn công ty (Tất cả)">
+                            <Switch 
+                                checked={isAllCompany} 
+                                onChange={(checked) => setIsAllCompany(checked)} 
+                                checkedChildren="Bật" 
+                                unCheckedChildren="Tắt"
+                            />
                         </Form.Item>
 
                         {!isAllCompany && (
@@ -400,7 +483,7 @@ const Announcements = () => {
                     <div>
                         <div style={{ marginBottom: 24, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                             <Text type="secondary">
-                                Đăng bởi: <strong style={{ color: '#000' }}>{selectedAnnouncement.created_by?.full_name || 'Hệ thống'}</strong>
+                                Đăng bởi: <strong style={{ color: '#000' }}>{selectedAnnouncement.created_by_name || 'Hệ thống'}</strong>
                             </Text>
                             <Text type="secondary">
                                 Thời gian: <strong style={{ color: '#000' }}>{dayjs(selectedAnnouncement.created_at).format('DD/MM/YYYY HH:mm')}</strong>

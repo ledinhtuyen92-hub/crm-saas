@@ -472,7 +472,7 @@ class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
             return Permission.objects.none()
             
         # Core modules are always available for permission assignment
-        core_modules = ["dashboard", "reports", "settings", "notifications"]
+        core_modules = ["dashboard", "reports", "settings"]
         active_modules = company.settings.active_modules if hasattr(company, "settings") else []
         allowed_modules = core_modules + active_modules
         

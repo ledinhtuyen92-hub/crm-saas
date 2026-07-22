@@ -14,11 +14,21 @@ const announcementApi = {
             },
         });
     },
+    update: (id, data) => {
+        return api.patch(`/notifications/announcements/${id}/`, data, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        });
+    },
     delete: (id) => {
         return api.delete(`/notifications/announcements/${id}/`);
     },
     markRead: (id) => {
         return api.post(`/notifications/announcements/${id}/mark_read/`);
+    },
+    getCategories: () => {
+        return api.get("/notifications/announcements/categories/");
     }
 };
 

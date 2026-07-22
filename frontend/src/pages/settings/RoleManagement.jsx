@@ -32,18 +32,21 @@ const { Title, Text } = Typography
 
 const MODULE_ORDER = [
   'dashboard',
-  'announcements',
+  'notifications',
   'approvals',
   'crm',
+  'products',
   'sales',
   'orders',
-  'finance',
-  'products',
   'inventory',
   'production',
+  'delivery',
+  'warranty',
+  'finance',
   'reports',
-  'settings',
-  'notifications'
+  'zalo',
+  'facebook',
+  'settings'
 ]
 export default function RoleManagement() {
   const { token } = theme.useToken()

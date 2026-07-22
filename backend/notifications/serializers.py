@@ -44,6 +44,7 @@ class InternalAnnouncementSerializer(serializers.ModelSerializer):
             "departments",
             "target_users",
             "priority",
+            "category",
             "is_pinned",
             "created_by",
             "created_by_name",

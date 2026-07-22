@@ -74,6 +74,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0)
   const [pendingProductionCount, setPendingProductionCount] = useState(0)
   const [pendingDeliveryCount, setPendingDeliveryCount] = useState(0)
+  const [unreadAnnouncementsCount, setUnreadAnnouncementsCount] = useState(0)
   const [notifications, setNotifications] = useState([])
   const [notifVisible, setNotifVisible] = useState(false)
 
@@ -89,6 +90,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
         setPendingOrdersCount(res.data.pending_orders_count || 0)
         setPendingProductionCount(res.data.pending_production_count || 0)
         setPendingDeliveryCount(res.data.pending_delivery_count || 0)
+        setUnreadAnnouncementsCount(res.data.unread_announcements_count || 0)
       }).catch(() => {})
     }
 
@@ -145,7 +147,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
         ...(hasPermission('notifications.view_announcements') ? [{
           key: '/announcements',
           icon: <NotificationOutlined />,
-          label: <Link to="/announcements">Thông báo</Link>,
+          label: <Link to="/announcements">Thông báo {unreadAnnouncementsCount > 0 && <Badge count={unreadAnnouncementsCount} style={{ marginLeft: 8 }} />}</Link>,
         }] : []),
         ...(isModuleActive('approvals') ? [{
           key: '/approvals',
@@ -657,8 +659,8 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                             }
                             description={
                               <div>
-                                <Text style={{ fontSize: 12, color: item.is_read ? '#8c8c8c' : '#595959', display: 'block', marginTop: 4 }}>
-                                  {item.message}
+                                <Text style={{ fontSize: 12, color: item.is_read ? '#8c8c8c' : '#595959', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginTop: 4 }}>
+                                  {item.message ? item.message.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ') : ''}
                                 </Text>
                                 <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
                                   {new Date(item.created_at).toLocaleString('vi-VN')}

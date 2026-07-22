@@ -379,7 +379,7 @@ class CompanySettings(models.Model):
         if not self.company_id:
             return
         try:
-            core_modules = ["dashboard", "reports", "settings", "notifications"]
+            core_modules = ["dashboard", "reports", "settings"]
             active = self.active_modules if isinstance(self.active_modules, list) else []
             allowed = set(core_modules + active)
 

@@ -54,3 +54,26 @@ Bước 3: Nạp (Load) dữ liệu vào máy cá nhân
 Mở Terminal trên máy cá nhân (chỗ anh đang ngồi) và chạy lệnh: docker exec crm_web python load_sync_data.py
 Lệnh này sẽ tự động xóa sạch dữ liệu cũ ở local và nạp 100% dữ liệu từ file JSON vào.
 Làm xong Bước 3, anh F5 lại web thì toàn bộ danh sách Quyền, Vai trò, Tài khoản... sẽ y xì đúc như máy công ty không sai một chữ nào ạ!
+
+Dạ khi anh gõ lệnh git pull ở máy khác, Git sẽ cố gắng kéo toàn bộ code mới nhất từ GitHub (những gì em vừa đẩy lên) về máy đó. Tuy nhiên, để đảm bảo máy khác giống hệt 100% với code và dữ liệu ở máy hiện tại mà không bị vướng bận các tệp thừa hay sửa đổi cũ, anh nên làm theo các bước chuẩn sau đây ở máy khác nhé:
+
+1. Đồng bộ Code (Ép giống hệt GitHub)
+Nếu anh chỉ gõ git pull, Git sẽ không xóa các tệp "thừa" (những tệp rác anh tạo nháp ở máy kia mà chưa commit). Để máy kia giống hệt GitHub, anh mở Terminal ở máy kia và gõ:
+
+bash
+git fetch --all
+git reset --hard origin/main
+git clean -fd
+Lệnh reset --hard sẽ ép bỏ qua mọi chỉnh sửa đang làm dở ở máy kia và đưa code về giống hệt GitHub.
+Lệnh clean -fd sẽ dọn dẹp sạch sẽ toàn bộ những file/thư mục thừa, không có trên GitHub.
+2. Đồng bộ Dữ liệu & Cấu hình (Rất quan trọng)
+Sau khi kéo code về xong, do nãy giờ chúng ta có thêm quyền mới ("In phiếu thu") và có lưu lại cấu hình mẫu, anh cần chạy luồng đồng bộ theo đúng Quy tắc số 10 của dự án nhé. Anh chạy các lệnh sau ở máy kia:
+
+bash
+# 1. Cập nhật Database (nếu có bảng mới)
+docker exec -i crm_web python manage.py migrate
+# 2. Nạp lại dữ liệu đồng bộ (những gì em vừa lưu vào sync_data.json)
+docker exec -i crm_web python load_sync_data.py
+# 3. Nạp lại danh sách Quyền (để lấy quyền In phiếu thu)
+docker exec -i crm_web python manage.py seed_permissions
+Chỉ cần làm đúng các bước này, em đảm bảo từ Code, Giao diện cho đến Dữ liệu, Phân quyền ở máy kia sẽ giống y xì đúc máy anh đang dùng bây giờ luôn ạ!

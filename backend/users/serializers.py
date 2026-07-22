@@ -140,7 +140,7 @@ class RoleSerializer(serializers.ModelSerializer):
             return value
         company = getattr(request.user, "company", None)
         if company and hasattr(company, "settings"):
-            core_modules = ["dashboard", "reports", "settings", "notifications"]
+            core_modules = ["dashboard", "reports", "settings"]
             active_modules = company.settings.active_modules if isinstance(company.settings.active_modules, list) else []
             allowed_modules = set(core_modules + active_modules)
             value = [p for p in value if p.module in allowed_modules]

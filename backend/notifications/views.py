@@ -89,6 +89,27 @@ def unread_count(request):
     pending_orders_count = 0
     pending_production_count = 0
     pending_delivery_count = 0
+    unread_announcements_count = 0
+
+    from .models import InternalAnnouncement
+    from django.db.models import Q
+    
+    announcement_qs = InternalAnnouncement.objects.filter(company=request.user.company)
+    if not (request.user.is_superuser or request.user.is_company_admin):
+        if request.user.department_id:
+            announcement_qs = announcement_qs.filter(
+                Q(is_all_company=True) | 
+                Q(departments=request.user.department_id) |
+                Q(target_users=request.user) |
+                Q(created_by=request.user)
+            ).distinct()
+        else:
+            announcement_qs = announcement_qs.filter(
+                Q(is_all_company=True) | 
+                Q(target_users=request.user) |
+                Q(created_by=request.user)
+            ).distinct()
+    unread_announcements_count = announcement_qs.exclude(reads__user=request.user).count()
 
     from inventory.models import InventoryTransaction
     from approvals.models import ApprovalStep
@@ -158,6 +179,7 @@ def unread_count(request):
         "pending_orders_count": pending_orders_count,
         "pending_production_count": pending_production_count,
         "pending_delivery_count": pending_delivery_count,
+        "unread_announcements_count": unread_announcements_count,
     })
 
 
@@ -193,7 +215,7 @@ class InternalAnnouncementViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        qs = InternalAnnouncement.objects.filter(company=user.company).order_by("-created_at")
+        qs = InternalAnnouncement.objects.filter(company=user.company).order_by("-is_pinned", "-created_at")
         
         # Nếu không phải là người tạo hoặc superadmin, thì chỉ xem những thông báo dành cho toàn công ty 
         # hoặc gửi riêng cho phòng ban của user
@@ -218,6 +240,14 @@ class InternalAnnouncementViewSet(viewsets.ModelViewSet):
             qs = qs.exclude(reads__user=user)
             
         return qs.prefetch_related("attachments", "departments", "reads")
+
+    @action(detail=False, methods=['get'], url_path='categories')
+    def get_categories(self, request):
+        categories = InternalAnnouncement.objects.filter(
+            company=request.user.company,
+            category__isnull=False
+        ).exclude(category='').values_list('category', flat=True).distinct()
+        return Response(list(categories))
 
     def perform_create(self, serializer):
         priority = self.request.data.get("priority", "normal")

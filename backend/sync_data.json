@@ -946,9 +946,6 @@
     "description": "Vai trò quản trị cao nhất của công ty.",
     "is_auto_assign_target": false,
     "permissions": [
-      128,
-      129,
-      127,
       56,
       119,
       6,
@@ -1125,6 +1122,7 @@
       63,
       48,
       23,
+      124,
       62,
       17,
       18,
@@ -1258,7 +1256,7 @@
   "pk": 1,
   "fields": {
     "password": "pbkdf2_sha256$1000000$ECQhi9BHkIsVTlsjgPiIMe$sVQIe5Cfq9ZU7nACy/evbQj0IfRFVVhgCQ1NbKN4NE8=",
-    "last_login": "2026-07-22T11:10:43.310Z",
+    "last_login": "2026-07-22T15:44:05.306Z",
     "is_superuser": true,
     "username": "admin",
     "first_name": "",
@@ -1285,7 +1283,7 @@
   "pk": 2,
   "fields": {
     "password": "pbkdf2_sha256$1000000$gogv5if640Ve4r5k5DvYiY$Co2C/05RkNJOSvpBH4uiONSzdeTJAZ/vJysA2SrgpDY=",
-    "last_login": "2026-07-22T11:12:24.466Z",
+    "last_login": "2026-07-22T15:38:39.702Z",
     "is_superuser": false,
     "username": "giamdoc",
     "first_name": "",
@@ -1366,7 +1364,7 @@
   "pk": 5,
   "fields": {
     "password": "pbkdf2_sha256$1000000$zGI3raZm9E8dPpanLUOhR3$66e+R9q5PbqIrxfRL936um0S8glLIWQJO9doV+Isw5o=",
-    "last_login": "2026-07-22T11:22:22.454Z",
+    "last_login": "2026-07-22T15:44:27.158Z",
     "is_superuser": false,
     "username": "nvkinhdoanh1",
     "first_name": "",
@@ -1517,7 +1515,8 @@
       "facebook",
       "approvals",
       "zalo",
-      "crm"
+      "crm",
+      "notifications"
     ],
     "pipeline_status_labels": {
       "new": "Khách mới",
@@ -6525,7 +6524,7 @@
     "title": "Có thông báo nội bộ mới: Kiểm tra",
     "message": "<p>Kiểm tra</p>",
     "link": "/announcements",
-    "is_read": false,
+    "is_read": true,
     "created_at": "2026-07-22T11:18:29.271Z"
   }
 },
@@ -6630,7 +6629,7 @@
     "title": "Có thông báo nội bộ mới: Không có thông báo",
     "message": "<p>hihi</p>",
     "link": "/announcements",
-    "is_read": false,
+    "is_read": true,
     "created_at": "2026-07-22T11:19:24.316Z"
   }
 },
@@ -6695,75 +6694,285 @@
   }
 },
 {
-  "model": "notifications.internalannouncement",
-  "pk": 2,
+  "model": "notifications.notification",
+  "pk": 360,
   "fields": {
     "company": 15,
-    "title": "Kiểm tra",
-    "content": "<p>Kiểm tra</p>",
+    "recipient": 3,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào",
+    "message": "<p>Chào</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-22T15:46:34.223Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 361,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào",
+    "message": "<p>Chào</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-22T15:46:34.223Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 362,
+  "fields": {
+    "company": 15,
+    "recipient": 5,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào",
+    "message": "<p>Chào</p>",
+    "link": "/announcements",
+    "is_read": true,
+    "created_at": "2026-07-22T15:46:34.223Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 363,
+  "fields": {
+    "company": 15,
+    "recipient": 6,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào",
+    "message": "<p>Chào</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-22T15:46:34.223Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 364,
+  "fields": {
+    "company": 15,
+    "recipient": 7,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào",
+    "message": "<p>Chào</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-22T15:46:34.223Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 365,
+  "fields": {
+    "company": 15,
+    "recipient": 8,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào",
+    "message": "<p>Chào</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-22T15:46:34.223Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 366,
+  "fields": {
+    "company": 15,
+    "recipient": 9,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào",
+    "message": "<p>Chào</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-22T15:46:34.223Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 367,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Nội quy công ty",
+    "message": "<p>Sửa nội quy công ty</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-22T16:19:29.676Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 368,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Nội quy công ty",
+    "message": "<p>Sửa nội quy công ty</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-22T16:19:29.676Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 369,
+  "fields": {
+    "company": 15,
+    "recipient": 5,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Nội quy công ty",
+    "message": "<p>Sửa nội quy công ty</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-22T16:19:29.676Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 370,
+  "fields": {
+    "company": 15,
+    "recipient": 6,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Nội quy công ty",
+    "message": "<p>Sửa nội quy công ty</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-22T16:19:29.676Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 371,
+  "fields": {
+    "company": 15,
+    "recipient": 7,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Nội quy công ty",
+    "message": "<p>Sửa nội quy công ty</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-22T16:19:29.676Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 372,
+  "fields": {
+    "company": 15,
+    "recipient": 8,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Nội quy công ty",
+    "message": "<p>Sửa nội quy công ty</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-22T16:19:29.676Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 373,
+  "fields": {
+    "company": 15,
+    "recipient": 9,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Nội quy công ty",
+    "message": "<p>Sửa nội quy công ty</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-22T16:19:29.676Z"
+  }
+},
+{
+  "model": "notifications.internalannouncement",
+  "pk": 4,
+  "fields": {
+    "company": 15,
+    "title": "Xin chào các bạn",
+    "content": "<p>Chào</p>",
     "created_by": 2,
     "is_all_company": true,
     "priority": "high",
+    "category": null,
     "is_pinned": true,
-    "created_at": "2026-07-22T11:18:29.162Z",
+    "created_at": "2026-07-22T15:46:34.114Z",
     "departments": [],
     "target_users": []
   }
 },
 {
   "model": "notifications.internalannouncement",
-  "pk": 3,
+  "pk": 5,
   "fields": {
     "company": 15,
-    "title": "Không có thông báo",
-    "content": "<p>hihi</p>",
+    "title": "Nội quy công ty",
+    "content": "<p>Sửa nội quy công ty</p>",
     "created_by": 2,
     "is_all_company": true,
     "priority": "normal",
+    "category": "Nội quy công ty",
     "is_pinned": false,
-    "created_at": "2026-07-22T11:19:24.228Z",
+    "created_at": "2026-07-22T16:19:29.659Z",
     "departments": [],
     "target_users": []
   }
 },
 {
   "model": "notifications.announcementattachment",
-  "pk": 1,
-  "fields": {
-    "announcement": 2,
-    "file": "announcements/logo_mlg.pdf",
-    "file_name": "logo mlg.pdf",
-    "file_size": 204975,
-    "created_at": "2026-07-22T11:18:29.203Z"
-  }
-},
-{
-  "model": "notifications.announcementattachment",
-  "pk": 2,
-  "fields": {
-    "announcement": 3,
-    "file": "announcements/Logo-vuong-vien.jpg",
-    "file_name": "Logo-vuong-vien.jpg",
-    "file_size": 251417,
-    "created_at": "2026-07-22T11:19:24.277Z"
-  }
-},
-{
-  "model": "notifications.announcementread",
-  "pk": 2,
-  "fields": {
-    "announcement": 2,
-    "user": 2,
-    "read_at": "2026-07-22T11:18:31.998Z"
-  }
-},
-{
-  "model": "notifications.announcementread",
   "pk": 3,
   "fields": {
-    "announcement": 3,
+    "announcement": 4,
+    "file": "announcements/Sửa.docx",
+    "file_name": "Sửa.docx",
+    "file_size": 18522,
+    "created_at": "2026-07-22T15:46:34.209Z"
+  }
+},
+{
+  "model": "notifications.announcementread",
+  "pk": 4,
+  "fields": {
+    "announcement": 4,
     "user": 2,
-    "read_at": "2026-07-22T11:19:57.030Z"
+    "read_at": "2026-07-22T15:46:41.461Z"
+  }
+},
+{
+  "model": "notifications.announcementread",
+  "pk": 5,
+  "fields": {
+    "announcement": 4,
+    "user": 5,
+    "read_at": "2026-07-22T16:01:54.898Z"
+  }
+},
+{
+  "model": "notifications.announcementread",
+  "pk": 8,
+  "fields": {
+    "announcement": 5,
+    "user": 2,
+    "read_at": "2026-07-22T16:20:01.630Z"
   }
 },
 {
