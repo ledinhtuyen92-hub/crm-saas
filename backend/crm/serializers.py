@@ -101,6 +101,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             "source_display",
             "status",
             "status_display",
+            "is_inactive",
             "tags",
             "tag_ids",
             "assigned_to",
@@ -131,18 +132,28 @@ class CustomerSerializer(serializers.ModelSerializer):
         return obj.get_status_display()
 
     def validate_status(self, value):
-        if self.instance and self.instance.status in [Customer.STATUS_HAS_ORDER, Customer.STATUS_REPEAT_ORDER]:
-            if value != self.instance.status:
-                raise serializers.ValidationError(
-                    "Khách hàng này đã đạt trạng thái 'Đã có đơn hàng/Mua thêm đơn hàng' do hệ thống tự động ghi nhận từ Đơn hàng. KHÔNG ĐƯỢC PHÉP ĐỔI thủ công sang trạng thái khác để tránh sai lệch dữ liệu."
-                )
-            return value
+        if self.instance and self.instance.pk:
+            from orders.models import Order
+            valid_orders_count = self.instance.orders.exclude(
+                status__in=[Order.STATUS_CANCELLED, Order.STATUS_REJECTED]
+            ).count()
+            
+            if valid_orders_count > 0:
+                if value not in [Customer.STATUS_HAS_ORDER, Customer.STATUS_REPEAT_ORDER]:
+                    raise serializers.ValidationError(
+                        "Khách hàng này đã có đơn hàng trên hệ thống. KHÔNG ĐƯỢC PHÉP lùi trạng thái về các bước trước đó để tránh sai lệch dữ liệu."
+                    )
+                if value != self.instance.status:
+                    raise serializers.ValidationError(
+                        "Trạng thái 'Đã có đơn hàng' và 'Mua thêm đơn hàng' là trạng thái được hệ thống TỰ ĐỘNG CẬP NHẬT. Bạn không được phép đổi thủ công."
+                    )
+                return value
+                
         if value in [Customer.STATUS_HAS_ORDER, Customer.STATUS_REPEAT_ORDER]:
             raise serializers.ValidationError(
-                "Trạng thái 'Đã có đơn hàng' và 'Mua thêm đơn hàng' là trạng thái được hệ thống TỰ ĐỘNG CẬP NHẬT khi Đơn hàng được duyệt. Bạn không được phép chọn thủ công."
+                "Trạng thái 'Đã có đơn hàng' và 'Mua thêm đơn hàng' là trạng thái được hệ thống TỰ ĐỘNG CẬP NHẬT khi có đơn hàng. Bạn không được phép chọn thủ công."
             )
         return value
-
     def validate_phone(self, value):
         request = self.context.get("request")
         if request and hasattr(request, "user"):

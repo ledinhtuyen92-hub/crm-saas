@@ -72,6 +72,9 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         customer_status = self.request.query_params.get("status")
         if customer_status:
             qs = qs.filter(status=customer_status)
+        is_inactive = self.request.query_params.get("is_inactive")
+        if is_inactive:
+            qs = qs.filter(is_inactive=(is_inactive.lower() == 'true'))
         # Filter theo assigned_to nếu có query param (dành cho manager)
         assigned_to = self.request.query_params.get("assigned_to")
         if assigned_to:

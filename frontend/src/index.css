@@ -35,6 +35,23 @@ a {
   text-decoration: none;
 }
 
+/* ── Compact Table Styles for Print Views (On-screen & Printed) ────────────── */
+.compact-print-table .ant-table-cell,
+.printable-quotation-content .ant-table-cell,
+.printable-transaction-content .ant-table-cell,
+.printable-receipt-content .ant-table-cell {
+  padding: 4px 8px !important;
+  line-height: 1.4 !important;
+  font-size: 13px !important;
+}
+
+.compact-print-table .ant-table-thead > tr > th,
+.printable-quotation-content .ant-table-thead > tr > th,
+.printable-transaction-content .ant-table-thead > tr > th {
+  padding: 6px 8px !important;
+}
+
+
 /* ── Print Styles for Quotations & Multi-page Tables ────────────── */
 @media print {
   @page {

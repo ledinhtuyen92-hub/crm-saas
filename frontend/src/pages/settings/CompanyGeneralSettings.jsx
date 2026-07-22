@@ -18,6 +18,7 @@ import {
   Divider,
   Form,
   Input,
+  InputNumber,
   Modal,
   Row,
   Select,
@@ -94,7 +95,6 @@ export default function CompanyGeneralSettings() {
           has_order: 'Đã có đơn hàng',
           repeat_order: 'Mua thêm đơn hàng',
           lost: 'Đã mất',
-          inactive: 'Không hoạt động',
         },
       })
     } catch (err) {
@@ -483,12 +483,17 @@ export default function CompanyGeneralSettings() {
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name={['pipeline_status_labels', 'potential']} label="Trạng thái: Tiềm năng (potential)">
-                <Input placeholder="VD: Tiềm năng" />
+                <Input placeholder="VD: Tìm hiểu nhu cầu" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name={['pipeline_status_labels', 'active']} label="Trạng thái: Đang hoạt động (active)">
-                <Input placeholder="VD: Đang giao dịch" />
+                <Input placeholder="VD: Sắp chốt" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name={['pipeline_status_labels', 'lost']} label="Trạng thái: Đã mất (lost)">
+                <Input placeholder="VD: Không còn nhu cầu" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>
@@ -501,14 +506,15 @@ export default function CompanyGeneralSettings() {
                 <Input placeholder="VD: Mua thêm đơn hàng" />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name={['pipeline_status_labels', 'lost']} label="Trạng thái: Đã mất (lost)">
-                <Input placeholder="VD: Thất bại" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name={['pipeline_status_labels', 'inactive']} label="Trạng thái: Không hoạt động (inactive)">
-                <Input placeholder="VD: Ngừng giao dịch" />
+          </Row>
+          <Row gutter={16}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                name="inactive_days_threshold"
+                label="Số ngày tính là khách ngủ đông"
+                help="Tính từ ngày mua hàng gần nhất (hoặc ngày tạo khách). Điền 0 để tắt tự động đánh dấu."
+              >
+                <InputNumber min={0} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           </Row>

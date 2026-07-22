@@ -298,6 +298,11 @@ class CompanySettings(models.Model):
         verbose_name="Tiền tố mã đơn hàng",
         help_text="VD: 'DH' → Mã đơn: DH-20240101-001",
     )
+    inactive_days_threshold = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Số ngày tính là khách ngủ đông",
+        help_text="Điền 0 để tắt chức năng tự động đánh dấu khách ngủ đông."
+    )
     lead_routing = models.CharField(
         max_length=20,
         choices=ROUTING_CHOICES,

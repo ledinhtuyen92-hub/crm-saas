@@ -231,6 +231,11 @@ try:
             "task": "zalo.send_birthday_zns",
             "schedule": crontab(minute=0, hour=8),
         },
+        # Đánh dấu khách ngủ đông mỗi ngày lúc nửa đêm
+        "crm-check-inactive-customers": {
+            "task": "crm.tasks.check_and_update_inactive_customers",
+            "schedule": crontab(minute=0, hour=0),
+        },
     }
 except ImportError:
     pass  # Celery chưa được cài — bỏ qua, không crash Django

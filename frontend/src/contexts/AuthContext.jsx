@@ -104,8 +104,7 @@ export function AuthProvider({ children }) {
       active: 'Đang giao dịch',
       has_order: 'Đã có đơn hàng',
       repeat_order: 'Mua thêm đơn hàng',
-      lost: 'Thất bại',
-      inactive: 'Ngừng giao dịch',
+      lost: 'Đã mất',
     }
     return { ...defaults, ...(user?.pipeline_status_labels || {}) }
   }, [user])

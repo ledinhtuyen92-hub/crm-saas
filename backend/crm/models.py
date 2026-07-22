@@ -56,15 +56,13 @@ class Customer(models.Model):
     STATUS_HAS_ORDER = "has_order"
     STATUS_REPEAT_ORDER = "repeat_order"
     STATUS_LOST = "lost"
-    STATUS_INACTIVE = "inactive"
     STATUS_CHOICES = [
         (STATUS_NEW, "Khách mới"),
-        (STATUS_POTENTIAL, "Tiềm năng"),
-        (STATUS_ACTIVE, "Đang hoạt động"),
+        (STATUS_POTENTIAL, "Tìm hiểu nhu cầu"),
+        (STATUS_ACTIVE, "Sắp chốt"),
+        (STATUS_LOST, "Không còn nhu cầu"),
         (STATUS_HAS_ORDER, "Đã có đơn hàng"),
         (STATUS_REPEAT_ORDER, "Mua thêm đơn hàng"),
-        (STATUS_LOST, "Đã mất"),
-        (STATUS_INACTIVE, "Không hoạt động"),
     ]
 
     company = models.ForeignKey(
@@ -96,6 +94,10 @@ class Customer(models.Model):
         blank=True,
         related_name="customers",
         verbose_name="Tags",
+    )
+    is_inactive = models.BooleanField(
+        default=False,
+        verbose_name="Không hoạt động (Ngủ đông)"
     )
     assigned_to = models.ForeignKey(
         "users.User",

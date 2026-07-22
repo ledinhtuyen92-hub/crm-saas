@@ -5,6 +5,7 @@ import {
   Badge,
   Button,
   Card,
+  Checkbox,
   Col,
   DatePicker,
   Drawer,
@@ -61,13 +62,12 @@ const { Option } = Select
 const { TextArea } = Input
 
 const STATUS_MAP = {
-  new: { label: 'Mới (Lead)', color: 'blue' },
-  potential: { label: 'Tiềm năng', color: 'cyan' },
-  active: { label: 'Đang giao dịch', color: 'green' },
+  new: { label: 'Khách mới', color: 'blue' },
+  potential: { label: 'Tìm hiểu nhu cầu', color: 'cyan' },
+  active: { label: 'Sắp chốt', color: 'green' },
+  lost: { label: 'Không còn nhu cầu', color: 'red' },
   has_order: { label: 'Đã có đơn hàng', color: 'purple' },
   repeat_order: { label: 'Mua thêm đơn hàng', color: 'magenta' },
-  lost: { label: 'Thất bại', color: 'red' },
-  inactive: { label: 'Ngừng giao dịch', color: 'gray' },
 }
 
 const SOURCE_MAP = {
@@ -123,6 +123,7 @@ function CustomerList() {
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [isInactiveFilter, setIsInactiveFilter] = useState(false)
   const [assignedToFilter, setAssignedToFilter] = useState('')
 
   // Auto Assign Toggle State
@@ -202,6 +203,7 @@ function CustomerList() {
       const params = {}
       if (searchQuery) params.search = searchQuery
       if (statusFilter) params.status = statusFilter
+      if (isInactiveFilter) params.is_inactive = true
       if (assignedToFilter) params.assigned_to = assignedToFilter
 
       const response = await api.get('/crm/customers/', { params })
@@ -214,7 +216,7 @@ function CustomerList() {
     } finally {
       setLoading(false)
     }
-  }, [searchQuery, statusFilter, assignedToFilter])
+  }, [searchQuery, statusFilter, isInactiveFilter, assignedToFilter])
 
   const fetchSalesUsers = useCallback(async () => {
     if (!isCompanyAdmin && !hasPermission('crm.assign')) return
@@ -589,7 +591,22 @@ function CustomerList() {
       key: 'contact',
       render: (_, record) => (
         <Space direction="vertical" size={0}>
-          <Text><PhoneOutlined style={{ marginRight: 6, color: '#52c41a' }} />{record.phone}</Text>
+          <Space>
+            <Text><PhoneOutlined style={{ marginRight: 6, color: '#52c41a' }} />{record.phone}</Text>
+            {record.phone && (
+              <Button 
+                type="primary" 
+                size="small" 
+                style={{ background: '#0068ff', borderColor: '#0068ff', fontSize: 11, height: 20, padding: '0 8px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', fontWeight: 600 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(`https://zalo.me/${record.phone.replace(/\D/g, '')}`, '_blank');
+                }}
+              >
+                Chat Zalo
+              </Button>
+            )}
+          </Space>
           {record.email && <Text type="secondary" style={{ fontSize: 12 }}>{record.email}</Text>}
         </Space>
       ),
@@ -628,9 +645,16 @@ function CustomerList() {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => {
+      render: (status, record) => {
         const item = getStatusItem(status)
-        return <Tag color={item.color}>{item.label}</Tag>
+        return (
+          <Space direction="vertical" size={2}>
+            <Tag color={item.color}>{item.label}</Tag>
+            {record.is_inactive && (
+              <Tag color="error" style={{ marginInlineEnd: 0 }}>Không hoạt động</Tag>
+            )}
+          </Space>
+        )
       },
     },
     {
@@ -838,7 +862,7 @@ function CustomerList() {
       {/* Filter Bar */}
       <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: 16 }}>
         <Row gutter={16} align="middle">
-          <Col xs={24} sm={12} md={8} style={{ marginBottom: 8 }}>
+          <Col xs={24} sm={12} md={(hasPermission('crm.assign') || hasPermission('crm.auto_assign') || hasPermission('crm.view_all')) ? 6 : 8} style={{ marginBottom: 8 }}>
             <Input
               placeholder="Tìm theo tên hoặc SĐT..."
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
@@ -847,7 +871,7 @@ function CustomerList() {
               allowClear
             />
           </Col>
-          <Col xs={24} sm={12} md={6} style={{ marginBottom: 8 }}>
+          <Col xs={24} sm={12} md={5} style={{ marginBottom: 8 }}>
             <Select
               placeholder="Lọc theo trạng thái"
               style={{ width: '100%' }}
@@ -865,6 +889,14 @@ function CustomerList() {
                 )
               })}
             </Select>
+          </Col>
+          <Col xs={24} sm={12} md={3} style={{ marginBottom: 8, display: 'flex', alignItems: 'center' }}>
+            <Checkbox 
+              checked={isInactiveFilter} 
+              onChange={(e) => setIsInactiveFilter(e.target.checked)}
+            >
+              <Tag color="error" style={{ margin: 0 }}>Không hoạt động</Tag>
+            </Checkbox>
           </Col>
           {(hasPermission('crm.assign') || hasPermission('crm.auto_assign') || hasPermission('crm.view_all')) && (
             <Col xs={24} sm={12} md={6} style={{ marginBottom: 8 }}>
@@ -886,7 +918,7 @@ function CustomerList() {
               </Select>
             </Col>
           )}
-          <Col xs={24} sm={12} md={(hasPermission('crm.assign') || hasPermission('crm.auto_assign') || hasPermission('crm.view_all')) ? 4 : 10} style={{ textAlign: 'right', marginBottom: 8 }}>
+          <Col xs={24} sm={12} md={(hasPermission('crm.assign') || hasPermission('crm.auto_assign') || hasPermission('crm.view_all')) ? 4 : 8} style={{ textAlign: 'right', marginBottom: 8 }}>
             <Button onClick={fetchCustomers} icon={<ReloadOutlined />}>
               Làm mới
             </Button>
@@ -1233,7 +1265,26 @@ function CustomerList() {
                       columns={[
                         { title: 'Họ tên', dataIndex: 'name', key: 'name' },
                         { title: 'Chức vụ', dataIndex: 'position', key: 'position' },
-                        { title: 'SĐT', dataIndex: 'phone', key: 'phone' },
+                        { 
+                          title: 'SĐT', 
+                          dataIndex: 'phone', 
+                          key: 'phone',
+                          render: (text) => (
+                            <Space>
+                              {text}
+                              {text && (
+                                <Button 
+                                  type="primary" 
+                                  size="small" 
+                                  style={{ background: '#0068ff', borderColor: '#0068ff', fontSize: 11, height: 20, padding: '0 8px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', fontWeight: 600, marginLeft: 8 }}
+                                  onClick={() => window.open(`https://zalo.me/${text.replace(/\D/g, '')}`, '_blank')}
+                                >
+                                  Chat Zalo
+                                </Button>
+                              )}
+                            </Space>
+                          )
+                        },
                         { title: 'Email', dataIndex: 'email', key: 'email' },
                       ]}
                     />
@@ -1248,7 +1299,18 @@ function CustomerList() {
                     <Row gutter={16}>
                       <Col xs={24} md={12}>
                         <Form.Item label="Số điện thoại">
-                          <Input value={currentCustomer.phone} readOnly />
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <Input value={currentCustomer.phone} readOnly />
+                            {currentCustomer.phone && (
+                              <Button
+                                type="primary"
+                                style={{ background: '#0068ff', borderColor: '#0068ff', fontWeight: 600 }}
+                                onClick={() => window.open(`https://zalo.me/${currentCustomer.phone.replace(/\D/g, '')}`, '_blank')}
+                              >
+                                Chat Zalo
+                              </Button>
+                            )}
+                          </div>
                         </Form.Item>
                       </Col>
                       <Col xs={24} md={12}>
@@ -1439,7 +1501,6 @@ function CustomerList() {
               has_order: pipelineStatusLabels.has_order || 'Đã có đơn hàng',
               repeat_order: pipelineStatusLabels.repeat_order || 'Mua thêm đơn hàng',
               lost: pipelineStatusLabels.lost || 'Đã mất',
-              inactive: pipelineStatusLabels.inactive || 'Không hoạt động',
             })
           }
         }}
@@ -1456,32 +1517,27 @@ function CustomerList() {
             </Col>
             <Col xs={24} sm={12}>
               <Form.Item name="potential" label="2. Tiềm năng (potential)">
-                <Input placeholder="VD: Tiềm năng / Đang tìm hiểu" />
+                <Input placeholder="VD: Tìm hiểu nhu cầu / Đang tìm hiểu" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
               <Form.Item name="active" label="3. Đang hoạt động (active)">
-                <Input placeholder="VD: Đang giao dịch / Tư vấn mẫu" />
+                <Input placeholder="VD: Sắp chốt / Tư vấn mẫu" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
-              <Form.Item name="has_order" label="4. Đã có đơn hàng (has_order) ⚡">
+              <Form.Item name="lost" label="4. Đã mất (lost)">
+                <Input placeholder="VD: Không còn nhu cầu / Thất bại" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="has_order" label="5. Đã có đơn hàng (has_order) ⚡">
                 <Input placeholder="VD: Đã có đơn hàng" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
-              <Form.Item name="repeat_order" label="5. Mua thêm đơn hàng (repeat_order) ⚡">
+              <Form.Item name="repeat_order" label="6. Mua thêm đơn hàng (repeat_order) ⚡">
                 <Input placeholder="VD: Mua thêm đơn hàng / Khách quen" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item name="lost" label="6. Đã mất (lost)">
-                <Input placeholder="VD: Thất bại / Hủy quan tâm" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item name="inactive" label="7. Không hoạt động (inactive)">
-                <Input placeholder="VD: Ngừng giao dịch" />
               </Form.Item>
             </Col>
           </Row>

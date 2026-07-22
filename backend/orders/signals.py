@@ -106,21 +106,21 @@ def sync_customer_pipeline_status(customer):
     try:
         from orders.models import Order
         from crm.models import Customer
-        approved_count = customer.orders.filter(status=Order.STATUS_APPROVED).count()
+        valid_count = customer.orders.exclude(status__in=[Order.STATUS_CANCELLED, Order.STATUS_REJECTED]).count()
         
         # Nếu có từ 2 đơn trở lên -> Khách hàng quay lại (Mua thêm)
-        if approved_count >= 2:
+        if valid_count >= 2:
             if customer.status != Customer.STATUS_REPEAT_ORDER:
                 customer.status = Customer.STATUS_REPEAT_ORDER
                 customer.save(update_fields=['status'])
         # Nếu mới có 1 đơn -> Khách hàng mới chốt (Đã có đơn hàng)
-        elif approved_count == 1:
+        elif valid_count == 1:
             if customer.status != Customer.STATUS_HAS_ORDER:
                 customer.status = Customer.STATUS_HAS_ORDER
                 customer.save(update_fields=['status'])
         else:
-            # approved_count == 0
-            # Chỉ lùi trạng thái về 'Đang hoạt động' nếu khách hàng đang bị đánh dấu là đã có đơn hàng
+            # valid_count == 0
+            # Chỉ lùi trạng thái về 'Sắp chốt' nếu khách hàng đang bị đánh dấu là đã có đơn hàng
             if customer.status in [Customer.STATUS_HAS_ORDER, Customer.STATUS_REPEAT_ORDER]:
                 customer.status = Customer.STATUS_ACTIVE
                 customer.save(update_fields=['status'])

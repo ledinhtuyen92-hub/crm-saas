@@ -1,5 +1,5 @@
-import React from 'react'
-import { Card, Col, Divider, Row, Space, Table, Tag, Typography, Button } from 'antd'
+import React, { useState, useRef, useEffect } from 'react'
+import { Card, Col, Divider, Row, Space, Table, Tag, Typography, Button, Slider } from 'antd'
 import { SettingOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 
@@ -53,9 +53,35 @@ const computeProductSTT = (data, index, field = 'product') => {
 }
 
 export default function QuotationPrintView({ quotation, type = 'quotation', effectiveTemplate, isCompanyAdmin, products = [], renderCustomerSignature, hidePricing = false, hideCustomerInfo = false }) {
+  const [scale, setScale] = useState(1);
+  const [zoomedHeight, setZoomedHeight] = useState(0);
+  const contentRef = useRef(null);
+
+  const isLand = effectiveTemplate?.layout_config?.paper_orientation === 'landscape' || effectiveTemplate?.code === 'production_landscape_a4'
+  
+  // A4 Printable Dimensions in pixels (assuming 12mm margin, 96 DPI)
+  // Portrait: ~703x1032, Landscape: ~1032x703
+  const A4_PRINTABLE_HEIGHT = isLand ? 703 : 1032;
+
+  useEffect(() => {
+    if (!contentRef.current) return;
+    const resizeObserver = new ResizeObserver(() => {
+      if (contentRef.current) {
+        setZoomedHeight(contentRef.current.getBoundingClientRect().height);
+      }
+    });
+    resizeObserver.observe(contentRef.current);
+    
+    // Also trigger on scale change just to be sure
+    setZoomedHeight(contentRef.current.getBoundingClientRect().height);
+    
+    return () => resizeObserver.disconnect();
+  }, [scale]);
+
+  const estimatedPages = Math.max(1, Math.ceil(zoomedHeight / A4_PRINTABLE_HEIGHT));
+
   if (!quotation) return null
   
-  const isLand = effectiveTemplate?.layout_config?.paper_orientation === 'landscape' || effectiveTemplate?.code === 'production_landscape_a4'
   const themeColor = effectiveTemplate?.layout_config?.theme_color || '#1649c9'
 
   const docNumber = type === 'order' ? quotation.order_number : quotation.quotation_number;
@@ -69,7 +95,58 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
   }
 
   return (
-    <div className="printable-quotation-content" style={{ fontFamily: effectiveTemplate?.layout_config?.font_family || 'Inter, sans-serif' }}>
+    <div>
+      {/* ── Zoom Controls (No Print) ───────────── */}
+      <div className="no-print" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, background: '#f8fafc', padding: '8px 16px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+        <span style={{ fontWeight: 600, color: '#334155' }}>Thu phóng (Scale):</span>
+        <Slider 
+          min={0.5} 
+          max={1.5} 
+          step={0.05} 
+          value={scale} 
+          onChange={setScale} 
+          style={{ width: 150, margin: 0 }} 
+          tooltip={{ formatter: (val) => `${Math.round(val * 100)}%` }}
+        />
+        <span style={{ minWidth: 45, textAlign: 'right', fontWeight: 600, color: '#1649c9' }}>
+          {Math.round(scale * 100)}%
+        </span>
+        <span style={{ marginLeft: 16, paddingLeft: 16, borderLeft: '1px solid #cbd5e1', fontWeight: 600, color: '#0f172a' }}>
+          Dự kiến in: <span style={{ color: '#16a34a' }}>{estimatedPages} trang A4</span>
+        </span>
+      </div>
+
+      <div 
+        ref={contentRef}
+        className="printable-quotation-content" 
+        style={{ 
+          fontFamily: effectiveTemplate?.layout_config?.font_family || 'Inter, sans-serif', 
+          zoom: scale,
+          position: 'relative'
+        }}
+      >
+        {/* Draw simulated page breaks */}
+        {zoomedHeight > 0 && Array.from({ length: estimatedPages - 1 }).map((_, i) => (
+          <div 
+            key={i}
+            className="no-print"
+            style={{
+              position: 'absolute',
+              top: ((i + 1) * A4_PRINTABLE_HEIGHT) / scale,
+              left: -20,
+              right: -20,
+              borderTop: '2px dashed #ef4444',
+              zIndex: 999,
+              opacity: 0.7,
+              pointerEvents: 'none'
+            }}
+          >
+            <div style={{ position: 'absolute', right: 0, top: -11, background: '#fee2e2', color: '#ef4444', fontSize: 11, padding: '2px 8px', borderRadius: 12, border: '1px solid #ef4444', fontWeight: 600 }}>
+              Cắt trang {i + 1}
+            </div>
+          </div>
+        ))}
+
       {/* ── Header: Bên trái Logo, Bên phải TT Công ty ───────────── */}
       <div
         style={{
@@ -235,6 +312,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
 
       <Title level={5}>Danh sách hạng mục báo giá</Title>
       <Table scroll={{ x: 1200 }}
+        className="compact-print-table"
         dataSource={quotation.items || []}
         rowKey="id"
         pagination={false}
@@ -265,9 +343,9 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
                 const rowSpan = computeRowSpan(quotation.items || [], idx, 'product')
                 return {
                   children: (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '6px 4px', gap: 6, width: '100%' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '2px 0', gap: 4, width: '100%' }}>
                       {imgUrl ? (
-                        <img src={imgUrl} alt="prod" style={{ width: 68, height: 68, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1' }} />
+                        <img src={imgUrl} alt="prod" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4, border: '1px solid #cbd5e1' }} />
                       ) : null}
                       <Text strong style={{ display: 'block', color: '#0f172a', fontSize: 13.5, textAlign: 'left', width: '100%', lineHeight: 1.3 }}>
                         {r.product_name || (prodObj ? prodObj.name : '—')}
@@ -608,6 +686,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
           </Col>
         </Row>
       )}
+    </div>
     </div>
   )
 }

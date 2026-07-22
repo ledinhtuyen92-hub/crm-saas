@@ -24,7 +24,7 @@
 - **Bắt buộc:** Trước khi đẩy code lên GitHub, LUÔN LUÔN tạo file `sync_data.json` chứa toàn bộ dữ liệu hiện tại của database để đảm bảo khi pull code về máy khác chỉ cần nạp lại dữ liệu là hệ thống chạy bình thường.
 - **Lệnh thực thi (chạy tại thư mục `backend/`):**
   ```powershell
-  python manage.py dumpdata -e contenttypes -e auth.Permission -e sessions -e admin.logentry --indent 2 > sync_data.json
+  python manage.py dumpdata -e contenttypes -e auth.Permission -e sessions -e admin.logentry --indent 2 -o sync_data.json
   ```
 - **Lưu ý:** Việc này giúp đồng bộ dữ liệu cài đặt, cấu hình, dữ liệu người dùng và phân quyền giữa các môi trường làm việc.
 
