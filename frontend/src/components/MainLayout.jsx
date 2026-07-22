@@ -49,6 +49,7 @@ import {
   WechatOutlined,
   MessageOutlined,
   MenuOutlined,
+  NotificationOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -139,7 +140,12 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
         ...(hasPermission('dashboard.view') ? [{
           key: '/dashboard',
           icon: <DashboardOutlined />,
-          label: <Link to="/dashboard">Bảng điều khiển</Link>,
+          label: <Link to="/dashboard">Dashboard</Link>,
+        }] : []),
+        ...(hasPermission('notifications.view_announcements') ? [{
+          key: '/announcements',
+          icon: <NotificationOutlined />,
+          label: <Link to="/announcements">Thông báo</Link>,
         }] : []),
         ...(isModuleActive('approvals') ? [{
           key: '/approvals',

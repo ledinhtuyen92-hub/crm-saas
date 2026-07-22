@@ -32,6 +32,7 @@ const { Title, Text } = Typography
 
 const MODULE_ORDER = [
   'dashboard',
+  'announcements',
   'approvals',
   'crm',
   'sales',

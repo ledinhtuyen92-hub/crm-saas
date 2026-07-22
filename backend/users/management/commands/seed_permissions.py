@@ -97,6 +97,11 @@ PERMISSIONS = [
     {"code": "approvals.approve", "name": "Duyệt/Từ chối yêu cầu", "module": "approvals"},
     {"code": "approvals.delete", "name": "Xóa yêu cầu / lịch sử phê duyệt", "module": "approvals"},
 
+    # ── Announcements (Thông báo) ───────────────────────────────────
+    {"code": "announcements.view", "name": "Xem thông báo nội bộ", "module": "announcements"},
+    {"code": "announcements.create", "name": "Đăng thông báo mới", "module": "announcements"},
+    {"code": "announcements.delete", "name": "Xóa thông báo", "module": "announcements"},
+
     # ── Finance (Tài chính & Kế toán) ─────────────────────────────
     {"code": "finance.view", "name": "Xem danh sách giao dịch tài chính", "module": "finance"},
     {"code": "finance.create_receipt", "name": "Tạo giao dịch thu/chi mới", "module": "finance"},
@@ -122,6 +127,11 @@ PERMISSIONS = [
     {"code": "facebook.create_customer", "name": "Tạo khách hàng từ hội thoại Facebook", "module": "facebook"},
     {"code": "facebook.manage_config", "name": "Quản lý kết nối Trang Facebook & Cấu hình tự động quét SĐT", "module": "facebook"},
     {"code": "facebook.delete_conversation", "name": "Xóa hội thoại Facebook", "module": "facebook"},
+
+    # ── Internal Announcements (Thông báo nội bộ) ───────────────────
+    {"code": "notifications.view_announcements", "name": "Xem thông báo nội bộ", "module": "notifications"},
+    {"code": "notifications.create_announcements", "name": "Tạo và gửi thông báo nội bộ", "module": "notifications"},
+    {"code": "notifications.delete_announcements", "name": "Xóa thông báo nội bộ", "module": "notifications"},
 ]
 
 # [FUTURE RESERVED PERMISSIONS - MỞ RỘNG SAU NÀY]

@@ -291,8 +291,6 @@ class DepartmentViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     serializer_class = DepartmentSerializer
     permission_classes = [ActionBasedPermission]
     action_permissions = {
-        "list": "settings.departments",
-        "retrieve": "settings.departments",
         "create": "settings.departments",
         "update": "settings.departments",
         "partial_update": "settings.departments",

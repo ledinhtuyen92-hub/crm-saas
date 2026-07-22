@@ -159,3 +159,163 @@ def unread_count(request):
         "pending_production_count": pending_production_count,
         "pending_delivery_count": pending_delivery_count,
     })
+
+
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from django.db.models import Q
+from .models import InternalAnnouncement, AnnouncementAttachment, AnnouncementRead
+from .serializers import InternalAnnouncementSerializer
+from users.permissions import ActionBasedPermission, IsModuleActivePermission
+
+
+class InternalAnnouncementViewSet(viewsets.ModelViewSet):
+    """
+    API ViewSet cho Thông báo nội bộ
+    - Cần quyền `announcements.view` để xem
+    - Cần quyền `announcements.create` để tạo.
+    - Cần quyền `announcements.delete` để xóa.
+    """
+    serializer_class = InternalAnnouncementSerializer
+    permission_classes = [permissions.IsAuthenticated, IsModuleActivePermission, ActionBasedPermission]
+    module_code = "notifications"
+
+    # ActionBasedPermission uses action_permissions
+    action_permissions = {
+        "list": "notifications.view_announcements",
+        "retrieve": "notifications.view_announcements",
+        "create": "notifications.create_announcements",
+        "update": "notifications.create_announcements",
+        "partial_update": "notifications.create_announcements",
+        "destroy": "notifications.delete_announcements",
+        "mark_read": "notifications.view_announcements",
+    }
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = InternalAnnouncement.objects.filter(company=user.company).order_by("-created_at")
+        
+        # Nếu không phải là người tạo hoặc superadmin, thì chỉ xem những thông báo dành cho toàn công ty 
+        # hoặc gửi riêng cho phòng ban của user
+        if not (user.is_superuser or user.is_company_admin):
+            if user.department_id:
+                qs = qs.filter(
+                    Q(is_all_company=True) | 
+                    Q(departments=user.department_id) |
+                    Q(target_users=user) |
+                    Q(created_by=user)
+                ).distinct()
+            else:
+                # User ko có phòng ban thì chỉ xem thông báo toàn cty, cá nhân hoặc do mình tạo
+                qs = qs.filter(
+                    Q(is_all_company=True) | 
+                    Q(target_users=user) |
+                    Q(created_by=user)
+                ).distinct()
+        
+        # Tính năng Lọc chưa đọc
+        if self.request.query_params.get("unread") == "true":
+            qs = qs.exclude(reads__user=user)
+            
+        return qs.prefetch_related("attachments", "departments", "reads")
+
+    def perform_create(self, serializer):
+        priority = self.request.data.get("priority", "normal")
+        is_pinned = str(self.request.data.get("is_pinned", "false")).lower() == "true"
+        
+        # Lưu thông báo
+        announcement = serializer.save(
+            company=self.request.user.company, 
+            created_by=self.request.user,
+            priority=priority,
+            is_pinned=is_pinned
+        )
+        
+        # Xử lý up file
+        files = self.request.FILES.getlist("attachments")
+        if not files:
+            files = self.request.FILES.getlist("files") # fallback
+            
+        for f in files:
+            AnnouncementAttachment.objects.create(
+                announcement=announcement,
+                file=f,
+                file_name=f.name,
+                file_size=f.size
+            )
+            
+        # Xử lý departments (vì ManyToMany cần được set sau khi lưu object)
+        departments_data = self.request.data.getlist("departments") if hasattr(self.request.data, "getlist") else self.request.data.get("departments", [])
+        if not announcement.is_all_company and departments_data:
+            # Parse list of IDs (vì form-data gửi lên có thể là string)
+            dept_ids = []
+            for d in departments_data:
+                # Handle trường hợp ["1, 2"] hoặc ["1", "2"]
+                if isinstance(d, str):
+                    dept_ids.extend([int(x.strip()) for x in d.split(",") if x.strip().isdigit()])
+                else:
+                    dept_ids.append(int(d))
+            announcement.departments.set(dept_ids)
+            
+        # Xử lý target_users
+        target_users_data = self.request.data.getlist("target_users") if hasattr(self.request.data, "getlist") else self.request.data.get("target_users", [])
+        if not announcement.is_all_company and target_users_data:
+            user_ids = []
+            for d in target_users_data:
+                import json
+                try:
+                    parsed = json.loads(d)
+                    if isinstance(parsed, list):
+                        user_ids.extend([int(x) for x in parsed])
+                    else:
+                        user_ids.append(int(parsed))
+                except (ValueError, TypeError, json.JSONDecodeError):
+                    if isinstance(d, str):
+                        user_ids.extend([int(x.strip()) for x in d.split(",") if x.strip().isdigit()])
+                    else:
+                        user_ids.append(int(d))
+            announcement.target_users.set(user_ids)
+            
+        # [FEATURE] Bắn quả chuông cho các nhân viên liên quan
+        target_users = set()
+        if announcement.is_all_company:
+            for u in self.request.user.company.users.exclude(id=self.request.user.id):
+                target_users.add(u)
+        else:
+            # Filter users theo phòng ban
+            from users.models import User
+            dept_users = User.objects.filter(
+                company=self.request.user.company,
+                department__in=announcement.departments.all()
+            ).exclude(id=self.request.user.id)
+            for u in dept_users:
+                target_users.add(u)
+            
+            specific_users = announcement.target_users.exclude(id=self.request.user.id)
+            for u in specific_users:
+                target_users.add(u)
+            
+        notifications_to_create = []
+        for u in target_users:
+            notifications_to_create.append(
+                Notification(
+                    company=self.request.user.company,
+                    recipient=u,
+                    sender=self.request.user,
+                    type=Notification.TYPE_SYSTEM_UPDATE,
+                    title=f"Có thông báo nội bộ mới: {announcement.title}",
+                    message=announcement.content[:100] + "..." if len(announcement.content) > 100 else announcement.content,
+                    link="/announcements"
+                )
+            )
+        if notifications_to_create:
+            Notification.objects.bulk_create(notifications_to_create)
+
+    @action(detail=True, methods=["post"])
+    def mark_read(self, request, pk=None):
+        announcement = self.get_object()
+        AnnouncementRead.objects.get_or_create(
+            announcement=announcement,
+            user=request.user
+        )
+        return Response({"status": "ok"})

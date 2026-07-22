@@ -68,3 +68,107 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"[{self.get_type_display()}] → {self.recipient.full_name}: {self.title}"
+
+
+class InternalAnnouncement(models.Model):
+    """Thông báo nội bộ (bản tin, tài liệu công ty)."""
+    
+    company = models.ForeignKey(
+        "users.Company",
+        on_delete=models.CASCADE,
+        related_name="announcements",
+        verbose_name="Công ty",
+    )
+    title = models.CharField(max_length=255, verbose_name="Tiêu đề")
+    content = models.TextField(verbose_name="Nội dung")
+    created_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_announcements",
+        verbose_name="Người tạo",
+    )
+    is_all_company = models.BooleanField(
+        default=True, 
+        verbose_name="Gửi toàn công ty"
+    )
+    departments = models.ManyToManyField(
+        "users.Department",
+        blank=True,
+        related_name="announcements",
+        verbose_name="Phòng ban nhận",
+    )
+    target_users = models.ManyToManyField(
+        "users.User",
+        blank=True,
+        related_name="targeted_announcements",
+        verbose_name="Nhân viên nhận",
+    )
+    priority = models.CharField(
+        max_length=20,
+        choices=[("low", "Thấp"), ("normal", "Thường"), ("high", "Cao")],
+        default="normal",
+        verbose_name="Độ ưu tiên",
+    )
+    is_pinned = models.BooleanField(
+        default=False,
+        verbose_name="Đã ghim",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Thông báo nội bộ"
+        verbose_name_plural = "Thông báo nội bộ"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["company", "created_at"]),
+        ]
+
+    def __str__(self):
+        return self.title
+
+
+class AnnouncementAttachment(models.Model):
+    """File đính kèm của thông báo nội bộ."""
+    
+    announcement = models.ForeignKey(
+        InternalAnnouncement,
+        on_delete=models.CASCADE,
+        related_name="attachments",
+    )
+    file = models.FileField(upload_to="announcements/", verbose_name="File đính kèm")
+    file_name = models.CharField(max_length=255, verbose_name="Tên file")
+    file_size = models.IntegerField(verbose_name="Kích thước (bytes)", default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "File đính kèm thông báo"
+        verbose_name_plural = "File đính kèm thông báo"
+
+    def __str__(self):
+        return self.file_name
+
+
+class AnnouncementRead(models.Model):
+    """Lưu trạng thái đã đọc thông báo của nhân viên."""
+    
+    announcement = models.ForeignKey(
+        InternalAnnouncement,
+        on_delete=models.CASCADE,
+        related_name="reads",
+    )
+    user = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="read_announcements_status",
+    )
+    read_at = models.DateTimeField(auto_now_add=True, verbose_name="Thời gian đọc")
+
+    class Meta:
+        verbose_name = "Trạng thái đọc thông báo"
+        verbose_name_plural = "Trạng thái đọc thông báo"
+        unique_together = ("announcement", "user")
+
+    def __str__(self):
+        return f"{self.user.full_name} read {self.announcement.title}"

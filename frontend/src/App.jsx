@@ -42,6 +42,7 @@ import ZaloConfigPage from './pages/settings/ZaloConfigPage'
 import ZaloTemplatePage from './pages/settings/ZaloTemplatePage'
 import FacebookInboxPage from './pages/FacebookInboxPage'
 import FacebookConfigPage from './pages/settings/FacebookConfigPage'
+import Announcements from './pages/Announcements'
 
 function ApplicationLayout({ isDarkMode, toggleTheme }) {
   return (
@@ -89,6 +90,12 @@ function App() {
               <Route path="/dashboard" element={
                 <PermissionRoute permissionCode="dashboard.view">
                   <Dashboard />
+                </PermissionRoute>
+              } />
+
+              <Route path="/announcements" element={
+                <PermissionRoute permissionCode="notifications.view_announcements">
+                  <Announcements />
                 </PermissionRoute>
               } />
 
