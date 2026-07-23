@@ -77,6 +77,11 @@ class ProductSerializer(serializers.ModelSerializer):
                 return obj.image.url
         return None
 
+    def validate_sku(self, value):
+        if value == "":
+            return None
+        return value
+
 
 class WarehouseSerializer(serializers.ModelSerializer):
     class Meta:

@@ -180,7 +180,7 @@ class Product(models.Model):
         null=True,
         blank=True,
     )
-    sku = models.CharField(max_length=100, verbose_name="Mã sản phẩm")
+    sku = models.CharField(max_length=100, verbose_name="Mã sản phẩm", null=True, blank=True)
     name = models.CharField(max_length=255, verbose_name="Tên sản phẩm (biến thể)", blank=True)
     
     TYPE_PRODUCT = "product"
