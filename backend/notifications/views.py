@@ -249,6 +249,19 @@ class InternalAnnouncementViewSet(viewsets.ModelViewSet):
         ).exclude(category='').values_list('category', flat=True).distinct()
         return Response(list(categories))
 
+    @action(detail=False, methods=['post'], url_path='delete-category')
+    def delete_category(self, request):
+        category = request.data.get('category')
+        if not category:
+            return Response({'detail': 'Vui lòng cung cấp category cần xóa.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        InternalAnnouncement.objects.filter(
+            company=request.user.company,
+            category=category
+        ).update(category="")
+        
+        return Response({'detail': 'Xóa danh mục thành công.'}, status=status.HTTP_200_OK)
+
     def perform_create(self, serializer):
         priority = self.request.data.get("priority", "normal")
         is_pinned = str(self.request.data.get("is_pinned", "false")).lower() == "true"

@@ -411,11 +411,18 @@ const Announcements = () => {
                                                 danger 
                                                 size="small" 
                                                 icon={<DeleteOutlined />} 
-                                                onClick={(e) => {
+                                                onClick={async (e) => {
                                                     e.stopPropagation();
-                                                    setCategoriesList(prev => prev.filter(c => c !== cat));
-                                                    if (form.getFieldValue('category') === cat) {
-                                                        form.setFieldValue('category', undefined);
+                                                    try {
+                                                        await api.post('/notifications/announcements/delete-category/', { category: cat });
+                                                        setCategoriesList(prev => prev.filter(c => c !== cat));
+                                                        if (form.getFieldValue('category') === cat) {
+                                                            form.setFieldValue('category', undefined);
+                                                        }
+                                                        message.success('Đã xóa loại thông báo!');
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                        message.error('Lỗi khi xóa loại thông báo.');
                                                     }
                                                 }} 
                                             />
