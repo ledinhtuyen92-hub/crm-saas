@@ -1603,7 +1603,7 @@ export default function Inventory() {
         <Form form={productForm} layout="vertical" style={{ marginTop: 16 }}>
           <Row gutter={16}>
             <Col xs={24} md={12}>
-              <Form.Item name="sku" label="Mã SKU" rules={[{ required: true, message: 'Vui lòng nhập mã SKU' }]}>
+              <Form.Item name="sku" label="Mã SKU">
                 <Input placeholder="VD: SP-001, NHOM-XINGFA..." />
               </Form.Item>
             </Col>
