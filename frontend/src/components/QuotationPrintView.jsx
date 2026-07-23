@@ -25,9 +25,10 @@ const computeLineTotal = (item, templateOverride) => {
 
 const computeRowSpan = (data, index, field = 'product') => {
   if (!data || !data[index]) return 1
+  if (data[index].item_type === 'service') return 1
   const currentVal = data[index]?.[field]
   if (!currentVal) return 1
-  if (index > 0 && data[index - 1]?.[field] === currentVal) {
+  if (index > 0 && data[index - 1]?.[field] === currentVal && data[index - 1].item_type !== 'service') {
     return 0
   }
   let count = 1
@@ -45,7 +46,9 @@ const computeProductSTT = (data, index, field = 'product') => {
   if (!data) return 0
   let count = 0
   for (let i = 0; i <= index; i++) {
-    if (i === 0 || data[i]?.[field] !== data[i - 1]?.[field]) {
+    if (data[i].item_type === 'service') {
+      count++
+    } else if (i === 0 || data[i]?.[field] !== data[i - 1]?.[field] || data[i - 1]?.item_type === 'service') {
       count++
     }
   }
@@ -312,8 +315,8 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
 
       <Title level={5}>Danh sách hạng mục báo giá</Title>
       <Table scroll={{ x: 1200 }}
-        className="compact-print-table"
-        dataSource={quotation.items || []}
+        className="compact-print-table no-bg-table"
+        dataSource={[...(quotation.items || [])].sort((a, b) => (a.item_type === 'service' ? 1 : 0) - (b.item_type === 'service' ? 1 : 0))}
         rowKey="id"
         pagination={false}
         size="small"

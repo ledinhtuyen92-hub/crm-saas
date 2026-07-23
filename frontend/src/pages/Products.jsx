@@ -133,21 +133,23 @@ export default function Products() {
     setEditingProduct(prod)
     setProductImageFile(null)
     if (prod) {
-      setProductPreviewImage(prod.image_url || prod.image || null)
+      setProductImageFile(null)
+      setProductPreviewImage(prod.image_url || prod.image)
       productForm.setFieldsValue({
-        sku: prod.sku,
-        name: prod.name,
-        category: prod.category,
-        unit: prod.unit || 'cái',
-        price: Number(prod.price || 0),
-        cost_price: Number(prod.cost_price || 0),
-        is_active: prod.is_active !== false,
-        description: prod.description || '',
+        ...prod,
+        attributes_str: prod.attributes ? JSON.stringify(prod.attributes) : '',
       })
     } else {
+      setProductImageFile(null)
       setProductPreviewImage(null)
       productForm.resetFields()
-      productForm.setFieldsValue({ unit: 'cái', price: 0, cost_price: 0, is_active: true })
+      productForm.setFieldsValue({ 
+        product_type: activeTab === 'services' ? 'service' : 'product',
+        unit: 'cái', 
+        price: 0, 
+        cost_price: 0, 
+        is_active: true 
+      })
     }
     setProductModalVisible(true)
   }
@@ -160,6 +162,7 @@ export default function Products() {
       const formData = new FormData()
       formData.append('sku', values.sku)
       formData.append('name', values.name)
+      formData.append('product_type', values.product_type || 'product')
       formData.append('category', values.category)
       formData.append('unit', values.unit || 'cái')
       formData.append('price', values.price || 0)
@@ -445,7 +448,7 @@ export default function Products() {
         </Col>
         <Col>
           <Space>
-            {activeTab === 'products' && (
+            {(activeTab === 'products' || activeTab === 'services') && (
               <>
                 <input
                   type="file"
@@ -465,27 +468,16 @@ export default function Products() {
                 </Button>
               </>
             )}
-            {activeTab === 'products' && canCreate && (
+            {canCreate && (
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={() => openProductModal()}
                 style={{ background: '#0284c7', fontWeight: 600, borderRadius: 8 }}
               >
-                Thêm Sản Phẩm Mới
+                Thêm {activeTab === 'categories' ? 'Danh mục' : 'Hàng hóa/Dịch vụ'}
               </Button>
             )}
-            {activeTab === 'categories' && canCreate && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => openCategoryModal()}
-                style={{ background: '#0891b2', fontWeight: 600, borderRadius: 8 }}
-              >
-                Thêm Danh Mục Mới
-              </Button>
-            )}
-
           </Space>
         </Col>
       </Row>
@@ -496,6 +488,98 @@ export default function Products() {
           activeKey={activeTab}
           onChange={setActiveTab}
           items={[
+            {
+              key: 'products',
+              label: (
+                <Space>
+                  <InboxOutlined />
+                  <span>Hàng hóa ({products.filter(p => p.product_type !== 'service').length})</span>
+                </Space>
+              ),
+              children: (
+                <div>
+                  <Row gutter={16} align="middle" style={{ marginBottom: 16 }}>
+                    <Col xs={24} sm={10}>
+                      <Input
+                        placeholder="Tìm theo tên hàng hóa, mã SKU..."
+                        prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        allowClear
+                        style={{ borderRadius: 8 }}
+                      />
+                    </Col>
+                    <Col xs={24} sm={8}>
+                      <Select
+                        placeholder="Lọc theo danh mục"
+                        value={categoryFilter || undefined}
+                        onChange={(val) => setCategoryFilter(val || '')}
+                        allowClear
+                        style={{ width: '100%' }}
+                      >
+                        {categories.map((c) => (
+                          <Option key={c.id} value={c.id}>{c.name}</Option>
+                        ))}
+                      </Select>
+                    </Col>
+                  </Row>
+                  <Table
+                    columns={productColumns}
+                    dataSource={products.filter(p => p.product_type !== 'service' && (p.name?.toLowerCase().includes(searchText.toLowerCase()) || p.sku?.toLowerCase().includes(searchText.toLowerCase())))}
+                    rowKey="id"
+                    loading={loading}
+                    scroll={{ x: 1200 }}
+                    pagination={{ pageSize: 15 }}
+                  />
+                </div>
+              ),
+            },
+            {
+              key: 'services',
+              label: (
+                <Space>
+                  <ShopOutlined />
+                  <span>Dịch vụ & Chi phí ({products.filter(p => p.product_type === 'service').length})</span>
+                </Space>
+              ),
+              children: (
+                <div>
+                  <Row gutter={16} align="middle" style={{ marginBottom: 16 }}>
+                    <Col xs={24} sm={10}>
+                      <Input
+                        placeholder="Tìm theo tên dịch vụ, mã SKU..."
+                        prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        allowClear
+                        style={{ borderRadius: 8 }}
+                      />
+                    </Col>
+                    <Col xs={24} sm={8}>
+                      <Select
+                        placeholder="Lọc theo danh mục"
+                        value={categoryFilter || undefined}
+                        onChange={(val) => setCategoryFilter(val || '')}
+                        allowClear
+                        style={{ width: '100%' }}
+                      >
+                        {categories.map((c) => (
+                          <Option key={c.id} value={c.id}>{c.name}</Option>
+                        ))}
+                      </Select>
+                    </Col>
+                  </Row>
+                  <Table
+                    columns={productColumns}
+                    dataSource={products.filter(p => p.product_type === 'service' && (p.name?.toLowerCase().includes(searchText.toLowerCase()) || p.sku?.toLowerCase().includes(searchText.toLowerCase())))}
+                    rowKey="id"
+                    loading={loading}
+                    scroll={{ x: 1200 }}
+                    pagination={{ pageSize: 15 }}
+                  />
+                </div>
+              ),
+            },
             {
               key: 'categories',
               label: (
@@ -541,64 +625,18 @@ export default function Products() {
               ),
               children: <ProductTemplateTab categories={categories} />
             },
-            {
-              key: 'products',
-              label: (
-                <Space>
-                  <InboxOutlined />
-                  <span>Sản phẩm & Dịch vụ ({products.length})</span>
-                </Space>
-              ),
-              children: (
-                <div>
-                  <Row gutter={16} align="middle" style={{ marginBottom: 16 }}>
-                    <Col xs={24} sm={10}>
-                      <Input
-                        placeholder="Tìm theo tên sản phẩm, mã SKU..."
-                        prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
-                        value={searchText}
-                        onChange={(e) => setSearchText(e.target.value)}
-                        allowClear
-                        style={{ borderRadius: 8 }}
-                      />
-                    </Col>
-                    <Col xs={24} sm={8}>
-                      <Select
-                        placeholder="Lọc theo danh mục"
-                        value={categoryFilter || undefined}
-                        onChange={(val) => setCategoryFilter(val || '')}
-                        allowClear
-                        style={{ width: '100%' }}
-                      >
-                        {categories.map((c) => (
-                          <Option key={c.id} value={c.id}>{c.name}</Option>
-                        ))}
-                      </Select>
-                    </Col>
-                  </Row>
-                  <Table
-                    columns={productColumns}
-                    dataSource={filteredProducts}
-                    rowKey="id"
-                    loading={loading}
-                    pagination={{ pageSize: 10 }}
-                    scroll={{ x: 1300 }}
-                  />
-                </div>
-              ),
-            },
           ]}
         />
       </Card>
 
       {/* ── Modal Product Add / Edit ───────────────────────────────────── */}
       <Modal
-        title={<Text strong style={{ fontSize: 18 }}>{editingProduct ? 'Chỉnh sửa Sản phẩm' : 'Thêm Sản Phẩm Mới'}</Text>}
+        title={<Text strong style={{ fontSize: 18 }}>{editingProduct ? 'Chỉnh sửa' : 'Thêm mới'}</Text>}
         open={productModalVisible}
         onCancel={() => setProductModalVisible(false)}
         onOk={handleProductSubmit}
         confirmLoading={submitting}
-        okText="Lưu Sản Phẩm"
+        okText="Lưu"
         cancelText="Hủy"
         width={700}
       >
@@ -606,12 +644,20 @@ export default function Products() {
           <Row gutter={16}>
             <Col xs={24} md={12}>
               <Form.Item name="sku" label="Mã SKU" rules={[{ required: true, message: 'Vui lòng nhập mã SKU' }]}>
-                <Input placeholder="VD: SP-001, NHOM-XINGFA..." />
+                <Input placeholder="VD: SP-001..." />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="name" label="Tên sản phẩm / dịch vụ" rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm' }]}>
-                <Input placeholder="VD: Cửa nhôm Xingfa 4 cánh..." />
+              <Form.Item name="name" label="Tên hàng hóa/dịch vụ" rules={[{ required: true }]}>
+                <Input placeholder="Tên..." />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="product_type" label="Loại" rules={[{ required: true }]}>
+                <Select>
+                  <Option value="product">Hàng hóa</Option>
+                  <Option value="service">Dịch vụ / Chi phí</Option>
+                </Select>
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>

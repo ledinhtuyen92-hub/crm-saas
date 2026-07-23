@@ -11,6 +11,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
             "id",
             "order",
             "product",
+            "item_type",
             "product_name",
             "unit_price",
             "width",

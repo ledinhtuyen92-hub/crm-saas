@@ -403,7 +403,24 @@ const Announcements = () => {
                                 )}
                             >
                                 {categoriesList.map(cat => (
-                                    <Select.Option key={cat} value={cat}>{cat}</Select.Option>
+                                    <Select.Option key={cat} value={cat}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span>{cat}</span>
+                                            <Button 
+                                                type="text" 
+                                                danger 
+                                                size="small" 
+                                                icon={<DeleteOutlined />} 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setCategoriesList(prev => prev.filter(c => c !== cat));
+                                                    if (form.getFieldValue('category') === cat) {
+                                                        form.setFieldValue('category', undefined);
+                                                    }
+                                                }} 
+                                            />
+                                        </div>
+                                    </Select.Option>
                                 ))}
                             </Select>
                         </Form.Item>

@@ -101,6 +101,7 @@ class QuotationItemSerializer(serializers.ModelSerializer):
             "id",
             "quotation",
             "product",
+            "item_type",
             "product_name",
             "unit_price",
             "width",

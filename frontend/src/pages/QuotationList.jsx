@@ -16,6 +16,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import {
+  AutoComplete,
   Badge,
   Button,
   Card,
@@ -88,6 +89,7 @@ export default function QuotationList() {
   const [formItems, setFormItems] = useState(() => [
     { key: 'init-1', product: null, width: 0, height: 0, quantity: 1, unit_price: 0, discount_percent: 0 },
   ])
+  const [serviceItems, setServiceItems] = useState(() => [])
 
   // Drawer details
   const [drawerVisible, setDrawerVisible] = useState(false)
@@ -215,6 +217,13 @@ export default function QuotationList() {
     if ((item.unit === 'm²' || item.custom_data?.unit === 'm²' || (area > 0 && item.width > 0 && item.height > 0)) && area > 0) {
       return Number((area * qty * price * (1 - discount / 100)).toFixed(0))
     }
+    return Number((qty * price * (1 - discount / 100)).toFixed(0))
+  }
+
+  const computeServiceLineTotal = (item) => {
+    const qty = Number(item.quantity || 1)
+    const price = Number(item.unit_price || 0)
+    const discount = Number(item.discount_percent || 0)
     return Number((qty * price * (1 - discount / 100)).toFixed(0))
   }
 
@@ -364,12 +373,44 @@ export default function QuotationList() {
     })
   }
 
+  const handleAddServiceLine = () => {
+    setServiceItems((prev) => [
+      ...prev,
+      { key: Date.now(), product: null, product_name: '', quantity: 1, unit_price: 0, discount_percent: 0, note: '' },
+    ])
+  }
+
+  const handleRemoveServiceLine = (index) => {
+    setServiceItems((prev) => prev.filter((_, idx) => idx !== index))
+  }
+
+  const handleServiceLineChange = (index, field, value) => {
+    setServiceItems((prev) => {
+      const updated = [...prev]
+      const currentItem = { ...updated[index], [field]: value }
+      if (field === 'product_name') {
+        const prod = products.find((p) => p.name === value && p.product_type === 'service')
+        if (prod) {
+          currentItem.product = prod.id
+          currentItem.unit_price = Number(prod.price || prod.cost_price || 0)
+        } else {
+          currentItem.product = null
+        }
+      }
+      updated[index] = currentItem
+      return updated
+    })
+  }
+
   // Calculate totals in modal
   const calculateModalTotal = () => {
     let subtotal = 0
     const effTmpl = getEffectiveTemplate(editingQuotation)
     formItems.forEach((item) => {
       subtotal += computeLineTotal(item, effTmpl)
+    })
+    serviceItems.forEach((item) => {
+      subtotal += computeServiceLineTotal(item)
     })
     return subtotal
   }
@@ -399,36 +440,61 @@ export default function QuotationList() {
         discount_total: Number(quotation.discount_total || 0),
       })
       if (quotation.items && quotation.items.length > 0) {
-        setFormItems(
-          quotation.items.map((it, idx) => {
-            const prodObj = products.find((p) => p.id === it.product)
-            return {
-              key: it.id || idx,
+        const mainItems = quotation.items.filter(it => it.item_type !== 'service')
+        const srvItems = quotation.items.filter(it => it.item_type === 'service')
+
+        if (mainItems.length > 0) {
+          setFormItems(
+            mainItems.map((it, idx) => {
+              const prodObj = products.find((p) => p.id === it.product)
+              return {
+                key: it.id || idx,
+                id: it.id,
+                product: it.product,
+                width: Math.round(Number(it.width || 0)),
+                height: Math.round(Number(it.height || 0)),
+                length: Math.round(Number(it.length || 0)),
+                thickness: Math.round(Number(it.thickness || it.custom_data?.thickness || 0)),
+                area: Number(it.area || 0),
+                spec: it.spec || '',
+                warranty: it.warranty || '12 tháng',
+                quantity: Number(it.quantity || 1),
+                unit_price: Number(it.unit_price || 0),
+                discount_percent: Number(it.discount_percent || 0),
+                note: it.note || '',
+                product_image: it.product_image || (prodObj ? (prodObj.image_url || prodObj.image) : '') || '',
+                unit: it.custom_data?.unit || (prodObj ? prodObj.unit : 'cái'),
+                symbol: it.custom_data?.symbol || it.symbol || '',
+                custom_data: it.custom_data || {},
+                product_name: it.product_name || (prodObj ? prodObj.name : ''),
+              }
+            })
+          )
+        } else {
+          setFormItems([{ key: Date.now(), product: null, width: 0, height: 0, length: 0, thickness: 0, area: 0, spec: '', warranty: '12 tháng', quantity: 1, unit_price: 0, discount_percent: 0, note: '', product_image: '', unit: 'cái', symbol: '', custom_data: {} }])
+        }
+
+        if (srvItems.length > 0) {
+          setServiceItems(
+            srvItems.map((it, idx) => ({
+              key: it.id || `srv-${idx}`,
               id: it.id,
               product: it.product,
-              width: Math.round(Number(it.width || 0)),
-              height: Math.round(Number(it.height || 0)),
-              length: Math.round(Number(it.length || 0)),
-              thickness: Math.round(Number(it.thickness || it.custom_data?.thickness || 0)),
-              area: Number(it.area || 0),
-              spec: it.spec || '',
-              warranty: it.warranty || '12 tháng',
-              quantity: Number(it.quantity || 1),
+              product_name: it.product_name || '',
               unit_price: Number(it.unit_price || 0),
+              quantity: Number(it.quantity || 1),
               discount_percent: Number(it.discount_percent || 0),
               note: it.note || '',
-              product_image: it.product_image || (prodObj ? (prodObj.image_url || prodObj.image) : '') || '',
-              unit: it.custom_data?.unit || (prodObj ? prodObj.unit : 'cái'),
-              symbol: it.custom_data?.symbol || it.symbol || '',
-              custom_data: it.custom_data || {},
-              product_name: it.product_name || (prodObj ? prodObj.name : ''),
-            }
-          })
-        )
+            }))
+          )
+        } else {
+          setServiceItems([])
+        }
       } else {
         setFormItems([
           { key: Date.now(), product: null, width: 0, height: 0, length: 0, thickness: 0, area: 0, spec: '', warranty: '12 tháng', quantity: 1, unit_price: 0, discount_percent: 0, note: '', product_image: '', unit: 'cái', symbol: '', custom_data: {} },
         ])
+        setServiceItems([])
       }
     } else {
       form.resetFields()
@@ -448,6 +514,7 @@ export default function QuotationList() {
       setFormItems([
         { key: Date.now(), product: null, width: 0, height: 0, length: 0, thickness: 0, area: 0, spec: '', warranty: '12 tháng', quantity: 1, unit_price: 0, discount_percent: 0, note: '', product_image: '', unit: 'cái' },
       ])
+      setServiceItems([])
     }
     setModalVisible(true)
   }
@@ -460,8 +527,9 @@ export default function QuotationList() {
 
       // Validate items
       const validItems = formItems.filter((it) => it.product)
-      if (validItems.length === 0) {
-        messageApi.error('Vui lòng chọn ít nhất 1 sản phẩm cho báo giá.')
+      const validServiceItems = serviceItems.filter((it) => it.product_name)
+      if (validItems.length === 0 && validServiceItems.length === 0) {
+        messageApi.error('Vui lòng chọn ít nhất 1 sản phẩm hoặc 1 dịch vụ/chi phí cho báo giá.')
         setSubmitting(false)
         return
       }
@@ -554,6 +622,32 @@ export default function QuotationList() {
           quantity: Number(it.quantity || 1),
           discount_percent: Number(it.discount_percent || 0),
           note: it.note || '',
+        })
+      }
+
+      for (const srv of validServiceItems) {
+        let prodId = null
+        if (typeof srv.product === 'number') {
+          prodId = srv.product
+        }
+        await api.post('/sales/quotation-items/', {
+          quotation: quotationId,
+          product: prodId,
+          item_type: 'service',
+          product_name: srv.product_name,
+          unit_price: Number(srv.unit_price || 0),
+          width: 0,
+          height: 0,
+          length: 0,
+          thickness: 0,
+          area: 0,
+          spec: '',
+          warranty: '',
+          product_image: '',
+          custom_data: { unit: 'lần' },
+          quantity: Number(srv.quantity || 1),
+          discount_percent: Number(srv.discount_percent || 0),
+          note: srv.note || '',
         })
       }
 
@@ -1085,6 +1179,88 @@ export default function QuotationList() {
   ]
 
   // ── Dynamic Editable Table Columns based on Template ──────────────────
+  const getServiceItemColumns = () => {
+    return [
+      {
+        title: 'STT',
+        key: 'stt',
+        width: 60,
+        align: 'center',
+        render: (_, __, idx) => idx + 1,
+      },
+      {
+        title: 'Tên Dịch vụ / Chi phí',
+        dataIndex: 'product_name',
+        key: 'product_name',
+        width: 300,
+        render: (text, record, index) => (
+          <AutoComplete
+            style={{ width: '100%' }}
+            value={text}
+            onChange={(val) => handleServiceLineChange(index, 'product_name', val)}
+            options={products.filter((p) => p.product_type === 'service').map((p) => ({ value: p.name, label: p.name }))}
+            placeholder="Chọn hoặc nhập tên dịch vụ"
+          />
+        ),
+      },
+      {
+        title: 'Số lượng (Lần)',
+        dataIndex: 'quantity',
+        key: 'quantity',
+        width: 120,
+        render: (val, _, index) => (
+          <InputNumber min={1} value={val} onChange={(v) => handleServiceLineChange(index, 'quantity', v)} style={{ width: '100%' }} />
+        ),
+      },
+      {
+        title: 'Đơn giá (VNĐ)',
+        dataIndex: 'unit_price',
+        key: 'unit_price',
+        width: 150,
+        render: (val, _, index) => (
+          <InputNumber min={0} value={val} onChange={(v) => handleServiceLineChange(index, 'unit_price', v)} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} />
+        ),
+      },
+      {
+        title: 'Chiết khấu (%)',
+        dataIndex: 'discount_percent',
+        key: 'discount_percent',
+        width: 120,
+        render: (val, _, index) => (
+          <InputNumber min={0} max={100} value={val} onChange={(v) => handleServiceLineChange(index, 'discount_percent', v)} style={{ width: '100%' }} />
+        ),
+      },
+      {
+        title: 'Thành tiền',
+        key: 'line_total',
+        width: 150,
+        align: 'right',
+        render: (_, record) => {
+          const total = computeServiceLineTotal(record)
+          return <Text strong style={{ color: '#0f172a' }}>{total.toLocaleString('vi-VN')} đ</Text>
+        },
+      },
+      {
+        title: 'Ghi chú',
+        dataIndex: 'note',
+        key: 'note',
+        width: 200,
+        render: (val, _, index) => (
+          <Input value={val} onChange={(e) => handleServiceLineChange(index, 'note', e.target.value)} placeholder="Ghi chú thêm..." />
+        ),
+      },
+      {
+        title: '',
+        key: 'action',
+        width: 60,
+        align: 'center',
+        render: (_, __, index) => (
+          <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveServiceLine(index)} />
+        ),
+      },
+    ]
+  }
+
   const getItemColumns = () => {
     const effectiveTmpl = getEffectiveTemplate(editingQuotation)
     const tmplCode = effectiveTmpl?.code || 'STANDARD'
@@ -1652,6 +1828,28 @@ export default function QuotationList() {
 
           <Button type="dashed" onClick={handleAddLine} block icon={<PlusOutlined />} style={{ marginBottom: 20 }}>
             Thêm dòng sản phẩm / hạng mục mới
+          </Button>
+
+          <Divider style={{ margin: '12px 0' }}>
+            <Space>
+              <Text strong>Dịch Vụ & Chi Phí Phát Sinh</Text>
+              <Tag color="blue">{serviceItems.length} dịch vụ</Tag>
+            </Space>
+          </Divider>
+
+          <div style={{ marginBottom: 16, border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
+            <Table
+              dataSource={serviceItems}
+              columns={getServiceItemColumns()}
+              rowKey="key"
+              pagination={false}
+              size="small"
+              scroll={{ x: 'max-content' }}
+            />
+          </div>
+
+          <Button type="dashed" onClick={handleAddServiceLine} block icon={<PlusOutlined />} style={{ marginBottom: 20 }}>
+            Thêm dịch vụ / chi phí phát sinh
           </Button>
 
           <Card size="small" style={{ background: '#f8fafc', borderRadius: 8, marginBottom: 16 }}>

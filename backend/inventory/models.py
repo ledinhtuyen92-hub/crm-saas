@@ -50,6 +50,19 @@ class ProductTemplate(models.Model):
     name = models.CharField(max_length=255, verbose_name="Tên mẫu sản phẩm")
     description = models.TextField(blank=True, verbose_name="Mô tả")
     
+    TYPE_PRODUCT = "product"
+    TYPE_SERVICE = "service"
+    TYPE_CHOICES = [
+        (TYPE_PRODUCT, "Sản phẩm"),
+        (TYPE_SERVICE, "Dịch vụ / Chi phí"),
+    ]
+    product_type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        default=TYPE_PRODUCT,
+        verbose_name="Loại",
+    )
+    
     UNIT_CAI = "cái"
     UNIT_M2 = "m²"
     UNIT_M = "m"
@@ -169,6 +182,20 @@ class Product(models.Model):
     )
     sku = models.CharField(max_length=100, verbose_name="Mã sản phẩm")
     name = models.CharField(max_length=255, verbose_name="Tên sản phẩm (biến thể)", blank=True)
+    
+    TYPE_PRODUCT = "product"
+    TYPE_SERVICE = "service"
+    TYPE_CHOICES = [
+        (TYPE_PRODUCT, "Sản phẩm"),
+        (TYPE_SERVICE, "Dịch vụ / Chi phí"),
+    ]
+    product_type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        default=TYPE_PRODUCT,
+        verbose_name="Loại",
+    )
+    
     description = models.TextField(blank=True, verbose_name="Mô tả")
     attributes = models.JSONField(
         default=dict,

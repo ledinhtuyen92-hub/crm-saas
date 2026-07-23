@@ -946,6 +946,9 @@
     "description": "Vai trò quản trị cao nhất của công ty.",
     "is_auto_assign_target": false,
     "permissions": [
+      128,
+      129,
+      127,
       56,
       119,
       6,
@@ -1283,7 +1286,7 @@
   "pk": 2,
   "fields": {
     "password": "pbkdf2_sha256$1000000$gogv5if640Ve4r5k5DvYiY$Co2C/05RkNJOSvpBH4uiONSzdeTJAZ/vJysA2SrgpDY=",
-    "last_login": "2026-07-22T15:38:39.702Z",
+    "last_login": "2026-07-23T01:36:07.110Z",
     "is_superuser": false,
     "username": "giamdoc",
     "first_name": "",
@@ -1863,6 +1866,7 @@
   "fields": {
     "quotation": 1,
     "product": 7,
+    "item_type": "product",
     "product_name": "Cửa composite CCP01 - Mẫu mới",
     "unit_price": "3900000.00",
     "width": "600.00",
@@ -1890,6 +1894,7 @@
   "fields": {
     "quotation": 1,
     "product": 7,
+    "item_type": "product",
     "product_name": "Cửa composite CCP01 - Mẫu mới",
     "unit_price": "3900000.00",
     "width": "300.00",
@@ -1917,6 +1922,7 @@
   "fields": {
     "quotation": 1,
     "product": 7,
+    "item_type": "product",
     "product_name": "Cửa composite CCP01 - Mẫu mới",
     "unit_price": "3900000.00",
     "width": "300.00",
@@ -1944,6 +1950,7 @@
   "fields": {
     "quotation": 1,
     "product": 10,
+    "item_type": "product",
     "product_name": "Khoá thông minh KTM01",
     "unit_price": "5600000.00",
     "width": "0.00",
@@ -2202,6 +2209,7 @@
   "fields": {
     "order": 11,
     "product": 7,
+    "item_type": "product",
     "product_name": "Cửa composite CCP01 - Mẫu mới",
     "unit_price": "3900000.00",
     "width": "600.00",
@@ -2229,6 +2237,7 @@
   "fields": {
     "order": 11,
     "product": 7,
+    "item_type": "product",
     "product_name": "Cửa composite CCP01 - Mẫu mới",
     "unit_price": "3900000.00",
     "width": "300.00",
@@ -2256,6 +2265,7 @@
   "fields": {
     "order": 11,
     "product": 7,
+    "item_type": "product",
     "product_name": "Cửa composite CCP01 - Mẫu mới",
     "unit_price": "3900000.00",
     "width": "300.00",
@@ -2283,6 +2293,7 @@
   "fields": {
     "order": 11,
     "product": 10,
+    "item_type": "product",
     "product_name": "Khoá thông minh KTM01",
     "unit_price": "5600000.00",
     "width": "0.00",
@@ -2331,6 +2342,7 @@
     "category": 7,
     "sku": "CCP01",
     "name": "Cửa composite CCP01 - Mẫu mới",
+    "product_type": "product",
     "description": "1. Độ dày cửa cao\r\n2. Tương đối đẹp\r\n3. Nhiều màu sắc để lựa chọn",
     "attributes": {},
     "unit": "bộ",
@@ -2351,6 +2363,7 @@
     "category": 7,
     "sku": "KTM01",
     "name": "Khoá thông minh KTM01",
+    "product_type": "product",
     "description": "1. Khoá thông minh đi kèm theo cửa\r\n2. Hỗ trợ vân tay\r\n3. Hỗ trợ mở từ xa",
     "attributes": {},
     "unit": "cái",
@@ -6913,7 +6926,7 @@
     "created_by": 2,
     "is_all_company": true,
     "priority": "high",
-    "category": null,
+    "category": "Hướng dẫn đào tạo",
     "is_pinned": true,
     "created_at": "2026-07-22T15:46:34.114Z",
     "departments": [],

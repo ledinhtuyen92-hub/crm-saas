@@ -177,6 +177,9 @@ class ProductViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         category_id = self.request.query_params.get("category_id")
         if category_id:
             qs = qs.filter(category_id=category_id)
+        product_type = self.request.query_params.get("product_type")
+        if product_type:
+            qs = qs.filter(product_type=product_type)
         return qs
 
     @action(detail=False, methods=["get"], url_path="export-csv")

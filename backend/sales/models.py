@@ -238,6 +238,21 @@ class QuotationItem(models.Model):
         on_delete=models.PROTECT,
         related_name="quotation_items",
         verbose_name="Sản phẩm",
+        null=True,
+        blank=True,
+    )
+    
+    ITEM_TYPE_PRODUCT = 'product'
+    ITEM_TYPE_SERVICE = 'service'
+    ITEM_TYPE_CHOICES = [
+        (ITEM_TYPE_PRODUCT, 'Sản phẩm'),
+        (ITEM_TYPE_SERVICE, 'Dịch vụ / Chi phí'),
+    ]
+    item_type = models.CharField(
+        max_length=20,
+        choices=ITEM_TYPE_CHOICES,
+        default=ITEM_TYPE_PRODUCT,
+        verbose_name="Loại item",
     )
     # Snapshot thông tin sản phẩm tại thời điểm lập báo giá
     product_name = models.CharField(
