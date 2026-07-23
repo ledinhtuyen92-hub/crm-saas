@@ -160,7 +160,7 @@ export default function Products() {
       setSubmitting(true)
 
       const formData = new FormData()
-      formData.append('sku', values.sku)
+      formData.append('sku', values.sku || '')
       formData.append('name', values.name)
       formData.append('product_type', values.product_type || 'product')
       formData.append('category', values.category)
@@ -188,7 +188,8 @@ export default function Products() {
       fetchProducts()
     } catch (error) {
       if (error.errorFields) return
-      messageApi.error('Lưu sản phẩm thất bại. Vui lòng kiểm tra lại mã SKU.')
+      const errDetail = error.response?.data?.detail || JSON.stringify(error.response?.data) || 'Vui lòng kiểm tra lại thông tin.'
+      messageApi.error(`Lưu sản phẩm thất bại: ${errDetail}`)
     } finally {
       setSubmitting(false)
     }
@@ -309,7 +310,7 @@ export default function Products() {
       dataIndex: 'sku',
       key: 'sku',
       width: 130,
-      render: (val) => <Tag color="blue" style={{ fontWeight: 600 }}>{val}</Tag>,
+      render: (val) => <Tag color={val ? "blue" : "default"} style={{ fontWeight: 600 }}>{val || 'Không có mã'}</Tag>,
     },
     {
       title: 'Hình ảnh',
@@ -593,7 +594,7 @@ export default function Products() {
               label: (
                 <Space>
                   <TagOutlined />
-                  <span>Loại Sản Phẩm</span>
+                  <span>Loại Sản Phẩm/Dịch vụ</span>
                 </Space>
               ),
               children: (
@@ -601,7 +602,7 @@ export default function Products() {
                   dataSource={categories}
                   rowKey="id"
                   columns={[
-                    { title: 'Tên loại sản phẩm', dataIndex: 'name', key: 'name', render: (v) => <Text strong>{v}</Text> },
+                    { title: 'Tên loại SP/Dịch vụ', dataIndex: 'name', key: 'name', render: (v) => <Text strong>{v}</Text> },
                     { title: 'Mô tả', dataIndex: 'description', key: 'description', render: (v) => <Text type="secondary">{v || '—'}</Text> },
                     {
                       title: 'Hành động',
@@ -669,7 +670,7 @@ export default function Products() {
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="category" label="Danh mục sản phẩm" rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}>
+              <Form.Item name="category" label="Danh mục SP/Dịch vụ" rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}>
                 <Select placeholder="Chọn danh mục...">
                   {categories.map((c) => (
                     <Option key={c.id} value={c.id}>{c.name}</Option>
@@ -684,6 +685,8 @@ export default function Products() {
                   <Option value="m²">m²</Option>
                   <Option value="m">Mét</Option>
                   <Option value="bộ">Bộ</Option>
+                  <Option value="lần">Lần</Option>
+                  <Option value="chuyến">Chuyến</Option>
                   <Option value="kg">Kg</Option>
                   <Option value="lít">Lít</Option>
                 </Select>

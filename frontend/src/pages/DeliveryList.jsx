@@ -450,7 +450,7 @@ export default function DeliveryList() {
   ]
 
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ padding: 24 }}>
       <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
         <Title level={3} style={{ margin: 0 }}>
           <CarOutlined style={{ marginRight: 8, color: '#f59e0b' }} />

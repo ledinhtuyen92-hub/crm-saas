@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Card, Col, Divider, Row, Space, Table, Tag, Typography, Button, Slider } from 'antd'
+import { Card, Col, Divider, Row, Space, Table, Tag, Typography, Button, Slider, Switch } from 'antd'
 import { SettingOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 
@@ -57,6 +57,7 @@ const computeProductSTT = (data, index, field = 'product') => {
 
 export default function QuotationPrintView({ quotation, type = 'quotation', effectiveTemplate, isCompanyAdmin, products = [], renderCustomerSignature, hidePricing = false, hideCustomerInfo = false }) {
   const [scale, setScale] = useState(1);
+  const [showPageBreaks, setShowPageBreaks] = useState(true);
   const [zoomedHeight, setZoomedHeight] = useState(0);
   const contentRef = useRef(null);
 
@@ -117,6 +118,10 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
         <span style={{ marginLeft: 16, paddingLeft: 16, borderLeft: '1px solid #cbd5e1', fontWeight: 600, color: '#0f172a' }}>
           Dự kiến in: <span style={{ color: '#16a34a' }}>{estimatedPages} trang A4</span>
         </span>
+        <div style={{ marginLeft: 16, paddingLeft: 16, borderLeft: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontWeight: 600, color: '#334155' }}>Xem trước cắt trang:</span>
+          <Switch size="small" checked={showPageBreaks} onChange={setShowPageBreaks} />
+        </div>
       </div>
 
       <div 
@@ -129,7 +134,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
         }}
       >
         {/* Draw simulated page breaks */}
-        {zoomedHeight > 0 && Array.from({ length: estimatedPages - 1 }).map((_, i) => (
+        {showPageBreaks && zoomedHeight > 0 && Array.from({ length: estimatedPages - 1 }).map((_, i) => (
           <div 
             key={i}
             className="no-print"
@@ -314,13 +319,11 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
       )}
 
       <Title level={5}>Danh sách hạng mục báo giá</Title>
-      <Table scroll={{ x: 1200 }}
-        className="compact-print-table no-bg-table"
-        dataSource={[...(quotation.items || [])].sort((a, b) => (a.item_type === 'service' ? 1 : 0) - (b.item_type === 'service' ? 1 : 0))}
-        rowKey="id"
-        pagination={false}
-        size="small"
-        columns={
+      {(() => {
+        const productItems = (quotation.items || []).filter(i => i.item_type !== 'service');
+        const serviceItems = (quotation.items || []).filter(i => i.item_type === 'service');
+        
+        const getColumns = (data, isServiceTable) => (
           isLand ? [
             {
               title: 'STT',
@@ -328,8 +331,9 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
               width: 50,
               align: 'center',
               render: (_, __, idx) => {
-                const rowSpan = computeRowSpan(quotation.items || [], idx, 'product')
-                const sttNum = computeProductSTT(quotation.items || [], idx, 'product')
+                if (isServiceTable) return { children: <Text strong>{idx + 1}</Text>, props: { rowSpan: 1 } };
+                const rowSpan = isServiceTable ? 1 : computeRowSpan(data, idx, 'product')
+                const sttNum = computeProductSTT(data, idx, 'product')
                 return {
                   children: <Text strong>{sttNum}</Text>,
                   props: { rowSpan },
@@ -343,21 +347,23 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
               render: (_, r, idx) => {
                 const prodObj = (products || []).find((p) => p && p.id === r?.product)
                 const imgUrl = r?.product_image || (prodObj ? (prodObj.image_url || prodObj.image) : null)
-                const rowSpan = computeRowSpan(quotation.items || [], idx, 'product')
+                const rowSpan = computeRowSpan(data, idx, 'product')
                 return {
                   children: (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '2px 0', gap: 4, width: '100%' }}>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', width: '100%' }}>
                       {imgUrl ? (
-                        <img src={imgUrl} alt="prod" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4, border: '1px solid #cbd5e1' }} />
+                        <img src={imgUrl} alt="prod" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, border: '1px solid #cbd5e1', flexShrink: 0 }} />
                       ) : null}
-                      <Text strong style={{ display: 'block', color: '#0f172a', fontSize: 13.5, textAlign: 'left', width: '100%', lineHeight: 1.3 }}>
-                        {r.product_name || (prodObj ? prodObj.name : '—')}
-                      </Text>
-                      {(r.spec || (prodObj && prodObj.description) || r.note) && (
-                        <div style={{ fontSize: 11.5, color: '#475569', textAlign: 'left', width: '100%', lineHeight: 1.4, marginTop: 2, fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
-                          {r.spec || (prodObj && prodObj.description) || r.note}
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                        <Text strong style={{ display: 'block', color: '#0f172a', fontSize: 13.5, textAlign: 'left', lineHeight: 1.3 }}>
+                          {r.product_name || (prodObj ? prodObj.name : '—')}
+                        </Text>
+                        {(r.spec || (prodObj && prodObj.description)) && (
+                          <div style={{ fontSize: 11.5, color: '#475569', textAlign: 'left', lineHeight: 1.4, marginTop: 2, fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+                            {r.spec || (prodObj && prodObj.description)}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ),
                   props: { rowSpan },
@@ -372,14 +378,14 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
                   dataIndex: 'height',
                   width: 70,
                   align: 'center',
-                  render: (v) => <Text>{Number(v) > 0 ? v : ''}</Text>,
+                  render: (v) => <Text>{Number(v) > 0 ? Number(v) : ''}</Text>,
                 },
                 {
                   title: 'Rộng',
                   dataIndex: 'width',
                   width: 70,
                   align: 'center',
-                  render: (v) => <Text>{Number(v) > 0 ? v : ''}</Text>,
+                  render: (v) => <Text>{Number(v) > 0 ? Number(v) : ''}</Text>,
                 },
                 {
                   title: 'Dày',
@@ -388,7 +394,7 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
                   align: 'center',
                   render: (v, r) => {
                     const thickness = v || r.custom_data?.thickness
-                    return <Text>{Number(thickness) > 0 ? thickness : ''}</Text>
+                    return <Text>{Number(thickness) > 0 ? Number(thickness) : ''}</Text>
                   },
                 },
               ],
@@ -452,10 +458,20 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
             },
             {
               title: 'Sản phẩm / Hàng hoá',
-              dataIndex: 'product_name',
-              key: 'product_name',
+              key: 'product_info',
               width: 240,
-              render: (val) => <Text strong style={{ color: '#0f172a', lineHeight: 1.4 }}>{val}</Text>,
+              render: (_, r) => {
+                const prodObj = (products || []).find((p) => p && p.id === r?.product)
+                const imgUrl = r?.product_image || (prodObj ? (prodObj.image_url || prodObj.image) : null)
+                return (
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    {imgUrl ? (
+                      <img src={imgUrl} alt="prod" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, border: '1px solid #cbd5e1', flexShrink: 0 }} />
+                    ) : null}
+                    <Text strong style={{ color: '#0f172a', lineHeight: 1.4 }}>{r.product_name || (prodObj ? prodObj.name : '—')}</Text>
+                  </div>
+                )
+              },
             },
             {
               title: 'Kích thước / Ghi chú',
@@ -508,8 +524,37 @@ export default function QuotationPrintView({ quotation, type = 'quotation', effe
               },
             },
           ].filter(Boolean)
-        }
-      />
+        );
+
+        return (
+          <>
+            {productItems.length > 0 && (
+              <Table scroll={{ x: 1200 }}
+                className="compact-print-table no-bg-table"
+                dataSource={productItems}
+                rowKey="id"
+                pagination={false}
+                size="small"
+                columns={getColumns(productItems, false)}
+              />
+            )}
+            {serviceItems.length > 0 && (
+              <div style={{ marginTop: 24, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                <Title level={5} style={{ color: '#0f172a', marginBottom: 8, fontSize: 14, fontWeight: 'bold', marginLeft: 16 }}>Chi phí phát sinh:</Title>
+                <Table scroll={{ x: 1200 }}
+                  className="compact-print-table no-bg-table"
+                  dataSource={serviceItems}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                  showHeader={false}
+                  columns={getColumns(serviceItems, true)}
+                />
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       <Divider />
       {!hidePricing && (

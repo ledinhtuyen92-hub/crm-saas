@@ -120,6 +120,18 @@ class QuotationItemSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "line_total"]
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        for field in ['width', 'height', 'length', 'area', 'thickness']:
+            if field in data and data[field] is not None:
+                try:
+                    f_val = float(data[field])
+                    if f_val.is_integer():
+                        data[field] = str(int(f_val))
+                except (ValueError, TypeError):
+                    pass
+        return data
+
 
 class QuotationSerializer(serializers.ModelSerializer):
     items = QuotationItemSerializer(many=True, read_only=True)

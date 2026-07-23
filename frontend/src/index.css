@@ -40,15 +40,15 @@ a {
 .printable-quotation-content .ant-table-cell,
 .printable-transaction-content .ant-table-cell,
 .printable-receipt-content .ant-table-cell {
-  padding: 4px 8px !important;
-  line-height: 1.4 !important;
+  padding: 2px 6px !important;
+  line-height: 1.35 !important;
   font-size: 13px !important;
 }
 
 .compact-print-table .ant-table-thead > tr > th,
 .printable-quotation-content .ant-table-thead > tr > th,
 .printable-transaction-content .ant-table-thead > tr > th {
-  padding: 6px 8px !important;
+  padding: 4px 6px !important;
 }
 
 
@@ -56,6 +56,11 @@ a {
 @media print {
   @page {
     margin: 12mm;
+  }
+
+  /* Warranty: landscape by default */
+  .warranty-print-container + * {
+    display: none;
   }
 
   /* Hide Ant Design drawer headers, masks, toasts/messages, notifications, close buttons */
@@ -103,13 +108,15 @@ a {
     margin: 0 !important;
   }
 
-  /* 4. Ensure Quotation Content flows naturally across pages */
+  /* 4. Ensure Content flows naturally across pages */
   .printable-quotation-content,
   .printable-transaction-content,
-  .printable-receipt-content {
+  .printable-receipt-content,
+  .warranty-print-container {
     width: 100% !important;
     height: auto !important;
     overflow: visible !important;
+    zoom: 1 !important;
   }
 
   table {

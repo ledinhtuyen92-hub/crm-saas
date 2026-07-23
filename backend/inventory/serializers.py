@@ -41,6 +41,7 @@ class ProductSerializer(serializers.ModelSerializer):
     template_name = serializers.CharField(source="template.name", read_only=True)
     unit_display = serializers.CharField(source="get_unit_display", read_only=True)
     image_url = serializers.SerializerMethodField()
+    sku = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = Product
@@ -118,7 +119,7 @@ class StockLevelSerializer(serializers.ModelSerializer):
 class InventoryTransactionSerializer(serializers.ModelSerializer):
     type_display = serializers.CharField(source="get_type_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
-    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_name = serializers.SerializerMethodField()
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
     target_warehouse_name = serializers.CharField(source="target_warehouse.name", read_only=True)
@@ -190,6 +191,11 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
 
     def get_company_info(self, obj):
         return get_company_info_dict(self, obj)
+
+    def get_product_name(self, obj):
+        if hasattr(obj, 'custom_product_name') and obj.custom_product_name:
+            return obj.custom_product_name
+        return obj.product.name if obj.product else ""
 
     def get_has_production_order(self, obj):
         """Trả về True nếu phiếu xuất kho đã hoàn thành và có lệnh SX liên kết."""

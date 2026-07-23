@@ -69,6 +69,8 @@ class ProductTemplate(models.Model):
     UNIT_BO = "bộ"
     UNIT_KG = "kg"
     UNIT_LIT = "lít"
+    UNIT_LAN = "lần"
+    UNIT_CHUYEN = "chuyến"
     UNIT_CHOICES = [
         (UNIT_CAI, "Cái"),
         (UNIT_M2, "m²"),
@@ -76,6 +78,8 @@ class ProductTemplate(models.Model):
         (UNIT_BO, "Bộ"),
         (UNIT_KG, "Kg"),
         (UNIT_LIT, "Lít"),
+        (UNIT_LAN, "Lần"),
+        (UNIT_CHUYEN, "Chuyến"),
     ]
     unit = models.CharField(
         max_length=20,
@@ -149,6 +153,8 @@ class Product(models.Model):
     UNIT_BO = "bộ"
     UNIT_KG = "kg"
     UNIT_LIT = "lít"
+    UNIT_LAN = "lần"
+    UNIT_CHUYEN = "chuyến"
     UNIT_CHOICES = [
         (UNIT_CAI, "Cái"),
         (UNIT_M2, "m²"),
@@ -156,6 +162,8 @@ class Product(models.Model):
         (UNIT_BO, "Bộ"),
         (UNIT_KG, "Kg"),
         (UNIT_LIT, "Lít"),
+        (UNIT_LAN, "Lần"),
+        (UNIT_CHUYEN, "Chuyến"),
     ]
 
     company = models.ForeignKey(
@@ -372,6 +380,13 @@ class InventoryTransaction(models.Model):
         on_delete=models.PROTECT,
         related_name="inventory_transactions",
         verbose_name="Sản phẩm",
+    )
+    custom_product_name = models.CharField(
+        max_length=500,
+        null=True,
+        blank=True,
+        verbose_name="Tên hiển thị tùy chỉnh",
+        help_text="VD: Cửa composite CCP01 - Mẫu mới (800 x 2200 x 130)"
     )
     warehouse = models.ForeignKey(
         "inventory.Warehouse",

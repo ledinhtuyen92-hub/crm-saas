@@ -254,6 +254,7 @@ export default function Inventory() {
 
   // ── Filtered Products ─────────────────────────────────────────────────
   const filteredProducts = products.filter((item) => {
+    if (item.product_type === 'service') return false
     if (!searchText) return true
     const name = (item.name || '').toLowerCase()
     const sku = (item.sku || '').toLowerCase()
@@ -1093,7 +1094,8 @@ export default function Inventory() {
         }
         const id = record.items ? record.items[0].product : record.product
         const p = products.find((item) => item.id === id)
-        return p ? <Text strong>{p.name}</Text> : `SP #${id}`
+        const txnName = record.items ? record.items[0].product_name : record.product_name
+        return p ? <Text strong>{txnName || p.name}</Text> : `SP #${id}`
       },
     },
     {
@@ -1381,9 +1383,9 @@ export default function Inventory() {
                               { 
                                 title: 'Sản phẩm', 
                                 dataIndex: 'product', 
-                                render: (id) => {
+                                render: (id, r) => {
                                   const p = products.find((item) => item.id === id)
-                                  return p ? <Text strong>{p.name} <Text type="secondary" style={{fontWeight: 'normal'}}>({p.sku})</Text></Text> : `SP #${id}`
+                                  return p ? <Text strong>{r.product_name || p.name} <Text type="secondary" style={{fontWeight: 'normal'}}>({p.sku})</Text></Text> : `SP #${id}`
                                 } 
                               },
                               { 
@@ -1808,7 +1810,7 @@ export default function Inventory() {
                             style={{ marginBottom: 0 }}
                           >
                             <Select showSearch optionFilterProp="children" placeholder="Chọn sản phẩm...">
-                              {products.map((p) => (
+                              {products.filter(p => p.product_type !== 'service').map((p) => (
                                 <Option key={p.id} value={p.id}>{p.name} ({p.sku})</Option>
                               ))}
                             </Select>

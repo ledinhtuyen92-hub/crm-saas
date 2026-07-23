@@ -120,6 +120,25 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
             quotation_number=quotation_number,
         )
 
+    @action(detail=False, methods=["post"], url_path="upload-item-image")
+    def upload_item_image(self, request):
+        """Upload ảnh cho dịch vụ phát sinh / sản phẩm trong báo giá."""
+        if 'image' not in request.FILES:
+            return Response({"error": "Không tìm thấy file ảnh."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        image_file = request.FILES['image']
+        
+        from django.core.files.storage import default_storage
+        import os
+        import uuid
+        
+        ext = os.path.splitext(image_file.name)[1]
+        filename = f"item_images/{uuid.uuid4()}{ext}"
+        saved_path = default_storage.save(filename, image_file)
+        url = request.build_absolute_uri(default_storage.url(saved_path))
+        
+        return Response({"url": url})
+
     @action(detail=True, methods=["post"], url_path="create-order")
     def create_order(self, request, pk=None):
         from django.db import transaction
@@ -173,6 +192,7 @@ class QuotationViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 OrderItem.objects.create(
                     order=order,
                     product=item.product,
+                    item_type=item.item_type,
                     product_name=item.product_name,
                     unit_price=item.unit_price,
                     width=item.width,

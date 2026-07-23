@@ -54,6 +54,7 @@ export default function WarrantyList() {
   const [printingWarranty, setPrintingWarranty] = useState(null)
   const [companyInfo, setCompanyInfo] = useState(null)
   const [companySettings, setCompanySettings] = useState(null)
+  const [printOrientation, setPrintOrientation] = useState('landscape')
 
   const canEdit = hasPermission('warranty.edit')
   const canCreate = hasPermission('warranty.create') || hasPermission('warranty.edit')
@@ -183,6 +184,9 @@ export default function WarrantyList() {
     if (!printingWarranty) return
     const contentEl = document.querySelector('.warranty-print-container')
     const dNum = printingWarranty.warranty_code || 'Phieu_Bao_Hanh'
+    const isLandscape = printOrientation === 'landscape'
+    // Read actual scale value set by user in WarrantyPrintView
+    const printScale = parseFloat(contentEl?.dataset?.scale || '1')
 
     if (!contentEl) {
       const oldTitle = document.title
@@ -213,33 +217,51 @@ export default function WarrantyList() {
         <title>${dNum}</title>
         ${styleTags}
         <style>
-          @media print {
-            body, html, .warranty-print-container {
-              display: block !important;
-              visibility: visible !important;
-              opacity: 1 !important;
-            }
-            .warranty-print-container {
-              width: 100% !important;
-              margin: 0 auto !important;
-              padding: 0 !important;
-              box-shadow: none !important;
-            }
-            @page {
-              size: A4 portrait;
-              margin: 10mm;
-            }
-            body {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-            .warranty-print-container > div:first-child {
-              box-shadow: none !important;
-              border: none !important;
-              padding: 0 !important;
-              margin: 0 !important;
-            }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            box-sizing: border-box !important;
           }
+          @page {
+            size: ${isLandscape ? 'A4 landscape' : 'A4 portrait'};
+            margin: ${isLandscape ? '0' : '12mm'};
+          }
+          html, body {
+            margin: 0;
+            padding: 0;
+            ${isLandscape ? 'width: 297mm; height: 210mm;' : ''}
+          }
+          .no-print {
+            display: none !important;
+          }
+          .warranty-print-container {
+            zoom: ${printScale} !important;
+            box-shadow: none !important;
+            ${isLandscape ? `
+              width: 297mm !important;
+              height: 210mm !important;
+              padding: 10mm !important;
+              overflow: hidden !important;
+            ` : `
+              width: 100% !important;
+              height: auto !important;
+              padding: 8mm !important;
+            `}
+          }
+          ${isLandscape ? `
+            .warranty-print-container .ant-row {
+              flex-wrap: nowrap !important;
+            }
+            .warranty-print-container .ant-col {
+              flex: 0 0 50% !important;
+              max-width: 50% !important;
+            }
+          ` : `
+            .warranty-print-container .ant-col {
+              flex: 0 0 100% !important;
+              max-width: 100% !important;
+            }
+          `}
         </style>
       </head>
       <body>
@@ -461,9 +483,12 @@ export default function WarrantyList() {
           </Button>
         }
       >
-        <div style={{ marginBottom: 24, border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, background: '#fff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-          <WarrantyPrintView warranty={printingWarranty} companyInfo={companyInfo} companySettings={companySettings} />
-        </div>
+          <WarrantyPrintView
+            warranty={printingWarranty}
+            companyInfo={companyInfo}
+            companySettings={companySettings}
+            onOrientationChange={setPrintOrientation}
+          />
       </Drawer>
     </div>
   )

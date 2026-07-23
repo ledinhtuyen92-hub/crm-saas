@@ -168,20 +168,26 @@ def _create_production_order(order, factory_id=None):
     """Tự động tạo ProductionOrder sau khi kho cấp vật tư."""
     try:
         from production.models import ProductionOrder
+        from orders.models import Order
         from core.numbering import derive_code_from_order
+        from django.db import transaction
 
-        # Kiểm tra tránh duplicate
-        if not ProductionOrder.objects.filter(order=order).exists():
-            # Thừa kế hậu tố từ mã đơn hàng: DH-21072026-001 → LSX-21072026-001
-            po_code = derive_code_from_order(order.order_number, order.company, "lsx")
-            ProductionOrder.objects.create(
-                company=order.company,
-                order=order,
-                factory_id=factory_id,
-                production_order_code=po_code,
-                status=ProductionOrder.STATUS_PENDING,
-            )
-            logger.info("Auto-created ProductionOrder for order %s with code %s", order.order_number, po_code)
+        with transaction.atomic():
+            # Khóa đơn hàng trong transaction để tránh race condition khi duyệt xuất kho nhiều mục cùng lúc
+            Order.objects.select_for_update().get(id=order.id)
+            
+            # Kiểm tra tránh duplicate
+            if not ProductionOrder.objects.filter(order=order).exists():
+                # Thừa kế hậu tố từ mã đơn hàng: DH-21072026-001 → LSX-21072026-001
+                po_code = derive_code_from_order(order.order_number, order.company, "lsx")
+                ProductionOrder.objects.create(
+                    company=order.company,
+                    order=order,
+                    factory_id=factory_id,
+                    production_order_code=po_code,
+                    status=ProductionOrder.STATUS_PENDING,
+                )
+                logger.info("Auto-created ProductionOrder for order %s with code %s", order.order_number, po_code)
     except Exception as exc:
         logger.error("Failed to create ProductionOrder for order %s: %s", order.order_number, exc)
 
@@ -222,12 +228,33 @@ def _create_pending_inventory_export(order):
         txn_code = derive_code_from_order(order.order_number, order.company, "export")
 
         for item in order.items.select_related("product").all():
+            # Skip services as they don't require physical stock outward
+            if item.item_type == 'service' or (item.product and item.product.product_type == 'service'):
+                continue
+                
+            # Generate custom product name with dimensions
+            custom_name = item.product.name if item.product else item.product_name
+            dims = []
+            
+            def format_dim(val):
+                f_val = float(val)
+                return f"{int(f_val)}" if f_val.is_integer() else f"{f_val}"
+                
+            if hasattr(item, 'length') and item.length and float(item.length) > 0: dims.append(format_dim(item.length))
+            if hasattr(item, 'height') and item.height and float(item.height) > 0: dims.append(format_dim(item.height))
+            if hasattr(item, 'width') and item.width and float(item.width) > 0: dims.append(format_dim(item.width))
+            if hasattr(item, 'thickness') and item.thickness and float(item.thickness) > 0: dims.append(format_dim(item.thickness))
+            
+            if dims:
+                custom_name += f" ({' x '.join(dims)})"
+
             InventoryTransaction.objects.create(
                 company=order.company,
                 transaction_code=txn_code,
                 type=InventoryTransaction.TYPE_EXPORT,
                 status=InventoryTransaction.STATUS_PENDING,
                 product=item.product,
+                custom_product_name=custom_name,
                 warehouse=None,
                 quantity=item.quantity,
                 unit_cost=0,

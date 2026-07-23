@@ -946,9 +946,6 @@
     "description": "Vai trò quản trị cao nhất của công ty.",
     "is_auto_assign_target": false,
     "permissions": [
-      128,
-      129,
-      127,
       56,
       119,
       6,
@@ -1286,7 +1283,7 @@
   "pk": 2,
   "fields": {
     "password": "pbkdf2_sha256$1000000$gogv5if640Ve4r5k5DvYiY$Co2C/05RkNJOSvpBH4uiONSzdeTJAZ/vJysA2SrgpDY=",
-    "last_login": "2026-07-23T01:36:07.110Z",
+    "last_login": "2026-07-23T04:52:53.419Z",
     "is_superuser": false,
     "username": "giamdoc",
     "first_name": "",
@@ -1693,6 +1690,116 @@
   }
 },
 {
+  "model": "users.companysequence",
+  "pk": 9,
+  "fields": {
+    "company": 15,
+    "prefix": "FUJI-PT",
+    "date_str": "23072026",
+    "last_seq": 4
+  }
+},
+{
+  "model": "users.companysequence",
+  "pk": 10,
+  "fields": {
+    "company": 15,
+    "prefix": "FUJI-EXP",
+    "date_str": "22072026",
+    "last_seq": 1
+  }
+},
+{
+  "model": "users.companysequence",
+  "pk": 11,
+  "fields": {
+    "company": 15,
+    "prefix": "FUJI-LSX",
+    "date_str": "22072026",
+    "last_seq": 1
+  }
+},
+{
+  "model": "users.companysequence",
+  "pk": 13,
+  "fields": {
+    "company": 15,
+    "prefix": "FUJI-GH",
+    "date_str": "22072026",
+    "last_seq": 1
+  }
+},
+{
+  "model": "users.companysequence",
+  "pk": 14,
+  "fields": {
+    "company": 15,
+    "prefix": "FUJI-BH",
+    "date_str": "22072026",
+    "last_seq": 1
+  }
+},
+{
+  "model": "users.companysequence",
+  "pk": 15,
+  "fields": {
+    "company": 15,
+    "prefix": "FUJI-BG",
+    "date_str": "23072026",
+    "last_seq": 5
+  }
+},
+{
+  "model": "users.companysequence",
+  "pk": 16,
+  "fields": {
+    "company": 15,
+    "prefix": "FUJI-DH",
+    "date_str": "23072026",
+    "last_seq": 6
+  }
+},
+{
+  "model": "users.companysequence",
+  "pk": 17,
+  "fields": {
+    "company": 15,
+    "prefix": "FUJI-EXP",
+    "date_str": "23072026",
+    "last_seq": 6
+  }
+},
+{
+  "model": "users.companysequence",
+  "pk": 18,
+  "fields": {
+    "company": 15,
+    "prefix": "FUJI-LSX",
+    "date_str": "23072026",
+    "last_seq": 6
+  }
+},
+{
+  "model": "users.companysequence",
+  "pk": 20,
+  "fields": {
+    "company": 15,
+    "prefix": "FUJI-GH",
+    "date_str": "23072026",
+    "last_seq": 6
+  }
+},
+{
+  "model": "users.companysequence",
+  "pk": 21,
+  "fields": {
+    "company": 15,
+    "prefix": "FUJI-BH",
+    "date_str": "23072026",
+    "last_seq": 4
+  }
+},
+{
   "model": "crm.customertag",
   "pk": 2,
   "fields": {
@@ -1713,7 +1820,7 @@
     "city": "Hải Phòng",
     "birthday": "1992-09-14",
     "source": "other",
-    "status": "active",
+    "status": "has_order",
     "is_inactive": false,
     "assigned_to": 5,
     "created_by": 5,
@@ -1762,28 +1869,28 @@
 },
 {
   "model": "sales.quotation",
-  "pk": 1,
+  "pk": 5,
   "fields": {
     "company": 15,
-    "quotation_number": "FUJI-BG-22072026-001",
-    "customer": 28,
-    "created_by": 5,
-    "status": "approved",
-    "installation_date": "2026-07-28",
+    "quotation_number": "FUJI-BG-23072026-004",
+    "customer": 27,
+    "created_by": 2,
+    "status": "draft",
+    "installation_date": "2026-07-29",
     "notes": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao.",
     "discount_total": "0.00",
-    "public_token": "57227c11-a01b-4e7a-8e55-a0f7dced29db",
+    "public_token": "0cdb70f1-f839-4f4a-82a5-1b30b195a0b7",
     "public_link_expires_at": null,
     "signature_image": null,
     "signed_at": null,
     "customer_name_signed": null,
-    "subtotal": "17300000.00",
+    "subtotal": "18700000.00",
     "vat_rate": "0.00",
     "vat_amount": "0.00",
-    "total_amount": "17300000.00",
+    "total_amount": "18800000.00",
     "order": null,
     "template": null,
-    "shipping_fee": "0.00",
+    "shipping_fee": "100000.00",
     "installation_fee": "0.00",
     "delivery_time": "3-5 ngày làm việc",
     "warranty_months": 12,
@@ -1856,99 +1963,71 @@
         "footer_content": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao."
       }
     },
-    "created_at": "2026-07-22T03:36:57.390Z",
-    "updated_at": "2026-07-22T03:36:57.390Z"
+    "created_at": "2026-07-23T07:21:34.592Z",
+    "updated_at": "2026-07-23T09:56:46.953Z"
   }
 },
 {
   "model": "sales.quotationitem",
-  "pk": 1,
+  "pk": 34,
   "fields": {
-    "quotation": 1,
+    "quotation": 5,
     "product": 7,
     "item_type": "product",
     "product_name": "Cửa composite CCP01 - Mẫu mới",
     "unit_price": "3900000.00",
     "width": "600.00",
-    "height": "2000.00",
+    "height": "200.00",
     "quantity": 1,
     "discount_percent": "0.00",
     "line_total": "0.00",
-    "note": "Không bản lề",
+    "note": "Khoá chính hãng",
     "length": "0.00",
-    "area": "1200000.00",
+    "area": "120000.00",
     "spec": "",
     "warranty": "12 tháng",
-    "thickness": "300.00",
+    "thickness": "500.00",
     "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
     "custom_data": {
       "unit": "bộ",
       "symbol": "D11",
-      "thickness": 300
+      "thickness": 500
     }
   }
 },
 {
   "model": "sales.quotationitem",
-  "pk": 2,
+  "pk": 35,
   "fields": {
-    "quotation": 1,
+    "quotation": 5,
     "product": 7,
     "item_type": "product",
     "product_name": "Cửa composite CCP01 - Mẫu mới",
-    "unit_price": "3900000.00",
-    "width": "300.00",
-    "height": "2011.00",
+    "unit_price": "3000000.00",
+    "width": "600.00",
+    "height": "400.00",
     "quantity": 1,
     "discount_percent": "0.00",
     "line_total": "0.00",
-    "note": "Màu óc chó",
+    "note": "Khoá thông minh",
     "length": "0.00",
-    "area": "603300.00",
+    "area": "240000.00",
     "spec": "",
     "warranty": "12 tháng",
-    "thickness": "200.00",
+    "thickness": "600.00",
     "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
     "custom_data": {
       "unit": "bộ",
       "symbol": "D12",
-      "thickness": 200
+      "thickness": 600
     }
   }
 },
 {
   "model": "sales.quotationitem",
-  "pk": 3,
+  "pk": 36,
   "fields": {
-    "quotation": 1,
-    "product": 7,
-    "item_type": "product",
-    "product_name": "Cửa composite CCP01 - Mẫu mới",
-    "unit_price": "3900000.00",
-    "width": "300.00",
-    "height": "2500.00",
-    "quantity": 1,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "Không có",
-    "length": "0.00",
-    "area": "750000.00",
-    "spec": "",
-    "warranty": "12 tháng",
-    "thickness": "800.00",
-    "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
-    "custom_data": {
-      "unit": "bộ",
-      "symbol": "",
-      "thickness": 800
-    }
-  }
-},
-{
-  "model": "sales.quotationitem",
-  "pk": 4,
-  "fields": {
-    "quotation": 1,
+    "quotation": 5,
     "product": 10,
     "item_type": "product",
     "product_name": "Khoá thông minh KTM01",
@@ -1958,7 +2037,7 @@
     "quantity": 1,
     "discount_percent": "0.00",
     "line_total": "0.00",
-    "note": "Thông minh",
+    "note": "hỗ trợ wifi",
     "length": "0.00",
     "area": "0.00",
     "spec": "",
@@ -1969,6 +2048,58 @@
       "unit": "cái",
       "symbol": "K1",
       "thickness": 0
+    }
+  }
+},
+{
+  "model": "sales.quotationitem",
+  "pk": 37,
+  "fields": {
+    "quotation": 5,
+    "product": 12,
+    "item_type": "service",
+    "product_name": "Chi phí nhân công",
+    "unit_price": "5600000.00",
+    "width": "0.00",
+    "height": "0.00",
+    "quantity": 1,
+    "discount_percent": "0.00",
+    "line_total": "0.00",
+    "note": "Cánh phẳng",
+    "length": "0.00",
+    "area": "0.00",
+    "spec": "",
+    "warranty": "",
+    "thickness": "0.00",
+    "product_image": "http://localhost:8000/media/item_images/72a67756-cbcb-4e8a-9a10-8566ffdc5969.jpg",
+    "custom_data": {
+      "unit": "lần"
+    }
+  }
+},
+{
+  "model": "sales.quotationitem",
+  "pk": 38,
+  "fields": {
+    "quotation": 5,
+    "product": 11,
+    "item_type": "service",
+    "product_name": "Cửa khuôn kép",
+    "unit_price": "600000.00",
+    "width": "0.00",
+    "height": "0.00",
+    "quantity": 1,
+    "discount_percent": "0.00",
+    "line_total": "0.00",
+    "note": "Cánh trơn",
+    "length": "0.00",
+    "area": "0.00",
+    "spec": "",
+    "warranty": "",
+    "thickness": "0.00",
+    "product_image": "",
+    "custom_data": {
+      "unit": "lần"
     }
   }
 },
@@ -2108,16 +2239,16 @@
 },
 {
   "model": "orders.order",
-  "pk": 11,
+  "pk": 16,
   "fields": {
     "company": 15,
-    "order_number": "FUJI-DH-22072026-001",
+    "order_number": "FUJI-DH-23072026-006",
     "customer": 28,
-    "quotation": 1,
-    "created_by": 5,
+    "quotation": null,
+    "created_by": 2,
     "approved_by": 2,
     "status": "approved",
-    "financial_status": "unpaid",
+    "financial_status": "fully_paid",
     "payment_term": "Cọc 30% - Giao hàng 70%",
     "payment_terms_schedule": [
       {
@@ -2126,19 +2257,19 @@
         "percentage": 100
       }
     ],
-    "installation_date": "2026-07-28",
-    "notes": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao.",
-    "subtotal": "17300000.00",
+    "installation_date": null,
+    "notes": "",
+    "subtotal": "9500000.00",
     "vat_rate": "0.00",
     "vat_amount": "0.00",
     "shipping_fee": "0.00",
     "installation_fee": "0.00",
     "delivery_time": "3-5 ngày làm việc",
     "warranty_months": 12,
-    "validity_days": 15,
+    "validity_days": 30,
     "discount_total": "0.00",
-    "total_amount": "17300000.00",
-    "approved_at": "2026-07-22T03:53:50.524Z",
+    "total_amount": "9500000.00",
+    "approved_at": "2026-07-23T09:58:07.420Z",
     "custom_data": {
       "template_snapshot": {
         "id": 2,
@@ -2199,99 +2330,218 @@
         "footer_content": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao."
       }
     },
-    "created_at": "2026-07-22T03:53:36.809Z",
-    "updated_at": "2026-07-22T03:53:50.526Z"
+    "created_at": "2026-07-23T09:57:37.339Z",
+    "updated_at": "2026-07-23T09:58:07.421Z"
+  }
+},
+{
+  "model": "orders.order",
+  "pk": 17,
+  "fields": {
+    "company": 15,
+    "order_number": "FUJI-DH-23072026-004",
+    "customer": 27,
+    "quotation": 5,
+    "created_by": 2,
+    "approved_by": 2,
+    "status": "completed",
+    "financial_status": "credit_approved",
+    "payment_term": "Cọc 30% - Giao hàng 70%",
+    "payment_terms_schedule": [
+      {
+        "type": "deposit",
+        "title": "Thanh toán đợt 1",
+        "percentage": 100
+      }
+    ],
+    "installation_date": "2026-07-29",
+    "notes": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao.",
+    "subtotal": "18700000.00",
+    "vat_rate": "0.00",
+    "vat_amount": "0.00",
+    "shipping_fee": "100000.00",
+    "installation_fee": "0.00",
+    "delivery_time": "3-5 ngày làm việc",
+    "warranty_months": 12,
+    "validity_days": 15,
+    "discount_total": "0.00",
+    "total_amount": "18800000.00",
+    "approved_at": "2026-07-23T09:58:05.276Z",
+    "custom_data": {
+      "template_snapshot": {
+        "id": 2,
+        "code": "default",
+        "name": "Báo giá FUJITECH",
+        "layout_style": "modern_navy",
+        "layout_config": {
+          "sections": [
+            {
+              "id": "header",
+              "name": "🏢 Khối Header & Logo Công ty",
+              "order": 1,
+              "visible": true
+            },
+            {
+              "id": "title",
+              "name": "📌 Khối Tiêu đề & Lời chào",
+              "order": 2,
+              "visible": true
+            },
+            {
+              "id": "customer_info",
+              "name": "👤 Khối Thông tin Khách hàng / Đối tác",
+              "order": 3,
+              "visible": true
+            },
+            {
+              "id": "items_table",
+              "name": "📦 Khối Bảng Hạng mục Sản phẩm & Dịch vụ",
+              "order": 4,
+              "visible": true
+            },
+            {
+              "id": "summary",
+              "name": "💰 Khối Tổng kết Thanh toán & Chiết khấu",
+              "order": 5,
+              "visible": true
+            },
+            {
+              "id": "terms",
+              "name": "📜 Khối Ghi chú & Điều khoản (Từ Admin Công ty)",
+              "order": 6,
+              "visible": true
+            },
+            {
+              "id": "signatures",
+              "name": "✍️ Khối Chữ ký Xác nhận",
+              "order": 7,
+              "columns": 2,
+              "visible": true
+            }
+          ],
+          "table_style": "classic_border",
+          "theme_color": "#d97706",
+          "custom_title": "BÁO GIÁ SẢN XUẤT CỬA COMPOSITE",
+          "paper_orientation": "landscape"
+        },
+        "footer_content": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao."
+      }
+    },
+    "created_at": "2026-07-23T09:58:01.834Z",
+    "updated_at": "2026-07-23T10:14:29.614Z"
   }
 },
 {
   "model": "orders.orderitem",
-  "pk": 23,
+  "pk": 44,
   "fields": {
-    "order": 11,
+    "order": 16,
     "product": 7,
     "item_type": "product",
     "product_name": "Cửa composite CCP01 - Mẫu mới",
     "unit_price": "3900000.00",
-    "width": "600.00",
-    "height": "2000.00",
+    "width": "300.00",
+    "height": "100.00",
     "quantity": 1,
     "discount_percent": "0.00",
     "line_total": "0.00",
-    "note": "Không bản lề",
+    "note": "Không",
     "length": "0.00",
-    "area": "1200000.00",
+    "area": "0.00",
     "spec": "",
     "warranty": "12 tháng",
     "thickness": "300.00",
-    "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
-    "custom_data": {
-      "unit": "bộ",
-      "symbol": "D11",
-      "thickness": 300
-    }
+    "product_image": null,
+    "custom_data": {}
   }
 },
 {
   "model": "orders.orderitem",
-  "pk": 24,
+  "pk": 45,
   "fields": {
-    "order": 11,
-    "product": 7,
-    "item_type": "product",
-    "product_name": "Cửa composite CCP01 - Mẫu mới",
-    "unit_price": "3900000.00",
-    "width": "300.00",
-    "height": "2011.00",
-    "quantity": 1,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "Màu óc chó",
-    "length": "0.00",
-    "area": "603300.00",
-    "spec": "",
-    "warranty": "12 tháng",
-    "thickness": "200.00",
-    "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
-    "custom_data": {
-      "unit": "bộ",
-      "symbol": "D12",
-      "thickness": 200
-    }
-  }
-},
-{
-  "model": "orders.orderitem",
-  "pk": 25,
-  "fields": {
-    "order": 11,
-    "product": 7,
-    "item_type": "product",
-    "product_name": "Cửa composite CCP01 - Mẫu mới",
-    "unit_price": "3900000.00",
-    "width": "300.00",
-    "height": "2500.00",
+    "order": 16,
+    "product": 12,
+    "item_type": "service",
+    "product_name": "Chi phí nhân công",
+    "unit_price": "5600000.00",
+    "width": "0.00",
+    "height": "0.00",
     "quantity": 1,
     "discount_percent": "0.00",
     "line_total": "0.00",
     "note": "Không có",
     "length": "0.00",
-    "area": "750000.00",
+    "area": "0.00",
     "spec": "",
-    "warranty": "12 tháng",
-    "thickness": "800.00",
-    "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
+    "warranty": "",
+    "thickness": "0.00",
+    "product_image": "",
     "custom_data": {
-      "unit": "bộ",
-      "symbol": "",
-      "thickness": 800
+      "unit": "lần"
     }
   }
 },
 {
   "model": "orders.orderitem",
-  "pk": 26,
+  "pk": 46,
   "fields": {
-    "order": 11,
+    "order": 17,
+    "product": 7,
+    "item_type": "product",
+    "product_name": "Cửa composite CCP01 - Mẫu mới",
+    "unit_price": "3900000.00",
+    "width": "600.00",
+    "height": "200.00",
+    "quantity": 1,
+    "discount_percent": "0.00",
+    "line_total": "0.00",
+    "note": "Khoá chính hãng",
+    "length": "0.00",
+    "area": "120000.00",
+    "spec": "",
+    "warranty": "12 tháng",
+    "thickness": "500.00",
+    "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
+    "custom_data": {
+      "unit": "bộ",
+      "symbol": "D11",
+      "thickness": 500
+    }
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": 47,
+  "fields": {
+    "order": 17,
+    "product": 7,
+    "item_type": "product",
+    "product_name": "Cửa composite CCP01 - Mẫu mới",
+    "unit_price": "3000000.00",
+    "width": "600.00",
+    "height": "400.00",
+    "quantity": 1,
+    "discount_percent": "0.00",
+    "line_total": "0.00",
+    "note": "Khoá thông minh",
+    "length": "0.00",
+    "area": "240000.00",
+    "spec": "",
+    "warranty": "12 tháng",
+    "thickness": "600.00",
+    "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
+    "custom_data": {
+      "unit": "bộ",
+      "symbol": "D12",
+      "thickness": 600
+    }
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": 48,
+  "fields": {
+    "order": 17,
     "product": 10,
     "item_type": "product",
     "product_name": "Khoá thông minh KTM01",
@@ -2301,7 +2551,7 @@
     "quantity": 1,
     "discount_percent": "0.00",
     "line_total": "0.00",
-    "note": "Thông minh",
+    "note": "hỗ trợ wifi",
     "length": "0.00",
     "area": "0.00",
     "spec": "",
@@ -2312,6 +2562,58 @@
       "unit": "cái",
       "symbol": "K1",
       "thickness": 0
+    }
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": 49,
+  "fields": {
+    "order": 17,
+    "product": 12,
+    "item_type": "service",
+    "product_name": "Chi phí nhân công",
+    "unit_price": "5600000.00",
+    "width": "0.00",
+    "height": "0.00",
+    "quantity": 1,
+    "discount_percent": "0.00",
+    "line_total": "0.00",
+    "note": "Cánh phẳng",
+    "length": "0.00",
+    "area": "0.00",
+    "spec": "",
+    "warranty": "",
+    "thickness": "0.00",
+    "product_image": "http://localhost:8000/media/item_images/72a67756-cbcb-4e8a-9a10-8566ffdc5969.jpg",
+    "custom_data": {
+      "unit": "lần"
+    }
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": 50,
+  "fields": {
+    "order": 17,
+    "product": 11,
+    "item_type": "service",
+    "product_name": "Cửa khuôn kép",
+    "unit_price": "600000.00",
+    "width": "0.00",
+    "height": "0.00",
+    "quantity": 1,
+    "discount_percent": "0.00",
+    "line_total": "0.00",
+    "note": "Cánh trơn",
+    "length": "0.00",
+    "area": "0.00",
+    "spec": "",
+    "warranty": "",
+    "thickness": "0.00",
+    "product_image": "",
+    "custom_data": {
+      "unit": "lần"
     }
   }
 },
@@ -2329,8 +2631,17 @@
   "pk": 8,
   "fields": {
     "company": 15,
-    "name": "Cửa Fujitech Grand Door",
+    "name": "Phụ kiện đi kèm",
     "description": "Cửa cao cấp hơn"
+  }
+},
+{
+  "model": "inventory.productcategory",
+  "pk": 9,
+  "fields": {
+    "company": 15,
+    "name": "Chi phí phát sinh",
+    "description": "Các chi phí phát sinh khác"
   }
 },
 {
@@ -2376,6 +2687,48 @@
   }
 },
 {
+  "model": "inventory.product",
+  "pk": 11,
+  "fields": {
+    "company": 15,
+    "template": null,
+    "category": 9,
+    "sku": "",
+    "name": "Cửa khuôn kép",
+    "product_type": "service",
+    "description": "",
+    "attributes": {},
+    "unit": "cái",
+    "price": "500000.00",
+    "cost_price": "0.00",
+    "image": "",
+    "is_active": true,
+    "created_at": "2026-07-23T05:30:18.833Z",
+    "updated_at": "2026-07-23T05:30:18.833Z"
+  }
+},
+{
+  "model": "inventory.product",
+  "pk": 12,
+  "fields": {
+    "company": 15,
+    "template": null,
+    "category": 9,
+    "sku": null,
+    "name": "Chi phí nhân công",
+    "product_type": "service",
+    "description": "",
+    "attributes": {},
+    "unit": "lần",
+    "price": "5600000.00",
+    "cost_price": "0.00",
+    "image": "",
+    "is_active": true,
+    "created_at": "2026-07-23T06:38:04.904Z",
+    "updated_at": "2026-07-23T06:38:04.904Z"
+  }
+},
+{
   "model": "inventory.warehouse",
   "pk": 6,
   "fields": {
@@ -2401,7 +2754,7 @@
   "fields": {
     "product": 7,
     "warehouse": 6,
-    "quantity": 8,
+    "quantity": 4,
     "min_quantity": 0
   }
 },
@@ -2411,7 +2764,7 @@
   "fields": {
     "product": 7,
     "warehouse": 10,
-    "quantity": 2,
+    "quantity": 0,
     "min_quantity": 0
   }
 },
@@ -2421,7 +2774,7 @@
   "fields": {
     "product": 10,
     "warehouse": 10,
-    "quantity": 18,
+    "quantity": 17,
     "min_quantity": 5
   }
 },
@@ -2431,8 +2784,92 @@
   "fields": {
     "product": 10,
     "warehouse": 6,
-    "quantity": 38,
+    "quantity": 37,
     "min_quantity": 5
+  }
+},
+{
+  "model": "inventory.inventorytransaction",
+  "pk": 27,
+  "fields": {
+    "company": 15,
+    "transaction_code": "FUJI-EXP-23072026-004",
+    "type": "export",
+    "product": 7,
+    "custom_product_name": "Cửa composite CCP01 - Mẫu mới (400 x 600 x 600)",
+    "warehouse": 10,
+    "target_warehouse": null,
+    "status": "completed",
+    "quantity": 1,
+    "unit_cost": "0.00",
+    "reference_order": 17,
+    "factory": 2,
+    "note": "Lệnh xuất kho chờ duyệt cho đơn hàng FUJI-DH-23072026-004",
+    "created_by": 2,
+    "created_at": "2026-07-23T10:04:37.836Z"
+  }
+},
+{
+  "model": "inventory.inventorytransaction",
+  "pk": 28,
+  "fields": {
+    "company": 15,
+    "transaction_code": "FUJI-EXP-23072026-004",
+    "type": "export",
+    "product": 7,
+    "custom_product_name": "Cửa composite CCP01 - Mẫu mới (200 x 600 x 500)",
+    "warehouse": 10,
+    "target_warehouse": null,
+    "status": "completed",
+    "quantity": 1,
+    "unit_cost": "0.00",
+    "reference_order": 17,
+    "factory": 2,
+    "note": "Lệnh xuất kho chờ duyệt cho đơn hàng FUJI-DH-23072026-004",
+    "created_by": 2,
+    "created_at": "2026-07-23T10:04:37.862Z"
+  }
+},
+{
+  "model": "inventory.inventorytransaction",
+  "pk": 29,
+  "fields": {
+    "company": 15,
+    "transaction_code": "FUJI-EXP-23072026-004",
+    "type": "export",
+    "product": 10,
+    "custom_product_name": "Khoá thông minh KTM01",
+    "warehouse": 10,
+    "target_warehouse": null,
+    "status": "completed",
+    "quantity": 1,
+    "unit_cost": "0.00",
+    "reference_order": 17,
+    "factory": 2,
+    "note": "Lệnh xuất kho chờ duyệt cho đơn hàng FUJI-DH-23072026-004",
+    "created_by": 2,
+    "created_at": "2026-07-23T10:04:37.876Z"
+  }
+},
+{
+  "model": "inventory.inventorytransaction",
+  "pk": 30,
+  "fields": {
+    "company": 15,
+    "transaction_code": "FUJI-EXP-23072026-006",
+    "type": "export",
+    "product": 7,
+    "custom_product_name": "Cửa composite CCP01 - Mẫu mới (100 x 300 x 300)",
+    "warehouse": 6,
+    "target_warehouse": null,
+    "status": "completed",
+    "quantity": 1,
+    "unit_cost": "0.00",
+    "reference_order": 16,
+    "factory": 2,
+    "note": "Lệnh xuất kho chờ duyệt cho đơn hàng FUJI-DH-23072026-006",
+    "created_by": 2,
+    "created_at": "2026-07-23T10:04:40.687Z"
   }
 },
 {
@@ -2444,6 +2881,38 @@
     "location": "Đông Anh, Hà Nội",
     "linked_warehouse": 10,
     "is_active": true
+  }
+},
+{
+  "model": "production.productionorder",
+  "pk": 5,
+  "fields": {
+    "company": 15,
+    "production_order_code": "FUJI-LSX-23072026-006",
+    "order": 16,
+    "factory": 2,
+    "status": "completed",
+    "start_date": null,
+    "end_date": null,
+    "notes": "",
+    "created_at": "2026-07-23T10:07:26.380Z",
+    "updated_at": "2026-07-23T10:44:34.185Z"
+  }
+},
+{
+  "model": "production.productionorder",
+  "pk": 6,
+  "fields": {
+    "company": 15,
+    "production_order_code": "FUJI-LSX-23072026-004",
+    "order": 17,
+    "factory": 2,
+    "status": "completed",
+    "start_date": null,
+    "end_date": null,
+    "notes": "",
+    "created_at": "2026-07-23T10:10:27.628Z",
+    "updated_at": "2026-07-23T10:10:48.165Z"
   }
 },
 {
@@ -6917,35 +7386,723 @@
   }
 },
 {
+  "model": "notifications.notification",
+  "pk": 374,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Tài liệu nội bộ",
+    "message": "<p>Tài liệu công ty</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:07:33.506Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 375,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Tài liệu nội bộ",
+    "message": "<p>Tài liệu công ty</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:07:33.506Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 376,
+  "fields": {
+    "company": 15,
+    "recipient": 5,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Tài liệu nội bộ",
+    "message": "<p>Tài liệu công ty</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:07:33.506Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 377,
+  "fields": {
+    "company": 15,
+    "recipient": 6,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Tài liệu nội bộ",
+    "message": "<p>Tài liệu công ty</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:07:33.506Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 378,
+  "fields": {
+    "company": 15,
+    "recipient": 7,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Tài liệu nội bộ",
+    "message": "<p>Tài liệu công ty</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:07:33.506Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 379,
+  "fields": {
+    "company": 15,
+    "recipient": 8,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Tài liệu nội bộ",
+    "message": "<p>Tài liệu công ty</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:07:33.506Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 380,
+  "fields": {
+    "company": 15,
+    "recipient": 9,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Tài liệu nội bộ",
+    "message": "<p>Tài liệu công ty</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:07:33.506Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 381,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào các bạn",
+    "message": "<p>Chào các bạn</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:18:49.044Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 382,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào các bạn",
+    "message": "<p>Chào các bạn</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:18:49.045Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 383,
+  "fields": {
+    "company": 15,
+    "recipient": 5,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào các bạn",
+    "message": "<p>Chào các bạn</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:18:49.045Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 384,
+  "fields": {
+    "company": 15,
+    "recipient": 6,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào các bạn",
+    "message": "<p>Chào các bạn</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:18:49.045Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 385,
+  "fields": {
+    "company": 15,
+    "recipient": 7,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào các bạn",
+    "message": "<p>Chào các bạn</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:18:49.045Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 386,
+  "fields": {
+    "company": 15,
+    "recipient": 8,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào các bạn",
+    "message": "<p>Chào các bạn</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:18:49.045Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 387,
+  "fields": {
+    "company": 15,
+    "recipient": 9,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào các bạn",
+    "message": "<p>Chào các bạn</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:18:49.045Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 388,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: hihi",
+    "message": "<p>hihi</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:19:22.818Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 389,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: hihi",
+    "message": "<p>hihi</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:19:22.818Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 390,
+  "fields": {
+    "company": 15,
+    "recipient": 5,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: hihi",
+    "message": "<p>hihi</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:19:22.818Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 391,
+  "fields": {
+    "company": 15,
+    "recipient": 6,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: hihi",
+    "message": "<p>hihi</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:19:22.818Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 392,
+  "fields": {
+    "company": 15,
+    "recipient": 7,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: hihi",
+    "message": "<p>hihi</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:19:22.818Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 393,
+  "fields": {
+    "company": 15,
+    "recipient": 8,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: hihi",
+    "message": "<p>hihi</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:19:22.818Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 394,
+  "fields": {
+    "company": 15,
+    "recipient": 9,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: hihi",
+    "message": "<p>hihi</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T05:19:22.818Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 395,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào các bạn",
+    "message": "<p>Chào các bạn</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T06:21:33.011Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 396,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào các bạn",
+    "message": "<p>Chào các bạn</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T06:21:33.011Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 397,
+  "fields": {
+    "company": 15,
+    "recipient": 5,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào các bạn",
+    "message": "<p>Chào các bạn</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T06:21:33.011Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 398,
+  "fields": {
+    "company": 15,
+    "recipient": 6,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào các bạn",
+    "message": "<p>Chào các bạn</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T06:21:33.011Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 399,
+  "fields": {
+    "company": 15,
+    "recipient": 7,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào các bạn",
+    "message": "<p>Chào các bạn</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T06:21:33.011Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 400,
+  "fields": {
+    "company": 15,
+    "recipient": 8,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào các bạn",
+    "message": "<p>Chào các bạn</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T06:21:33.011Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 401,
+  "fields": {
+    "company": 15,
+    "recipient": 9,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Xin chào các bạn",
+    "message": "<p>Chào các bạn</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-23T06:21:33.011Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 402,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": 2,
+    "type": "order_new",
+    "title": "Đơn hàng mới cần duyệt",
+    "message": "Đơn hàng FUJI-DH-23072026-004 của khách Anh Tuyền đang chờ duyệt.",
+    "link": "/orders/12",
+    "is_read": false,
+    "created_at": "2026-07-23T07:30:05.437Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 403,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "order_new",
+    "title": "Đơn hàng mới cần duyệt",
+    "message": "Đơn hàng FUJI-DH-23072026-004 của khách Anh Tuyền đang chờ duyệt.",
+    "link": "/orders/12",
+    "is_read": false,
+    "created_at": "2026-07-23T07:30:05.665Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 404,
+  "fields": {
+    "company": 15,
+    "recipient": 2,
+    "sender": 2,
+    "type": "approval",
+    "title": "Yêu cầu Phê duyệt Đơn hàng FUJI-DH-23072026-004 đã được duyệt",
+    "message": "Giám đốc đã phê duyệt yêu cầu của bạn.",
+    "link": "/approvals",
+    "is_read": true,
+    "created_at": "2026-07-23T07:30:10.426Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 405,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": 2,
+    "type": "order_new",
+    "title": "Đơn hàng mới cần duyệt",
+    "message": "Đơn hàng FUJI-DH-23072026-004 của khách Anh Tuyền đang chờ duyệt.",
+    "link": "/orders/13",
+    "is_read": false,
+    "created_at": "2026-07-23T07:36:20.327Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 406,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "order_new",
+    "title": "Đơn hàng mới cần duyệt",
+    "message": "Đơn hàng FUJI-DH-23072026-004 của khách Anh Tuyền đang chờ duyệt.",
+    "link": "/orders/13",
+    "is_read": false,
+    "created_at": "2026-07-23T07:36:20.529Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 407,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": 2,
+    "type": "order_new",
+    "title": "Đơn hàng mới cần duyệt",
+    "message": "Đơn hàng FUJI-DH-23072026-005 của khách Anh Tuyền đang chờ duyệt.",
+    "link": "/orders/14",
+    "is_read": false,
+    "created_at": "2026-07-23T08:43:29.892Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 408,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "order_new",
+    "title": "Đơn hàng mới cần duyệt",
+    "message": "Đơn hàng FUJI-DH-23072026-005 của khách Anh Tuyền đang chờ duyệt.",
+    "link": "/orders/14",
+    "is_read": false,
+    "created_at": "2026-07-23T08:43:29.914Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 409,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": 2,
+    "type": "order_new",
+    "title": "Đơn hàng mới cần duyệt",
+    "message": "Đơn hàng FUJI-DH-23072026-004 của khách Anh Tuyền đang chờ duyệt.",
+    "link": "/orders/15",
+    "is_read": false,
+    "created_at": "2026-07-23T08:43:31.320Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 410,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "order_new",
+    "title": "Đơn hàng mới cần duyệt",
+    "message": "Đơn hàng FUJI-DH-23072026-004 của khách Anh Tuyền đang chờ duyệt.",
+    "link": "/orders/15",
+    "is_read": false,
+    "created_at": "2026-07-23T08:43:31.329Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 411,
+  "fields": {
+    "company": 15,
+    "recipient": 2,
+    "sender": 2,
+    "type": "approval",
+    "title": "Yêu cầu Phê duyệt Đơn hàng FUJI-DH-23072026-004 đã được duyệt",
+    "message": "Giám đốc đã phê duyệt yêu cầu của bạn.",
+    "link": "/approvals",
+    "is_read": true,
+    "created_at": "2026-07-23T08:43:34.318Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 412,
+  "fields": {
+    "company": 15,
+    "recipient": 2,
+    "sender": 2,
+    "type": "approval",
+    "title": "Yêu cầu Phê duyệt Đơn hàng FUJI-DH-23072026-005 đã được duyệt",
+    "message": "Giám đốc đã phê duyệt yêu cầu của bạn.",
+    "link": "/approvals",
+    "is_read": true,
+    "created_at": "2026-07-23T08:43:36.282Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 413,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": 2,
+    "type": "order_new",
+    "title": "Đơn hàng mới cần duyệt",
+    "message": "Đơn hàng FUJI-DH-23072026-006 của khách Chị Huế đang chờ duyệt.",
+    "link": "/orders/16",
+    "is_read": false,
+    "created_at": "2026-07-23T09:57:37.457Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 414,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "order_new",
+    "title": "Đơn hàng mới cần duyệt",
+    "message": "Đơn hàng FUJI-DH-23072026-006 của khách Chị Huế đang chờ duyệt.",
+    "link": "/orders/16",
+    "is_read": false,
+    "created_at": "2026-07-23T09:57:37.753Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 415,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": 2,
+    "type": "order_new",
+    "title": "Đơn hàng mới cần duyệt",
+    "message": "Đơn hàng FUJI-DH-23072026-004 của khách Anh Tuyền đang chờ duyệt.",
+    "link": "/orders/17",
+    "is_read": false,
+    "created_at": "2026-07-23T09:58:01.844Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 416,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "order_new",
+    "title": "Đơn hàng mới cần duyệt",
+    "message": "Đơn hàng FUJI-DH-23072026-004 của khách Anh Tuyền đang chờ duyệt.",
+    "link": "/orders/17",
+    "is_read": false,
+    "created_at": "2026-07-23T09:58:01.853Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 417,
+  "fields": {
+    "company": 15,
+    "recipient": 2,
+    "sender": 2,
+    "type": "approval",
+    "title": "Yêu cầu Phê duyệt Đơn hàng FUJI-DH-23072026-004 đã được duyệt",
+    "message": "Giám đốc đã phê duyệt yêu cầu của bạn.",
+    "link": "/approvals",
+    "is_read": true,
+    "created_at": "2026-07-23T09:58:05.408Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 418,
+  "fields": {
+    "company": 15,
+    "recipient": 2,
+    "sender": 2,
+    "type": "approval",
+    "title": "Yêu cầu Phê duyệt Đơn hàng FUJI-DH-23072026-006 đã được duyệt",
+    "message": "Giám đốc đã phê duyệt yêu cầu của bạn.",
+    "link": "/approvals",
+    "is_read": true,
+    "created_at": "2026-07-23T09:58:07.560Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 419,
+  "fields": {
+    "company": 15,
+    "recipient": 2,
+    "sender": 2,
+    "type": "approval",
+    "title": "Yêu cầu Duyệt xuất kho nợ - FUJI-DH-23072026-004 bị từ chối",
+    "message": "Giám đốc đã từ chối yêu cầu của bạn.",
+    "link": "/approvals",
+    "is_read": true,
+    "created_at": "2026-07-23T09:58:39.483Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 420,
+  "fields": {
+    "company": 15,
+    "recipient": 2,
+    "sender": 2,
+    "type": "approval",
+    "title": "Yêu cầu Duyệt xuất kho nợ - FUJI-DH-23072026-004 đã được duyệt",
+    "message": "Giám đốc đã phê duyệt yêu cầu của bạn.",
+    "link": "/approvals",
+    "is_read": true,
+    "created_at": "2026-07-23T09:59:02.314Z"
+  }
+},
+{
   "model": "notifications.internalannouncement",
   "pk": 4,
   "fields": {
     "company": 15,
     "title": "Xin chào các bạn",
-    "content": "<p>Chào</p>",
+    "content": "<p>Chào các bạn</p>",
     "created_by": 2,
     "is_all_company": true,
     "priority": "high",
-    "category": "Hướng dẫn đào tạo",
+    "category": "",
     "is_pinned": true,
     "created_at": "2026-07-22T15:46:34.114Z",
-    "departments": [],
-    "target_users": []
-  }
-},
-{
-  "model": "notifications.internalannouncement",
-  "pk": 5,
-  "fields": {
-    "company": 15,
-    "title": "Nội quy công ty",
-    "content": "<p>Sửa nội quy công ty</p>",
-    "created_by": 2,
-    "is_all_company": true,
-    "priority": "normal",
-    "category": "Nội quy công ty",
-    "is_pinned": false,
-    "created_at": "2026-07-22T16:19:29.659Z",
     "departments": [],
     "target_users": []
   }
@@ -6977,15 +8134,6 @@
     "announcement": 4,
     "user": 5,
     "read_at": "2026-07-22T16:01:54.898Z"
-  }
-},
-{
-  "model": "notifications.announcementread",
-  "pk": 8,
-  "fields": {
-    "announcement": 5,
-    "user": 2,
-    "read_at": "2026-07-22T16:20:01.630Z"
   }
 },
 {
@@ -7125,17 +8273,62 @@
 },
 {
   "model": "approvals.approvalrequest",
-  "pk": 119,
+  "pk": 124,
   "fields": {
     "company": 15,
     "content_type": 23,
-    "object_id": 11,
-    "requester": 5,
-    "title": "Phê duyệt Đơn hàng FUJI-DH-22072026-001",
-    "description": "Đơn hàng FUJI-DH-22072026-001 — Khách hàng: Chị Huế",
+    "object_id": 16,
+    "requester": 2,
+    "title": "Phê duyệt Đơn hàng FUJI-DH-23072026-006",
+    "description": "Đơn hàng FUJI-DH-23072026-006 — Khách hàng: Chị Huế",
     "status": "approved",
-    "created_at": "2026-07-22T03:53:36.854Z",
-    "updated_at": "2026-07-22T03:53:50.503Z"
+    "created_at": "2026-07-23T09:57:37.808Z",
+    "updated_at": "2026-07-23T09:58:07.393Z"
+  }
+},
+{
+  "model": "approvals.approvalrequest",
+  "pk": 125,
+  "fields": {
+    "company": 15,
+    "content_type": 23,
+    "object_id": 17,
+    "requester": 2,
+    "title": "Phê duyệt Đơn hàng FUJI-DH-23072026-004",
+    "description": "Đơn hàng FUJI-DH-23072026-004 — Khách hàng: Anh Tuyền",
+    "status": "approved",
+    "created_at": "2026-07-23T09:58:01.872Z",
+    "updated_at": "2026-07-23T09:58:05.260Z"
+  }
+},
+{
+  "model": "approvals.approvalrequest",
+  "pk": 126,
+  "fields": {
+    "company": 15,
+    "content_type": 23,
+    "object_id": 17,
+    "requester": 2,
+    "title": "Duyệt xuất kho nợ - FUJI-DH-23072026-004",
+    "description": "Khách hàng Anh Tuyền còn nợ 18,800,000 đ. Trình duyệt xuất kho trước khi thu đủ tiền.",
+    "status": "rejected",
+    "created_at": "2026-07-23T09:58:25.898Z",
+    "updated_at": "2026-07-23T09:58:39.467Z"
+  }
+},
+{
+  "model": "approvals.approvalrequest",
+  "pk": 127,
+  "fields": {
+    "company": 15,
+    "content_type": 23,
+    "object_id": 17,
+    "requester": 2,
+    "title": "Duyệt xuất kho nợ - FUJI-DH-23072026-004",
+    "description": "Khách hàng Anh Tuyền còn nợ 18,800,000 đ. Trình duyệt xuất kho trước khi thu đủ tiền.",
+    "status": "approved",
+    "created_at": "2026-07-23T09:58:50.206Z",
+    "updated_at": "2026-07-23T09:59:02.183Z"
   }
 },
 {
@@ -7275,9 +8468,9 @@
 },
 {
   "model": "approvals.approvalstep",
-  "pk": 118,
+  "pk": 123,
   "fields": {
-    "request": 119,
+    "request": 124,
     "step_order": 1,
     "approver_user": null,
     "approver_role": null,
@@ -7285,25 +8478,162 @@
     "status": "approved",
     "comment": "",
     "comments": "",
-    "acted_at": "2026-07-22T03:53:50.492Z"
+    "acted_at": "2026-07-23T09:58:07.378Z"
+  }
+},
+{
+  "model": "approvals.approvalstep",
+  "pk": 124,
+  "fields": {
+    "request": 125,
+    "step_order": 1,
+    "approver_user": null,
+    "approver_role": null,
+    "acted_by": 2,
+    "status": "approved",
+    "comment": "",
+    "comments": "",
+    "acted_at": "2026-07-23T09:58:05.232Z"
+  }
+},
+{
+  "model": "approvals.approvalstep",
+  "pk": 125,
+  "fields": {
+    "request": 126,
+    "step_order": 1,
+    "approver_user": 2,
+    "approver_role": null,
+    "acted_by": 2,
+    "status": "rejected",
+    "comment": "",
+    "comments": "",
+    "acted_at": "2026-07-23T09:58:39.461Z"
+  }
+},
+{
+  "model": "approvals.approvalstep",
+  "pk": 126,
+  "fields": {
+    "request": 127,
+    "step_order": 1,
+    "approver_user": 7,
+    "approver_role": null,
+    "acted_by": 2,
+    "status": "approved",
+    "comment": "",
+    "comments": "",
+    "acted_at": "2026-07-23T09:59:02.162Z"
   }
 },
 {
   "model": "finance.orderpaymentmilestone",
-  "pk": 28,
+  "pk": 38,
   "fields": {
     "company": 15,
-    "order": 11,
+    "order": 17,
     "milestone_type": "deposit",
     "title": "Thanh toán đợt 1",
     "percentage": "100.00",
-    "amount": "17300000.00",
+    "amount": "18800000.00",
     "paid_amount": "0.00",
     "status": "pending",
     "due_date": null,
     "note": "",
-    "created_at": "2026-07-22T03:53:50.678Z",
-    "updated_at": "2026-07-22T03:53:50.678Z"
+    "created_at": "2026-07-23T09:58:05.401Z",
+    "updated_at": "2026-07-23T09:58:05.401Z"
+  }
+},
+{
+  "model": "finance.orderpaymentmilestone",
+  "pk": 39,
+  "fields": {
+    "company": 15,
+    "order": 16,
+    "milestone_type": "deposit",
+    "title": "Thanh toán đợt 1",
+    "percentage": "100.00",
+    "amount": "9500000.00",
+    "paid_amount": "9500000.00",
+    "status": "paid",
+    "due_date": null,
+    "note": "",
+    "created_at": "2026-07-23T09:58:07.546Z",
+    "updated_at": "2026-07-23T09:58:31.165Z"
+  }
+},
+{
+  "model": "finance.paymentreceipt",
+  "pk": 4,
+  "fields": {
+    "company": 15,
+    "receipt_code": "FUJI-PT-23072026-004",
+    "order": 16,
+    "milestone": 39,
+    "amount": "9500000.00",
+    "payment_method": "transfer",
+    "payment_date": "2026-07-23",
+    "reference_code": "",
+    "note": "Thanh toán Thanh toán đợt 1 - Đơn hàng FUJI-DH-23072026-006",
+    "created_by": 2,
+    "attachments": [],
+    "created_at": "2026-07-23T09:58:30.827Z"
+  }
+},
+{
+  "model": "delivery.deliveryorder",
+  "pk": 2,
+  "fields": {
+    "company": 15,
+    "order": 17,
+    "delivery_code": "FUJI-GH-23072026-004",
+    "status": "delivered",
+    "shipper_name": "",
+    "shipper_phone": "",
+    "shipper_user": null,
+    "shipping_address": "Xóm 4, Hạ Trường, xã Hà Đông",
+    "expected_date": "2026-07-26",
+    "actual_date": "2026-07-23",
+    "notes": "",
+    "created_at": "2026-07-23T10:10:48.172Z",
+    "updated_at": "2026-07-23T10:14:29.524Z"
+  }
+},
+{
+  "model": "delivery.deliveryorder",
+  "pk": 3,
+  "fields": {
+    "company": 15,
+    "order": 16,
+    "delivery_code": "FUJI-GH-23072026-006",
+    "status": "pending",
+    "shipper_name": "",
+    "shipper_phone": "",
+    "shipper_user": null,
+    "shipping_address": "220 Định Công Thượng, Phường Định Công",
+    "expected_date": null,
+    "actual_date": null,
+    "notes": "",
+    "created_at": "2026-07-23T10:44:34.201Z",
+    "updated_at": "2026-07-23T10:44:34.201Z"
+  }
+},
+{
+  "model": "delivery.warrantycard",
+  "pk": 2,
+  "fields": {
+    "company": 15,
+    "order": 17,
+    "customer": 27,
+    "warranty_code": "FUJI-BH-23072026-004",
+    "status": "active",
+    "start_date": "2026-07-23",
+    "end_date": "2027-07-23",
+    "terms": "Bảo hành 12 tháng kể từ ngày giao hàng.",
+    "warranty_content": "Thực hiện bảo hành công trình khi sử dụng sản phẩm Cửa Composite Fujitech Group\n\nChính sách bảo hành \n Bộ cửa Composite (khung, cánh, phào, gioăng): Bảo hành 36 tháng. \nPhụ kiện Fujitech Look (khóa, bản lề...): Bảo hành 12 tháng. \nLưu ý: \nThời gian bảo hành được tính bắt đầu từ ngày hàng hóa được giao đến khách hàng căn cứ vào phiếu xuất kho của nhà máy\nThời gian xem xét nguyên nhân và gửi thông báo cách xử lý, khắc phục tới khách hàng từ 3-7 ngày kể từ ngày nhận được yêu cầu bảo hành.\nĐối với những sản phẩm hư hỏng do nguyên nhân từ phía nhà máy sản xuất, khách hàng sẽ được cung cấp/thay thế sản phẩm mới hoặc sửa chữa miễn phí.\nTrường hợp hư hỏng do lỗi sử dụng của khách hàng, Fujitech Door sẽ sửa chữa bảo hành tính phí với mức chi phí hữu nghị.",
+    "warranty_rules": "1. Trường hợp được bảo hành \n1) Sản phẩm còn trong thời hạn bảo hành. \n2) Có phiếu bảo hành đầy đủ thông tin (mã sản phẩm, ngày mua, thông tin khách hàng). \n3) Sản phẩm được lắp đặt đúng quy chuẩn ban đầu.\n\n2. Các trường hợp không bảo hành:\n1) Lỗi sản phẩm phát sinh do khách hàng lắp đặt và sử dụng không theo chỉ dẫn. \n2) Sản phẩm sử dụng trong môi trường tiếp xúc nhiều với hóa chất tẩy rửa mạnh hoặc quá trình sử dụng không đúng cách \n3) Chịu ảnh hưởng bởi ánh nắng mặt trời trực tiếp.\n4) Sản phẩm bị hỏng do tác động của lực cơ học, bề mặt cửa bị trầy xước, bong tróc do vật sắc nhọn va quệt.\n5) Sản phẩm bị hư hỏng do thiên tai, hỏa hoạn.\n6) Sản phẩm lắp đặt sai quy cách do không phải trực tiếp Fujitech lắp đặt\n7) Màu sắc sản phẩm thay đổi nhẹ theo thời gian do điều kiện môi trường và quá trình sử dụng tự nhiên.\n8) Nguyên nhân khác mà không phải lỗi của nhà sản xuất..",
+    "created_at": "2026-07-23T10:14:29.552Z",
+    "updated_at": "2026-07-23T10:14:29.552Z"
   }
 },
 {
@@ -7582,6 +8912,138 @@
     "zalo_msg_id": "",
     "error_message": "",
     "sent_at": "2026-07-21T16:34:01.995Z"
+  }
+},
+{
+  "model": "zalo_integration.zalomessagelog",
+  "pk": 9,
+  "fields": {
+    "company": 15,
+    "template": 2,
+    "social_lead": null,
+    "customer": 28,
+    "sent_by": null,
+    "recipient_phone": "0989198265",
+    "recipient_zalo_id": "",
+    "params_sent": {
+      "amount": "17300000.00",
+      "receipt_code": "FUJI-PT-23072026-001",
+      "customer_name": "Chị Huế"
+    },
+    "status": "pending",
+    "zalo_msg_id": "",
+    "error_message": "",
+    "sent_at": "2026-07-23T05:42:24.375Z"
+  }
+},
+{
+  "model": "zalo_integration.zalomessagelog",
+  "pk": 10,
+  "fields": {
+    "company": 15,
+    "template": 2,
+    "social_lead": null,
+    "customer": 28,
+    "sent_by": null,
+    "recipient_phone": "0989198265",
+    "recipient_zalo_id": "",
+    "params_sent": {
+      "order_number": "FUJI-DH-22072026-001",
+      "customer_name": "Chị Huế",
+      "warranty_link": "https://system.yourdomain.com/warranty/FUJI-DH-22072026-001"
+    },
+    "status": "pending",
+    "zalo_msg_id": "",
+    "error_message": "",
+    "sent_at": "2026-07-23T05:46:11.396Z"
+  }
+},
+{
+  "model": "zalo_integration.zalomessagelog",
+  "pk": 11,
+  "fields": {
+    "company": 15,
+    "template": 2,
+    "social_lead": null,
+    "customer": 27,
+    "sent_by": null,
+    "recipient_phone": "0988565777",
+    "recipient_zalo_id": "",
+    "params_sent": {
+      "amount": "18800000.00",
+      "receipt_code": "FUJI-PT-23072026-002",
+      "customer_name": "Anh Tuyền"
+    },
+    "status": "pending",
+    "zalo_msg_id": "",
+    "error_message": "",
+    "sent_at": "2026-07-23T08:43:48.399Z"
+  }
+},
+{
+  "model": "zalo_integration.zalomessagelog",
+  "pk": 12,
+  "fields": {
+    "company": 15,
+    "template": 2,
+    "social_lead": null,
+    "customer": 27,
+    "sent_by": null,
+    "recipient_phone": "0988565777",
+    "recipient_zalo_id": "",
+    "params_sent": {
+      "amount": "4400000.00",
+      "receipt_code": "FUJI-PT-23072026-003",
+      "customer_name": "Anh Tuyền"
+    },
+    "status": "pending",
+    "zalo_msg_id": "",
+    "error_message": "",
+    "sent_at": "2026-07-23T08:44:01.158Z"
+  }
+},
+{
+  "model": "zalo_integration.zalomessagelog",
+  "pk": 13,
+  "fields": {
+    "company": 15,
+    "template": 2,
+    "social_lead": null,
+    "customer": 28,
+    "sent_by": null,
+    "recipient_phone": "0989198265",
+    "recipient_zalo_id": "",
+    "params_sent": {
+      "amount": "9500000.00",
+      "receipt_code": "FUJI-PT-23072026-004",
+      "customer_name": "Chị Huế"
+    },
+    "status": "pending",
+    "zalo_msg_id": "",
+    "error_message": "",
+    "sent_at": "2026-07-23T09:58:30.846Z"
+  }
+},
+{
+  "model": "zalo_integration.zalomessagelog",
+  "pk": 14,
+  "fields": {
+    "company": 15,
+    "template": 2,
+    "social_lead": null,
+    "customer": 27,
+    "sent_by": null,
+    "recipient_phone": "0988565777",
+    "recipient_zalo_id": "",
+    "params_sent": {
+      "order_number": "FUJI-DH-23072026-004",
+      "customer_name": "Anh Tuyền",
+      "warranty_link": "https://system.yourdomain.com/warranty/FUJI-DH-23072026-004"
+    },
+    "status": "pending",
+    "zalo_msg_id": "",
+    "error_message": "",
+    "sent_at": "2026-07-23T10:14:29.655Z"
   }
 },
 {

@@ -1,20 +1,4 @@
-import {
-  AlertOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  FileDoneOutlined,
-  FileTextOutlined,
-  MessageOutlined,
-  MinusCircleOutlined,
-  PlusOutlined,
-  PrinterOutlined,
-  SearchOutlined,
-  UploadOutlined,
-  PictureOutlined,
-} from '@ant-design/icons'
+import { AlertOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, DeleteOutlined, EditOutlined, FileDoneOutlined, FileTextOutlined, MessageOutlined, MinusCircleOutlined, PlusOutlined, PrinterOutlined, SearchOutlined, UploadOutlined, PictureOutlined, CameraOutlined } from '@ant-design/icons'
 import {
   AutoComplete,
   Badge,
@@ -44,7 +28,8 @@ import {
   message,
   theme,
   Upload,
-} from 'antd'
+  Avatar,
+} from 'antd' 
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
@@ -699,7 +684,7 @@ export default function OrderList() {
                     value={val || undefined}
                     onChange={(v) => handleLineChange(idx, 'product', v)}
                   >
-                    {products.map((p) => (
+                    {products.filter(p => p.product_type !== 'service').map((p) => (
                       <Option key={p.id} value={p.id}>{p.name} ({p.unit || 'cái'})</Option>
                     ))}
                   </Select>
@@ -713,9 +698,9 @@ export default function OrderList() {
                       <Text strong style={{ fontSize: 13, textAlign: 'center', color: '#0f172a', lineHeight: 1.3 }}>
                         {record.product_name || (prodObj ? prodObj.name : '')}
                       </Text>
-                      {(record.spec || (prodObj && prodObj.description) || record.note) && (
+                      {(record.spec || (prodObj && prodObj.description)) && (
                         <div style={{ fontSize: 11.5, color: '#475569', textAlign: 'center', lineHeight: 1.4, fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
-                          {record.spec || (prodObj && prodObj.description) || record.note}
+                          {record.spec || (prodObj && prodObj.description)}
                         </div>
                       )}
                       <Button
@@ -840,7 +825,7 @@ export default function OrderList() {
           key: 'action',
           width: 50,
           render: (_, __, idx) => formItems.length > 1 ? (
-            <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveLine(idx)} />
+            <Tooltip title="Xoá dòng"><Button type="text" danger shape="circle" icon={<DeleteOutlined />} onClick={() => handleRemoveLine(idx)} /></Tooltip>
           ) : null,
         },
       ]
@@ -861,7 +846,7 @@ export default function OrderList() {
             value={val || undefined}
             onChange={(v) => handleLineChange(idx, 'product', v)}
           >
-            {products.map((p) => (
+            {products.filter(p => p.product_type !== 'service').map((p) => (
               <Option key={p.id} value={p.id}>{p.name} ({p.unit || 'cái'})</Option>
             ))}
           </Select>
@@ -1023,7 +1008,7 @@ export default function OrderList() {
         key: 'action',
         width: 50,
         render: (_, __, idx) => formItems.length > 1 ? (
-          <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveLine(idx)} />
+          <Tooltip title="Xoá dòng"><Button type="text" danger shape="circle" icon={<DeleteOutlined />} onClick={() => handleRemoveLine(idx)} /></Tooltip>
         ) : null,
       }
     )
@@ -1032,7 +1017,11 @@ export default function OrderList() {
   }
 
   const getServiceItemColumns = () => {
-    return [
+    const effectiveTmpl = getEffectiveTemplate(editingOrder)
+    const tmplCode = effectiveTmpl?.code || 'STANDARD'
+    const isLandscape = tmplCode === 'production_landscape_a4' || effectiveTmpl?.layout_config?.paper_orientation === 'landscape'
+
+    let baseCols = [
       {
         title: 'STT',
         key: 'stt',
@@ -1041,82 +1030,154 @@ export default function OrderList() {
         render: (_, __, idx) => idx + 1,
       },
       {
-        title: 'Tên Dịch vụ / Chi phí',
+        title: 'TÊN DỊCH VỤ / CHI PHÍ',
         dataIndex: 'product_name',
         key: 'product_name',
-        width: 300,
+        width: 250,
         render: (text, record, index) => (
-          <AutoComplete
-            style={{ width: '100%' }}
-            value={text}
-            onChange={(val) => handleServiceLineChange(index, 'product_name', val)}
-            options={products.filter((p) => p.product_type === 'service').map((p) => ({ value: p.name, label: p.name }))}
-            placeholder="Chọn hoặc nhập tên dịch vụ"
-          />
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'nowrap' }}>
+            {record.product_image && (
+              <Image width={32} height={32} style={{ borderRadius: 4, objectFit: 'cover' }} src={record.product_image} />
+            )}
+            <AutoComplete
+              style={{ flex: 1, minWidth: 150 }}
+              value={text}
+              onChange={(val) => handleServiceLineChange(index, 'product_name', val)}
+              options={products.filter((p) => p.product_type === 'service').map((p) => ({ value: p.name, label: p.name }))}
+              placeholder="Chọn hoặc nhập tên dịch vụ"
+            />
+            <Upload
+              showUploadList={false}
+              customRequest={async ({ file, onSuccess, onError }) => {
+                try {
+                  const formData = new FormData();
+                  formData.append('image', file);
+                  const res = await api.post('/sales/quotations/upload-item-image/', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                  });
+                  handleServiceLineChange(index, 'product_image', res.data.url);
+                  messageApi.success("Đã tải ảnh thành công!");
+                  onSuccess("ok");
+                } catch (e) {
+                  const errDetail = e.response?.data?.error || "Vui lòng thử lại";
+                  messageApi.error(`Tải ảnh thất bại: ${errDetail}`);
+                  onError(e);
+                }
+              }}
+            >
+              <Button icon={<CameraOutlined />} size="small" type="dashed" title="Tải ảnh lên" />
+            </Upload>
+          </div>
         ),
-      },
+      }
+    ]
+
+    if (isLandscape) {
+      baseCols.push(
+        {
+          title: 'KÝ HIỆU',
+          dataIndex: 'symbol',
+          width: 100,
+          align: 'center',
+          render: (val, record, idx) => <Input style={{ textAlign: 'center', fontWeight: 600, color: '#2563eb' }} placeholder="VD: D1.1" value={record.symbol || ''} onChange={(e) => handleServiceLineChange(idx, 'symbol', e.target.value)} />,
+        },
+        {
+          title: 'GHI CHÚ KỸ THUẬT',
+          dataIndex: 'note',
+          width: 170,
+          render: (val, record, idx) => <Input placeholder="Chi tiết..." value={val || ''} onChange={(e) => handleServiceLineChange(idx, 'note', e.target.value)} />,
+        },
+        {
+          title: 'SL',
+          dataIndex: 'quantity',
+          width: 70,
+          align: 'center',
+          render: (val, record, idx) => <InputNumber min={1} style={{ width: '100%', textAlign: 'center' }} value={val} onChange={(v) => handleServiceLineChange(idx, 'quantity', v)} />,
+        },
+        {
+          title: 'ĐVT',
+          dataIndex: 'unit',
+          width: 70,
+          align: 'center',
+          render: (val, record, idx) => <Input style={{ textAlign: 'center' }} value={val || 'lần'} onChange={(e) => handleServiceLineChange(idx, 'unit', e.target.value)} />,
+        }
+      )
+    } else {
+      baseCols.push(
+        {
+          title: 'GHI CHÚ',
+          dataIndex: 'note',
+          width: 170,
+          render: (val, record, idx) => <Input placeholder="Chi tiết..." value={val || ''} onChange={(e) => handleServiceLineChange(idx, 'note', e.target.value)} />,
+        },
+        {
+          title: 'ĐVT',
+          dataIndex: 'unit',
+          width: 70,
+          align: 'center',
+          render: (val, record, idx) => <Input style={{ textAlign: 'center' }} value={val || 'lần'} onChange={(e) => handleServiceLineChange(idx, 'unit', e.target.value)} />,
+        },
+        {
+          title: 'SL',
+          dataIndex: 'quantity',
+          width: 70,
+          align: 'center',
+          render: (val, record, idx) => <InputNumber min={1} style={{ width: '100%', textAlign: 'center' }} value={val} onChange={(v) => handleServiceLineChange(idx, 'quantity', v)} />,
+        }
+      )
+    }
+
+    baseCols.push(
       {
-        title: 'Số lượng (Lần)',
-        dataIndex: 'quantity',
-        key: 'quantity',
-        width: 120,
-        render: (val, _, index) => (
-          <InputNumber min={1} value={val} onChange={(v) => handleServiceLineChange(index, 'quantity', v)} style={{ width: '100%' }} />
-        ),
-      },
-      {
-        title: 'Đơn giá (VNĐ)',
+        title: 'ĐƠN GIÁ',
         dataIndex: 'unit_price',
-        key: 'unit_price',
-        width: 150,
-        render: (val, _, index) => (
-          <InputNumber min={0} value={val} onChange={(v) => handleServiceLineChange(index, 'unit_price', v)} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} />
-        ),
-      },
+        width: 130,
+        align: 'right',
+        render: (val, record, idx) => <InputNumber min={0} step={1000} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => v.replace(/\$\s?|(,*)/g, '')} value={val} onChange={(v) => handleServiceLineChange(idx, 'unit_price', v)} />,
+      }
+    )
+
+    if (!isLandscape) {
+      baseCols.push(
+        {
+          title: 'CK (%)',
+          dataIndex: 'discount_percent',
+          width: 75,
+          align: 'center',
+          render: (val, record, idx) => <InputNumber min={0} max={100} style={{ width: '100%', textAlign: 'center' }} value={val} onChange={(v) => handleServiceLineChange(idx, 'discount_percent', v)} />,
+        }
+      )
+    }
+
+    baseCols.push(
       {
-        title: 'Chiết khấu (%)',
-        dataIndex: 'discount_percent',
-        key: 'discount_percent',
-        width: 120,
-        render: (val, _, index) => (
-          <InputNumber min={0} max={100} value={val} onChange={(v) => handleServiceLineChange(index, 'discount_percent', v)} style={{ width: '100%' }} />
-        ),
-      },
-      {
-        title: 'Thành tiền',
-        key: 'line_total',
-        width: 150,
+        title: 'TỔNG TIỀN',
+        key: 'total',
+        width: 130,
         align: 'right',
         render: (_, record) => {
           const total = computeServiceLineTotal(record)
-          return <Text strong style={{ color: '#0f172a' }}>{total.toLocaleString('vi-VN')} đ</Text>
+          return <Text strong style={{ color: '#16a34a', fontSize: 14 }}>{total.toLocaleString('vi-VN')} đ</Text>
         },
-      },
-      {
-        title: 'Ghi chú',
-        dataIndex: 'note',
-        key: 'note',
-        width: 200,
-        render: (val, _, index) => (
-          <Input value={val} onChange={(e) => handleServiceLineChange(index, 'note', e.target.value)} placeholder="Ghi chú thêm..." />
-        ),
       },
       {
         title: '',
         key: 'action',
-        width: 60,
+        width: 50,
         align: 'center',
         render: (_, __, index) => (
-          <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveServiceLine(index)} />
+          <Tooltip title="Xoá dòng"><Button type="text" danger shape="circle" icon={<DeleteOutlined />} onClick={() => handleRemoveServiceLine(index)} /></Tooltip>
         ),
-      },
-    ]
+      }
+    )
+
+    return baseCols
   }
 
   const handleAddServiceLine = () => {
     setServiceItems((prev) => [
       ...prev,
-      { key: Date.now(), product: null, product_name: '', quantity: 1, unit_price: 0, discount_percent: 0, note: '' },
+      { key: Date.now(), product: null, product_name: '', quantity: 1, unit_price: 0, discount_percent: 0, note: '', product_image: '' },
     ])
   }
 
@@ -1133,6 +1194,7 @@ export default function OrderList() {
         if (prod) {
           currentItem.product = prod.id
           currentItem.unit_price = Number(prod.price || prod.cost_price || 0)
+          currentItem.unit = prod.unit || 'lần'
         } else {
           currentItem.product = null
         }
@@ -1216,6 +1278,7 @@ export default function OrderList() {
               quantity: Number(it.quantity || 1),
               discount_percent: Number(it.discount_percent || 0),
               note: it.note || '',
+              product_image: it.product_image || '',
             }))
           )
         } else {
@@ -1361,7 +1424,7 @@ export default function OrderList() {
           area: 0,
           spec: '',
           warranty: '',
-          product_image: '',
+          product_image: srv.product_image || '',
           custom_data: { unit: 'lần' },
           quantity: Number(srv.quantity || 1),
           discount_percent: Number(srv.discount_percent || 0),
@@ -1602,22 +1665,27 @@ export default function OrderList() {
             </>
           )}
 
-          <Button
-            type="text"
-            icon={<FileTextOutlined style={{ color: '#2563eb' }} />}
-            onClick={() => {
-              setSelectedOrder(record)
-              setDrawerVisible(true)
-            }}
-          />
-
-          {canEdit && record.status !== 'cancelled' && record.status !== 'completed' && (
+          <Tooltip title="Xem chi tiết & In PDF">
             <Button
               type="text"
-              icon={<EditOutlined style={{ color: '#d97706' }} />}
-              onClick={() => openModal(record)}
-              title="Sửa đơn hàng"
+              shape="circle"
+              icon={<FileTextOutlined style={{ color: '#2563eb' }} />}
+              onClick={() => {
+                setSelectedOrder(record)
+                setDrawerVisible(true)
+              }}
             />
+          </Tooltip>
+
+          {canEdit && record.status !== 'cancelled' && record.status !== 'completed' && (
+            <Tooltip title="Sửa đơn hàng">
+              <Button
+                type="text"
+                shape="circle"
+                icon={<EditOutlined style={{ color: '#d97706' }} />}
+                onClick={() => openModal(record)}
+              />
+            </Tooltip>
           )}
 
           {canEdit && record.status === 'rejected' && (
@@ -1628,7 +1696,7 @@ export default function OrderList() {
               okText="Trình duyệt"
               cancelText="Hủy"
             >
-              <Button type="text" title="Trình duyệt lại" icon={<CheckCircleOutlined style={{ color: '#0284c7' }} />} />
+              <Tooltip title="Trình duyệt lại"><Button type="text" shape="circle" icon={<CheckCircleOutlined style={{ color: '#0284c7' }} />} /></Tooltip>
             </Popconfirm>
           )}
 
@@ -1641,7 +1709,7 @@ export default function OrderList() {
               cancelText="Không"
               okButtonProps={{ danger: true }}
             >
-              <Button type="text" title="Hủy đơn hàng" icon={<CloseCircleOutlined style={{ color: '#dc2626' }} />} />
+              <Tooltip title="Hủy đơn hàng"><Button type="text" shape="circle" icon={<CloseCircleOutlined style={{ color: '#dc2626' }} />} /></Tooltip>
             </Popconfirm>
           )}
 
@@ -1654,7 +1722,7 @@ export default function OrderList() {
               cancelText="Hủy"
               okButtonProps={{ danger: true }}
             >
-              <Button type="text" danger icon={<DeleteOutlined />} />
+              <Tooltip title="Xoá"><Button type="text" danger shape="circle" icon={<DeleteOutlined />} /></Tooltip>
             </Popconfirm>
           )}
         </Space>
