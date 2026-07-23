@@ -472,10 +472,18 @@ export default function Products() {
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={() => openProductModal()}
+                onClick={() => {
+                  if (activeTab === 'categories') {
+                    openCategoryModal()
+                  } else if (activeTab === 'templates') {
+                    // Assuming there's a template modal if needed, else ignore
+                  } else {
+                    openProductModal()
+                  }
+                }}
                 style={{ background: '#0284c7', fontWeight: 600, borderRadius: 8 }}
               >
-                Thêm {activeTab === 'categories' ? 'Danh mục' : 'Hàng hóa/Dịch vụ'}
+                Thêm {activeTab === 'categories' ? 'Danh mục' : (activeTab === 'templates' ? 'Mẫu sản phẩm' : 'Hàng hóa/Dịch vụ')}
               </Button>
             )}
           </Space>
