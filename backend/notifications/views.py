@@ -246,7 +246,7 @@ class InternalAnnouncementViewSet(viewsets.ModelViewSet):
         categories = InternalAnnouncement.objects.filter(
             company=request.user.company,
             category__isnull=False
-        ).exclude(category='').values_list('category', flat=True).distinct()
+        ).exclude(category='').order_by('category').values_list('category', flat=True).distinct()
         return Response(list(categories))
 
     def perform_create(self, serializer):
