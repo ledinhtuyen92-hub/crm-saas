@@ -1796,7 +1796,7 @@
     "company": 15,
     "prefix": "FUJI-BH",
     "date_str": "23072026",
-    "last_seq": 4
+    "last_seq": 6
   }
 },
 {
@@ -2247,7 +2247,7 @@
     "quotation": null,
     "created_by": 2,
     "approved_by": 2,
-    "status": "approved",
+    "status": "completed",
     "financial_status": "fully_paid",
     "payment_term": "Cọc 30% - Giao hàng 70%",
     "payment_terms_schedule": [
@@ -2331,7 +2331,7 @@
       }
     },
     "created_at": "2026-07-23T09:57:37.339Z",
-    "updated_at": "2026-07-23T09:58:07.421Z"
+    "updated_at": "2026-07-23T11:18:42.013Z"
   }
 },
 {
@@ -8606,16 +8606,16 @@
     "company": 15,
     "order": 16,
     "delivery_code": "FUJI-GH-23072026-006",
-    "status": "pending",
+    "status": "delivered",
     "shipper_name": "",
     "shipper_phone": "",
     "shipper_user": null,
     "shipping_address": "220 Định Công Thượng, Phường Định Công",
     "expected_date": null,
-    "actual_date": null,
+    "actual_date": "2026-07-23",
     "notes": "",
     "created_at": "2026-07-23T10:44:34.201Z",
-    "updated_at": "2026-07-23T10:44:34.201Z"
+    "updated_at": "2026-07-23T11:18:41.946Z"
   }
 },
 {
@@ -8634,6 +8634,24 @@
     "warranty_rules": "1. Trường hợp được bảo hành \n1) Sản phẩm còn trong thời hạn bảo hành. \n2) Có phiếu bảo hành đầy đủ thông tin (mã sản phẩm, ngày mua, thông tin khách hàng). \n3) Sản phẩm được lắp đặt đúng quy chuẩn ban đầu.\n\n2. Các trường hợp không bảo hành:\n1) Lỗi sản phẩm phát sinh do khách hàng lắp đặt và sử dụng không theo chỉ dẫn. \n2) Sản phẩm sử dụng trong môi trường tiếp xúc nhiều với hóa chất tẩy rửa mạnh hoặc quá trình sử dụng không đúng cách \n3) Chịu ảnh hưởng bởi ánh nắng mặt trời trực tiếp.\n4) Sản phẩm bị hỏng do tác động của lực cơ học, bề mặt cửa bị trầy xước, bong tróc do vật sắc nhọn va quệt.\n5) Sản phẩm bị hư hỏng do thiên tai, hỏa hoạn.\n6) Sản phẩm lắp đặt sai quy cách do không phải trực tiếp Fujitech lắp đặt\n7) Màu sắc sản phẩm thay đổi nhẹ theo thời gian do điều kiện môi trường và quá trình sử dụng tự nhiên.\n8) Nguyên nhân khác mà không phải lỗi của nhà sản xuất..",
     "created_at": "2026-07-23T10:14:29.552Z",
     "updated_at": "2026-07-23T10:14:29.552Z"
+  }
+},
+{
+  "model": "delivery.warrantycard",
+  "pk": 3,
+  "fields": {
+    "company": 15,
+    "order": 16,
+    "customer": 28,
+    "warranty_code": "FUJI-BH-23072026-006",
+    "status": "active",
+    "start_date": "2026-07-23",
+    "end_date": "2027-07-23",
+    "terms": "Bảo hành 12 tháng kể từ ngày giao hàng.",
+    "warranty_content": "Thực hiện bảo hành công trình khi sử dụng sản phẩm Cửa Composite Fujitech Group\n\nChính sách bảo hành \n Bộ cửa Composite (khung, cánh, phào, gioăng): Bảo hành 36 tháng. \nPhụ kiện Fujitech Look (khóa, bản lề...): Bảo hành 12 tháng. \nLưu ý: \nThời gian bảo hành được tính bắt đầu từ ngày hàng hóa được giao đến khách hàng căn cứ vào phiếu xuất kho của nhà máy\nThời gian xem xét nguyên nhân và gửi thông báo cách xử lý, khắc phục tới khách hàng từ 3-7 ngày kể từ ngày nhận được yêu cầu bảo hành.\nĐối với những sản phẩm hư hỏng do nguyên nhân từ phía nhà máy sản xuất, khách hàng sẽ được cung cấp/thay thế sản phẩm mới hoặc sửa chữa miễn phí.\nTrường hợp hư hỏng do lỗi sử dụng của khách hàng, Fujitech Door sẽ sửa chữa bảo hành tính phí với mức chi phí hữu nghị.",
+    "warranty_rules": "1. Trường hợp được bảo hành \n1) Sản phẩm còn trong thời hạn bảo hành. \n2) Có phiếu bảo hành đầy đủ thông tin (mã sản phẩm, ngày mua, thông tin khách hàng). \n3) Sản phẩm được lắp đặt đúng quy chuẩn ban đầu.\n\n2. Các trường hợp không bảo hành:\n1) Lỗi sản phẩm phát sinh do khách hàng lắp đặt và sử dụng không theo chỉ dẫn. \n2) Sản phẩm sử dụng trong môi trường tiếp xúc nhiều với hóa chất tẩy rửa mạnh hoặc quá trình sử dụng không đúng cách \n3) Chịu ảnh hưởng bởi ánh nắng mặt trời trực tiếp.\n4) Sản phẩm bị hỏng do tác động của lực cơ học, bề mặt cửa bị trầy xước, bong tróc do vật sắc nhọn va quệt.\n5) Sản phẩm bị hư hỏng do thiên tai, hỏa hoạn.\n6) Sản phẩm lắp đặt sai quy cách do không phải trực tiếp Fujitech lắp đặt\n7) Màu sắc sản phẩm thay đổi nhẹ theo thời gian do điều kiện môi trường và quá trình sử dụng tự nhiên.\n8) Nguyên nhân khác mà không phải lỗi của nhà sản xuất..",
+    "created_at": "2026-07-23T11:18:41.962Z",
+    "updated_at": "2026-07-23T11:18:41.962Z"
   }
 },
 {
@@ -9044,6 +9062,28 @@
     "zalo_msg_id": "",
     "error_message": "",
     "sent_at": "2026-07-23T10:14:29.655Z"
+  }
+},
+{
+  "model": "zalo_integration.zalomessagelog",
+  "pk": 15,
+  "fields": {
+    "company": 15,
+    "template": 2,
+    "social_lead": null,
+    "customer": 28,
+    "sent_by": null,
+    "recipient_phone": "0989198265",
+    "recipient_zalo_id": "",
+    "params_sent": {
+      "order_number": "FUJI-DH-23072026-006",
+      "customer_name": "Chị Huế",
+      "warranty_link": "https://system.yourdomain.com/warranty/FUJI-DH-23072026-006"
+    },
+    "status": "pending",
+    "zalo_msg_id": "",
+    "error_message": "",
+    "sent_at": "2026-07-23T11:18:42.038Z"
   }
 },
 {

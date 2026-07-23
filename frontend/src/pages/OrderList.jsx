@@ -1765,33 +1765,120 @@ export default function OrderList() {
         </Col>
       </Row>
 
-      {/* ── Cards Thống Kê ─────────────────────────────────────────────── */}
+      {/* ── Cards Thống Kê (Minimal Premium) ─────────────────────────────── */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        {/* Card 1: Chờ xét duyệt */}
         <Col xs={24} sm={12} md={6}>
-          <Card style={{ borderRadius: 12, borderLeft: '4px solid #f59e0b' }}>
-            <Text type="secondary" style={{ fontWeight: 600 }}>CHỜ XÉT DUYỆT</Text>
-            <Title level={2} style={{ margin: '4px 0 0', fontWeight: 800, color: '#f59e0b' }}>{totalPending}</Title>
-          </Card>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: 12,
+            padding: '16px 20px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+            display: 'flex',
+            flexDirection: 'column',
+            transition: 'all 0.2s ease',
+            cursor: 'default',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#fcd34d'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(245,158,11,0.08)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.02)'; }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>Chờ xét duyệt</span>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ClockCircleOutlined style={{ color: '#f59e0b', fontSize: 15 }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#b45309', lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>{totalPending}</div>
+            </div>
+          </div>
         </Col>
+
+        {/* Card 2: Đã duyệt / Đang SX */}
         <Col xs={24} sm={12} md={6}>
-          <Card style={{ borderRadius: 12, borderLeft: '4px solid #3b82f6' }}>
-            <Text type="secondary" style={{ fontWeight: 600 }}>ĐÃ DUYỆT / ĐANG SX</Text>
-            <Title level={2} style={{ margin: '4px 0 0', fontWeight: 800, color: '#3b82f6' }}>{totalApproved}</Title>
-          </Card>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: 12,
+            padding: '16px 20px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+            display: 'flex',
+            flexDirection: 'column',
+            transition: 'all 0.2s ease',
+            cursor: 'default',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#93c5fd'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(59,130,246,0.08)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.02)'; }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>Đã duyệt / Đang SX</span>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FileTextOutlined style={{ color: '#3b82f6', fontSize: 15 }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#1d4ed8', lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>{totalApproved}</div>
+            </div>
+          </div>
         </Col>
+
+        {/* Card 3: Hoàn thành */}
         <Col xs={24} sm={12} md={6}>
-          <Card style={{ borderRadius: 12, borderLeft: '4px solid #10b981' }}>
-            <Text type="secondary" style={{ fontWeight: 600 }}>HOÀN THÀNH</Text>
-            <Title level={2} style={{ margin: '4px 0 0', fontWeight: 800, color: '#10b981' }}>{totalCompleted}</Title>
-          </Card>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: 12,
+            padding: '16px 20px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+            display: 'flex',
+            flexDirection: 'column',
+            transition: 'all 0.2s ease',
+            cursor: 'default',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#86efac'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(34,197,94,0.08)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.02)'; }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>Hoàn thành</span>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <CheckCircleOutlined style={{ color: '#22c55e', fontSize: 15 }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#15803d', lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>{totalCompleted}</div>
+            </div>
+          </div>
         </Col>
+
+        {/* Card 4: Doanh thu ghi nhận */}
         <Col xs={24} sm={12} md={6}>
-          <Card style={{ borderRadius: 12, borderLeft: '4px solid #e11d48' }}>
-            <Text type="secondary" style={{ fontWeight: 600 }}>DOANH THU GHI NHẬN</Text>
-            <Title level={3} style={{ margin: '4px 0 0', fontWeight: 800, color: '#e11d48' }}>
-              {totalRevenue.toLocaleString('vi-VN')} đ
-            </Title>
-          </Card>
+          <div style={{
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+            borderRadius: 12,
+            padding: '16px 20px',
+            border: '1px solid #334155',
+            boxShadow: '0 4px 12px rgba(15,23,42,0.15)',
+            display: 'flex',
+            flexDirection: 'column',
+            transition: 'all 0.2s ease',
+            cursor: 'default',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(15,23,42,0.25)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(15,23,42,0.15)'; }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#94a3b8' }}>Doanh thu ghi nhận</span>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(245, 158, 11, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FileDoneOutlined style={{ color: '#f59e0b', fontSize: 15 }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <div style={{ fontSize: totalRevenue >= 1e9 ? 22 : 26, fontWeight: 700, color: '#fbbf24', lineHeight: 1, fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
+                {totalRevenue.toLocaleString('vi-VN')} đ
+              </div>
+            </div>
+          </div>
         </Col>
       </Row>
 
