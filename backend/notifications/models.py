@@ -135,6 +135,27 @@ class InternalAnnouncement(models.Model):
         return self.title
 
 
+class AnnouncementCategory(models.Model):
+    """Bảng lưu trữ danh mục loại thông báo nội bộ."""
+    company = models.ForeignKey(
+        "users.Company",
+        on_delete=models.CASCADE,
+        related_name="announcement_categories",
+        verbose_name="Công ty",
+    )
+    name = models.CharField(max_length=255, verbose_name="Tên loại thông báo")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Loại thông báo nội bộ"
+        verbose_name_plural = "Loại thông báo nội bộ"
+        unique_together = ("company", "name")
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.company.name})"
+
+
 class AnnouncementAttachment(models.Model):
     """File đính kèm của thông báo nội bộ."""
     

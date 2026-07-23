@@ -403,7 +403,31 @@ const Announcements = () => {
                                 )}
                             >
                                 {categoriesList.map(cat => (
-                                    <Select.Option key={cat} value={cat}>{cat}</Select.Option>
+                                    <Select.Option key={cat} value={cat}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span>{cat}</span>
+                                            <Button 
+                                                type="text" 
+                                                danger 
+                                                size="small" 
+                                                icon={<DeleteOutlined />} 
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    try {
+                                                        await api.post('/notifications/announcements/delete-category/', { category: cat });
+                                                        setCategoriesList(prev => prev.filter(c => c !== cat));
+                                                        if (form.getFieldValue('category') === cat) {
+                                                            form.setFieldValue('category', undefined);
+                                                        }
+                                                        message.success('Đã xóa loại thông báo khỏi danh mục!');
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                        message.error('Lỗi khi xóa loại thông báo.');
+                                                    }
+                                                }} 
+                                            />
+                                        </div>
+                                    </Select.Option>
                                 ))}
                             </Select>
                         </Form.Item>

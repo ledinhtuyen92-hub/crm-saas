@@ -186,7 +186,7 @@ def unread_count(request):
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from django.db.models import Q
-from .models import InternalAnnouncement, AnnouncementAttachment, AnnouncementRead
+from .models import InternalAnnouncement, AnnouncementAttachment, AnnouncementRead, AnnouncementCategory
 from .serializers import InternalAnnouncementSerializer
 from users.permissions import ActionBasedPermission, IsModuleActivePermission
 
@@ -243,11 +243,30 @@ class InternalAnnouncementViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='categories')
     def get_categories(self, request):
-        categories = InternalAnnouncement.objects.filter(
-            company=request.user.company,
-            category__isnull=False
-        ).exclude(category='').order_by('category').values_list('category', flat=True).distinct()
+        categories = AnnouncementCategory.objects.filter(
+            company=request.user.company
+        ).values_list('name', flat=True)
         return Response(list(categories))
+
+    @action(detail=False, methods=['post'], url_path='delete-category')
+    def delete_category(self, request):
+        category_name = request.data.get('category')
+        if not category_name:
+            return Response({'detail': 'Vui lòng cung cấp category cần xóa.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Xóa record category
+        AnnouncementCategory.objects.filter(
+            company=request.user.company,
+            name=category_name
+        ).delete()
+        
+        # Cập nhật rỗng cho các thông báo cũ (nếu muốn triệt để)
+        InternalAnnouncement.objects.filter(
+            company=request.user.company,
+            category=category_name
+        ).update(category="")
+        
+        return Response({'detail': 'Xóa danh mục thành công.'}, status=status.HTTP_200_OK)
 
     def perform_create(self, serializer):
         priority = self.request.data.get("priority", "normal")
@@ -260,6 +279,13 @@ class InternalAnnouncementViewSet(viewsets.ModelViewSet):
             priority=priority,
             is_pinned=is_pinned
         )
+        
+        # Lưu AnnouncementCategory nếu có
+        if announcement.category:
+            AnnouncementCategory.objects.get_or_create(
+                company=self.request.user.company,
+                name=announcement.category
+            )
         
         # Xử lý up file
         files = self.request.FILES.getlist("attachments")
@@ -305,6 +331,47 @@ class InternalAnnouncementViewSet(viewsets.ModelViewSet):
                     else:
                         user_ids.append(int(d))
             announcement.target_users.set(user_ids)
+            
+    def perform_update(self, serializer):
+        priority = self.request.data.get("priority", "normal")
+        is_pinned = str(self.request.data.get("is_pinned", "false")).lower() == "true"
+        
+        announcement = serializer.save(
+            priority=priority,
+            is_pinned=is_pinned
+        )
+        
+        if announcement.category:
+            AnnouncementCategory.objects.get_or_create(
+                company=self.request.user.company,
+                name=announcement.category
+            )
+            
+        # Xử lý departments
+        departments_data = self.request.data.getlist("departments") if hasattr(self.request.data, "getlist") else self.request.data.get("departments", [])
+        if not announcement.is_all_company and departments_data:
+            dept_ids = []
+            for d in departments_data:
+                if isinstance(d, str):
+                    dept_ids.extend([int(x.strip()) for x in d.split(",") if x.strip().isdigit()])
+                else:
+                    dept_ids.append(int(d))
+            announcement.departments.set(dept_ids)
+        elif announcement.is_all_company:
+            announcement.departments.clear()
+            
+        # Xử lý target_users
+        target_users_data = self.request.data.getlist("target_users") if hasattr(self.request.data, "getlist") else self.request.data.get("target_users", [])
+        if not announcement.is_all_company and target_users_data:
+            user_ids = []
+            for u in target_users_data:
+                if isinstance(u, str):
+                    user_ids.extend([int(x.strip()) for x in u.split(",") if x.strip().isdigit()])
+                else:
+                    user_ids.append(int(u))
+            announcement.target_users.set(user_ids)
+        elif announcement.is_all_company:
+            announcement.target_users.clear()
             
         # [FEATURE] Bắn quả chuông cho các nhân viên liên quan
         target_users = set()
