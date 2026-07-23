@@ -96,8 +96,23 @@ class CustomerViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         company = self.request.user.company
         user = self.request.user
         default_assignee = user if user.has_perm_code("crm.auto_assign_self") else None
-        assigned_to = serializer.validated_data.get('assigned_to', default_assignee)
+        
+        if 'assigned_to' in serializer.validated_data:
+            if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("crm.assign"):
+                assigned_to = default_assignee
+            else:
+                assigned_to = serializer.validated_data.get('assigned_to')
+        else:
+            assigned_to = default_assignee
+            
         serializer.save(company=company, created_by=user, assigned_to=assigned_to)
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        if 'assigned_to' in serializer.validated_data:
+            if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("crm.assign"):
+                serializer.validated_data.pop('assigned_to', None)
+        serializer.save()
 
     def destroy(self, request, *args, **kwargs):
         from django.db.models.deletion import ProtectedError

@@ -302,6 +302,9 @@ class FacebookLeadViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSe
     permission_classes = [IsAuthenticated, ActionBasedPermission]
     action_permissions = {
         "destroy": "facebook.delete_conversation",
+        "send_message": "facebook.chat",
+        "create_customer": "facebook.create_customer",
+        "assign": "facebook.assign",
     }
 
     def get_queryset(self):

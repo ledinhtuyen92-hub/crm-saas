@@ -16,11 +16,35 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 
+from django.utils import timezone
+
 def _company_filter(user):
     """Trả về company filter phù hợp với user."""
     if user.is_superuser and user.company_id is None:
         return Q()  # Superuser hệ thống xem tất cả
     return Q(company=user.company)
+
+
+def get_date_range(time_filter):
+    """Tính toán start_date, end_date dựa trên time_filter."""
+    today = timezone.localtime().date()
+    if time_filter == "today":
+        return today, today
+    elif time_filter == "week":
+        start = today - timedelta(days=today.weekday())
+        return start, today
+    elif time_filter == "month":
+        start = today.replace(day=1)
+        return start, today
+    elif time_filter == "quarter":
+        quarter = (today.month - 1) // 3 + 1
+        start = today.replace(month=3 * quarter - 2, day=1)
+        return start, today
+    elif time_filter == "year":
+        start = today.replace(month=1, day=1)
+        return start, today
+    return None, None
+
 
 
 @api_view(["GET"])
@@ -40,11 +64,14 @@ def summary(request):
     from orders.models import Order
     from inventory.models import StockLevel
     from users.models import User
+    from orders.models import OrderItem
 
     user = request.user
     today = date.today()
-    month_start = today.replace(day=1)
     cf = _company_filter(user)
+
+    time_filter = request.query_params.get("time_filter", "month")
+    start_date, end_date = get_date_range(time_filter)
 
     # ── Khách hàng ────────────────────────────────────────────────
     customer_qs = Customer.objects.filter(cf)
@@ -57,6 +84,9 @@ def summary(request):
             )
         else:
             customer_qs = customer_qs.filter(assigned_to=user)
+    
+    if start_date and end_date:
+        customer_qs = customer_qs.filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
 
     customer_stats = customer_qs.aggregate(
         total=Count("id"),
@@ -77,13 +107,17 @@ def summary(request):
             )
         else:
             quotation_qs = quotation_qs.filter(created_by=user)
+            
+    if start_date and end_date:
+        quotation_qs = quotation_qs.filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
 
     quotation_stats = quotation_qs.aggregate(
-        total=Count("id"),
-        draft=Count("id", filter=Q(status="draft")),
-        sent=Count("id", filter=Q(status="sent")),
-        accepted=Count("id", filter=Q(status="accepted")),
-        rejected=Count("id", filter=Q(status="rejected")),
+        total=Count("id", distinct=True),
+        draft=Count("id", filter=Q(status="draft"), distinct=True),
+        sent=Count("id", filter=Q(status="sent"), distinct=True),
+        accepted=Count("id", filter=Q(status="accepted"), distinct=True),
+        rejected=Count("id", filter=Q(status="rejected"), distinct=True),
+        won=Count("id", filter=Q(orders__status__in=["approved", "completed"]), distinct=True),
     )
 
     # ── Đơn hàng ────────────────────────────────────────────────
@@ -97,6 +131,13 @@ def summary(request):
             )
         else:
             order_qs = order_qs.filter(created_by=user)
+            
+    if start_date and end_date:
+        order_qs = order_qs.filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
+
+    revenue_in_period = order_qs.filter(
+        status__in=["approved", "in_production", "completed"]
+    ).aggregate(total=Sum("total_amount"))["total"] or 0
 
     order_stats = order_qs.aggregate(
         total=Count("id"),
@@ -104,20 +145,19 @@ def summary(request):
         approved=Count("id", filter=Q(status="approved")),
         rejected=Count("id", filter=Q(status="rejected")),
         completed=Count("id", filter=Q(status="completed")),
-        new_today=Count("id", filter=Q(created_at__date=today)),
-        revenue_this_month=Sum(
-            "total_amount",
-            filter=Q(status__in=["approved", "in_production", "completed"], created_at__date__gte=month_start),
-        ),
-        revenue_today=Sum(
-            "total_amount",
-            filter=Q(status__in=["approved", "in_production", "completed"], created_at__date=today),
-        ),
-        total_revenue_all_time=Sum(
-            "total_amount",
-            filter=Q(status__in=["approved", "in_production", "completed"]),
-        ),
     )
+    order_stats["revenue_in_period"] = float(revenue_in_period)
+
+    order_items_qs = OrderItem.objects.filter(order__in=order_qs, item_type="product")
+    won_products = order_items_qs.filter(
+        order__status__in=["approved", "in_production", "completed"]
+    ).aggregate(total=Sum("quantity"))["total"] or 0
+    completed_products = order_items_qs.filter(
+        order__status="completed"
+    ).aggregate(total=Sum("quantity"))["total"] or 0
+    
+    order_stats["won_products_count"] = float(won_products)
+    order_stats["completed_products_count"] = float(completed_products)
 
     # ── Tồn kho thấp ────────────────────────────────────────────
     low_stock_count = 0
@@ -143,10 +183,14 @@ def summary(request):
     employee_count = employee_qs.count()
 
     # ── Tính Win Rate ───────────────────────────────────────────
+    # Tính theo số lượng báo giá đã được chuyển thành đơn hàng (Đã duyệt/Hoàn thành)
     total_quotes = (quotation_stats.get("sent") or 0) + (quotation_stats.get("accepted") or 0) + (quotation_stats.get("rejected") or 0)
+    won_quotes = quotation_stats.get("won") or 0
+    total_quotes = max(total_quotes, won_quotes) # Đảm bảo tỷ lệ không quá 100%
+    
     win_rate = 0
     if total_quotes > 0:
-        win_rate = ((quotation_stats.get("accepted") or 0) / total_quotes) * 100
+        win_rate = (won_quotes / total_quotes) * 100
 
     return Response({
         "customers": customer_stats,
@@ -156,9 +200,7 @@ def summary(request):
         },
         "orders": {
             **order_stats,
-            "revenue_this_month": float(order_stats.get("revenue_this_month") or 0),
-            "revenue_today": float(order_stats.get("revenue_today") or 0),
-            "total_revenue_all_time": float(order_stats.get("total_revenue_all_time") or 0),
+            "revenue_in_period": float(order_stats.get("revenue_in_period") or 0),
         },
         "inventory": {
             "low_stock_count": low_stock_count,
@@ -173,22 +215,28 @@ def summary(request):
 @permission_classes([permissions.IsAuthenticated])
 def revenue_chart(request):
     """
-    Doanh thu theo tháng trong N tháng gần nhất.
-    Query param: ?period=12 (mặc định 12 tháng)
+    Doanh thu theo thời gian.
+    Query param: ?time_filter=...
     """
     from orders.models import Order
-    from django.db.models.functions import TruncMonth
+    from django.db.models.functions import TruncMonth, TruncDay
 
     user = request.user
-    period = min(int(request.query_params.get("period", 12)), 24)
+    time_filter = request.query_params.get("time_filter", "month")
+    
+    start_date, end_date = get_date_range(time_filter)
+    # Nếu không có time_filter, mặc định lấy 6 tháng (giống period=6 cũ)
+    if not start_date:
+        start_date = date.today().replace(day=1) - timedelta(days=30 * 5)
+        end_date = date.today()
 
-    start_date = date.today().replace(day=1) - timedelta(days=30 * (period - 1))
     cf = _company_filter(user)
 
     order_qs = Order.objects.filter(
         cf,
         status__in=["approved", "in_production", "completed"],
         created_at__date__gte=start_date,
+        created_at__date__lte=end_date,
     )
     if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("orders.view_all"):
         managed_deps = user.managed_departments.all()
@@ -200,21 +248,25 @@ def revenue_chart(request):
         else:
             order_qs = order_qs.filter(created_by=user)
 
-    monthly = (
+    use_daily = time_filter in ["today", "week", "month"]
+    trunc_func = TruncDay("created_at") if use_daily else TruncMonth("created_at")
+    date_format = "%Y-%m-%d" if use_daily else "%Y-%m"
+
+    grouped = (
         order_qs
-        .annotate(month=TruncMonth("created_at"))
-        .values("month")
+        .annotate(date_group=trunc_func)
+        .values("date_group")
         .annotate(revenue=Sum("total_amount"), count=Count("id"))
-        .order_by("month")
+        .order_by("date_group")
     )
 
     return Response([
         {
-            "month": item["month"].strftime("%Y-%m"),
+            "month": item["date_group"].strftime(date_format) if item["date_group"] else "",
             "revenue": float(item["revenue"] or 0),
             "count": item["count"],
         }
-        for item in monthly
+        for item in grouped
     ])
 
 
@@ -313,25 +365,33 @@ def top_sellers(request):
     """Top nhân viên Sale theo doanh thu toàn công ty."""
     from users.models import User
     from django.db.models.functions import Coalesce
-    from django.db.models import Sum, Count, Q, DecimalField
+    from django.db.models import Sum, Count, Q, DecimalField, IntegerField
     from decimal import Decimal
 
     user = request.user
     cf = _company_filter(user)
+    
+    time_filter = request.query_params.get("time_filter", "month")
+    start_date, end_date = get_date_range(time_filter)
+
+    order_filter = Q(created_orders__status__in=["approved", "in_production", "completed"])
+    if start_date and end_date:
+        order_filter &= Q(created_orders__created_at__date__gte=start_date, created_orders__created_at__date__lte=end_date)
+
+    product_filter = order_filter & Q(created_orders__items__item_type='product')
 
     # Chỉ tính các nhân viên thuộc phòng ban được cấu hình là "Phòng Sales"
     users = User.objects.filter(cf, is_active=True, department__is_sales_department=True).annotate(
         total_revenue=Coalesce(
-            Sum(
-                "created_orders__total_amount",
-                filter=Q(created_orders__status__in=["approved", "in_production", "completed"])
-            ),
+            Sum("created_orders__total_amount", filter=order_filter),
             Decimal('0.0'),
             output_field=DecimalField()
         ),
-        order_count=Count(
-            "created_orders",
-            filter=Q(created_orders__status__in=["approved", "in_production", "completed"])
+        order_count=Count("created_orders", filter=order_filter),
+        product_count=Coalesce(
+            Sum("created_orders__items__quantity", filter=product_filter),
+            0,
+            output_field=IntegerField()
         )
     ).order_by("-total_revenue")
 
@@ -341,6 +401,7 @@ def top_sellers(request):
             "full_name": item.full_name or item.email,
             "total_revenue": float(item.total_revenue),
             "order_count": item.order_count,
+            "product_count": item.product_count,
         }
         for item in users
     ])
@@ -357,11 +418,18 @@ def debt_stats(request):
     from finance.models import PaymentReceipt
     from django.db.models.functions import TruncMonth, Coalesce
     from django.db.models import Sum, OuterRef, Subquery, F, DecimalField
+    from django.db.models.functions import TruncMonth, TruncDay
 
     user = request.user
     cf = _company_filter(user)
+    
+    time_filter = request.query_params.get("time_filter", "month")
+    start_date, end_date = get_date_range(time_filter)
 
     order_qs = Order.objects.filter(cf).exclude(status__in=["cancelled", "rejected"])
+    
+    if start_date and end_date:
+        order_qs = order_qs.filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
 
     # Phân quyền
     can_view_all = user.is_company_admin or user.is_superuser or user.has_perm_code("dashboard.view_debt") or user.has_perm_code("orders.view_all")
@@ -395,27 +463,31 @@ def debt_stats(request):
     # 1. Tổng công nợ hiện tại
     total_debt = debt_qs.aggregate(t=Sum("debt"))["t"] or 0
 
-    # 2. Biểu đồ công nợ 6 tháng qua (nhóm theo tháng tạo đơn hàng)
-    period = 6
-    start_date = date.today().replace(day=1) - timedelta(days=30 * (period - 1))
+    # 2. Biểu đồ công nợ
+    # Nếu không có time_filter thì lấy 6 tháng gần nhất
+    if not start_date:
+        start_date = date.today().replace(day=1) - timedelta(days=30 * 5)
     
     monthly_qs = debt_qs.filter(created_at__date__gte=start_date)
+    
+    use_daily = time_filter in ["today", "week", "month"]
+    trunc_func = TruncDay("created_at") if use_daily else TruncMonth("created_at")
+    date_format = "%Y-%m-%d" if use_daily else "%Y-%m"
     monthly = (
         monthly_qs
-        .annotate(month=TruncMonth("created_at"))
-        .values("month")
+        .annotate(date_group=trunc_func)
+        .values("date_group")
         .annotate(total_debt=Sum("debt"))
-        .order_by("month")
+        .order_by("date_group")
     )
-
-    chart_data = []
-    for item in monthly:
-        chart_data.append({
-            "month": item["month"].strftime("%Y-%m") if item["month"] else "",
-            "debt": float(item["total_debt"] or 0)
-        })
 
     return Response({
         "total_debt": float(total_debt),
-        "chart_data": chart_data
+        "chart_data": [
+            {
+                "month": item["date_group"].strftime(date_format) if item["date_group"] else "",
+                "debt": float(item["total_debt"] or 0),
+            }
+            for item in monthly
+        ]
     })

@@ -97,10 +97,6 @@ PERMISSIONS = [
     {"code": "approvals.approve", "name": "Duyệt/Từ chối yêu cầu", "module": "approvals"},
     {"code": "approvals.delete", "name": "Xóa yêu cầu / lịch sử phê duyệt", "module": "approvals"},
 
-    # ── Announcements (Thông báo) ───────────────────────────────────
-    {"code": "announcements.view", "name": "Xem thông báo nội bộ", "module": "announcements"},
-    {"code": "announcements.create", "name": "Đăng thông báo mới", "module": "announcements"},
-    {"code": "announcements.delete", "name": "Xóa thông báo", "module": "announcements"},
 
     # ── Finance (Tài chính & Kế toán) ─────────────────────────────
     {"code": "finance.view", "name": "Xem danh sách giao dịch tài chính", "module": "finance"},
@@ -119,6 +115,7 @@ PERMISSIONS = [
     {"code": "zalo.chat", "name": "Chat trực tiếp với khách hàng trên Zalo", "module": "zalo"},
     {"code": "zalo.create_customer", "name": "Tạo khách hàng từ hội thoại Zalo", "module": "zalo"},
     {"code": "zalo.delete_conversation", "name": "Xóa hội thoại Zalo", "module": "zalo"},
+    {"code": "zalo.assign", "name": "Phân công hội thoại Zalo", "module": "zalo"},
 
     # ── Facebook Integration (Tích hợp Facebook Multi-Page) ────────
     {"code": "facebook.view_inbox", "name": "Xem Hộp thư Facebook (Multi-Page Inbox)", "module": "facebook"},
@@ -127,6 +124,7 @@ PERMISSIONS = [
     {"code": "facebook.create_customer", "name": "Tạo khách hàng từ hội thoại Facebook", "module": "facebook"},
     {"code": "facebook.manage_config", "name": "Quản lý kết nối Trang Facebook & Cấu hình tự động quét SĐT", "module": "facebook"},
     {"code": "facebook.delete_conversation", "name": "Xóa hội thoại Facebook", "module": "facebook"},
+    {"code": "facebook.assign", "name": "Phân công hội thoại Facebook", "module": "facebook"},
 
     # ── Internal Announcements (Thông báo nội bộ) ───────────────────
     {"code": "notifications.view_announcements", "name": "Xem thông báo nội bộ", "module": "notifications"},

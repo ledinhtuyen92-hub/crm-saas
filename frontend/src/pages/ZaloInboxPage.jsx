@@ -188,6 +188,8 @@ export default function ZaloInboxPage() {
   const canDeleteConversation = isCompanyAdmin || user?.is_superuser || hasPermission('zalo.delete_conversation')
   // Sale có thể xem toàn bộ hội thoại nếu là admin hoặc có quyền zalo.view_all_inbox
   const canViewAllInbox = isCompanyAdmin || hasPermission('zalo.view_all_inbox')
+  const canChat = isCompanyAdmin || hasPermission('zalo.chat')
+  const canCreateCustomer = isCompanyAdmin || hasPermission('zalo.create_customer')
 
   const [leads, setLeads] = useState([])
   const [loading, setLoading] = useState(false)
@@ -628,7 +630,7 @@ export default function ZaloInboxPage() {
   }
 
   return (
-    <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
       {/* Header */}
       <div style={{ padding: '10px 16px', background: token.colorBgContainer, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <WechatOutlined style={{ fontSize: 22, color: '#0068ff' }} />
@@ -1095,7 +1097,7 @@ export default function ZaloInboxPage() {
               </div>
 
               {/* Chat Input & Horizontal Toolbar Chuẩn Pancake */}
-              {selectedLead.status !== 'archived' && (
+              {selectedLead.status !== 'archived' && canChat && (
                 <div style={{ padding: '10px 14px', borderTop: '1px solid #e5e7eb', background: '#fff' }}>
                   {/* Hàng ngang phía trên khung nhập chat (3 nút biểu tượng icon: Yêu cầu SĐT, Yêu cầu Email, Văn bản mẫu) */}
                   <div style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
@@ -1258,11 +1260,12 @@ export default function ZaloInboxPage() {
                               style={{ width: '100%' }}
                               value={selectedLeadDetail.assigned_to || ''}
                               allowClear
+                              disabled={!isCompanyAdmin && !hasPermission('zalo.assign')}
                               onChange={val => handleAssign(val || null)}
                               options={[{ value: '', label: '-- Chưa phân công --' }, ...employees.map(e => ({ value: e.id, label: e.full_name || e.username }))]}
                             />
                           </div>
-                          {!selectedLeadDetail.is_customer_converted && (
+                          {!selectedLeadDetail.is_customer_converted && canCreateCustomer && (
                             <Button
                               type="primary"
                               block

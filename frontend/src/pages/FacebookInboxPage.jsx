@@ -388,6 +388,8 @@ export default function FacebookInboxPage() {
   const { user, maintenanceMode, hasPermission, isCompanyAdmin } = useAuth()
   const canDeleteConversation = isCompanyAdmin || user?.is_superuser || hasPermission('facebook.delete_conversation')
   const canViewAllInbox = isCompanyAdmin || hasPermission('facebook.view_all_inbox')
+  const canChat = isCompanyAdmin || hasPermission('facebook.chat')
+  const canCreateCustomer = isCompanyAdmin || hasPermission('facebook.create_customer')
   // Resizable columns
   const [leftColWidth, setLeftColWidth] = useState(270)
   const [rightColWidth, setRightColWidth] = useState(260)
@@ -955,7 +957,7 @@ export default function FacebookInboxPage() {
   )
 
   return (
-    <div style={{ height: 'calc(100vh - 128px)', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
       {/* Header */}
       <div style={{ padding: '10px 16px', background: token.colorBgContainer, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 22, color: '#1877f2', fontWeight: 900, flexShrink: 0 }}>𝐟</span>
@@ -1441,7 +1443,7 @@ export default function FacebookInboxPage() {
                   <div style={{ fontSize: 12, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedLead.page_name}</div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
-                  {!selectedLead.is_customer_converted && (
+                  {!selectedLead.is_customer_converted && canCreateCustomer && (
                     <Button
                       type="primary"
                       size="small"
@@ -1517,7 +1519,8 @@ export default function FacebookInboxPage() {
                 <div style={{ padding: '8px 16px', background: '#fffbeb', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <PhoneOutlined style={{ color: '#f59e0b' }} />
                   <Text style={{ color: '#92400e', fontSize: 13 }}>
-                    Phát hiện liên hệ: <b>{selectedLead.detected_phone || '---'}</b> | 📧 <b>{selectedLead.detected_email || '---'}</b> | 📍 <b>{selectedLead.detected_address || '---'}</b> — Bấm <b>"Tạo khách hàng"</b> để thêm vào CRM
+                    Phát hiện liên hệ: <b>{selectedLead.detected_phone || '---'}</b> | 📧 <b>{selectedLead.detected_email || '---'}</b> | 📍 <b>{selectedLead.detected_address || '---'}</b> 
+                    {canCreateCustomer && <span> — Bấm <b>"Tạo khách hàng"</b> để thêm vào CRM</span>}
                   </Text>
                 </div>
               )}
@@ -1590,26 +1593,26 @@ export default function FacebookInboxPage() {
                   <Input.TextArea
                     value={msgText}
                     onChange={handleMsgTextChange}
-                    placeholder="Nhập tin nhắn (hoặc gõ /phimtat)..."
+                    placeholder={canChat ? "Nhập tin nhắn (hoặc gõ /phimtat)..." : "Bạn không có quyền gửi tin nhắn"}
                     autoSize={{ minRows: 1, maxRows: 4 }}
                     style={{ borderRadius: 18, resize: 'none', flex: 1, padding: '8px 12px' }}
                     onPressEnter={e => { if (!e.shiftKey) { e.preventDefault(); handleSend() } }}
-                    disabled={sending}
+                    disabled={sending || !canChat}
                   />
                   {/* Đính kèm ảnh và tài liệu ở bên phải (nằm ngang như bình thường) */}
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', paddingBottom: 2 }}>
-                    <Upload fileList={[]} beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={true} accept="image/*">
-                      <Button shape="circle" icon={<PictureOutlined style={{ fontSize: 16 }} />} disabled={sending} title="Gửi hình ảnh (Chọn nhiều được)" />
+                    <Upload fileList={[]} beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={true} accept="image/*" disabled={!canChat}>
+                      <Button shape="circle" icon={<PictureOutlined style={{ fontSize: 16 }} />} disabled={sending || !canChat} title="Gửi hình ảnh (Chọn nhiều được)" />
                     </Upload>
-                    <Upload fileList={[]} beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={true}>
-                      <Button shape="circle" icon={<PaperClipOutlined style={{ fontSize: 16 }} />} disabled={sending} title="Gửi file tài liệu (Chọn nhiều được)" />
+                    <Upload fileList={[]} beforeUpload={(file) => { handleSend(file, false); return false; }} showUploadList={false} multiple={true} disabled={!canChat}>
+                      <Button shape="circle" icon={<PaperClipOutlined style={{ fontSize: 16 }} />} disabled={sending || !canChat} title="Gửi file tài liệu (Chọn nhiều được)" />
                     </Upload>
                     <Button
                       type="primary"
                       icon={<SendOutlined style={{ fontSize: 16 }} />}
                       onClick={() => handleSend()}
                       loading={sending}
-                      disabled={!msgText.trim() && !sending}
+                      disabled={(!msgText.trim() && !sending) || !canChat}
                       style={{ background: '#1877f2', borderRadius: '50%', width: 36, height: 36, padding: 0, flexShrink: 0 }}
                     />
                   </div>
@@ -1719,11 +1722,12 @@ export default function FacebookInboxPage() {
                               style={{ width: '100%' }}
                               value={selectedLead.assigned_to || ''}
                               allowClear
+                              disabled={!isCompanyAdmin && !hasPermission('facebook.assign')}
                               onChange={val => handleAssign(val || null)}
                               options={[{ value: '', label: '-- Chưa phân công --' }, ...(employees || []).map(e => ({ value: e.id, label: e.full_name || e.username }))]}
                             />
                           </div>
-                          {!selectedLead.is_customer_converted && (
+                          {!selectedLead.is_customer_converted && canCreateCustomer && (
                             <Button
                               type="primary"
                               block

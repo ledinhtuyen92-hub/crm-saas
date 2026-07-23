@@ -50,6 +50,10 @@ import {
   MessageOutlined,
   MenuOutlined,
   NotificationOutlined,
+  LeftOutlined,
+  RightOutlined,
+  UpOutlined,
+  DownOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -63,6 +67,8 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
   const screens = useBreakpoint()
   const isMobile = screens.lg === false
   const [drawerVisible, setDrawerVisible] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+  const [headerCollapsed, setHeaderCollapsed] = useState(false)
   
   const { user, logout, isSuperAdmin, isCompanyAdmin, hasPermission, maintenanceMode, isModuleActive } = useAuth()
 
@@ -393,12 +399,14 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
         >
           <AppstoreOutlined style={{ fontSize: 20 }} />
         </div>
-        <Title
-          level={4}
-          style={{ margin: 0, color: '#ffffff', fontWeight: 800, letterSpacing: 0 }}
-        >
-          CRM SaaS
-        </Title>
+        {!collapsed && (
+          <Title
+            level={4}
+            style={{ margin: 0, color: '#ffffff', fontWeight: 800, letterSpacing: 0, whiteSpace: 'nowrap' }}
+          >
+            CRM SaaS
+          </Title>
+        )}
       </div>
 
       {/* ── Company or SuperAdmin Badge ─────────────────────────── */}
@@ -418,17 +426,20 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
               display: 'flex',
               alignItems: 'center',
               gap: 10,
+              justifyContent: collapsed ? 'center' : 'flex-start',
             }}
           >
             <SettingOutlined style={{ color: '#fdba74', fontSize: 16 }} />
-            <div>
-              <Text style={{ color: '#fdba74', fontSize: 11, fontWeight: 800, display: 'block', letterSpacing: 0.5 }}>
-                SYSTEM ADMIN
-              </Text>
-              <Text style={{ color: '#e5e7eb', fontSize: 11 }}>
-                SaaS Platform Console
-              </Text>
-            </div>
+            {!collapsed && (
+              <div>
+                <Text style={{ color: '#fdba74', fontSize: 11, fontWeight: 800, display: 'block', letterSpacing: 0.5 }}>
+                  SYSTEM ADMIN
+                </Text>
+                <Text style={{ color: '#e5e7eb', fontSize: 11 }}>
+                  SaaS Platform Console
+                </Text>
+              </div>
+            )}
           </div>
         </div>
       ) : user?.company_name ? (
@@ -445,13 +456,17 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
               padding: '6px 10px',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: collapsed ? 'center' : 'flex-start',
               gap: 6,
+              overflow: 'hidden'
             }}
           >
-            <BankOutlined style={{ color: '#93c5fd', fontSize: 12 }} />
-            <Text style={{ color: '#93c5fd', fontSize: 12, fontWeight: 600 }}>
-              {user.company_name}
-            </Text>
+            <BankOutlined style={{ color: '#93c5fd', fontSize: 12, flexShrink: 0 }} />
+            {!collapsed && (
+              <Text style={{ color: '#93c5fd', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                {user.company_name}
+              </Text>
+            )}
           </div>
         </div>
       ) : null}
@@ -489,31 +504,108 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           {siderContent}
         </Drawer>
       ) : (
-        <Sider
-          width={260}
-          theme="dark"
-          style={{
-            background: 'linear-gradient(180deg, #111827 0%, #172554 100%)',
-            boxShadow: '8px 0 24px rgba(15, 23, 42, 0.16)',
-            minHeight: '100vh',
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            bottom: 0,
-            zIndex: 100,
-            overflowY: 'auto',
-          }}
-        >
-          {siderContent}
-        </Sider>
+        <>
+          <Sider
+            collapsible
+            collapsed={collapsed}
+            trigger={null}
+            width={260}
+            theme="dark"
+            className="custom-sider-scrollbar"
+            style={{
+              background: 'linear-gradient(180deg, #111827 0%, #172554 100%)',
+              boxShadow: '8px 0 24px rgba(15, 23, 42, 0.16)',
+              minHeight: '100vh',
+              position: 'fixed',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              zIndex: 100,
+              overflowY: 'auto',
+              transition: 'all 0.2s',
+            }}
+          >
+            {siderContent}
+          </Sider>
+          <div
+            onClick={() => setCollapsed(!collapsed)}
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: collapsed ? 80 : 260,
+              transform: 'translate(0, -50%)',
+              zIndex: 101,
+              width: 14,
+              height: 48,
+              background: '#1e293b',
+              border: '1px solid rgba(255,255,255,0.05)',
+              borderLeft: 'none',
+              borderRadius: '0 8px 8px 0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#94a3b8',
+              transition: 'all 0.2s',
+              boxShadow: '4px 0 8px rgba(0,0,0,0.1)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#fff'
+              e.currentTarget.style.background = '#3b82f6'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#94a3b8'
+              e.currentTarget.style.background = '#1e293b'
+            }}
+          >
+            {collapsed ? <RightOutlined style={{ fontSize: 10, fontWeight: 900 }} /> : <LeftOutlined style={{ fontSize: 10, fontWeight: 900 }} />}
+          </div>
+        </>
       )}
 
       {/* ── Main content area (offset by sider width) ────────────── */}
-      <Layout style={{ minWidth: 0, background: token.colorBgLayout, marginLeft: isMobile ? 0 : 260 }}>
+      <Layout style={{ minWidth: 0, background: token.colorBgLayout, marginLeft: isMobile ? 0 : (collapsed ? 80 : 260), transition: 'all 0.2s', position: 'relative' }}>
+        
+        {/* Toggle Header Button */}
+        {!isMobile && (
+          <div
+            onClick={() => setHeaderCollapsed(!headerCollapsed)}
+            style={{
+              position: 'fixed',
+              top: headerCollapsed ? 0 : 80,
+              right: 24,
+              zIndex: 101,
+              width: 32,
+              height: 16,
+              background: token.colorBgContainer,
+              border: '1px solid #e2e8f0',
+              borderTop: 'none',
+              borderRadius: '0 0 6px 6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#64748b',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#2563eb'
+              e.currentTarget.style.background = '#f8fafc'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#64748b'
+              e.currentTarget.style.background = token.colorBgContainer
+            }}
+          >
+            {headerCollapsed ? <DownOutlined style={{ fontSize: 10, fontWeight: 900 }} /> : <UpOutlined style={{ fontSize: 10, fontWeight: 900 }} />}
+          </div>
+        )}
+
         <Header
           style={{
-            height: 80,
-            minHeight: 80,
+            height: headerCollapsed ? 0 : 80,
+            minHeight: headerCollapsed ? 0 : 80,
             lineHeight: 'normal',
             display: 'flex',
             alignItems: 'center',
@@ -527,6 +619,10 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
             top: 0,
             zIndex: 10,
             flexShrink: 0,
+            overflow: 'hidden',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            opacity: headerCollapsed ? 0 : 1,
+            visibility: headerCollapsed ? 'hidden' : 'visible'
           }}
         >
           <div
@@ -732,12 +828,15 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
         <Content
           style={{
             margin: '0',
-            padding: '24px',
-            minHeight: 'calc(100vh - 80px)',
+            padding: location.pathname.includes('/inbox') ? 0 : '24px',
+            height: headerCollapsed ? '100vh' : 'calc(100vh - 80px)',
+            display: 'flex',
+            flexDirection: 'column',
             width: '100%',
             minWidth: 0,
             overflow: 'auto',
             background: token.colorBgLayout,
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
           {maintenanceMode && (
