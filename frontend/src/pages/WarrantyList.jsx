@@ -351,7 +351,7 @@ export default function WarrantyList() {
   ]
 
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ padding: 24, width: '100%', minWidth: 0 }}>
       <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
         <Title level={3} style={{ margin: 0 }}>
           <SafetyCertificateOutlined style={{ marginRight: 8, color: '#059669' }} />
