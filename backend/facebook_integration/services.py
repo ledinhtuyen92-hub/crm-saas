@@ -495,7 +495,7 @@ def process_fb_webhook_message(entry: dict):
             extract_and_process_phone_fb(lead, msg_text)
 
         # Trigger AI
-        if lead.is_ai_active and lead.ai_agent_id:
+        if lead.is_ai_active and lead.page_config and lead.page_config.is_ai_active and lead.page_config.ai_agent_id:
             from ai_agents.tasks import trigger_facebook_ai
             trigger_facebook_ai(lead.id)
 

@@ -48,6 +48,7 @@ import {
   Skeleton,
   Space,
   Spin,
+  Switch,
   Tabs,
   Tag,
   Tooltip,
@@ -562,6 +563,16 @@ export default function FacebookInboxPage() {
     }
   }
 
+  const handleToggleGlobalAi = async (pageId, checked) => {
+    try {
+      await api.patch(`/facebook/pages/${pageId}/`, { is_ai_active: checked })
+      setPages(prev => prev.map(p => p.id === pageId ? { ...p, is_ai_active: checked } : p))
+      message.success(`Đã ${checked ? 'Bật' : 'Tắt'} AI toàn cục cho trang!`)
+    } catch {
+      message.error('Không thể thay đổi trạng thái AI toàn cục')
+    }
+  }
+
   useEffect(() => {
     fetchPages()
     fetchTags()
@@ -967,6 +978,8 @@ export default function FacebookInboxPage() {
     (l.detected_address || '').toLowerCase().includes(search.toLowerCase())
   )
 
+  const currentPage = pages.find(p => p.id === selectedPage) || (pages.length === 1 ? pages[0] : null)
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
       {/* Header */}
@@ -987,6 +1000,19 @@ export default function FacebookInboxPage() {
           </Select>
         )}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          {currentPage && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 16, background: currentPage.is_ai_active ? '#dcfce7' : '#fee2e2', padding: '4px 12px', borderRadius: 20, border: `1px solid ${currentPage.is_ai_active ? '#bbf7d0' : '#fecaca'}` }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: currentPage.is_ai_active ? '#16a34a' : '#ef4444' }}>
+                {currentPage.is_ai_active ? '🤖 AI Đang Bật' : '🛑 AI Đang Tắt'}
+              </span>
+              <Switch
+                size="small"
+                checked={currentPage.is_ai_active}
+                onChange={(checked) => handleToggleGlobalAi(currentPage.id, checked)}
+                style={{ background: currentPage.is_ai_active ? '#10b981' : '#ccc' }}
+              />
+            </div>
+          )}
           {!canViewAllInbox && (
             <Tooltip title="Bạn đang ở chế độ 'Giỏ của tôi': Chỉ thấy hội thoại chưa phân công + hội thoại được giao cho bạn. Liên hệ Admin để được cấp quyền xem toàn bộ.">
               <Tag color="blue" style={{ borderRadius: 20, cursor: 'default', fontWeight: 600, fontSize: 11, margin: 0 }}>

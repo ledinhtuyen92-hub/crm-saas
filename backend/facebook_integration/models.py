@@ -115,6 +115,11 @@ class FacebookPageConfig(models.Model):
         related_name="facebook_pages_managed",
         verbose_name="Nhân viên phụ trách mặc định",
     )
+    is_ai_active = models.BooleanField(
+        default=True,
+        verbose_name="Bật/Tắt AI toàn cục",
+        help_text="Cờ bật/tắt AI cho toàn bộ trang Facebook này."
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -258,6 +263,11 @@ class FacebookLead(models.Model):
     is_starred = models.BooleanField(
         default=False,
         verbose_name="Đánh dấu sao / Khách VIP",
+    )
+    is_ai_active = models.BooleanField(
+        default=True,
+        verbose_name="AI đang tiếp quản",
+        help_text="Cờ bật/tắt AI cho cuộc hội thoại này. Tắt nếu Sale thật nhảy vào."
     )
     tags = models.ManyToManyField(
         FacebookLeadTag,

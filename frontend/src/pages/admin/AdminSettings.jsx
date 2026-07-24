@@ -27,6 +27,7 @@ import {
 } from 'antd'
 import api from '../../utils/api'
 import SubscriptionPlanManager from './SubscriptionPlanManager'
+import SystemAiKeyManager from './SystemAiKeyManager'
 import { useAuth } from '../../contexts/AuthContext'
 
 const { Title, Text } = Typography
@@ -195,6 +196,7 @@ export default function AdminSettings() {
       >
         <Row gutter={[20, 20]}>
           <Col xs={24} lg={14}>
+            <SystemAiKeyManager />
             <Card style={cardStyle} title={<Text style={{ fontWeight: 700, fontSize: 16 }}>📦 Quản lý Gói Đăng ký & Hạn mức mặc định</Text>}>
               <Alert
                 message="Chính sách hạn mức người dùng (License Seats Policy)"

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Avatar, Badge, Button, Col, Divider, Empty, Input, Modal,
-  Row, Select, Space, Spin, Tag, Tooltip, Typography, Form, message, Upload,
+  Row, Select, Space, Spin, Switch, Tag, Tooltip, Typography, Form, message, Upload,
   Tabs, Radio, Popover, theme
 } from 'antd'
 import {
@@ -440,6 +440,16 @@ export default function ZaloInboxPage() {
     }
   }
 
+  const handleToggleGlobalAi = async (oaId, checked) => {
+    try {
+      await api.patch(`/zalo/config/${oaId}/`, { is_ai_active: checked })
+      setOaConfigs(prev => prev.map(oa => oa.id === oaId ? { ...oa, is_ai_active: checked } : oa))
+      message.success(`Đã ${checked ? 'Bật' : 'Tắt'} AI toàn cục cho Zalo OA!`)
+    } catch {
+      message.error('Không thể thay đổi trạng thái AI toàn cục')
+    }
+  }
+
   const handleSendMessage = async (file = null, requestPhone = false, forceAsFile = false, requestEmail = false) => {
     if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
     if (!selectedLead) return
@@ -639,6 +649,7 @@ export default function ZaloInboxPage() {
     setMessageText(prev => (prev ? prev + ' ' + qr.content : qr.content))
     setQuickReplyModal(false)
   }
+  const currentOa = oaConfigs.find(oa => oa.id === selectedOaFilter) || (oaConfigs.length === 1 ? oaConfigs[0] : null)
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -660,6 +671,19 @@ export default function ZaloInboxPage() {
           </Select>
         )}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          {currentOa && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 16, background: currentOa.is_ai_active ? '#dcfce7' : '#fee2e2', padding: '4px 12px', borderRadius: 20, border: `1px solid ${currentOa.is_ai_active ? '#bbf7d0' : '#fecaca'}` }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: currentOa.is_ai_active ? '#16a34a' : '#ef4444' }}>
+                {currentOa.is_ai_active ? '🤖 AI Đang Bật' : '🛑 AI Đang Tắt'}
+              </span>
+              <Switch
+                size="small"
+                checked={currentOa.is_ai_active}
+                onChange={(checked) => handleToggleGlobalAi(currentOa.id, checked)}
+                style={{ background: currentOa.is_ai_active ? '#10b981' : '#ccc' }}
+              />
+            </div>
+          )}
           {!canViewAllInbox && (
             <Tooltip title="Bạn đang ở chế độ 'Giỏ của tôi': Chỉ thấy hội thoại chưa phân công + hội thoại được giao cho bạn. Liên hệ Admin để được cấp quyền xem toàn bộ.">
               <Tag color="blue" style={{ borderRadius: 20, cursor: 'default', fontWeight: 600, fontSize: 11, margin: 0 }}>

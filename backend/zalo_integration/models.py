@@ -118,6 +118,11 @@ class ZaloOaConfig(models.Model):
     )
 
     is_active = models.BooleanField(default=True, verbose_name="Đang hoạt động")
+    is_ai_active = models.BooleanField(
+        default=True,
+        verbose_name="Bật/Tắt AI toàn cục",
+        help_text="Cờ bật/tắt AI cho toàn bộ Zalo OA này."
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

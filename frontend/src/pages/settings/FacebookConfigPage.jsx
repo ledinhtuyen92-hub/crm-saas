@@ -25,6 +25,7 @@ import {
   Modal,
   Popconfirm,
   Row,
+  Select,
   Space,
   Switch,
   Tag,
@@ -65,6 +66,7 @@ export default function FacebookConfigPage() {
   const [debuggingId, setDebuggingId] = useState(null)
   const [editingPage, setEditingPage] = useState(null)
   const [isCreatingNew, setIsCreatingNew] = useState(false)
+  const [aiAgents, setAiAgents] = useState([])
   // Facebook Login OAuth
   const [oauthPages, setOauthPages] = useState([])       // pages returned by exchange-oauth-code
   const [selectPageModal, setSelectPageModal] = useState(false)
@@ -100,6 +102,9 @@ export default function FacebookConfigPage() {
     } else {
       fetchPages()
     }
+    api.get('ai_agents/agents/')
+      .then(res => setAiAgents(Array.isArray(res.data) ? res.data : res.data?.results ?? []))
+      .catch(console.error)
   }, [])
 
   const handleExchangeCode = async (code, configId) => {
@@ -216,6 +221,7 @@ export default function FacebookConfigPage() {
         lead_cleanup_days: page.lead_cleanup_days || 30,
         request_phone_template: page.request_phone_template,
         request_email_template: page.request_email_template,
+        ai_agent: page.ai_agent,
         is_active: page.is_active,
       })
     } else {
@@ -225,7 +231,8 @@ export default function FacebookConfigPage() {
         is_active: true,
         lead_cleanup_days: 30,
         request_phone_template: "Dạ chào bạn, để tiện chuyên viên tư vấn chi tiết và gửi bảng giá ưu đãi, bạn cho mình xin số điện thoại liên hệ với ạ ❤️",
-        request_email_template: "Dạ bạn cho mình xin địa chỉ Email để bên em gửi catalogue và thông tin chi tiết qua email cho mình nhé 📧"
+        request_email_template: "Dạ bạn cho mình xin địa chỉ Email để bên em gửi catalogue và thông tin chi tiết qua email cho mình nhé 📧",
+        ai_agent: null,
       })
     }
     setModalVisible(true)
@@ -577,6 +584,15 @@ export default function FacebookConfigPage() {
               </Form.Item>
             </Col>
           </Row>
+
+          <Divider>🤖 Trợ lý AI (Giao việc tự động)</Divider>
+          <Form.Item name="ai_agent" label="Chọn Trợ lý AI" help="Khi chọn một AI Agent, nó sẽ tự động nhận và trả lời tin nhắn mới của khách hàng trên trang này.">
+            <Select allowClear placeholder="-- Không sử dụng Trợ lý AI --">
+              {aiAgents.map(agent => (
+                <Select.Option key={agent.id} value={agent.id}>{agent.name} ({agent.model_name})</Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
 
           <Divider>💬 Mẫu tin nhắn xin thông tin (Quick Reply 1 chạm)</Divider>
           <Form.Item

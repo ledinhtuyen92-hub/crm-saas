@@ -98,14 +98,14 @@ export default function AiAgentSettings() {
           
           <Collapse defaultActiveKey={['1']}>
             <Panel header={<Space><SettingOutlined /> Tùy chọn Nâng cao (Toggles)</Space>} key='1'>
-              <Form.Item name='enable_human_typing' valuePropName='checked'><Switch /> <Text>Giả lập người thật (Delay & gõ phím)</Text></Form.Item>
-              <Form.Item name='enable_auto_summary' valuePropName='checked'><Switch /> <Text>Tự động tóm tắt hội thoại cho Sale</Text></Form.Item>
-              <Form.Item name='enable_auto_tagging' valuePropName='checked'><Switch /> <Text>Tự động dán nhãn (Tag) hội thoại</Text></Form.Item>
-              <Form.Item name='enable_drip_followup' valuePropName='checked'><Switch /> <Text>Bám đuổi (Follow-up) tự động sau 24h</Text></Form.Item>
+              <Form.Item name='enable_human_typing' valuePropName='checked' label="Giả lập người thật (Delay & gõ phím)"><Switch /></Form.Item>
+              <Form.Item name='enable_auto_summary' valuePropName='checked' label="Tự động tóm tắt hội thoại cho Sale"><Switch /></Form.Item>
+              <Form.Item name='enable_auto_tagging' valuePropName='checked' label="Tự động dán nhãn (Tag) hội thoại"><Switch /></Form.Item>
+              <Form.Item name='enable_drip_followup' valuePropName='checked' label="Bám đuổi (Follow-up) tự động sau 24h"><Switch /></Form.Item>
             </Panel>
           </Collapse>
           <br/>
-          <Form.Item name='is_active' valuePropName='checked'><Switch /> <Text>Đang hoạt động</Text></Form.Item>
+          <Form.Item name='is_active' valuePropName='checked' label="Trạng thái"><Switch checkedChildren="Đang hoạt động" unCheckedChildren="Đã tắt" /></Form.Item>
         </Form>
       </Modal>
     </div>

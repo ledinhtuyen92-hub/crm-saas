@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def process_ai_reply_zalo(lead_id):
     try:
         lead = ZaloLead.objects.get(id=lead_id)
-        if not lead.is_ai_active or not lead.ai_agent:
+        if not lead.is_ai_active or not lead.oa_config or not lead.oa_config.is_ai_active or not lead.oa_config.ai_agent:
             return
 
         # Lấy lịch sử
@@ -23,7 +23,7 @@ def process_ai_reply_zalo(lead_id):
             role = 'user' if m.direction == ZaloMessage.DIRECTION_INBOUND else 'assistant'
             history.append({'role': role, 'content': m.content or '([Hình ảnh/File đính kèm])'})
 
-        result = generate_ai_reply(lead.ai_agent, history, lead.display_name)
+        result = generate_ai_reply(lead.oa_config.ai_agent, history, lead.display_name)
         
         if result.get('sentiment') == 'angry':
             lead.is_ai_active = False
@@ -45,7 +45,7 @@ def process_ai_reply_zalo(lead_id):
 def process_ai_reply_facebook(lead_id):
     try:
         lead = FacebookLead.objects.get(id=lead_id)
-        if not lead.is_ai_active or not lead.ai_agent:
+        if not lead.is_ai_active or not lead.page_config or not lead.page_config.is_ai_active or not lead.page_config.ai_agent:
             return
 
         messages = FacebookMessage.objects.filter(lead=lead).order_by('-created_at')[:10]
@@ -54,7 +54,7 @@ def process_ai_reply_facebook(lead_id):
             role = 'user' if m.sender_type == 'customer' else 'assistant'
             history.append({'role': role, 'content': m.text or '([Hình ảnh/File đính kèm])'})
 
-        result = generate_ai_reply(lead.ai_agent, history, lead.fb_user_name)
+        result = generate_ai_reply(lead.page_config.ai_agent, history, lead.fb_user_name)
 
         if result.get('sentiment') == 'angry':
             lead.is_ai_active = False
@@ -94,8 +94,8 @@ def ai_drip_followup():
     # 1. Quét Zalo
     zalo_leads = ZaloLead.objects.filter(
         is_ai_active=True,
-        ai_agent__isnull=False,
-        ai_agent__enable_drip_followup=True,
+        oa_config__ai_agent__isnull=False,
+        oa_config__ai_agent__enable_drip_followup=True,
         last_interaction_date__gte=cutoff_start,
         last_interaction_date__lte=cutoff_end
     )
@@ -109,8 +109,8 @@ def ai_drip_followup():
     # 2. Quét Facebook
     fb_leads = FacebookLead.objects.filter(
         is_ai_active=True,
-        ai_agent__isnull=False,
-        ai_agent__enable_drip_followup=True,
+        page_config__ai_agent__isnull=False,
+        page_config__ai_agent__enable_drip_followup=True,
         last_message_at__gte=cutoff_start,
         last_message_at__lte=cutoff_end
     )

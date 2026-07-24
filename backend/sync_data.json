@@ -1294,7 +1294,7 @@
   "pk": 1,
   "fields": {
     "password": "pbkdf2_sha256$1000000$ECQhi9BHkIsVTlsjgPiIMe$sVQIe5Cfq9ZU7nACy/evbQj0IfRFVVhgCQ1NbKN4NE8=",
-    "last_login": "2026-07-24T08:10:03.729Z",
+    "last_login": "2026-07-24T11:01:47.060Z",
     "is_superuser": true,
     "username": "admin",
     "first_name": "",
@@ -8674,7 +8674,7 @@
     "company": 15,
     "oa_name": "Bất động sản Minh Phúc",
     "use_system_config": true,
-    "ai_agent": null,
+    "ai_agent": 1,
     "app_id": "",
     "secret_key": "",
     "oa_id": "1164593518856973451",
@@ -8690,8 +8690,9 @@
     "request_phone_template": "Vui lòng chia sẻ số điện thoại để chúng tôi có thể liên hệ hỗ trợ tốt nhất.",
     "request_email_template": "Xin chào quý khách! Để thuận tiện gửi thông tin và tài liệu, xin vui lòng chia sẻ địa chỉ Email của quý khách tại đây ạ.",
     "is_active": true,
+    "is_ai_active": true,
     "created_at": "2026-07-14T02:32:51.927Z",
-    "updated_at": "2026-07-20T08:36:52.215Z"
+    "updated_at": "2026-07-24T11:24:54.123Z"
   }
 },
 {
@@ -8701,7 +8702,7 @@
     "company": 15,
     "oa_name": "Nội thất Mộc Lê Gia",
     "use_system_config": true,
-    "ai_agent": null,
+    "ai_agent": 1,
     "app_id": "",
     "secret_key": "",
     "oa_id": "4375101215417069625",
@@ -8717,8 +8718,9 @@
     "request_phone_template": "Vui lòng chia sẻ số điện thoại để chúng tôi có thể liên hệ hỗ trợ tốt nhất.",
     "request_email_template": "Xin chào quý khách! Để thuận tiện gửi thông tin và tài liệu, xin vui lòng chia sẻ địa chỉ Email của quý khách tại đây ạ.",
     "is_active": true,
+    "is_ai_active": true,
     "created_at": "2026-07-14T03:41:37.660Z",
-    "updated_at": "2026-07-16T06:32:03.703Z"
+    "updated_at": "2026-07-24T11:24:38.034Z"
   }
 },
 {
@@ -9158,7 +9160,7 @@
     "page_name": "Mr Bee - Mật ong nguyên chất",
     "page_id": "243343795792895",
     "use_system_config": true,
-    "ai_agent": null,
+    "ai_agent": 1,
     "app_id": null,
     "app_secret": null,
     "page_access_token": "EAAOi715rIAYBR44jBIEX957L6A3cYD9fl3WTeOrNW4RnjFSFR93bvvv43ZBIRM93QaZCvVoKzlj28VxKAk1ysV7ZA4pAcjrkixedzKtwMWAn7HCpjK3BGLZCzeFdHbHcnZBXgwPZBMQGlhZAsTXfZBocz8sbV1IF2MVEZAvTFtC83eZCi8dALybWcQfUCDfYUXwGr7Wy9bbrSYfwMvVSm411IZD",
@@ -9171,8 +9173,9 @@
     "request_phone_template": "Dạ chào bạn, để tiện chuyên viên tư vấn chi tiết và gửi bảng giá ưu đãi, bạn cho mình xin số điện thoại liên hệ với ạ ❤️",
     "request_email_template": "Dạ bạn cho mình xin địa chỉ Email để bên em gửi catalogue và thông tin chi tiết qua email cho mình nhé 📧",
     "assigned_to": null,
+    "is_ai_active": true,
     "created_at": "2026-07-15T13:13:47.717Z",
-    "updated_at": "2026-07-16T06:15:24.075Z"
+    "updated_at": "2026-07-24T11:44:12.706Z"
   }
 },
 {
@@ -9215,8 +9218,8 @@
     "has_unread_message": false,
     "unread_count": 0,
     "is_archived": false,
-    "last_message_at": "2026-07-23T15:41:13Z",
-    "last_message_preview": "hi",
+    "last_message_at": "2026-07-24T11:25:22.199Z",
+    "last_message_preview": "chào",
     "created_at": "2026-07-15T13:17:34.787Z",
     "updated_at": "2026-07-23T16:38:32.845Z",
     "tags": []
@@ -11867,6 +11870,19 @@
   }
 },
 {
+  "model": "facebook_integration.facebookmessage",
+  "pk": 662,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_cGj_odNtqcO8lxlthRJqiz5XArWXuhqgvcgPG60c2RxCLCW5NDTkKSkAWpLH3oi_HBHKyOtS4vPjs8OCryjy_A",
+    "sender_type": "page",
+    "text": "chào",
+    "attachment_url": "",
+    "attachment_type": "",
+    "created_at": "2026-07-24T11:25:22.199Z"
+  }
+},
+{
   "model": "facebook_integration.quickmediaasset",
   "pk": 1,
   "fields": {
@@ -11915,6 +11931,35 @@
     "content": "Địa chỉ bên mình là gì",
     "created_by": 2,
     "created_at": "2026-07-15T11:09:42.081Z"
+  }
+},
+{
+  "model": "ai_agents.systemaikey",
+  "pk": 1,
+  "fields": {
+    "provider": "openai",
+    "api_key": "sk-proj-dummy",
+    "is_active": true,
+    "priority": 0,
+    "created_at": "2026-07-24T11:14:00.998Z"
+  }
+},
+{
+  "model": "ai_agents.aiagent",
+  "pk": 1,
+  "fields": {
+    "company": 15,
+    "name": "CSKH Facebook & Zalo - Miu Miu",
+    "model_name": "gpt-4o-mini",
+    "system_prompt": "Bạn là một chuyên viên Chăm sóc khách hàng (CSKH) và Tư vấn viên xuất sắc của công ty chúng tôi (công ty chuyên về cửa nhựa Composite), hoạt động trên nền tảng nhắn tin Zalo và Facebook Messenger. \n\nMỤC TIÊU CỐT LÕI:\n1. Hỗ trợ khách hàng nhiệt tình, chuyên nghiệp và giải đáp các thắc mắc một cách nhanh chóng.\n2. Khéo léo thu thập thông tin liên hệ (Số điện thoại, Email) để chuyển cho đội ngũ Sale hỗ trợ chuyên sâu nếu khách hàng có nhu cầu tư vấn báo giá/mua hàng.\n\nVĂN PHONG VÀ THÁI ĐỘ:\n- Xưng hô là \"em\" và gọi khách hàng là \"anh/chị\" hoặc \"Quý khách\" (nếu chưa rõ giới tính).\n- Giọng điệu thân thiện, ấm áp, thấu hiểu và lịch sự. \n- Sử dụng emoji một cách tinh tế, vừa phải (1-2 emoji mỗi tin nhắn) để câu chuyện tự nhiên, không bị cứng nhắc.\n- TRẢ LỜI NGẮN GỌN: Vì đây là nền tảng chat, tuyệt đối không trả lời dài dòng kiểu viết văn hay gạch đầu dòng lê thê. Mỗi tin nhắn tối đa 2-3 câu ngắn. Cắt trọng tâm vào vấn đề khách hỏi.\n\nNGUYÊN TẮC HOẠT ĐỘNG (BẮT BUỘC TUÂN THỦ):\n- KHÔNG BAO GIỜ bịa đặt giá cả, thông số sản phẩm hoặc chính sách nếu bạn không chắc chắn. Hãy nói: \"Dạ phần chi tiết này để em nhờ bộ phận chuyên môn kiểm tra và báo lại chính xác cho anh/chị nhé ạ.\"\n- Nếu khách hàng tỏ ra khó chịu, tức giận, hoặc phàn nàn về dịch vụ: Hãy xoa dịu, xin lỗi chân thành và báo rằng bạn sẽ chuyển thông tin ngay cho Quản lý / Bộ phận xử lý khiếu nại (Hệ thống sẽ tự động bắt cảm xúc 'angry' và ngắt AI, bạn chỉ cần nói lời xoa dịu cuối cùng).\n- Khi khách hàng chủ động cho Số điện thoại: Hệ thống đã tự động lưu thông tin này vào CRM rồi. Bạn KHÔNG cần xác nhận lại số, chỉ cần nói: \"Dạ em cảm ơn anh/chị đã để lại thông tin. Chuyên viên bên em sẽ liên hệ lại hỗ trợ anh/chị ngay nhé ạ! ❤️\".\n- Tuyệt đối KHÔNG trả lời các câu hỏi không liên quan đến sản phẩm, dịch vụ hoặc lĩnh vực kinh doanh của công ty. Nếu khách hỏi ngoài lề, hãy từ chối khéo léo và đưa cuộc hội thoại quay về sản phẩm của công ty.\n\nQUY TRÌNH CHỐT THÔNG TIN:\n- Nếu khách hàng có biểu hiện quan tâm và muốn tư vấn sâu/nhận báo giá, hãy chủ động và khéo léo xin số điện thoại: \"Dạ để em tư vấn kỹ hơn và gửi báo giá chi tiết, anh/chị cho em xin số điện thoại (có Zalo) để em tiện hỗ trợ nhé ạ?\".",
+    "temperature": 0.7,
+    "enable_human_typing": true,
+    "enable_auto_summary": true,
+    "enable_auto_tagging": true,
+    "enable_drip_followup": true,
+    "is_active": true,
+    "created_at": "2026-07-24T10:53:03.553Z",
+    "updated_at": "2026-07-24T11:19:31.659Z"
   }
 }
 ]

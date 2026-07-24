@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   Alert, Button, Card, Col, Collapse, Descriptions, Divider, Form, Input, InputNumber,
-  message, Modal, Popconfirm, Row, Space, Switch, Tag, Tooltip, Typography
+  message, Modal, Popconfirm, Row, Select, Space, Switch, Tag, Tooltip, Typography
 } from 'antd'
 import {
   ApiOutlined, CheckCircleOutlined, CloseCircleOutlined,
@@ -26,6 +26,7 @@ export default function ZaloConfigPage() {
   const [deleteModal, setDeleteModal] = useState({ open: false, config: null })
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const [aiAgents, setAiAgents] = useState([])
   const [form] = Form.useForm()
 
   const fetchConfig = async (preferredId = null) => {
@@ -66,6 +67,9 @@ export default function ZaloConfigPage() {
     } else {
       fetchConfig()
     }
+    api.get('ai_agents/agents/')
+      .then(res => setAiAgents(Array.isArray(res.data) ? res.data : res.data?.results ?? []))
+      .catch(console.error)
   }, [])
 
   const handleZaloOAuthLogin = (targetConfig = null) => {
@@ -105,6 +109,7 @@ export default function ZaloConfigPage() {
         lead_cleanup_days: targetConfig.lead_cleanup_days,
         request_phone_template: targetConfig.request_phone_template,
         request_email_template: targetConfig.request_email_template,
+        ai_agent: targetConfig.ai_agent,
         is_active: targetConfig.is_active,
       })
     } else {
@@ -119,6 +124,7 @@ export default function ZaloConfigPage() {
         lead_cleanup_days: 30,
         request_phone_template: "Vui lòng chia sẻ số điện thoại để chúng tôi có thể liên hệ hỗ trợ tốt nhất.",
         request_email_template: "Xin chào quý khách! Để thuận tiện gửi thông tin và tài liệu, xin vui lòng chia sẻ địa chỉ Email của quý khách tại đây ạ.",
+        ai_agent: null,
         is_active: true,
       })
     }
@@ -528,6 +534,15 @@ export default function ZaloConfigPage() {
             help="Sẽ được dùng khi nhân viên bấm nút xin Email trong khung chat."
           >
             <Input.TextArea rows={2} placeholder="Xin chào quý khách! Để thuận tiện gửi thông tin và tài liệu, xin vui lòng chia sẻ địa chỉ Email của quý khách tại đây ạ." />
+          </Form.Item>
+
+          <Divider />
+          <Form.Item name="ai_agent" label="🤖 Giao việc cho Trợ lý AI (Tuỳ chọn)" help="Chọn một AI Agent để tự động trả lời khách hàng trên Zalo OA này.">
+            <Select allowClear placeholder="-- Không dùng AI --">
+              {aiAgents.map(agent => (
+                <Select.Option key={agent.id} value={agent.id}>{agent.name} ({agent.model_name})</Select.Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Divider />

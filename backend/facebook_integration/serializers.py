@@ -57,7 +57,7 @@ class FacebookPageConfigSerializer(serializers.ModelSerializer):
             "webhook_verify_token", "page_avatar", "is_active",
             "auto_create_customer_from_phone", "lead_cleanup_days",
             "request_phone_template", "request_email_template",
-            "assigned_to", "assigned_to_name",
+            "assigned_to", "assigned_to_name", "ai_agent", "is_ai_active",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "is_token_valid", "is_token_near_expiry"]
@@ -157,7 +157,7 @@ class FacebookLeadSerializer(serializers.ModelSerializer):
             "is_starred", "tags", "internal_notes",
             "last_message_at", "last_message_preview",
             "has_unread_message", "unread_count", "messages",
-            "created_at", "updated_at",
+            "created_at", "updated_at", "is_ai_active"
         ]
         read_only_fields = ["id", "company", "fb_user_id", "status", "has_unread_message", "unread_count", "created_at", "updated_at"]
 
@@ -206,7 +206,7 @@ class FacebookLeadListSerializer(serializers.ModelSerializer):
             "assigned_to", "assigned_to_name",
             "is_starred", "tags",
             "last_message_at", "last_message_preview",
-            "has_unread_message", "unread_count", "created_at", "latest_sender",
+            "has_unread_message", "unread_count", "created_at", "latest_sender", "is_ai_active"
         ]
 
 

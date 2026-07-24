@@ -47,7 +47,7 @@ class ZaloOaConfigSerializer(serializers.ModelSerializer):
             "token_expires_at_display", "is_token_near_expiry",
             "webhook_secret", "auto_send_payment_zns", "auto_send_delivery_zns", 
             "auto_send_birthday_zns", "auto_create_customer_from_phone", "lead_cleanup_days",
-            "request_phone_template", "request_email_template", "is_active", 
+            "request_phone_template", "request_email_template", "is_active", "ai_agent", "is_ai_active",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "company", "created_at", "updated_at",
@@ -76,7 +76,7 @@ class ZaloOaConfigWriteSerializer(serializers.ModelSerializer):
             "access_token", "refresh_token", "token_expires_at",
             "webhook_secret", "auto_send_payment_zns", "auto_send_delivery_zns", 
             "auto_send_birthday_zns", "auto_create_customer_from_phone", "lead_cleanup_days",
-            "request_phone_template", "request_email_template", "is_active",
+            "request_phone_template", "request_email_template", "is_active", "ai_agent"
         ]
 
     def validate(self, attrs):
@@ -145,7 +145,7 @@ class SocialLeadListSerializer(serializers.ModelSerializer):
             "assigned_to", "assigned_to_name",
             "is_converted", "detected_phone", "detected_email", "detected_address",
             "is_customer_converted", "is_starred", "tags",
-            "created_at", "has_unread_message", "unread_count"
+            "created_at", "has_unread_message", "unread_count", "is_ai_active"
         ]
 
     def get_is_converted(self, obj):
@@ -189,7 +189,7 @@ class SocialLeadDetailSerializer(serializers.ModelSerializer):
             "converted_customer_id", "converted_customer_name", "has_unread_message", "unread_count",
             "detected_phone", "detected_email", "detected_address",
             "is_customer_converted", "is_starred", "tags", "internal_notes",
-            "created_at", "updated_at",
+            "created_at", "updated_at", "is_ai_active"
         ]
 
     def get_is_customer_converted(self, obj):

@@ -198,7 +198,7 @@ class ZaloWebhookView(APIView):
             self._push_notification(social_lead, message_text)
 
         # Trigger AI
-        if social_lead.is_ai_active and social_lead.ai_agent_id:
+        if social_lead.is_ai_active and social_lead.oa_config and social_lead.oa_config.is_ai_active and social_lead.oa_config.ai_agent_id:
             from ai_agents.tasks import trigger_zalo_ai
             trigger_zalo_ai(social_lead.id)
 
