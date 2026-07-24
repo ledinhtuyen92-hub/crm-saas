@@ -551,6 +551,17 @@ export default function FacebookInboxPage() {
     finally { if (!silent) setMsgLoading(false) }
   }
 
+  const handleToggleAi = async (checked) => {
+    if (!selectedLead) return
+    try {
+      await api.patch(`/facebook/leads/${selectedLead.id}/`, { is_ai_active: checked })
+      setSelectedLead(prev => ({ ...prev, is_ai_active: checked }))
+      message.success(checked ? 'Đã bật chế độ AI tự động trả lời' : 'Đã tắt AI - Sale tiếp quản')
+    } catch {
+      message.error('Không thể thay đổi trạng thái AI')
+    }
+  }
+
   useEffect(() => {
     fetchPages()
     fetchTags()
@@ -1443,6 +1454,10 @@ export default function FacebookInboxPage() {
                   <div style={{ fontSize: 12, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedLead.page_name}</div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
+                  <div style={{ marginRight: 12, display: 'flex', alignItems: 'center', gap: 6, background: selectedLead.is_ai_active ? '#f6ffed' : '#fff1f0', padding: '4px 12px', borderRadius: 20, border: `1px solid ${selectedLead.is_ai_active ? '#b7eb8f' : '#ffa39e'}` }}>
+                    <Switch size="small" checked={selectedLead.is_ai_active} onChange={handleToggleAi} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: selectedLead.is_ai_active ? '#389e0d' : '#cf1322' }}>{selectedLead.is_ai_active ? '🤖 AI Đang Trực' : '🧑‍💻 Sale Tiếp Quản'}</span>
+                  </div>
                   {!selectedLead.is_customer_converted && canCreateCustomer && (
                     <Button
                       type="primary"

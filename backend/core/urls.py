@@ -28,4 +28,6 @@ urlpatterns = [
     path('api/zalo/', include('zalo_integration.urls')),
     # ── Facebook Multi-Page Integration ───────────────────────────────
     path('api/facebook/', include('facebook_integration.urls')),
+    # ── AI Agents (Multi-Agent Auto-Sale) ─────────────────────────────
+    path('api/ai_agents/', include('ai_agents.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

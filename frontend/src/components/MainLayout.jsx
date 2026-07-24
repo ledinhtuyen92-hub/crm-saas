@@ -55,6 +55,7 @@ import {
   UpOutlined,
   DownOutlined,
   ApiOutlined,
+  RobotOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -215,6 +216,11 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           key: '/settings/website',
           icon: <ApiOutlined style={{ color: '#eb2f96' }} />,
           label: <Link to="/settings/website">Tích hợp Website</Link>,
+        }] : []),
+        ...(isModuleActive('ai_agent') && isCompanyAdmin ? [{
+          key: '/settings/ai-agents',
+          icon: <RobotOutlined style={{ color: '#52c41a' }} />,
+          label: <Link to="/settings/ai-agents">Trợ lý AI</Link>,
         }] : []),
         ...(isCompanyAdmin || (isModuleActive('zalo') && (hasPermission('zalo.config') || hasPermission('zalo.manage_templates'))) || (isModuleActive('facebook') && hasPermission('facebook.manage_config'))
           ? [

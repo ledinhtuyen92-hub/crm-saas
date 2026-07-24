@@ -197,6 +197,11 @@ class ZaloWebhookView(APIView):
         if social_lead.assigned_to:
             self._push_notification(social_lead, message_text)
 
+        # Trigger AI
+        if social_lead.is_ai_active and social_lead.ai_agent_id:
+            from ai_agents.tasks import trigger_zalo_ai
+            trigger_zalo_ai(social_lead.id)
+
     def _handle_follow(self, company, oa_config, data):
         """Xử lý khi user follow OA."""
         follower = data.get("follower", {})

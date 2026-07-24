@@ -29,6 +29,14 @@ class ZaloOaConfig(models.Model):
         verbose_name="Sử dụng cấu hình ứng dụng hệ thống",
         help_text="Nếu bật, hệ thống sẽ dùng App ID, Secret Key từ Cấu hình Hệ thống (SuperAdmin).",
     )
+    ai_agent = models.ForeignKey(
+        "ai_agents.AiAgent",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Trợ lý AI",
+        help_text="AI được gán để quản lý OA này"
+    )
     app_id = models.CharField(
         max_length=100,
         blank=True,
@@ -238,6 +246,11 @@ class SocialLead(models.Model):
     has_unread_message = models.BooleanField(
         default=False,
         verbose_name="Có tin nhắn chưa đọc"
+    )
+    is_ai_active = models.BooleanField(
+        default=True,
+        verbose_name="AI đang tiếp quản",
+        help_text="Cờ bật/tắt AI cho cuộc hội thoại này. Tắt nếu Sale thật nhảy vào."
     )
     unread_count = models.IntegerField(
         default=0,

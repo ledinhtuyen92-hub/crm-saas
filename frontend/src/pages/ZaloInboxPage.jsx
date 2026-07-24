@@ -429,6 +429,17 @@ export default function ZaloInboxPage() {
   }
 
   // ── Actions trên Lead ─────────────────────────────────────────────────────
+  const handleToggleAi = async (checked) => {
+    if (!selectedLead) return
+    try {
+      await api.patch(`/zalo/social-leads/${selectedLead.id}/`, { is_ai_active: checked })
+      setSelectedLead(prev => ({ ...prev, is_ai_active: checked }))
+      message.success(checked ? 'Đã bật chế độ AI tự động trả lời' : 'Đã tắt AI - Sale tiếp quản')
+    } catch {
+      message.error('Không thể thay đổi trạng thái AI')
+    }
+  }
+
   const handleSendMessage = async (file = null, requestPhone = false, forceAsFile = false, requestEmail = false) => {
     if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì. Chức năng tạm khóa!'); return }
     if (!selectedLead) return
@@ -999,6 +1010,10 @@ export default function ZaloInboxPage() {
                 </div>
 
                 <Space>
+                  <div style={{ marginRight: 12, display: 'flex', alignItems: 'center', gap: 6, background: selectedLead.is_ai_active ? '#f6ffed' : '#fff1f0', padding: '4px 12px', borderRadius: 20, border: `1px solid ${selectedLead.is_ai_active ? '#b7eb8f' : '#ffa39e'}` }}>
+                    <Switch size="small" checked={selectedLead.is_ai_active} onChange={handleToggleAi} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: selectedLead.is_ai_active ? '#389e0d' : '#cf1322' }}>{selectedLead.is_ai_active ? '🤖 AI Đang Trực' : '🧑‍💻 Sale Tiếp Quản'}</span>
+                  </div>
                   <Tooltip title="Quét lại liên hệ cho hội thoại này">
                     <Button
                       size="small"

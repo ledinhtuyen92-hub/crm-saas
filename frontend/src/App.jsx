@@ -43,6 +43,7 @@ import ZaloTemplatePage from './pages/settings/ZaloTemplatePage'
 import FacebookInboxPage from './pages/FacebookInboxPage'
 import FacebookConfigPage from './pages/settings/FacebookConfigPage'
 import WebsiteIntegration from './pages/settings/WebsiteIntegration'
+import AiAgentSettings from './pages/settings/AiAgentSettings'
 import Announcements from './pages/Announcements'
 
 function ApplicationLayout({ isDarkMode, toggleTheme }) {
@@ -208,6 +209,16 @@ function App() {
                   <CompanyAdminRoute>
                     <WebsiteIntegration />
                   </CompanyAdminRoute>
+                }
+              />
+              <Route
+                path="/settings/ai-agents"
+                element={
+                  <ModuleRoute moduleCode="ai_agent">
+                    <CompanyAdminRoute>
+                      <AiAgentSettings />
+                    </CompanyAdminRoute>
+                  </ModuleRoute>
                 }
               />
 
