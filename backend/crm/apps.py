@@ -7,7 +7,8 @@ class CrmConfig(AppConfig):
     verbose_name = "Khách hàng"
     
     crm_modules = [
-        {"code": "crm", "name": "CRM (Khách hàng)"}
+        {"code": "crm", "name": "CRM (Khách hàng)"},
+        {"code": "website_integration", "name": "Tích hợp Website"}
     ]
 
     def ready(self):

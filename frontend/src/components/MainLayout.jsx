@@ -54,6 +54,7 @@ import {
   RightOutlined,
   UpOutlined,
   DownOutlined,
+  ApiOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -209,6 +210,11 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           key: '/facebook/inbox',
           icon: <span style={{ color: '#1877f2', fontWeight: 900, fontSize: 14 }}>𝐟</span>,
           label: <Link to="/facebook/inbox">Facebook Inbox</Link>,
+        }] : []),
+        ...(isModuleActive('website_integration') && isCompanyAdmin ? [{
+          key: '/settings/website',
+          icon: <ApiOutlined style={{ color: '#eb2f96' }} />,
+          label: <Link to="/settings/website">Tích hợp Website</Link>,
         }] : []),
         ...(isCompanyAdmin || (isModuleActive('zalo') && (hasPermission('zalo.config') || hasPermission('zalo.manage_templates'))) || (isModuleActive('facebook') && hasPermission('facebook.manage_config'))
           ? [

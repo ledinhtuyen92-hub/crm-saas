@@ -9,6 +9,9 @@ import {
   TagOutlined,
   UploadOutlined,
   UserOutlined,
+  SafetyCertificateOutlined,
+  PartitionOutlined,
+  ProfileOutlined,
 } from '@ant-design/icons'
 import {
   Badge,
@@ -417,16 +420,26 @@ export default function CompanyGeneralSettings() {
 
           <Divider dashed />
 
-          <Title level={5} style={{ color: '#16a34a', marginTop: 16 }}>🛠 Cấu Hình Phiếu Bảo Hành Mặc Định</Title>
-          <Paragraph type="secondary" style={{ marginBottom: 16 }}>
-            Nội dung ở đây sẽ tự động được sử dụng khi hệ thống sinh ra Phiếu bảo hành mới từ Đơn hàng/Giao hàng.
-          </Paragraph>
+          <div style={{ padding: '12px 16px', background: '#f6ffed', borderLeft: '4px solid #16a34a', borderRadius: 6, marginBottom: 24, marginTop: 16 }}>
+            <Space>
+              <SafetyCertificateOutlined style={{ fontSize: 18, color: '#16a34a' }} />
+              <Text strong style={{ fontSize: 16, color: '#16a34a' }}>Cấu Hình Phiếu Bảo Hành Mặc Định</Text>
+            </Space>
+            <div style={{ marginTop: 4 }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>Nội dung ở đây sẽ tự động được sử dụng khi hệ thống sinh ra Phiếu bảo hành mới từ Đơn hàng/Giao hàng.</Text>
+            </div>
+          </div>
 
           <Row gutter={24}>
             <Col xs={24} md={24}>
               <Form.Item
                 name="default_warranty_content"
-                label={<Text strong>📝 Nội dung bảo hành (Hiển thị bên cột trái)</Text>}
+                label={
+                  <Space>
+                    <FileTextOutlined style={{ color: '#16a34a' }} />
+                    <Text strong>Nội dung bảo hành (Hiển thị bên cột trái)</Text>
+                  </Space>
+                }
               >
                 <Input.TextArea
                   rows={6}
@@ -437,7 +450,12 @@ export default function CompanyGeneralSettings() {
             <Col xs={24} md={24}>
               <Form.Item
                 name="default_warranty_rules"
-                label={<Text strong>⚖️ Quy định bảo hành (Hiển thị bên cột phải)</Text>}
+                label={
+                  <Space>
+                    <ProfileOutlined style={{ color: '#16a34a' }} />
+                    <Text strong>Quy định bảo hành (Hiển thị bên cột phải)</Text>
+                  </Space>
+                }
               >
                 <Input.TextArea
                   rows={8}
@@ -470,10 +488,15 @@ export default function CompanyGeneralSettings() {
 
           <Divider dashed />
 
-          <Title level={5} style={{ color: '#2563eb', marginTop: 16 }}>🎯 Tùy Chỉnh Tên Trạng Thái Quy Trình (Pipeline CRM)</Title>
-          <Paragraph type="secondary" style={{ marginBottom: 16 }}>
-            Admin có thể đổi tên hiển thị các trạng thái quy trình bán hàng cho phù hợp với đặc thù nghiệp vụ doanh nghiệp. Tên mới sẽ hiển thị cho toàn bộ nhân viên.
-          </Paragraph>
+          <div style={{ padding: '12px 16px', background: '#e6f4ff', borderLeft: '4px solid #1677ff', borderRadius: 6, marginBottom: 24, marginTop: 16 }}>
+            <Space>
+              <PartitionOutlined style={{ fontSize: 18, color: '#1677ff' }} />
+              <Text strong style={{ fontSize: 16, color: '#1677ff' }}>Tùy Chỉnh Tên Trạng Thái Quy Trình (Pipeline CRM)</Text>
+            </Space>
+            <div style={{ marginTop: 4 }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>Admin có thể đổi tên hiển thị các trạng thái quy trình bán hàng cho phù hợp với đặc thù nghiệp vụ doanh nghiệp. Tên mới sẽ hiển thị cho toàn bộ nhân viên.</Text>
+            </div>
+          </div>
 
           <Row gutter={16}>
             <Col xs={24} sm={12} md={8}>

@@ -413,10 +413,14 @@ def process_fb_webhook_message(entry: dict):
     page_id = entry.get("id")
     messaging_list = entry.get("messaging", [])
 
-    # Tìm cấu hình Trang Facebook tương ứng
     page_config = FacebookPageConfig.objects.filter(page_id=page_id, is_active=True).first()
     if not page_config:
         logger.warning(f"[Facebook] Không tìm thấy config cho page_id={page_id}")
+        return
+
+    company = page_config.company
+    if not company.active_modules or "facebook" not in company.active_modules:
+        logger.warning(f"[Facebook] Module facebook bị tắt/thu hồi cho công ty {company.id}")
         return
 
     for messaging in messaging_list:

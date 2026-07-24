@@ -102,9 +102,12 @@ class ZaloWebhookView(APIView):
                 logger.warning(f"[Webhook] Chữ ký không hợp lệ từ oa_id={oa_id}")
                 return Response({"error": "Invalid signature"}, status=status.HTTP_403_FORBIDDEN)
 
-        # Xử lý event
         event_name = data.get("event_name", "")
         company = oa_config.company
+        
+        if not company.active_modules or "zalo" not in company.active_modules:
+            logger.warning(f"[Webhook Zalo] Module zalo bị tắt/thu hồi cho công ty {company.id}")
+            return Response({"error": "Module zalo disabled"}, status=status.HTTP_403_FORBIDDEN)
 
         if event_name == "user_send_text":
             self._handle_message(company, oa_config, data)

@@ -1294,7 +1294,7 @@
   "pk": 1,
   "fields": {
     "password": "pbkdf2_sha256$1000000$ECQhi9BHkIsVTlsjgPiIMe$sVQIe5Cfq9ZU7nACy/evbQj0IfRFVVhgCQ1NbKN4NE8=",
-    "last_login": "2026-07-22T15:44:05.306Z",
+    "last_login": "2026-07-24T08:10:03.729Z",
     "is_superuser": true,
     "username": "admin",
     "first_name": "",
@@ -1321,7 +1321,7 @@
   "pk": 2,
   "fields": {
     "password": "pbkdf2_sha256$1000000$gogv5if640Ve4r5k5DvYiY$Co2C/05RkNJOSvpBH4uiONSzdeTJAZ/vJysA2SrgpDY=",
-    "last_login": "2026-07-24T01:56:09.376Z",
+    "last_login": "2026-07-24T05:34:09.132Z",
     "is_superuser": false,
     "username": "giamdoc",
     "first_name": "",
@@ -1554,7 +1554,8 @@
       "approvals",
       "zalo",
       "crm",
-      "notifications"
+      "notifications",
+      "website_integration"
     ],
     "pipeline_status_labels": {
       "new": "Khách mới",
@@ -1569,7 +1570,9 @@
     "custom_quotation_title": "Báo giá sản xuất cửa",
     "custom_order_title": "ĐƠN ĐẶT HÀNG SẢN XUẤT",
     "default_warranty_content": "Thực hiện bảo hành công trình khi sử dụng sản phẩm Cửa Composite Fujitech Group\n\nChính sách bảo hành \n Bộ cửa Composite (khung, cánh, phào, gioăng): Bảo hành 36 tháng. \nPhụ kiện Fujitech Look (khóa, bản lề...): Bảo hành 12 tháng. \nLưu ý: \nThời gian bảo hành được tính bắt đầu từ ngày hàng hóa được giao đến khách hàng căn cứ vào phiếu xuất kho của nhà máy\nThời gian xem xét nguyên nhân và gửi thông báo cách xử lý, khắc phục tới khách hàng từ 3-7 ngày kể từ ngày nhận được yêu cầu bảo hành.\nĐối với những sản phẩm hư hỏng do nguyên nhân từ phía nhà máy sản xuất, khách hàng sẽ được cung cấp/thay thế sản phẩm mới hoặc sửa chữa miễn phí.\nTrường hợp hư hỏng do lỗi sử dụng của khách hàng, Fujitech Door sẽ sửa chữa bảo hành tính phí với mức chi phí hữu nghị.",
-    "default_warranty_rules": "1. Trường hợp được bảo hành \n1) Sản phẩm còn trong thời hạn bảo hành. \n2) Có phiếu bảo hành đầy đủ thông tin (mã sản phẩm, ngày mua, thông tin khách hàng). \n3) Sản phẩm được lắp đặt đúng quy chuẩn ban đầu.\n\n2. Các trường hợp không bảo hành:\n1) Lỗi sản phẩm phát sinh do khách hàng lắp đặt và sử dụng không theo chỉ dẫn. \n2) Sản phẩm sử dụng trong môi trường tiếp xúc nhiều với hóa chất tẩy rửa mạnh hoặc quá trình sử dụng không đúng cách \n3) Chịu ảnh hưởng bởi ánh nắng mặt trời trực tiếp.\n4) Sản phẩm bị hỏng do tác động của lực cơ học, bề mặt cửa bị trầy xước, bong tróc do vật sắc nhọn va quệt.\n5) Sản phẩm bị hư hỏng do thiên tai, hỏa hoạn.\n6) Sản phẩm lắp đặt sai quy cách do không phải trực tiếp Fujitech lắp đặt\n7) Màu sắc sản phẩm thay đổi nhẹ theo thời gian do điều kiện môi trường và quá trình sử dụng tự nhiên.\n8) Nguyên nhân khác mà không phải lỗi của nhà sản xuất.."
+    "default_warranty_rules": "1. Trường hợp được bảo hành \n1) Sản phẩm còn trong thời hạn bảo hành. \n2) Có phiếu bảo hành đầy đủ thông tin (mã sản phẩm, ngày mua, thông tin khách hàng). \n3) Sản phẩm được lắp đặt đúng quy chuẩn ban đầu.\n\n2. Các trường hợp không bảo hành:\n1) Lỗi sản phẩm phát sinh do khách hàng lắp đặt và sử dụng không theo chỉ dẫn. \n2) Sản phẩm sử dụng trong môi trường tiếp xúc nhiều với hóa chất tẩy rửa mạnh hoặc quá trình sử dụng không đúng cách \n3) Chịu ảnh hưởng bởi ánh nắng mặt trời trực tiếp.\n4) Sản phẩm bị hỏng do tác động của lực cơ học, bề mặt cửa bị trầy xước, bong tróc do vật sắc nhọn va quệt.\n5) Sản phẩm bị hư hỏng do thiên tai, hỏa hoạn.\n6) Sản phẩm lắp đặt sai quy cách do không phải trực tiếp Fujitech lắp đặt\n7) Màu sắc sản phẩm thay đổi nhẹ theo thời gian do điều kiện môi trường và quá trình sử dụng tự nhiên.\n8) Nguyên nhân khác mà không phải lỗi của nhà sản xuất..",
+    "website_api_key": "crm_MqWhNI7Za10ofSuaJVKXspwWuosO8iAiKkcJyoZV",
+    "is_website_integration_active": false
   }
 },
 {
@@ -1918,6 +1921,52 @@
   }
 },
 {
+  "model": "crm.customer",
+  "pk": 35,
+  "fields": {
+    "company": 15,
+    "name": "Nguyễn Thuý",
+    "phone": "0932562142",
+    "email": "thuy@gmail.com",
+    "address": "",
+    "city": "",
+    "birthday": null,
+    "source": "Website moclegia.vn",
+    "status": "new",
+    "is_inactive": false,
+    "assigned_to": 3,
+    "created_by": null,
+    "notes": "",
+    "social_lead": null,
+    "created_at": "2026-07-24T07:20:10.561Z",
+    "updated_at": "2026-07-24T08:07:04.445Z",
+    "tags": []
+  }
+},
+{
+  "model": "crm.customer",
+  "pk": 36,
+  "fields": {
+    "company": 15,
+    "name": "Lê Thắm",
+    "phone": "0327562123",
+    "email": "thamtham@gmail.com",
+    "address": "",
+    "city": "",
+    "birthday": null,
+    "source": "Website Form CF7",
+    "status": "new",
+    "is_inactive": false,
+    "assigned_to": 4,
+    "created_by": null,
+    "notes": "",
+    "social_lead": null,
+    "created_at": "2026-07-24T07:55:33.808Z",
+    "updated_at": "2026-07-24T08:07:04.354Z",
+    "tags": []
+  }
+},
+{
   "model": "crm.customercontact",
   "pk": 1,
   "fields": {
@@ -1926,6 +1975,45 @@
     "phone": "0362562123",
     "email": "",
     "position": ""
+  }
+},
+{
+  "model": "crm.customerinteraction",
+  "pk": 5,
+  "fields": {
+    "customer": 27,
+    "created_by": 2,
+    "type": "care",
+    "content": "Khách hàng vừa để lại thông tin trên form Website.\ntest",
+    "result": "",
+    "next_follow_up": null,
+    "created_at": "2026-07-24T07:07:17.512Z"
+  }
+},
+{
+  "model": "crm.customerinteraction",
+  "pk": 6,
+  "fields": {
+    "customer": 35,
+    "created_by": 2,
+    "type": "care",
+    "content": "Nội dung từ Website: Tư vấn cho tôi",
+    "result": "",
+    "next_follow_up": null,
+    "created_at": "2026-07-24T07:20:10.573Z"
+  }
+},
+{
+  "model": "crm.customerinteraction",
+  "pk": 7,
+  "fields": {
+    "customer": 36,
+    "created_by": 2,
+    "type": "care",
+    "content": "Nội dung từ Website: Kiểm tra lại đăng ký",
+    "result": "",
+    "next_follow_up": null,
+    "created_at": "2026-07-24T07:55:33.817Z"
   }
 },
 {
@@ -7825,6 +7913,66 @@
     "link": "/approvals",
     "is_read": true,
     "created_at": "2026-07-24T02:59:10.584Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 385,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": null,
+    "type": "crm_assigned",
+    "title": "Bạn có khách hàng mới được phân công",
+    "message": "Khách hàng Nguyễn Test Webhook Lần 2 (0999888777) đã được phân công cho bạn.",
+    "link": "/customers/32",
+    "is_read": false,
+    "created_at": "2026-07-24T05:54:10.493Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 386,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": null,
+    "type": "crm_assigned",
+    "title": "Bạn có khách hàng mới được phân công",
+    "message": "Khách hàng Nguyễn Test Lần 3 (0912111333) đã được phân công cho bạn.",
+    "link": "/customers/33",
+    "is_read": false,
+    "created_at": "2026-07-24T06:01:29.550Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 387,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "crm_assigned",
+    "title": "Bạn có khách hàng mới được phân công",
+    "message": "Khách hàng Lê Thắm (0327562123) đã được phân công cho bạn.",
+    "link": "/customers/36",
+    "is_read": false,
+    "created_at": "2026-07-24T08:07:04.380Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 388,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": 2,
+    "type": "crm_assigned",
+    "title": "Bạn có khách hàng mới được phân công",
+    "message": "Khách hàng Nguyễn Thuý (0932562142) đã được phân công cho bạn.",
+    "link": "/customers/35",
+    "is_read": false,
+    "created_at": "2026-07-24T08:07:04.478Z"
   }
 },
 {

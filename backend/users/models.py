@@ -369,6 +369,18 @@ class CompanySettings(models.Model):
         default="",
         verbose_name="Quy định bảo hành mặc định",
     )
+    website_api_key = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        verbose_name="Mã API Website (Webhook)",
+        help_text="Token bảo mật để kết nối dữ liệu từ Website về CRM",
+    )
+    is_website_integration_active = models.BooleanField(
+        default=False,
+        verbose_name="Kích hoạt nhận dữ liệu Website",
+        help_text="Nếu tắt, CRM sẽ từ chối mọi yêu cầu gửi dữ liệu khách hàng từ Website",
+    )
 
     class Meta:
 

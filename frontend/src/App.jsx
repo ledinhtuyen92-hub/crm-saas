@@ -42,6 +42,7 @@ import ZaloConfigPage from './pages/settings/ZaloConfigPage'
 import ZaloTemplatePage from './pages/settings/ZaloTemplatePage'
 import FacebookInboxPage from './pages/FacebookInboxPage'
 import FacebookConfigPage from './pages/settings/FacebookConfigPage'
+import WebsiteIntegration from './pages/settings/WebsiteIntegration'
 import Announcements from './pages/Announcements'
 
 function ApplicationLayout({ isDarkMode, toggleTheme }) {
@@ -200,6 +201,15 @@ function App() {
                   </PermissionRoute>
                 </ModuleRoute>
               } />
+
+              <Route
+                path="/settings/website"
+                element={
+                  <CompanyAdminRoute>
+                    <WebsiteIntegration />
+                  </CompanyAdminRoute>
+                }
+              />
 
               <Route
                 path="/settings/general"
