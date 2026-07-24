@@ -302,6 +302,11 @@ class FacebookLead(models.Model):
         blank=True,
         verbose_name="Nội dung tin nhắn cuối (tóm tắt)",
     )
+    ai_summary = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="AI tóm tắt hội thoại",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

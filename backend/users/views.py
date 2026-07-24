@@ -199,6 +199,20 @@ class CompanyViewSet(viewsets.ModelViewSet):
         instance.delete()
 
     @action(detail=True, methods=["post"])
+    def toggle_system_keys(self, request, pk=None):
+        company = self.get_object()
+        from ai_agents.models import CompanyAiSettings
+        settings, _ = CompanyAiSettings.objects.get_or_create(company=company)
+        # Super Admin bật tắt quyền allow_system_keys
+        new_status = request.data.get('allow_system_keys', True)
+        settings.allow_system_keys = new_status
+        # Tự động tắt use_system_keys nếu thu hồi quyền
+        if not new_status:
+            settings.use_system_keys = False
+        settings.save(update_fields=['allow_system_keys', 'use_system_keys'])
+        return Response({'status': 'ok', 'allow_system_keys': settings.allow_system_keys})
+
+    @action(detail=True, methods=["post"])
     def recreate_admin(self, request, pk=None):
         from rest_framework.response import Response
         from rest_framework import status

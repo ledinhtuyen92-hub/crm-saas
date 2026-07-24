@@ -104,8 +104,8 @@ export default function SystemAiKeyManager() {
           <Form.Item name='priority' label='Độ ưu tiên (Số cao chạy trước)'>
             <Input type='number' />
           </Form.Item>
-          <Form.Item name='is_active' valuePropName='checked'>
-            <Switch /> <Text>Kích hoạt</Text>
+          <Form.Item name='is_active' label='Trạng thái (Kích hoạt)' valuePropName='checked'>
+            <Switch />
           </Form.Item>
         </Form>
       </Modal>

@@ -189,6 +189,17 @@ export default function CompanyManagement() {
     }
   }
 
+  // ── AI Quota ─────────────────────────────────────────────────────
+  const handleToggleSystemKeys = async (company, checked) => {
+    try {
+      await api.post(`users/companies/${company.id}/toggle_system_keys/`, { allow_system_keys: checked })
+      messageApi.success('Đã cập nhật quyền Quota dự phòng.')
+      fetchCompanies()
+    } catch {
+      messageApi.error('Lỗi khi cập nhật quyền Quota.')
+    }
+  }
+
   // ── Stats ────────────────────────────────────────────────────────
   const totalCompanies = companies.length
   const activeCompanies = companies.filter((c) => c.is_active).length
@@ -275,6 +286,22 @@ export default function CompanyManagement() {
           ))}
         </Space>
       )
+    },
+    {
+      title: 'AI Quota',
+      dataIndex: 'allow_system_keys',
+      key: 'allow_system_keys',
+      align: 'center',
+      render: (allow_system_keys, record) => (
+        <Tooltip title={allow_system_keys ? "Đã cấp quyền dùng Quota dự phòng hệ thống" : "Chưa cấp quyền"}>
+          <Switch 
+            checkedChildren="Cấp" 
+            unCheckedChildren="Cắt" 
+            checked={allow_system_keys} 
+            onChange={(checked) => handleToggleSystemKeys(record, checked)} 
+          />
+        </Tooltip>
+      ),
     },
     {
       title: 'Trạng thái',

@@ -151,10 +151,19 @@ def smart_extract_address(text: str):
                 starts_with_house_number = bool(re.match(r'^\d{1,4}(?:[\/-]\d{1,4})*\s+[A-Za-zĐđÂâĂăÊêÔôƠơƯưÁáÀàẠạẢảÃã]', sent.strip()))
                 has_comma_or_admin = (',' in sent) or (len(matching_kws) >= 1)
                 
-                if len(matching_kws) >= 2 or (has_strong and len(sent) >= 8) or (starts_with_house_number and has_comma_or_admin and len(sent) >= 8):
+                if len(matching_kws) >= 2 or (has_strong and len(matching_kws) >= 1 and len(sent) >= 8) or (starts_with_house_number and has_comma_or_admin and len(sent) >= 8):
                     clean_addr = re.sub(r'\b(?:0|\+84)[35789]\d{8}\b', '', sent).strip(' .,:-')
                     if len(clean_addr) >= 6 and any(c.isalpha() for c in clean_addr):
-                        if not any(w in sent_low for w in ['ko ak', 'được ko', 'khi nào', 'hay sao vậy', 'muốn mua', 'hết hàng', 'giá bao nhiêu', 'bán cho', 'lít mật ong', 'kg ', 'gram ']):
+                        CHAT_EXCLUSIONS = [
+                            'ko ak', 'được ko', 'khi nào', 'hay sao vậy', 'muốn mua', 'hết hàng',
+                            'giá bao nhiêu', 'bán cho', 'lít mật ong', 'kg ', 'gram ',
+                            # Thêm các câu hỏi phổ biến về sản phẩm hay vận chuyển
+                            'ship đi', 'ship tới', 'giao đi', 'giao tới', 'giao tỉnh', 'ship tỉnh',
+                            'bao nhiêu tiền', 'giá bộ', 'giá sản phẩm', 'giá sp',
+                            'có giao không', 'có ship không', 'freeship', 'free ship',
+                            'bao tiền', 'giá bao', 'tư vấn', 'hỏi thăm', 'cần tư vấn'
+                        ]
+                        if not any(w in sent_low for w in CHAT_EXCLUSIONS):
                             extracted_segments.append(clean_addr)
 
     if extracted_segments:
@@ -419,7 +428,8 @@ def process_fb_webhook_message(entry: dict):
         return
 
     company = page_config.company
-    if not company.active_modules or "facebook" not in company.active_modules:
+    active_modules = company.settings.active_modules if hasattr(company, "settings") else []
+    if not active_modules or "facebook" not in active_modules:
         logger.warning(f"[Facebook] Module facebook bị tắt/thu hồi cho công ty {company.id}")
         return
 
@@ -528,7 +538,9 @@ def extract_and_process_phone_fb(lead, text: str):
     if norm_phone:
         # 1. Nếu Lead ĐÃ được chuyển đổi thành Khách hàng CRM (hoặc ĐÃ gắn customer),
         # tuyệt đối KHÔNG tạo thêm Khách hàng CRM thứ 2 và KHÔNG thay đổi SĐT/Khách hàng hiện tại.
-        if not (lead.is_customer_converted or lead.customer_id) and not (lead.detected_phone and lead.detected_phone != norm_phone):
+        already_converted = lead.is_customer_converted or lead.customer_id
+        phone_changed = lead.detected_phone and lead.detected_phone != norm_phone
+        if not already_converted and not phone_changed:
             if not lead.detected_phone:
                 lead.detected_phone = norm_phone
                 updated = True

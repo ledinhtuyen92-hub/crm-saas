@@ -300,6 +300,8 @@ class CompanySerializer(serializers.ModelSerializer):
         required=False,
         write_only=True,
     )
+    
+    allow_system_keys = serializers.SerializerMethodField()
 
     class Meta:
         model = Company
@@ -326,8 +328,9 @@ class CompanySerializer(serializers.ModelSerializer):
             "admin_fullname",
             "active_modules",
             "set_active_modules",
+            "allow_system_keys",
         ]
-        read_only_fields = ["created_at", "active_modules"]
+        read_only_fields = ["created_at", "active_modules", "allow_system_keys"]
 
     def get_user_count(self, obj):
         return obj.users.count()
@@ -340,6 +343,12 @@ class CompanySerializer(serializers.ModelSerializer):
         if hasattr(obj, 'settings'):
             return obj.settings.active_modules
         return []
+
+    def get_allow_system_keys(self, obj):
+        try:
+            return obj.ai_settings.allow_system_keys
+        except Exception:
+            return False
 
     def validate_admin_username(self, value):
         if value and User.objects.filter(username__iexact=value).exists():

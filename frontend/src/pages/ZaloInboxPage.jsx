@@ -10,7 +10,8 @@ import {
   UserAddOutlined, UserOutlined, WechatOutlined,
   InfoCircleOutlined, TeamOutlined, PaperClipOutlined, SendOutlined,
   PictureOutlined, DeleteOutlined, StarFilled, TagOutlined,
-  ThunderboltOutlined, MailOutlined, PlusOutlined, ClockCircleOutlined
+  ThunderboltOutlined, MailOutlined, PlusOutlined, ClockCircleOutlined,
+  RobotOutlined, StopOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -673,8 +674,8 @@ export default function ZaloInboxPage() {
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           {currentOa && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 16, background: currentOa.is_ai_active ? '#dcfce7' : '#fee2e2', padding: '4px 12px', borderRadius: 20, border: `1px solid ${currentOa.is_ai_active ? '#bbf7d0' : '#fecaca'}` }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: currentOa.is_ai_active ? '#16a34a' : '#ef4444' }}>
-                {currentOa.is_ai_active ? '🤖 AI Đang Bật' : '🛑 AI Đang Tắt'}
+              <span style={{ fontSize: 12, fontWeight: 700, color: currentOa.is_ai_active ? '#16a34a' : '#ef4444', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {currentOa.is_ai_active ? <><RobotOutlined /> AI Đang Bật</> : <><StopOutlined /> AI Đang Tắt</>}
               </span>
               <Switch
                 size="small"
@@ -1034,9 +1035,11 @@ export default function ZaloInboxPage() {
                 </div>
 
                 <Space>
-                  <div style={{ marginRight: 12, display: 'flex', alignItems: 'center', gap: 6, background: selectedLead.is_ai_active ? '#f6ffed' : '#fff1f0', padding: '4px 12px', borderRadius: 20, border: `1px solid ${selectedLead.is_ai_active ? '#b7eb8f' : '#ffa39e'}` }}>
-                    <Switch size="small" checked={selectedLead.is_ai_active} onChange={handleToggleAi} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: selectedLead.is_ai_active ? '#389e0d' : '#cf1322' }}>{selectedLead.is_ai_active ? '🤖 AI Đang Trực' : '🧑‍💻 Sale Tiếp Quản'}</span>
+                  <div style={{ marginRight: 12, display: 'flex', alignItems: 'center', gap: 6, background: (currentOa?.is_ai_active && selectedLead.is_ai_active) ? '#f6ffed' : '#fff1f0', padding: '4px 12px', borderRadius: 20, border: `1px solid ${(currentOa?.is_ai_active && selectedLead.is_ai_active) ? '#b7eb8f' : '#ffa39e'}` }}>
+                    <Switch size="small" disabled={!currentOa?.is_ai_active} checked={currentOa?.is_ai_active && selectedLead.is_ai_active} onChange={handleToggleAi} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: (currentOa?.is_ai_active && selectedLead.is_ai_active) ? '#389e0d' : '#cf1322', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {(currentOa?.is_ai_active && selectedLead.is_ai_active) ? <><RobotOutlined /> AI Đang Trực</> : <><UserOutlined /> Sale Tiếp Quản</>}
+                    </span>
                   </div>
                   <Tooltip title="Quét lại liên hệ cho hội thoại này">
                     <Button
@@ -1268,6 +1271,15 @@ export default function ZaloInboxPage() {
                         <div style={{ paddingTop: 6 }}>
                           <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>ZALO OA CỦA CÔNG TY</Text></div>
                           <div style={{ fontSize: 13, marginBottom: 12 }}>🏢 {selectedLeadDetail.oa_name || 'Zalo OA'}</div>
+                          
+                          {selectedLeadDetail.ai_summary && (
+                            <div style={{ marginBottom: 16, background: '#f6ffed', border: '1px solid #b7eb8f', padding: '8px 12px', borderRadius: 8 }}>
+                              <div style={{ marginBottom: 4 }}><Text strong style={{ fontSize: 12, color: '#389e0d' }}>✨ AI Tóm tắt Hội thoại</Text></div>
+                              <div style={{ fontSize: 13, color: '#595959', whiteSpace: 'pre-wrap' }}>
+                                {selectedLeadDetail.ai_summary}
+                              </div>
+                            </div>
+                          )}
                           {selectedLeadDetail.detected_phone && (
                             <>
                               <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>SỐ ĐIỆN THOẠI</Text></div>

@@ -34,7 +34,7 @@ class WebsiteIntegrationWebhookView(APIView):
             
         company = settings.company
         
-        if not company.active_modules or "website_integration" not in company.active_modules:
+        if not settings.active_modules or "website_integration" not in settings.active_modules:
             return Response({"error": "Gói phần mềm của công ty không bao gồm (hoặc đã bị thu hồi) module Tích hợp Website.", "code": "module_disabled"}, status=status.HTTP_403_FORBIDDEN)
             
         # 2. Xử lý dữ liệu

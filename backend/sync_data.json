@@ -1294,7 +1294,7 @@
   "pk": 1,
   "fields": {
     "password": "pbkdf2_sha256$1000000$ECQhi9BHkIsVTlsjgPiIMe$sVQIe5Cfq9ZU7nACy/evbQj0IfRFVVhgCQ1NbKN4NE8=",
-    "last_login": "2026-07-24T11:01:47.060Z",
+    "last_login": "2026-07-24T17:27:09.828Z",
     "is_superuser": true,
     "username": "admin",
     "first_name": "",
@@ -1321,7 +1321,7 @@
   "pk": 2,
   "fields": {
     "password": "pbkdf2_sha256$1000000$gogv5if640Ve4r5k5DvYiY$Co2C/05RkNJOSvpBH4uiONSzdeTJAZ/vJysA2SrgpDY=",
-    "last_login": "2026-07-24T05:34:09.132Z",
+    "last_login": "2026-07-24T17:25:36.906Z",
     "is_superuser": false,
     "username": "giamdoc",
     "first_name": "",
@@ -3309,6 +3309,51 @@
     "link": "/customers/26",
     "is_read": true,
     "created_at": "2026-07-14T01:34:48.032Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 3,
+  "fields": {
+    "company": 15,
+    "recipient": 6,
+    "sender": null,
+    "type": "crm_assigned",
+    "title": "Bạn có khách hàng mới được phân công",
+    "message": "Khách hàng Lê Đình Khánh (0988565232) đã được phân công cho bạn.",
+    "link": "/customers/29",
+    "is_read": false,
+    "created_at": "2026-07-24T17:24:23.896Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 4,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": null,
+    "type": "crm_assigned",
+    "title": "Bạn có khách hàng mới được phân công",
+    "message": "Khách hàng Nguyễn Thuý (0932562142) đã được phân công cho bạn.",
+    "link": "/customers/35",
+    "is_read": false,
+    "created_at": "2026-07-24T17:24:23.909Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 5,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": null,
+    "type": "crm_assigned",
+    "title": "Bạn có khách hàng mới được phân công",
+    "message": "Khách hàng Lê Thắm (0327562123) đã được phân công cho bạn.",
+    "link": "/customers/36",
+    "is_read": false,
+    "created_at": "2026-07-24T17:24:23.922Z"
   }
 },
 {
@@ -8734,6 +8779,7 @@
     "display_name": "",
     "avatar_url": null,
     "last_message": "0967234517",
+    "ai_summary": null,
     "last_interaction_date": "2026-07-16T07:10:53.665Z",
     "status": "chatting",
     "has_unread_message": false,
@@ -9209,7 +9255,7 @@
     "fb_user_avatar": "https://platform-lookaside.fbsbx.com/platform/profilepic/?eai=Aa2ghfaQMXfE7c_AbF4kwuIk_yzEW7jbD6O9a4jJXqZaa-MFu2IZdNH2ASo5_OI43df3oFK4GaZPmQ&psid=4748159361949508&width=1024&ext=1786713461&hash=Aft0lWbyedbKCPVfsN5AJEP1",
     "detected_phone": "0985880201",
     "detected_email": "ledinhtuyen92@gmail.com",
-    "detected_address": "220 định công, hà nội",
+    "detected_address": null,
     "is_customer_converted": false,
     "customer": null,
     "assigned_to": null,
@@ -9218,10 +9264,11 @@
     "has_unread_message": false,
     "unread_count": 0,
     "is_archived": false,
-    "last_message_at": "2026-07-24T11:25:22.199Z",
-    "last_message_preview": "chào",
+    "last_message_at": "2026-07-24T17:28:20.382Z",
+    "last_message_preview": "cứ nhắn tin qua đây đi em",
+    "ai_summary": null,
     "created_at": "2026-07-15T13:17:34.787Z",
-    "updated_at": "2026-07-23T16:38:32.845Z",
+    "updated_at": "2026-07-24T17:28:22.176Z",
     "tags": []
   }
 },
@@ -9247,8 +9294,9 @@
     "is_archived": false,
     "last_message_at": "2026-04-03T08:39:26Z",
     "last_message_preview": "Bạn đã gửi một ảnh.",
+    "ai_summary": null,
     "created_at": "2026-07-15T13:17:37.756Z",
-    "updated_at": "2026-07-23T16:36:16.129Z",
+    "updated_at": "2026-07-24T17:27:48.910Z",
     "tags": []
   }
 },
@@ -9274,8 +9322,9 @@
     "is_archived": false,
     "last_message_at": "2026-03-02T11:33:57Z",
     "last_message_preview": "󰀀",
+    "ai_summary": null,
     "created_at": "2026-07-15T13:17:41.269Z",
-    "updated_at": "2026-07-23T16:36:18.275Z",
+    "updated_at": "2026-07-24T17:27:52.228Z",
     "tags": []
   }
 },
@@ -9301,8 +9350,9 @@
     "is_archived": false,
     "last_message_at": "2022-04-02T13:24:45Z",
     "last_message_preview": "Mật nhà e cam kết nguyên chất k pha và mới quay ạ, c yên tâm nha",
+    "ai_summary": null,
     "created_at": "2026-07-15T13:17:46.619Z",
-    "updated_at": "2026-07-23T16:36:23.645Z",
+    "updated_at": "2026-07-24T17:27:57.823Z",
     "tags": []
   }
 },
@@ -9328,8 +9378,9 @@
     "is_archived": false,
     "last_message_at": "2023-03-06T04:50:14Z",
     "last_message_preview": "chị để giảm ho thì e nghĩ chị nên ngâm tỏi+gừng+mật ong sẽ hiệu quả hơn đấy ạ",
+    "ai_summary": null,
     "created_at": "2026-07-23T16:36:19.207Z",
-    "updated_at": "2026-07-23T16:36:21.703Z",
+    "updated_at": "2026-07-24T17:27:54.120Z",
     "tags": []
   }
 },
@@ -9355,8 +9406,9 @@
     "is_archived": false,
     "last_message_at": "2022-12-30T05:49:11Z",
     "last_message_preview": "C ở đâu ạ",
+    "ai_summary": null,
     "created_at": "2026-07-23T16:36:21.733Z",
-    "updated_at": "2026-07-23T16:36:22.217Z",
+    "updated_at": "2026-07-24T17:27:56.328Z",
     "tags": []
   }
 },
@@ -11883,6 +11935,682 @@
   }
 },
 {
+  "model": "facebook_integration.facebookmessage",
+  "pk": 663,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_qD15G3mOlGMne-q8rc5mWz5XArWXuhqgvcgPG60c2Ry6w07eLybO8RZV1kwQi9sshp0Pv5MB1NjnvQpTjIAlSg",
+    "sender_type": "customer",
+    "text": "tets",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T17:26:26.901Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 664,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": null,
+    "sender_type": "page",
+    "text": "Hệ thống AI chưa được cấu hình API Key.",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T17:26:33.647Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 665,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_yyqxeysQGpPO2xAkfKZK2T5XArWXuhqgvcgPG60c2Rz7IHCIT1vfJ0tbIdlvsUtWVDt8cEaBMU3Vg1563Y9LKA",
+    "sender_type": "customer",
+    "text": "xin chào",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T11:25:49Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 666,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_0MUMVOzGF2tUbO288f8LvD5XArWXuhqgvcgPG60c2Ryi5-OLFaNAzmrggwu1gixlYVKQvJmhI1fz4ynVXPDoTQ",
+    "sender_type": "customer",
+    "text": "",
+    "attachment_url": "https://scontent.fhan17-1.fna.fbcdn.net/v/t39.1997-6/39178562_1505197616293642_5411344281094848512_n.png?_nc_cat=1&ccb=1-7&_nc_sid=ef9b6e&_nc_eui2=AeEnjo3BGttoUiB7EGgFciWBTGXlyML-tShMZeXIwv61KFTAKnqIeLA6fiv8R_1uPio4axrO6p5DYg12dZlqvG3P&_nc_ohc=nWciIfMYk8sQ7kNvwF8WrdW&_nc_oc=AdrstfjoQ27p_0jcPYjMlg-iyt7K8oAB3ygKJci4z_lIVhicNrrd_UF8I0lQX2k4wyw&_nc_zt=26&_nc_ht=scontent.fhan17-1.fna&edm=AKu_40MEAAAA&_nc_gid=BnoBN--nfqIP3eqautWJQg&_nc_tpa=Q5bMBQE5XrNBs7BfqXkGrWu5gwSc9n1bgoDXud7JaEcSly9KOdYrzT3LMCKu2_lfh7w8kIMv19ksW8M38g&oh=00_AQCs42O5vJilrzejJgpCzp6LKSsNNCcvCIk3Y8IOz26i9w&oe=6A6967CB",
+    "attachment_type": "image",
+    "created_at": "2026-07-24T11:29:55Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 667,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_dEdqx8YTatOTU0KCyqh41z5XArWXuhqgvcgPG60c2RxeQbaICPOttcx4KuS9VR5YyRDxuyNF-NH49eeBwe-Gqw",
+    "sender_type": "customer",
+    "text": "chào",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T11:30:03Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 668,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_2qw3AjlORVavC-goE9tkAz5XArWXuhqgvcgPG60c2Ry0uIpgvCSToziadG65f8RllLa0qP1A3GZDdieZ-xCmxA",
+    "sender_type": "customer",
+    "text": "hi",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T11:44:38Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 669,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_OYX5hRyP0Ors6LB6Y5BXPz5XArWXuhqgvcgPG60c2RwQOKWOy_zYOSx7auavxvlvXI0pjY-n67jhTcocqaGDhQ",
+    "sender_type": "page",
+    "text": "2",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T12:57:46Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 670,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_4lZAfZljB3KvHoR7PRSLtD5XArWXuhqgvcgPG60c2RwBRWzJif-mTwUhnYlgvbbwUapxtCRwGxmEjamaKdthbQ",
+    "sender_type": "customer",
+    "text": "test",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T12:57:58Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 671,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_8C7xLLL-Bp4Jvf1AlW8M1T5XArWXuhqgvcgPG60c2RzMf_BbGtyCrGzVBoTcAUND7ll7LmiZfTqyJYVdWRg28w",
+    "sender_type": "customer",
+    "text": "2",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T13:13:13Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 672,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_VdIq5tc05Vt1movlTK79Uz5XArWXuhqgvcgPG60c2RwqN0_xZGZepOvWNrqWjVjTaKuxkYG1P-g54mD5-DHxZQ",
+    "sender_type": "customer",
+    "text": "tư vấn cho anh",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T13:22:36Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 673,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_rmpYt9tf9Qu-5OxDesQW2T5XArWXuhqgvcgPG60c2RzqRDNBI5JOfj_mVA_aD6GXRHv6AmYfTQp9stXvhzfZdQ",
+    "sender_type": "page",
+    "text": "dạ",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T13:24:04Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 674,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_NSPyn9zBNDSMNxDrGvyloT5XArWXuhqgvcgPG60c2RxUUXB4DoC8CznycgwmieELApghWudJuBtqOGd3CpSkYg",
+    "sender_type": "customer",
+    "text": "test",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T13:39:47Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 675,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_JLw99DwJzmSpCFCul3BD5j5XArWXuhqgvcgPG60c2Rw1W23VwIcMlq-A0W12I9qUTr-Pj0TFCt4eL9mTgFDQrA",
+    "sender_type": "page",
+    "text": "Xin lỗi, hệ thống AI đang quá tải.",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T13:39:54Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 676,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_ShqwqSoB9vvMlc1iX-aSXj5XArWXuhqgvcgPG60c2RyJPS9wBePfCxcQCO09t9tPE1xka1oNe-qB4ayDFB6JDQ",
+    "sender_type": "customer",
+    "text": "sao lại quá tải",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T13:40:02Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 677,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_jlSouCP10jn53lHkxdggIT5XArWXuhqgvcgPG60c2RwiXi0oJuWyFO6GW42nlJVMoFeCxklGiR5RX16CjK0HpQ",
+    "sender_type": "page",
+    "text": "Xin lỗi, hệ thống AI đang quá tải.",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T13:40:07Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 678,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_8CvNW6Et2juQoQ-BulcRhz5XArWXuhqgvcgPG60c2RzZGz-Pt1-6X3xwttMa5nuZQZUSQZ-ACHw0m-zX2X8DIQ",
+    "sender_type": "customer",
+    "text": "xin chào",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T13:50:50Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 679,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_lMt2h_Yc-K9VeRmeMe6d7T5XArWXuhqgvcgPG60c2Rx-DjdpYxZpPVNvLXZYBRS_Z8TDf9EVf0tSaVZNHbkqEA",
+    "sender_type": "page",
+    "text": "Xin lỗi, hệ thống AI đang quá tải.",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T13:50:55Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 680,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_jQlnU88iOP7uH4ekVOr98D5XArWXuhqgvcgPG60c2RwdAdWZno1gQKfbrAzY_a2GNcoS-niYfU3t07eGqQE9Uw",
+    "sender_type": "customer",
+    "text": "chào",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T13:54:31Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 681,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_eDnwGInwWrdGRSET3G3OuD5XArWXuhqgvcgPG60c2RxoxdY4qGl_w_8_NfN3qf2DKur_6jPe_z5D2RKwuMl0mQ",
+    "sender_type": "page",
+    "text": "Hệ thống AI chưa được cấu hình API Key.",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T13:54:34Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 682,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_SQqh9b9T7kDieZeU64w6CT5XArWXuhqgvcgPG60c2RzXKOvIvxxwvYbhXG0YXPwmJR-nGRSFFyWYWMlng8tgbQ",
+    "sender_type": "customer",
+    "text": "tư vấn",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:05:38Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 683,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_UX_x6Aa6lf8gmfiibNcquj5XArWXuhqgvcgPG60c2Ry07FBQLPctvOrVhRDOHLVZi0hsdz8iD70mO-78HdWeDA",
+    "sender_type": "page",
+    "text": "Xin lỗi, hệ thống AI đang quá tải.",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:05:44Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 684,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_PzXAZH0FC4ctvsR6sqS1RT5XArWXuhqgvcgPG60c2RysLJOYIBiuEwK3r-igTgVru9MVQwt6d1QpFyKw0IEoGg",
+    "sender_type": "customer",
+    "text": "tư vấn",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:14:32Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 685,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_5xgZHUByWAyibSesRUHitj5XArWXuhqgvcgPG60c2Rx7ps9qa694tfY-z_JdwXipzwZt3XByBDADjjvjUBcaVw",
+    "sender_type": "page",
+    "text": "Xin lỗi, hệ thống AI đang quá tải.",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:14:38Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 686,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_YU4k5PQITKxskgN8JM-zaD5XArWXuhqgvcgPG60c2Rz-QoTmnP7ASfcp96ESPTDkZ12Xrp7dLx-JUgCa3ZT1WQ",
+    "sender_type": "customer",
+    "text": "2",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:16:35Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 687,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_zXdBAfcQIv8KV13jfQAluj5XArWXuhqgvcgPG60c2RwEiLdaGs1JjxplalRlmHZWTUMnHPz-UWk9VlNHGEvOeg",
+    "sender_type": "page",
+    "text": "Xin lỗi, hệ thống AI đang quá tải.",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:16:38Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 688,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_Wkik_TUDHKNyHVCOF1iSOj5XArWXuhqgvcgPG60c2RwlM90S-YCSCL679PrBDqcOpMAjRDP8sMSFeYF-jPqNjQ",
+    "sender_type": "customer",
+    "text": "tư vấn",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:24:08Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 689,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_eKXK1OPFWkM8yY2tQhdBej5XArWXuhqgvcgPG60c2RxBThh7rLkoBlXHFdI0hmbUhATasGIsNU7mA6k6pPfygQ",
+    "sender_type": "page",
+    "text": "Dạ em chào anh Tuyền ạ! Em rất vui được hỗ trợ anh tìm hiểu về các mẫu cửa nhựa Composite cao cấp bên em. 🚪 Anh cho em xin số điện thoại (có Zalo) để em gửi catalog mẫu và báo giá chi tiết cho mình nhé ạ! ❤️",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:24:21Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 690,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_ztcHuQrjm7sr6zD51wcw7T5XArWXuhqgvcgPG60c2RxuvCncJYKVGGAxmn78FIqD_IYC_tIoJSLVOAIrMLBkxg",
+    "sender_type": "customer",
+    "text": "kích thước cửa thường là bao nhiêu",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:24:44Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 691,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_FvF6MEi3HWGhRIrM1jBs8z5XArWXuhqgvcgPG60c2RwsP6vwOnmBEG7e_Bmgf-ZzJbsZQ6PEk1zGaHkv7VJKLQ",
+    "sender_type": "page",
+    "text": "Dạ, kích thước thông dụng thường là 900x2200mm (cửa phòng) và 800x2100mm (cửa WC) ạ. Bên em cũng sản xuất chuẩn theo kích thước thực tế công trình của anh Tuyền nữa. Anh cho em xin SĐT (có Zalo) để em gửi bảng thông số chi tiết cho mình nhé! 📐",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:24:58Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 692,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_SB3gm5RQ89vcKzGZTrs3Sj5XArWXuhqgvcgPG60c2RzlpFbm9BQBILOoiao35UpYe6fa33secXnq07CjqutJ9A",
+    "sender_type": "customer",
+    "text": "giá một bộ là bao nhiêu, có ship đi tỉnh không",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:26:02Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 693,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_p8wH9mJcli9DOyNybnErCD5XArWXuhqgvcgPG60c2RwSHWq93Scl-0npAB2QdiOkWmiq0Btla_bkbScXBLrebg",
+    "sender_type": "page",
+    "text": "Dạ bên em có vận chuyển và lắp đặt toàn quốc luôn ạ! Giá một bộ phụ thuộc vào mẫu mã và phụ kiện anh chọn. Anh Tuyền cho em xin SĐT (có Zalo) để em gửi báo giá trọn gói chi tiết nhất cho mình nhé! 🚚",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:26:09Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 694,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_GeDuyn9_6SaiBWX0l3oYuz5XArWXuhqgvcgPG60c2RzcLaOM-083eD7ty26KsjLTTSRM6HyDmj38XWyV11IfKQ",
+    "sender_type": "customer",
+    "text": "096988567",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:26:36Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 695,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_d01TDY5oHMU_mXhNgSvd7j5XArWXuhqgvcgPG60c2RxJr3LZ1Ug-XggmPyuVBj4fmzKjHpr5P9-Vu9iNbygWcw",
+    "sender_type": "page",
+    "text": "Dạ em cảm ơn anh Tuyền đã để lại thông tin. Chuyên viên bên em sẽ liên hệ lại hỗ trợ anh ngay nhé ạ! ❤️",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:26:41Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 696,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_gz3VX-MbE7r7VydXgnxp5z5XArWXuhqgvcgPG60c2RzMw3ksXpyXwL5zE5mF6GQu1tybqdYZNMt_3qSiIFQSTA",
+    "sender_type": "page",
+    "text": "số sai, a cho em lại số nhé",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:30:37Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 697,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_KdG381hX_X6Y0q5Wuvb-ID5XArWXuhqgvcgPG60c2Rw42vd266o1-Qr0pA-92ncIYV_xGdJV-yINQcajlfzVsA",
+    "sender_type": "customer",
+    "text": "0989198260",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:30:58Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 698,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_8LYtRMykFr_tWISWPnTNJD5XArWXuhqgvcgPG60c2RwJTvTUH_NSoByXzZRd0hW2MugS5ywTK55qSPqcuArgFg",
+    "sender_type": "page",
+    "text": "Dạ em cảm ơn anh Tuyền đã để lại thông tin. Chuyên viên bên em sẽ liên hệ lại hỗ trợ anh ngay nhé ạ! ❤️",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T15:31:05Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 699,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_7UFRGMvBVIMolt32pb2YIz5XArWXuhqgvcgPG60c2RxI-sWBuceXuFSHoYDneH7HrUoRxTif-wzGI-lccPdbEA",
+    "sender_type": "customer",
+    "text": "2",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T16:09:32Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 700,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_bSS5FiRZvLrfXrOpFs5e1T5XArWXuhqgvcgPG60c2Rxiw7_RcrrG6OZgDsybRK2mdKoLWm68QYNXFPDGnB4RLg",
+    "sender_type": "page",
+    "text": "Xin lỗi, hệ thống AI đang quá tải.",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T16:09:35Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 701,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_oEyew9XPDYJQmgyOtegyLT5XArWXuhqgvcgPG60c2RxU0TgZMB3Nf8-7v84b3xMtZo5vHCPQo5lx5Xd19xcqSA",
+    "sender_type": "customer",
+    "text": "cần hỗ trợ",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T16:20:14Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 702,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_EzanxfHPwhDTbItmlFqrST5XArWXuhqgvcgPG60c2Rzqc7yZn7wRBZMK9QgTYUevucH45w9LfPN_wfUgFmF0Vg",
+    "sender_type": "page",
+    "text": "Dạ em đây ạ! Anh Tuyền cần em hỗ trợ thêm thông tin về mẫu mã hay kích thước cửa không để em ghi chú lại cho chuyên viên tư vấn kỹ nhất cho mình nhé? 😊",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T16:20:27Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 703,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_VY6Zl9R_4cjdQte0Y6PmyD5XArWXuhqgvcgPG60c2RwxtyK-Qaz1Bx0C6Ss5_R3DAr2sQi7Sux2NGVE-jDNNCw",
+    "sender_type": "customer",
+    "text": "cửa giá bao tiền em",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T16:20:48Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 704,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_v1MsZ9N3ue-WLQww8TjD8D5XArWXuhqgvcgPG60c2RzFvizAW913UEWLvw3tHW7N8fHtvyHoWLUGq96aRQQycA",
+    "sender_type": "page",
+    "text": "Dạ giá cửa nhựa Composite sẽ tùy thuộc vào mẫu mã và kích thước anh chọn ạ. Em sẽ báo chuyên viên gửi bảng giá chi tiết qua Zalo cho anh Tuyền tham khảo ngay nhé! 😊",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T16:20:53Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 705,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_AstrkjJEPIwtxlHwWJHchz5XArWXuhqgvcgPG60c2RxAPSh0Z2gt-wucsGXAgyd25QVDN_AQWll5RKgQA8y-xA",
+    "sender_type": "customer",
+    "text": "kiểm tra kho cho anh còn bn bộ",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T16:30:45Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 706,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_wmhch6RMHK4kskkR_Woflz5XArWXuhqgvcgPG60c2RwYB4Pyw5TIR7r-B5LOSZwUPoF_56ceCtcLtAd8yGF7rw",
+    "sender_type": "page",
+    "text": "Dạ để em nhờ bộ phận kho kiểm tra số lượng thực tế rồi báo lại chính xác cho anh Tuyền qua Zalo ngay nhé ạ. Anh đợi em một chút nhé! 😊",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T16:31:05Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 707,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_O5tj05vsu3lGT9_wvSPG6j5XArWXuhqgvcgPG60c2RwfRWg6KahSrY7ynPj010c9uwHE4WyVLfGLv_5MP6WgGA",
+    "sender_type": "customer",
+    "text": "không thấy báo gì nhỉ",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T16:31:24Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 708,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_5iFNmWwrrjFixgb7SApPXD5XArWXuhqgvcgPG60c2RyRvB1wlKNeIoeMy2p23rlQx6cXgD7eqNC4PRWZeKFGfQ",
+    "sender_type": "page",
+    "text": "Dạ em thành thật xin lỗi anh Tuyền vì sự chậm trễ này ạ. Em đang hối thúc bộ phận chuyên môn kiểm tra gấp và sẽ phản hồi lại anh ngay lập tức đây ạ! 🙏",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T16:31:49Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 709,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_6DddqQfvc1ctdeYoqY4ecT5XArWXuhqgvcgPG60c2Rx9ajZ3HpsCJbvotp1OfHZkq6p7ZLKdjtSE0d-DwCivvA",
+    "sender_type": "customer",
+    "text": "anh xin báo giá kho",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T17:12:42Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 710,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_kbbW4HlbRMLASqONt6zrqz5XArWXuhqgvcgPG60c2RysWaeLg_BGrPM1Lbs_x0G-6xt6BKikyg0PO9XyeD_c0Q",
+    "sender_type": "page",
+    "text": "Dạ em xin lỗi anh Tuyền nhiều ạ! Để em báo bộ phận Sale gửi bảng giá kho chi tiết qua Zalo cho anh ngay, anh cho em xin số điện thoại (có Zalo) của mình với nhé ạ? 🙏",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T17:12:54Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 711,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_3udYJCGsw2hIpvRvrZVMBT5XArWXuhqgvcgPG60c2RwRxI4S7YUAQDTSmob6zmfK0lpWcdL1nJDk0lugpLyy8g",
+    "sender_type": "customer",
+    "text": "cứ nhắn qua đây đi em",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T17:23:09Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 712,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_qUhSgzI_6vHHewePxKAoKD5XArWXuhqgvcgPG60c2RzPTte-VuqLx-GZNb_KDVQIJuTxsOVM5sUv3hBmnD3uaA",
+    "sender_type": "page",
+    "text": "Hệ thống AI chưa được cấu hình API Key.",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T17:26:37Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 713,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": "m_-DKw4F0b68koLldQw4Azsj5XArWXuhqgvcgPG60c2Ry6UjoXrjcg9Uvdee0_zXS9LBihiMKciR1jpe0oS0HXKg",
+    "sender_type": "customer",
+    "text": "cứ nhắn tin qua đây đi em",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T17:28:20.388Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 714,
+  "fields": {
+    "lead": 9,
+    "fb_message_id": null,
+    "sender_type": "page",
+    "text": "Xin lỗi, hệ thống AI đang quá tải.",
+    "attachment_url": null,
+    "attachment_type": "",
+    "created_at": "2026-07-24T17:28:24.589Z"
+  }
+},
+{
   "model": "facebook_integration.quickmediaasset",
   "pk": 1,
   "fields": {
@@ -11945,21 +12673,35 @@
   }
 },
 {
+  "model": "ai_agents.companyaisettings",
+  "pk": 1,
+  "fields": {
+    "company": 15,
+    "allow_system_keys": true,
+    "use_system_keys": true,
+    "created_at": "2026-07-24T17:26:46.558Z",
+    "updated_at": "2026-07-24T17:28:47.258Z"
+  }
+},
+{
   "model": "ai_agents.aiagent",
   "pk": 1,
   "fields": {
     "company": 15,
     "name": "CSKH Facebook & Zalo - Miu Miu",
+    "provider": "openai",
     "model_name": "gpt-4o-mini",
     "system_prompt": "Bạn là một chuyên viên Chăm sóc khách hàng (CSKH) và Tư vấn viên xuất sắc của công ty chúng tôi (công ty chuyên về cửa nhựa Composite), hoạt động trên nền tảng nhắn tin Zalo và Facebook Messenger. \n\nMỤC TIÊU CỐT LÕI:\n1. Hỗ trợ khách hàng nhiệt tình, chuyên nghiệp và giải đáp các thắc mắc một cách nhanh chóng.\n2. Khéo léo thu thập thông tin liên hệ (Số điện thoại, Email) để chuyển cho đội ngũ Sale hỗ trợ chuyên sâu nếu khách hàng có nhu cầu tư vấn báo giá/mua hàng.\n\nVĂN PHONG VÀ THÁI ĐỘ:\n- Xưng hô là \"em\" và gọi khách hàng là \"anh/chị\" hoặc \"Quý khách\" (nếu chưa rõ giới tính).\n- Giọng điệu thân thiện, ấm áp, thấu hiểu và lịch sự. \n- Sử dụng emoji một cách tinh tế, vừa phải (1-2 emoji mỗi tin nhắn) để câu chuyện tự nhiên, không bị cứng nhắc.\n- TRẢ LỜI NGẮN GỌN: Vì đây là nền tảng chat, tuyệt đối không trả lời dài dòng kiểu viết văn hay gạch đầu dòng lê thê. Mỗi tin nhắn tối đa 2-3 câu ngắn. Cắt trọng tâm vào vấn đề khách hỏi.\n\nNGUYÊN TẮC HOẠT ĐỘNG (BẮT BUỘC TUÂN THỦ):\n- KHÔNG BAO GIỜ bịa đặt giá cả, thông số sản phẩm hoặc chính sách nếu bạn không chắc chắn. Hãy nói: \"Dạ phần chi tiết này để em nhờ bộ phận chuyên môn kiểm tra và báo lại chính xác cho anh/chị nhé ạ.\"\n- Nếu khách hàng tỏ ra khó chịu, tức giận, hoặc phàn nàn về dịch vụ: Hãy xoa dịu, xin lỗi chân thành và báo rằng bạn sẽ chuyển thông tin ngay cho Quản lý / Bộ phận xử lý khiếu nại (Hệ thống sẽ tự động bắt cảm xúc 'angry' và ngắt AI, bạn chỉ cần nói lời xoa dịu cuối cùng).\n- Khi khách hàng chủ động cho Số điện thoại: Hệ thống đã tự động lưu thông tin này vào CRM rồi. Bạn KHÔNG cần xác nhận lại số, chỉ cần nói: \"Dạ em cảm ơn anh/chị đã để lại thông tin. Chuyên viên bên em sẽ liên hệ lại hỗ trợ anh/chị ngay nhé ạ! ❤️\".\n- Tuyệt đối KHÔNG trả lời các câu hỏi không liên quan đến sản phẩm, dịch vụ hoặc lĩnh vực kinh doanh của công ty. Nếu khách hỏi ngoài lề, hãy từ chối khéo léo và đưa cuộc hội thoại quay về sản phẩm của công ty.\n\nQUY TRÌNH CHỐT THÔNG TIN:\n- Nếu khách hàng có biểu hiện quan tâm và muốn tư vấn sâu/nhận báo giá, hãy chủ động và khéo léo xin số điện thoại: \"Dạ để em tư vấn kỹ hơn và gửi báo giá chi tiết, anh/chị cho em xin số điện thoại (có Zalo) để em tiện hỗ trợ nhé ạ?\".",
+    "core_prompt_template": "{\n    \"thought\": \"Phân tích tâm lý khách hàng và lên chiến thuật trả lời (Suy nghĩ nháp trước khi chat)\",\n    \"reply\": \"Câu trả lời gửi khách. Nếu KHÔNG BIẾT/không chắc chắn, xin phép đợi nhân viên kiểm tra.\",\n    \"sentiment\": \"angry / handoff / neutral (BẮT BUỘC chọn 'handoff' nếu bạn không biết, thiếu dữ liệu, phải nhờ người khác kiểm tra, báo khách đợi, hoặc khách đòi gặp Sale. Chọn 'angry' nếu khách chửi bậy/đe dọa. Còn lại chọn 'neutral')\",\n    \"extracted_info\": {\n        \"phone\": \"Trích xuất SĐT nếu có (nếu không có thì để rỗng)\",\n        \"address\": \"Trích xuất địa chỉ nếu có (nếu không có thì để rỗng)\",\n        \"notes\": \"Ghi chú (size, màu sắc...)\"\n    },\n    \"tags\": [\"Hỏi giá\", \"Khách VIP\", \"Đã chốt\"...],\n    \"summary\": \"Tóm tắt ngắn gọn lịch sử chat\"\n}",
     "temperature": 0.7,
     "enable_human_typing": true,
     "enable_auto_summary": true,
     "enable_auto_tagging": true,
     "enable_drip_followup": true,
+    "drip_followup_hours": 24,
     "is_active": true,
     "created_at": "2026-07-24T10:53:03.553Z",
-    "updated_at": "2026-07-24T11:19:31.659Z"
+    "updated_at": "2026-07-24T17:36:04.035Z"
   }
 }
 ]

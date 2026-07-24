@@ -236,6 +236,11 @@ class SocialLead(models.Model):
         verbose_name="Tin nhắn cuối",
         help_text="Preview tin nhắn cuối cùng từ khách.",
     )
+    ai_summary = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="AI tóm tắt hội thoại",
+    )
     last_interaction_date = models.DateTimeField(
         default=timezone.now,
         verbose_name="Lần tương tác cuối",

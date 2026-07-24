@@ -25,6 +25,8 @@ import {
   UserOutlined,
   UserSwitchOutlined,
   VideoCameraOutlined,
+  RobotOutlined,
+  StopOutlined,
 } from '@ant-design/icons'
 import {
   AutoComplete,
@@ -1002,8 +1004,8 @@ export default function FacebookInboxPage() {
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           {currentPage && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 16, background: currentPage.is_ai_active ? '#dcfce7' : '#fee2e2', padding: '4px 12px', borderRadius: 20, border: `1px solid ${currentPage.is_ai_active ? '#bbf7d0' : '#fecaca'}` }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: currentPage.is_ai_active ? '#16a34a' : '#ef4444' }}>
-                {currentPage.is_ai_active ? '🤖 AI Đang Bật' : '🛑 AI Đang Tắt'}
+              <span style={{ fontSize: 12, fontWeight: 700, color: currentPage.is_ai_active ? '#16a34a' : '#ef4444', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {currentPage.is_ai_active ? <><RobotOutlined /> AI Đang Bật</> : <><StopOutlined /> AI Đang Tắt</>}
               </span>
               <Switch
                 size="small"
@@ -1480,9 +1482,11 @@ export default function FacebookInboxPage() {
                   <div style={{ fontSize: 12, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedLead.page_name}</div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
-                  <div style={{ marginRight: 12, display: 'flex', alignItems: 'center', gap: 6, background: selectedLead.is_ai_active ? '#f6ffed' : '#fff1f0', padding: '4px 12px', borderRadius: 20, border: `1px solid ${selectedLead.is_ai_active ? '#b7eb8f' : '#ffa39e'}` }}>
-                    <Switch size="small" checked={selectedLead.is_ai_active} onChange={handleToggleAi} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: selectedLead.is_ai_active ? '#389e0d' : '#cf1322' }}>{selectedLead.is_ai_active ? '🤖 AI Đang Trực' : '🧑‍💻 Sale Tiếp Quản'}</span>
+                  <div style={{ marginRight: 12, display: 'flex', alignItems: 'center', gap: 6, background: (currentPage?.is_ai_active && selectedLead.is_ai_active) ? '#f6ffed' : '#fff1f0', padding: '4px 12px', borderRadius: 20, border: `1px solid ${(currentPage?.is_ai_active && selectedLead.is_ai_active) ? '#b7eb8f' : '#ffa39e'}` }}>
+                    <Switch size="small" disabled={!currentPage?.is_ai_active} checked={currentPage?.is_ai_active && selectedLead.is_ai_active} onChange={handleToggleAi} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: (currentPage?.is_ai_active && selectedLead.is_ai_active) ? '#389e0d' : '#cf1322', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {(currentPage?.is_ai_active && selectedLead.is_ai_active) ? <><RobotOutlined /> AI Đang Trực</> : <><UserOutlined /> Sale Tiếp Quản</>}
+                    </span>
                   </div>
                   {!selectedLead.is_customer_converted && canCreateCustomer && (
                     <Button
@@ -1732,6 +1736,15 @@ export default function FacebookInboxPage() {
                         <div style={{ paddingTop: 6 }}>
                           <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>TRANG FACEBOOK</Text></div>
                           <div style={{ fontSize: 13, marginBottom: 12 }}>🟦 {selectedLead.page_name}</div>
+                          
+                          {selectedLead.ai_summary && (
+                            <div style={{ marginBottom: 16, background: '#f6ffed', border: '1px solid #b7eb8f', padding: '8px 12px', borderRadius: 8 }}>
+                              <div style={{ marginBottom: 4 }}><Text strong style={{ fontSize: 12, color: '#389e0d' }}>✨ AI Tóm tắt Hội thoại</Text></div>
+                              <div style={{ fontSize: 13, color: '#595959', whiteSpace: 'pre-wrap' }}>
+                                {selectedLead.ai_summary}
+                              </div>
+                            </div>
+                          )}
                           {selectedLead.detected_phone && (
                             <>
                               <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>SỐ ĐIỆN THOẠI</Text></div>

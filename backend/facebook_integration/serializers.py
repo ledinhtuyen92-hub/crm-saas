@@ -155,7 +155,7 @@ class FacebookLeadSerializer(serializers.ModelSerializer):
             "customer", "customer_name",
             "assigned_to", "assigned_to_name",
             "is_starred", "tags", "internal_notes",
-            "last_message_at", "last_message_preview",
+            "last_message_at", "last_message_preview", "ai_summary",
             "has_unread_message", "unread_count", "messages",
             "created_at", "updated_at", "is_ai_active"
         ]
@@ -205,8 +205,9 @@ class FacebookLeadListSerializer(serializers.ModelSerializer):
             "customer", "customer_name",
             "assigned_to", "assigned_to_name",
             "is_starred", "tags",
-            "last_message_at", "last_message_preview",
-            "has_unread_message", "unread_count", "created_at", "latest_sender", "is_ai_active"
+            "last_message_at", "last_message_preview", "ai_summary",
+            "has_unread_message", "unread_count",
+            "created_at", "updated_at", "latest_sender", "is_ai_active"
         ]
 
 
