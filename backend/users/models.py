@@ -114,6 +114,15 @@ class Department(models.Model):
         related_name="managed_departments",
         verbose_name="Trưởng phòng",
     )
+    factory = models.ForeignKey(
+        "production.Factory",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="departments",
+        verbose_name="Nhà máy trực thuộc",
+        help_text="Nếu phòng ban này thuộc một nhà máy sản xuất, hãy chọn nhà máy tương ứng.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     is_sales_department = models.BooleanField(
         default=False,

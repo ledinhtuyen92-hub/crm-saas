@@ -88,6 +88,25 @@ class ProductionOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        user = self.request.user
+        
+        # Scope filtering
+        is_admin = user.is_company_admin or user.is_superuser
+        can_scope_company = is_admin or user.has_perm_code("production.scope_company")
+        can_scope_my_factory = is_admin or user.has_perm_code("production.scope_my_factory")
+
+        if not can_scope_company:
+            from django.db.models import Q
+            # Personal scope base: sales reps who created the order, or workers assigned to a step
+            personal_q = Q(order__created_by=user) | Q(steps__assigned_to=user)
+            
+            if can_scope_my_factory and user.department_id and user.department.factory_id:
+                # Factory scope + Personal scope
+                qs = qs.filter(Q(factory_id=user.department.factory_id) | personal_q).distinct()
+            else:
+                # Only Personal scope
+                qs = qs.filter(personal_q).distinct()
+
         # Filter theo trạng thái nếu có
         prod_status = self.request.query_params.get("status")
         if prod_status:

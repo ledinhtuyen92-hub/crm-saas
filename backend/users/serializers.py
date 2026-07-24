@@ -64,6 +64,7 @@ class DepartmentSerializer(serializers.ModelSerializer):
             "manager_name",
             "created_at",
             "is_sales_department",
+            "factory",
             "user_count",
         ]
         read_only_fields = ["created_at"]

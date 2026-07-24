@@ -10,7 +10,7 @@ import {
   FrownOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { Card, Col, Row, Space, Statistic, Table, Tag, Typography, theme, message, Segmented } from 'antd'
+import { Card, Col, Row, Space, Statistic, Table, Tag, Typography, theme, message, Segmented, Select } from 'antd'
 import {
   Bar,
   BarChart,
@@ -40,7 +40,7 @@ const contractColumns = [
   },
   {
     title: 'Tên khách hàng',
-    dataIndex: ['customer', 'name'],
+    dataIndex: 'customer_name',
     key: 'customerName',
   },
   {
@@ -51,7 +51,7 @@ const contractColumns = [
   },
   {
     title: 'Người tạo',
-    dataIndex: ['created_by', 'full_name'],
+    dataIndex: 'created_by_name',
     key: 'created_by',
     render: (name) => (
       <Space size={6}>
@@ -62,7 +62,7 @@ const contractColumns = [
   },
   {
     title: 'Người duyệt',
-    dataIndex: ['approved_by', 'full_name'],
+    dataIndex: 'approved_by_name',
     key: 'approved_by',
     render: (name) => name ? <Text>{name}</Text> : <Text type="secondary">Chưa có</Text>,
   },
@@ -98,7 +98,7 @@ function Dashboard() {
   const { token } = theme.useToken()
   const { isSuperAdmin, hasPermission, isCompanyAdmin } = useAuth()
   const canViewRevenue = isCompanyAdmin || hasPermission('dashboard.view_revenue') || hasPermission('reports.view_all')
-  const canViewDebt = isCompanyAdmin || hasPermission('dashboard.view_debt') || hasPermission('orders.view_all')
+  const canViewDebt = canViewRevenue || hasPermission('orders.view_all')
   const [messageApi, contextHolder] = message.useMessage()
 
   const [loading, setLoading] = useState(true)
@@ -109,19 +109,39 @@ function Dashboard() {
   const [topSellers, setTopSellers] = useState([])
   const [debtStats, setDebtStats] = useState({ total_debt: 0, chart_data: [] })
 
+  const canScopeMyDept = isCompanyAdmin || hasPermission('dashboard.scope_my_department')
+  const canScopeAnyDept = isCompanyAdmin || hasPermission('dashboard.scope_any_department')
+  const canScopeCompany = isCompanyAdmin || hasPermission('dashboard.scope_company')
+
+  const defaultScope = canScopeCompany ? 'company' : (canScopeAnyDept || canScopeMyDept ? 'my_department' : 'personal')
+  const [scopeFilter, setScopeFilter] = useState(defaultScope)
+  const [departmentId, setDepartmentId] = useState(null)
+  const [departments, setDepartments] = useState([])
+
   useEffect(() => {
     if (isSuperAdmin) return
     fetchDashboardData()
-  }, [isSuperAdmin, timeFilter])
+  }, [isSuperAdmin, timeFilter, scopeFilter, departmentId])
+
+  useEffect(() => {
+    if (canScopeAnyDept) {
+      api.get('users/departments/').then(res => setDepartments(res.data.results || res.data)).catch(console.error)
+    }
+  }, [canScopeAnyDept])
 
   const fetchDashboardData = async () => {
     setLoading(true)
     try {
       const fetchSafe = (url, fallback) => api.get(url).catch(() => ({ data: fallback }))
 
-      const filterParam = `?time_filter=${timeFilter}`
+      let scopeParams = `&scope=${scopeFilter}`
+      if (scopeFilter === 'any_department' && departmentId) {
+        scopeParams += `&department_id=${departmentId}`
+      }
+
+      const filterParam = `?time_filter=${timeFilter}${scopeParams}`
       const limitParam = timeFilter !== 'all' ? `&limit=100` : `?limit=100`
-      const limitFilterParam = `?time_filter=${timeFilter}&limit=100`
+      const limitFilterParam = `?time_filter=${timeFilter}&limit=100${scopeParams}`
 
       const [summaryRes, revenueRes, sellersRes, ordersRes, debtRes] = await Promise.all([
         fetchSafe(`dashboard/summary/${filterParam}`, {}),
@@ -159,7 +179,9 @@ function Dashboard() {
   const cardStyle = {
     height: '100%',
     borderRadius: 12,
-    boxShadow: '0 10px 28px rgba(15, 23, 42, 0.07)',
+    background: '#ffffff',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
   }
   
   const statisticCards = [
@@ -244,74 +266,118 @@ function Dashboard() {
   return (
     <div style={{ width: '100%', minWidth: 0 }}>
       {contextHolder}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-        <Space direction="vertical" size={2}>
-          <Title level={2} style={{ margin: 0 }}>
-            Dashboard
-          </Title>
-          <Text type="secondary">
-            Tổng quan hiệu quả kinh doanh và tiến độ thi công nội thất
-          </Text>
+      <Row justify="space-between" align="top" gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} md={12}>
+          <Space direction="vertical" size={2}>
+            <Title level={2} style={{ margin: 0 }}>
+              Dashboard
+            </Title>
+            <Text type="secondary">
+              Tổng quan hiệu quả kinh doanh và tiến độ thi công nội thất
+            </Text>
+          </Space>
+        </Col>
+        <Col xs={24} md={12} style={{ textAlign: 'right' }}>
+          <Space direction="vertical" align="end" size={8} style={{ width: '100%' }}>
+          <Space>
+            {(canScopeCompany || canScopeAnyDept || canScopeMyDept) && (
+              <Select
+                value={scopeFilter}
+                onChange={setScopeFilter}
+                style={{ minWidth: 200, height: 40 }}
+                options={[
+                  { label: <Space><UserOutlined style={{ color: '#8b5cf6' }} /> Cá nhân</Space>, value: 'personal' },
+                  ...(canScopeMyDept || canScopeAnyDept || canScopeCompany ? [{ label: <Space><TeamOutlined style={{ color: '#0ea5e9' }} /> Phòng ban của tôi</Space>, value: 'my_department' }] : []),
+                  ...(canScopeAnyDept || canScopeCompany ? [{ label: <Space><ProjectOutlined style={{ color: '#f59e0b' }} /> Chọn phòng ban...</Space>, value: 'any_department' }] : []),
+                  ...(canScopeCompany ? [{ label: <Space><BankOutlined style={{ color: '#ef4444' }} /> Toàn công ty</Space>, value: 'company' }] : []),
+                ]}
+              />
+            )}
+            
+            {scopeFilter === 'any_department' && (
+              <Select
+                placeholder="Chọn phòng ban"
+                value={departmentId}
+                onChange={setDepartmentId}
+                style={{ width: 200, height: 40 }}
+                allowClear
+                options={departments.map(d => ({ label: d.name, value: d.id }))}
+              />
+            )}
+          </Space>
+          <Segmented 
+            options={timeFilterOptions} 
+            value={timeFilter} 
+            onChange={setTimeFilter} 
+            size="large"
+            style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+          />
         </Space>
-        
-        <Segmented 
-          options={timeFilterOptions} 
-          value={timeFilter} 
-          onChange={setTimeFilter} 
-          size="large"
-          style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
-        />
-      </div>
+        </Col>
+      </Row>
 
       <Row gutter={[16, 16]} style={{ width: '100%', marginInline: 0 }}>
-        {statisticCards.map((item) => (
-          <Col xs={24} sm={12} md={8} style={{ flex: '1 1 200px' }} key={item.title}>
-            <Card bordered={false} style={cardStyle} loading={loading}>
-              <Space size={14} align="start" style={{ width: '100%' }}>
-                <div
-                  style={{
-                    width: 46,
-                    height: 46,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 12,
-                    fontSize: 23,
-                    ...item.iconStyle,
-                  }}
-                >
-                  {item.icon}
+        {statisticCards.map((item) => {
+          const primaryColor = item.valueStyle?.color || '#2563eb';
+          const bgColor = item.iconStyle?.background || 'rgba(37, 99, 235, 0.12)';
+          
+          return (
+            <Col xs={24} sm={12} md={8} style={{ flex: '1 1 200px' }} key={item.title}>
+              <div style={{
+                background: '#ffffff',
+                borderRadius: 12,
+                padding: '16px 20px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                display: 'flex',
+                flexDirection: 'column',
+                transition: 'all 0.2s ease',
+                cursor: 'default',
+                height: '100%',
+                position: 'relative'
+              }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = primaryColor; e.currentTarget.style.boxShadow = `0 4px 12px ${primaryColor}20`; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.02)'; }}
+              >
+                {loading && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12 }}>
+                    <div className="ant-spin ant-spin-spinning"><span className="ant-spin-dot ant-spin-dot-spin"><i className="ant-spin-dot-item"></i><i className="ant-spin-dot-item"></i><i className="ant-spin-dot-item"></i><i className="ant-spin-dot-item"></i></span></div>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>{item.title}</span>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: primaryColor, fontSize: 15 }}>
+                    {item.icon}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <Statistic
-                    title={item.title}
-                    value={item.value}
-                    precision={item.suffix === '%' ? 1 : 0}
-                    suffix={item.suffix}
-                    valueStyle={{
-                      fontSize: item.title === 'Doanh thu trong kỳ' && item.value > 1000000 ? 18 : 24,
-                      fontWeight: 800,
-                      letterSpacing: 0,
-                      lineHeight: 1.2,
-                      ...item.valueStyle,
-                    }}
-                    formatter={(value) => value === '***' ? value : Number(value).toLocaleString('vi-VN')}
-                  />
-                  {item.footer && (
-                    <Text type="secondary" style={{ fontSize: 12, marginTop: 4 }}>
-                      {item.footer}
-                    </Text>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexGrow: 1 }}>
+                  <div style={{ 
+                    fontSize: item.title === 'Doanh thu trong kỳ' && item.value > 1000000 ? 22 : 28, 
+                    fontWeight: 700, 
+                    color: primaryColor, 
+                    lineHeight: 1, 
+                    fontFamily: "'Inter', sans-serif" 
+                  }}>
+                    {item.value === '***' ? '***' : Number(item.value).toLocaleString('vi-VN')}
+                  </div>
+                  {item.suffix && item.value !== '***' && (
+                    <span style={{ fontSize: 14, fontWeight: 600, color: primaryColor }}>{item.suffix}</span>
                   )}
                 </div>
-              </Space>
-            </Card>
-          </Col>
-        ))}
+                {item.footer && (
+                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 8 }}>
+                    {item.footer}
+                  </div>
+                )}
+              </div>
+            </Col>
+          );
+        })}
       </Row>
 
       <Row gutter={[16, 16]} style={{ width: '100%', marginTop: 16, marginInline: 0 }}>
         <Col xs={24} lg={16}>
-          <Card title="Doanh thu & Số lượng đơn hàng (6 tháng gần nhất)" bordered={false} style={cardStyle} loading={loading}>
+          <Card title={`Doanh thu & Số lượng đơn hàng (${timeFilter === 'all' ? '6 tháng gần nhất' : timeFilterOptions.find(opt => opt.value === timeFilter)?.label?.toLowerCase() || ''})`} bordered={false} style={cardStyle} loading={loading}>
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={revenueData} margin={{ top: 12, right: 8, left: 20, bottom: 0 }}>
                 <CartesianGrid stroke={token.colorBorderSecondary} strokeDasharray="4 4" vertical={false} />
@@ -400,7 +466,7 @@ function Dashboard() {
 
       <Row gutter={[16, 16]} style={{ width: '100%', marginTop: 16, marginInline: 0 }}>
         <Col xs={24} lg={12}>
-          <Card title="Công nợ trong kỳ" bordered={false} style={cardStyle} loading={loading}>
+          <Card title={`Công nợ phát sinh (${timeFilter === 'all' ? '6 tháng gần nhất' : timeFilterOptions.find(opt => opt.value === timeFilter)?.label?.toLowerCase() || ''})`} bordered={false} style={cardStyle} loading={loading}>
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={debtStats?.chart_data || []} margin={{ top: 12, right: 8, left: 20, bottom: 0 }}>
                 <CartesianGrid stroke={token.colorBorderSecondary} strokeDasharray="4 4" vertical={false} />

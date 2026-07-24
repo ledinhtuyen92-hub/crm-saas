@@ -36,6 +36,7 @@ export default function DepartmentManagement() {
 
   const [departments, setDepartments] = useState([])
   const [users, setUsers] = useState([])
+  const [factories, setFactories] = useState([])
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingDepartment, setEditingDepartment] = useState(null)
@@ -50,14 +51,17 @@ export default function DepartmentManagement() {
     await Promise.resolve()
     setLoading(true)
     try {
-      const [depsRes, usersRes] = await Promise.all([
+      const [depsRes, usersRes, factoriesRes] = await Promise.all([
         api.get('users/departments/'),
         api.get('users/users/'),
+        api.get('production/factories/'),
       ])
       const depsData = Array.isArray(depsRes.data) ? depsRes.data : depsRes.data?.results ?? []
       const usersData = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data?.results ?? []
+      const factoriesData = Array.isArray(factoriesRes.data) ? factoriesRes.data : factoriesRes.data?.results ?? []
       setDepartments(depsData)
       setUsers(usersData)
+      setFactories(factoriesData)
     } catch {
       messageApi.error('Không thể tải dữ liệu phòng ban.')
     } finally {
@@ -77,6 +81,7 @@ export default function DepartmentManagement() {
       name: department?.name ?? '',
       description: department?.description ?? '',
       manager: department?.manager ?? null,
+      factory: department?.factory ?? null,
       is_sales_department: department?.is_sales_department ?? false,
     })
     setModalOpen(true)
@@ -279,6 +284,26 @@ export default function DepartmentManagement() {
               options={users.map((u) => ({
                 value: u.id,
                 label: `${u.full_name} (${u.username})`,
+              }))}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="factory"
+            label="Nhà máy trực thuộc"
+            help="Nếu bộ phận này là tổ sản xuất/chuyền may... hãy chọn nhà máy tương ứng để hệ thống phân quyền tự động."
+          >
+            <Select
+              size="large"
+              placeholder="Chọn nhà máy (Bỏ trống nếu là văn phòng)"
+              allowClear
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+              options={factories.map((f) => ({
+                value: f.id,
+                label: f.name,
               }))}
             />
           </Form.Item>

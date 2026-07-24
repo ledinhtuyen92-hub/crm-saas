@@ -8,7 +8,9 @@ PERMISSIONS = [
     # ── Dashboard ──────────────────────────────────────────────────
     {"code": "dashboard.view", "name": "Xem Dashboard tổng quan", "module": "dashboard"},
     {"code": "dashboard.view_revenue", "name": "Xem biểu đồ doanh thu & dòng tiền", "module": "dashboard"},
-    {"code": "dashboard.view_debt", "name": "Xem biểu đồ công nợ toàn công ty", "module": "dashboard"},
+    {"code": "dashboard.scope_my_department", "name": "Phạm vi: Xem dữ liệu phòng ban của mình", "module": "dashboard"},
+    {"code": "dashboard.scope_any_department", "name": "Phạm vi: Xem dữ liệu các phòng ban", "module": "dashboard"},
+    {"code": "dashboard.scope_company", "name": "Phạm vi: Xem dữ liệu toàn công ty", "module": "dashboard"},
 
     # ── CRM (Khách hàng & Leads) ───────────────────────────────────
     {"code": "crm.view", "name": "Xem danh sách khách hàng", "module": "crm"},
@@ -65,6 +67,8 @@ PERMISSIONS = [
     # ── Production (Sản xuất) ─────────────────────────────────────
     {"code": "production.manage_factory", "name": "Quản lý thiết lập nhà máy", "module": "production"},
     {"code": "production.view", "name": "Xem lệnh sản xuất", "module": "production"},
+    {"code": "production.scope_my_factory", "name": "Phạm vi: Xem lệnh sản xuất của Nhà máy mình", "module": "production"},
+    {"code": "production.scope_company", "name": "Phạm vi: Xem tất cả lệnh sản xuất toàn công ty", "module": "production"},
     {"code": "production.create", "name": "Tạo lệnh sản xuất", "module": "production"},
     {"code": "production.edit", "name": "Chỉnh sửa lệnh sản xuất", "module": "production"},
     {"code": "production.update_step", "name": "Cập nhật tiến độ công đoạn", "module": "production"},

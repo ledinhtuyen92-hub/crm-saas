@@ -57,3 +57,5 @@ docker exec -i crm_web python load_sync_data.py
 # 3. Nạp lại danh sách Quyền (để lấy quyền In phiếu thu)
 docker exec -i crm_web python manage.py seed_permissions
 Chỉ cần làm đúng các bước này, em đảm bảo từ Code, Giao diện cho đến Dữ liệu, Phân quyền ở máy kia sẽ giống y xì đúc máy anh đang dùng bây giờ luôn ạ!
+
+git pull origin V1.2

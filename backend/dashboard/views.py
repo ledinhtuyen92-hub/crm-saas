@@ -46,6 +46,42 @@ def get_date_range(time_filter):
     return None, None
 
 
+def apply_dashboard_scope(qs, request, user, user_field="created_by"):
+    """
+    Áp dụng filter dữ liệu dựa theo scope và phân quyền.
+    user_field: Trường lưu người tạo/phụ trách. Nếu qs là bảng User thì truyền None.
+    """
+    scope = request.query_params.get("scope", "personal")
+    dept_id = request.query_params.get("department_id")
+
+    is_admin = user.is_company_admin or user.is_superuser
+    prefix = f"{user_field}__" if user_field else ""
+    user_filter_key = user_field if user_field else "pk"
+
+    if scope == "company":
+        if is_admin or user.has_perm_code("dashboard.scope_company"):
+            return qs 
+        else:
+            scope = "personal" 
+
+    if scope == "any_department":
+        if is_admin or user.has_perm_code("dashboard.scope_any_department") or user.has_perm_code("dashboard.scope_company"):
+            if dept_id:
+                return qs.filter(**{f"{prefix}department_id": dept_id})
+            return qs 
+        else:
+            scope = "personal"
+
+    if scope == "my_department":
+        if is_admin or user.has_perm_code("dashboard.scope_my_department") or user.has_perm_code("dashboard.scope_company"):
+            if user.department_id:
+                return qs.filter(**{f"{prefix}department_id": user.department_id})
+            return qs.filter(**{user_filter_key: user})
+        else:
+            scope = "personal"
+
+    return qs.filter(**{user_filter_key: user})
+
 
 @api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
@@ -75,15 +111,7 @@ def summary(request):
 
     # ── Khách hàng ────────────────────────────────────────────────
     customer_qs = Customer.objects.filter(cf)
-    if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("crm.view_all"):
-        managed_deps = user.managed_departments.all()
-        if managed_deps.exists():
-            customer_qs = customer_qs.filter(
-                Q(assigned_to=user) | 
-                Q(assigned_to__department__in=managed_deps)
-            )
-        else:
-            customer_qs = customer_qs.filter(assigned_to=user)
+    customer_qs = apply_dashboard_scope(customer_qs, request, user, user_field="assigned_to")
     
     if start_date and end_date:
         customer_qs = customer_qs.filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
@@ -98,15 +126,7 @@ def summary(request):
 
     # ── Báo giá ────────────────────────────────────────────────
     quotation_qs = Quotation.objects.filter(cf)
-    if not user.is_company_admin and not user.is_superuser:
-        managed_deps = user.managed_departments.all()
-        if managed_deps.exists():
-            quotation_qs = quotation_qs.filter(
-                Q(created_by=user) | 
-                Q(created_by__department__in=managed_deps)
-            )
-        else:
-            quotation_qs = quotation_qs.filter(created_by=user)
+    quotation_qs = apply_dashboard_scope(quotation_qs, request, user, user_field="created_by")
             
     if start_date and end_date:
         quotation_qs = quotation_qs.filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
@@ -122,15 +142,7 @@ def summary(request):
 
     # ── Đơn hàng ────────────────────────────────────────────────
     order_qs = Order.objects.filter(cf)
-    if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("orders.view_all"):
-        managed_deps = user.managed_departments.all()
-        if managed_deps.exists():
-            order_qs = order_qs.filter(
-                Q(created_by=user) | 
-                Q(created_by__department__in=managed_deps)
-            )
-        else:
-            order_qs = order_qs.filter(created_by=user)
+    order_qs = apply_dashboard_scope(order_qs, request, user, user_field="created_by")
             
     if start_date and end_date:
         order_qs = order_qs.filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
@@ -238,15 +250,7 @@ def revenue_chart(request):
         created_at__date__gte=start_date,
         created_at__date__lte=end_date,
     )
-    if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("orders.view_all"):
-        managed_deps = user.managed_departments.all()
-        if managed_deps.exists():
-            order_qs = order_qs.filter(
-                Q(created_by=user) | 
-                Q(created_by__department__in=managed_deps)
-            )
-        else:
-            order_qs = order_qs.filter(created_by=user)
+    order_qs = apply_dashboard_scope(order_qs, request, user, user_field="created_by")
 
     use_daily = time_filter in ["today", "week", "month"]
     trunc_func = TruncDay("created_at") if use_daily else TruncMonth("created_at")
@@ -280,15 +284,7 @@ def orders_by_status(request):
     cf = _company_filter(user)
 
     order_qs = Order.objects.filter(cf)
-    if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("orders.view_all"):
-        managed_deps = user.managed_departments.all()
-        if managed_deps.exists():
-            order_qs = order_qs.filter(
-                Q(created_by=user) | 
-                Q(created_by__department__in=managed_deps)
-            )
-        else:
-            order_qs = order_qs.filter(created_by=user)
+    order_qs = apply_dashboard_scope(order_qs, request, user, user_field="created_by")
 
     STATUS_LABELS = {
         "pending": "Chờ duyệt",
@@ -327,15 +323,7 @@ def top_customers(request):
     cf = _company_filter(user)
 
     order_qs = Order.objects.filter(cf, status__in=["approved", "in_production", "completed"])
-    if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("orders.view_all"):
-        managed_deps = user.managed_departments.all()
-        if managed_deps.exists():
-            order_qs = order_qs.filter(
-                Q(created_by=user) | 
-                Q(created_by__department__in=managed_deps)
-            )
-        else:
-            order_qs = order_qs.filter(created_by=user)
+    order_qs = apply_dashboard_scope(order_qs, request, user, user_field="created_by")
 
     top = (
         order_qs
@@ -364,6 +352,7 @@ def top_customers(request):
 def top_sellers(request):
     """Top nhân viên Sale theo doanh thu toàn công ty."""
     from users.models import User
+    from orders.models import Order, OrderItem
     from django.db.models.functions import Coalesce
     from django.db.models import Sum, Count, Q, DecimalField, IntegerField
     from decimal import Decimal
@@ -374,26 +363,37 @@ def top_sellers(request):
     time_filter = request.query_params.get("time_filter", "month")
     start_date, end_date = get_date_range(time_filter)
 
-    order_filter = Q(created_orders__status__in=["approved", "in_production", "completed"])
+    # Sử dụng Subquery để tránh lỗi Cartesian Product khi tính tổng (do join nhiều bảng)
+    from django.db.models import Subquery, OuterRef
+    
+    order_qs = Order.objects.filter(
+        created_by=OuterRef('pk'), 
+        status__in=["approved", "in_production", "completed"]
+    )
     if start_date and end_date:
-        order_filter &= Q(created_orders__created_at__date__gte=start_date, created_orders__created_at__date__lte=end_date)
+        order_qs = order_qs.filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
+        
+    revenue_subquery = order_qs.values('created_by').annotate(t=Sum('total_amount')).values('t')
+    order_count_subquery = order_qs.values('created_by').annotate(t=Count('id')).values('t')
+    
+    product_qs = OrderItem.objects.filter(
+        order__created_by=OuterRef('pk'),
+        order__status__in=["approved", "in_production", "completed"],
+        item_type='product'
+    )
+    if start_date and end_date:
+        product_qs = product_qs.filter(order__created_at__date__gte=start_date, order__created_at__date__lte=end_date)
+        
+    product_count_subquery = product_qs.values('order__created_by').annotate(t=Sum('quantity')).values('t')
 
-    product_filter = order_filter & Q(created_orders__items__item_type='product')
-
-    # Chỉ tính các nhân viên thuộc phòng ban được cấu hình là "Phòng Sales"
-    users = User.objects.filter(cf, is_active=True, department__is_sales_department=True).annotate(
-        total_revenue=Coalesce(
-            Sum("created_orders__total_amount", filter=order_filter),
-            Decimal('0.0'),
-            output_field=DecimalField()
-        ),
-        order_count=Count("created_orders", filter=order_filter),
-        product_count=Coalesce(
-            Sum("created_orders__items__quantity", filter=product_filter),
-            0,
-            output_field=IntegerField()
-        )
-    ).order_by("-total_revenue")
+    # Lấy toàn bộ nhân viên có phát sinh đơn hàng, không phân biệt phòng ban
+    users = User.objects.filter(cf, is_active=True)
+    users = apply_dashboard_scope(users, request, user, user_field=None)
+    users = users.annotate(
+        total_revenue=Coalesce(Subquery(revenue_subquery), Decimal('0.0'), output_field=DecimalField()),
+        order_count=Coalesce(Subquery(order_count_subquery), 0, output_field=IntegerField()),
+        product_count=Coalesce(Subquery(product_count_subquery), 0, output_field=IntegerField())
+    ).exclude(order_count=0).order_by("-total_revenue")
 
     return Response([
         {
@@ -432,16 +432,7 @@ def debt_stats(request):
         order_qs = order_qs.filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
 
     # Phân quyền
-    can_view_all = user.is_company_admin or user.is_superuser or user.has_perm_code("dashboard.view_debt") or user.has_perm_code("orders.view_all")
-    if not can_view_all:
-        managed_deps = user.managed_departments.all()
-        if managed_deps.exists():
-            order_qs = order_qs.filter(
-                Q(created_by=user) | 
-                Q(created_by__department__in=managed_deps)
-            )
-        else:
-            order_qs = order_qs.filter(created_by=user)
+    order_qs = apply_dashboard_scope(order_qs, request, user, user_field="created_by")
 
     # Subquery tính tổng đã thanh toán cho từng Order
     receipts_subquery = PaymentReceipt.objects.filter(

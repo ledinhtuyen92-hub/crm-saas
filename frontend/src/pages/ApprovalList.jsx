@@ -192,7 +192,7 @@ export default function ApprovalList() {
   ]
 
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ padding: 24, width: '100%', minWidth: 0 }}>
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }} gutter={[16, 16]}>
         <Col xs={24} md={12}>
           <Title level={3} style={{ margin: 0 }}>Luồng Phê Duyệt</Title>
