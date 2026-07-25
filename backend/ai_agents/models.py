@@ -94,6 +94,7 @@ class AiAgent(models.Model):
     enable_auto_tagging = models.BooleanField(default=False, verbose_name="Tự động gắn thẻ Inbox")
     enable_drip_followup = models.BooleanField(default=False, verbose_name="Tự động bám đuổi (Follow-up)")
     drip_followup_hours = models.IntegerField(default=24, help_text="Số giờ chờ trước khi tự động bám đuổi")
+    debounce_delay = models.IntegerField(default=4, help_text="Thời gian chờ (giây) sau tin nhắn cuối để gộp các tin nhắn lại. Khuyên dùng: 4-15 giây", verbose_name="Thời gian chờ gộp tin (Debounce)")
     
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

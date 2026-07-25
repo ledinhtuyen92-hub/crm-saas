@@ -159,4 +159,4 @@ TRẢ LỜI BẮT BUỘC THEO ĐỊNH DẠNG JSON SAU (không trả về Markdow
             continue
             
     logger.error(f"All {provider} keys failed. Last error: {last_error}")
-    return {'reply': 'Xin lỗi, hệ thống AI đang quá tải.', 'sentiment': 'neutral', 'summary': ''}
+    return {'error': True, 'error_msg': 'Hệ thống AI đang quá tải.'}

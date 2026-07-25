@@ -22,6 +22,7 @@ from .models import (
 from .serializers import (
     FacebookLeadListSerializer,
     FacebookLeadSerializer,
+    FacebookLeadUpdateSerializer,
     FacebookMessageSerializer,
     FacebookPageConfigSerializer,
     QuickMediaAssetSerializer,
@@ -294,7 +295,7 @@ class FacebookPageConfigViewSet(viewsets.ModelViewSet):
 
 # ── ViewSet: FacebookLead ─────────────────────────────────────────────────────
 
-class FacebookLeadViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
+class FacebookLeadViewSet(mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
     """
     Danh sách hội thoại Facebook và chi tiết.
     Yêu cầu quyền: facebook.view_inbox
@@ -400,6 +401,8 @@ class FacebookLeadViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSe
             return qs.order_by("-last_message_at").distinct()
 
     def get_serializer_class(self):
+        if self.action in ["update", "partial_update"]:
+            return FacebookLeadUpdateSerializer
         if self.action == "retrieve":
             return FacebookLeadSerializer
         return FacebookLeadListSerializer

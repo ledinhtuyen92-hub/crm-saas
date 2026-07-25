@@ -438,6 +438,7 @@ def process_fb_webhook_message(entry: dict):
         lead.last_message_preview = (msg_text or "[Đính kèm]")[:255]
         lead.has_unread_message = True
         lead.unread_count = (lead.unread_count or 0) + 1
+        lead.has_ai_followed_up = False
         lead.save()
 
         # Lưu tin nhắn
@@ -703,6 +704,7 @@ def sync_page_conversations_history(page_config, max_conversations: int = 100, l
                     lead.last_message_preview = snippet[:255]
                     lead.has_unread_message = unread
                     lead.unread_count = unread_cnt
+                    lead.has_ai_followed_up = False
                 lead.save()
             else:
                 if not lead.company_id and page_config.company_id:
@@ -714,6 +716,7 @@ def sync_page_conversations_history(page_config, max_conversations: int = 100, l
                     lead.last_message_preview = snippet[:255]
                     lead.has_unread_message = unread
                     lead.unread_count = unread_cnt
+                    lead.has_ai_followed_up = False
                 lead.save()
 
             synced_conversations += 1

@@ -27,7 +27,51 @@ class AiAgentViewSet(viewsets.ModelViewSet):
         return AiAgent.objects.filter(company=self.request.user.company)
         
     def perform_create(self, serializer):
+        self._verify_agent_model(serializer.validated_data)
         serializer.save(company=self.request.user.company)
+
+    def perform_update(self, serializer):
+        self._verify_agent_model(serializer.validated_data)
+        serializer.save()
+        
+    def _verify_agent_model(self, validated_data):
+        from rest_framework import serializers
+        provider = validated_data.get('provider')
+        model_name = validated_data.get('model_name')
+        
+        if provider and model_name:
+            from .services import get_api_keys
+            company = self.request.user.company
+            keys = get_api_keys(company, provider)
+            if keys:
+                api_key = keys[0]
+                try:
+                    if provider == 'gemini':
+                        from google import genai as google_genai
+                        client = google_genai.Client(api_key=api_key)
+                        client.models.generate_content(model=model_name, contents="hi")
+                    elif provider == 'openai':
+                        from openai import OpenAI
+                        client = OpenAI(api_key=api_key)
+                        client.chat.completions.create(
+                            model=model_name,
+                            messages=[{"role": "user", "content": "hi"}],
+                            max_completion_tokens=1
+                        )
+                    elif provider == 'anthropic':
+                        from anthropic import Anthropic
+                        client = Anthropic(api_key=api_key)
+                        client.messages.create(
+                            model=model_name,
+                            max_tokens=1,
+                            messages=[{"role": "user", "content": "hi"}]
+                        )
+                except Exception as e:
+                    err = str(e).lower()
+                    if '429' in err or 'quota' in err or 'resource_exhausted' in err:
+                        raise serializers.ValidationError({"model_name": f"API Key của bạn đã hết Quota hoặc Rate Limit. Vui lòng thử lại sau."})
+                    elif 'not found' in err or '404' in err or '403' in err or 'permission' in err:
+                        raise serializers.ValidationError({"model_name": f"Mô hình '{model_name}' bị chặn hoặc tài khoản của bạn chưa được cấp quyền dùng nó. Vui lòng chọn mô hình khác."})
 
 class AiKnowledgeDocumentViewSet(viewsets.ModelViewSet):
     serializer_class = AiKnowledgeDocumentSerializer
@@ -105,22 +149,7 @@ class CompanyAiSettingsViewSet(viewsets.ModelViewSet):
                         if not any(kw in short_name.lower() for kw in SKIP_KEYWORDS):
                             models.append({'id': short_name, 'name': short_name})
                 
-                # Xác thực (Verify) xem API Key có thực sự dùng được model này không (tránh lỗi Tier)
-                import concurrent.futures
-                def verify_gemini_model(model_obj):
-                    try:
-                        # Gửi 1 request cực nhẹ
-                        client.models.generate_content(model=model_obj['id'], contents="hi")
-                        return model_obj, True
-                    except Exception:
-                        return model_obj, False
-                
-                verified_models = []
-                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-                    results = executor.map(verify_gemini_model, models)
-                    for m_obj, is_valid in results:
-                        if is_valid:
-                            verified_models.append(m_obj)
+                verified_models = models # Bỏ qua xác thực để tránh lỗi 429 Quota Exceeded
                 
                 models = verified_models
 
@@ -134,32 +163,7 @@ class CompanyAiSettingsViewSet(viewsets.ModelViewSet):
                         if 'instruct' not in m.id and 'vision' not in m.id and '0301' not in m.id and '0314' not in m.id:
                             models.append({'id': m.id, 'name': m.id})
                 
-                # Xác thực (Verify) xem API Key có quyền dùng model này không
-                import concurrent.futures
-                def verify_openai_model(model_obj):
-                    try:
-                        # Test cực nhẹ bằng cách tạo completion với max_completion_tokens=1 (dùng cho cả o1 và gpt)
-                        client.chat.completions.create(
-                            model=model_obj['id'],
-                            messages=[{"role": "user", "content": "hi"}],
-                            max_completion_tokens=1
-                        )
-                        return model_obj, True
-                    except Exception as e:
-                        err = str(e).lower()
-                        # Lỗi do model không hỗ trợ tham số, nhưng có quyền truy cập -> vẫn lấy
-                        if 'not supported' in err or 'unsupported' in err:
-                            return model_obj, True
-                        # Nếu là lỗi 403, 404 hoặc quota -> vứt
-                        return model_obj, False
-                        
-                verified_models = []
-                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-                    results = executor.map(verify_openai_model, models)
-                    for m_obj, is_valid in results:
-                        if is_valid:
-                            verified_models.append(m_obj)
-                            
+                verified_models = models # Bỏ qua xác thực để tránh lỗi 429 Quota Exceeded
                 models = sorted(verified_models, key=lambda x: x['id'])
 
             elif provider == 'anthropic':
@@ -171,31 +175,8 @@ class CompanyAiSettingsViewSet(viewsets.ModelViewSet):
                     {'id': 'claude-sonnet-4-5', 'name': 'Claude Sonnet 4.5 (Thế hệ mới)'},
                 ]
                 
-                import concurrent.futures
-                from anthropic import Anthropic
-                client = Anthropic(api_key=api_key)
-                def verify_anthropic_model(model_obj):
-                    try:
-                        client.messages.create(
-                            model=model_obj['id'],
-                            max_tokens=1,
-                            messages=[{"role": "user", "content": "hi"}]
-                        )
-                        return model_obj, True
-                    except Exception as e:
-                        err = str(e).lower()
-                        if 'not found' in err or 'permission' in err or 'credit' in err:
-                            return model_obj, False
-                        return model_obj, True
-                
-                verified_models = []
-                with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-                    results = executor.map(verify_anthropic_model, models)
-                    for m_obj, is_valid in results:
-                        if is_valid:
-                            verified_models.append(m_obj)
-                            
-                models = verified_models
+                # Bỏ qua xác thực để tránh lỗi 429 Quota Exceeded
+                pass
 
         except Exception as e:
             return Response({'error': f'Lỗi khi kết nối tới {provider}: {str(e)}'}, status=400)

@@ -231,6 +231,10 @@ class FacebookLead(models.Model):
         default=False,
         verbose_name="Đã có trong hệ thống KH",
     )
+    has_ai_followed_up = models.BooleanField(
+        default=False,
+        verbose_name="Đã được AI bám đuổi",
+    )
     customer = models.ForeignKey(
         "crm.Customer",
         on_delete=models.SET_NULL,

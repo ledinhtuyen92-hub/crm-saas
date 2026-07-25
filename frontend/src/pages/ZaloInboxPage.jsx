@@ -140,15 +140,28 @@ function LeadListItem({ lead, selected, onClick }) {
           </div>
 
           {/* Tags (Nhãn) */}
-          {lead.tags && lead.tags.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
-              {lead.tags.map(t => (
-                <Tag key={t.id} color={t.color || '#3b82f6'} style={{ fontSize: 10, padding: '0 6px', borderRadius: 10, margin: 0 }}>
-                  {t.name}
-                </Tag>
-              ))}
-            </div>
-          )}
+          {(() => {
+            const manualTags = lead.tags || [];
+            const aiTags = (lead.ai_tags || []).map((t, i) => ({ id: `ai-${i}`, name: t, color: '#8b5cf6' }));
+            const combinedTags = [...manualTags, ...aiTags];
+            if (combinedTags.length === 0) return null;
+            return (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                {combinedTags.slice(0, 2).map(t => (
+                  <Tag key={t.id} color={t.color || '#3b82f6'} style={{ fontSize: 10, padding: '0 6px', borderRadius: 10, margin: 0 }}>
+                    {t.name}
+                  </Tag>
+                ))}
+                {combinedTags.length > 2 && (
+                  <Tooltip title={combinedTags.slice(2).map(t => t.name).join(', ')}>
+                    <Tag color="#94a3b8" style={{ fontSize: 10, padding: '0 6px', borderRadius: 10, margin: 0, cursor: 'help' }}>
+                      +{combinedTags.length - 2}
+                    </Tag>
+                  </Tooltip>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Smart Contact Badges (SĐT | Email | Địa chỉ) */}
           {(lead.detected_phone || lead.detected_email || lead.detected_address) && (
@@ -1278,6 +1291,15 @@ export default function ZaloInboxPage() {
                               <div style={{ fontSize: 13, color: '#595959', whiteSpace: 'pre-wrap' }}>
                                 {selectedLeadDetail.ai_summary}
                               </div>
+                              {selectedLeadDetail.ai_tags && selectedLeadDetail.ai_tags.length > 0 && (
+                                <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                  {selectedLeadDetail.ai_tags.map((t, idx) => (
+                                    <span key={idx} style={{ fontSize: 11, padding: '2px 10px', borderRadius: 12, background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)', color: '#fff', fontWeight: 600, boxShadow: '0 2px 4px rgba(99, 102, 241, 0.2)' }}>
+                                      {t}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
                           {selectedLeadDetail.detected_phone && (

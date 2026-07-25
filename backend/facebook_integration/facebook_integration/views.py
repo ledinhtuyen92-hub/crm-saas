@@ -466,7 +466,8 @@ class FacebookLeadViewSet(viewsets.ReadOnlyModelViewSet):
             )
             lead.last_message_at = msg.created_at
             lead.last_message_preview = (text or "[Đính kèm]")[:255]
-            lead.save(update_fields=["last_message_at", "last_message_preview"])
+            lead.has_ai_followed_up = False
+            lead.save(update_fields=["last_message_at", "last_message_preview", "has_ai_followed_up"])
             return Response(FacebookMessageSerializer(msg).data, status=status.HTTP_201_CREATED)
         else:
             return Response({"error": result.get("error")}, status=status.HTTP_400_BAD_REQUEST)

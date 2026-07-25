@@ -159,6 +159,7 @@ class ZaloWebhookView(APIView):
             social_lead.status = SocialLead.STATUS_CHATTING
         social_lead.has_unread_message = True
         social_lead.unread_count = (social_lead.unread_count or 0) + 1
+        social_lead.has_ai_followed_up = False
         social_lead.save()
 
         # Quét tự động SĐT & xử lý theo cấu hình
@@ -856,7 +857,8 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
         # Cập nhật Lead
         social_lead.last_message = text[:500] if text else "[File đính kèm]"
         social_lead.last_interaction_date = timezone.now()
-        social_lead.save(update_fields=["last_message", "last_interaction_date", "updated_at"])
+        social_lead.has_ai_followed_up = False
+        social_lead.save(update_fields=["last_message", "last_interaction_date", "updated_at", "has_ai_followed_up"])
 
         data = ZaloMessageSerializer(msg).data
         if is_mock:

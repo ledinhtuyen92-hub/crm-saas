@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, Switch, message, Space, Typography, Tag, Collapse, Row, Col, Divider, Alert, Slider, Tooltip } from 'antd';
-import { PlusOutlined, EditOutlined, RobotOutlined, SettingOutlined, KeyOutlined, SyncOutlined, InfoCircleOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, RobotOutlined, SettingOutlined, KeyOutlined, SyncOutlined, InfoCircleOutlined, ThunderboltOutlined, DeleteOutlined } from '@ant-design/icons';
 import api from '../../utils/api';
 
 const { Title, Text } = Typography;
@@ -212,6 +212,7 @@ export default function AiAgentSettings() {
         enable_auto_tagging: false, 
         enable_drip_followup: false,
         drip_followup_hours: 24,
+        debounce_delay: 4,
         core_prompt_template: DEFAULT_CORE_PROMPT
       });
     }
@@ -230,7 +231,18 @@ export default function AiAgentSettings() {
       setModalVisible(false);
       fetchAgents();
     } catch (error) {
-      message.error('Có lỗi xảy ra khi lưu.');
+      let errMsg = 'Có lỗi xảy ra khi lưu.';
+      const data = error.response?.data;
+      if (data) {
+        if (Array.isArray(data.model_name)) {
+          errMsg = data.model_name[0];
+        } else if (typeof data.model_name === 'string') {
+          errMsg = data.model_name;
+        } else if (data.error) {
+          errMsg = data.error;
+        }
+      }
+      message.error(errMsg);
     }
   };
 
@@ -541,6 +553,14 @@ export default function AiAgentSettings() {
                     <InputNumber min={1} max={720} style={{ width: 65 }} />
                   </Form.Item>
                   <Text style={{ marginLeft: 8 }}>giờ</Text>
+                </div>
+              </Col>
+              <Col xs={24} sm={12}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <Text style={{ marginRight: 8 }}>Đợi gộp tin nhắn (giây):</Text>
+                  <Form.Item name='debounce_delay' style={{ marginBottom: 0 }}>
+                    <InputNumber min={0} max={60} style={{ width: 65 }} />
+                  </Form.Item>
                 </div>
               </Col>
             </Row>

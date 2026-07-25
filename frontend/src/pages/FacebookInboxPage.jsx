@@ -202,11 +202,27 @@ function ConvItem({ lead, selected, onClick }) {
           {lead.last_message_preview || 'Chưa có tin nhắn'}
         </Text>
         <div style={{ marginTop: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {lead.tags && lead.tags.map(t => (
-            <Tag key={t.id} style={{ fontSize: 10, padding: '0 6px', lineHeight: '16px', borderRadius: 8, margin: 0, color: '#fff', background: t.color || '#3b82f6', border: 'none', fontWeight: 600 }}>
-              {t.name}
-            </Tag>
-          ))}
+          {(() => {
+            const manualTags = lead.tags || [];
+            const aiTags = (lead.ai_tags || []).map((t, i) => ({ id: `ai-${i}`, name: t, color: '#8b5cf6' }));
+            const combinedTags = [...manualTags, ...aiTags];
+            return (
+              <>
+                {combinedTags.slice(0, 2).map(t => (
+                  <Tag key={t.id} style={{ fontSize: 10, padding: '0 6px', lineHeight: '16px', borderRadius: 8, margin: 0, color: '#fff', background: t.color || '#3b82f6', border: 'none', fontWeight: 600 }}>
+                    {t.name}
+                  </Tag>
+                ))}
+                {combinedTags.length > 2 && (
+                  <Tooltip title={combinedTags.slice(2).map(t => t.name).join(', ')}>
+                    <Tag style={{ fontSize: 10, padding: '0 6px', lineHeight: '16px', borderRadius: 8, margin: 0, color: '#fff', background: '#94a3b8', border: 'none', fontWeight: 600, cursor: 'help' }}>
+                      +{combinedTags.length - 2}
+                    </Tag>
+                  </Tooltip>
+                )}
+              </>
+            );
+          })()}
           {lead.assigned_to_name && (
             <Tag style={{ fontSize: 10, padding: '0 6px', lineHeight: '16px', borderRadius: 8, margin: 0, color: '#4b5563', background: '#f3f4f6', border: '1px solid #e5e7eb' }}>
               👤 {lead.assigned_to_name}
@@ -1743,6 +1759,15 @@ export default function FacebookInboxPage() {
                               <div style={{ fontSize: 13, color: '#595959', whiteSpace: 'pre-wrap' }}>
                                 {selectedLead.ai_summary}
                               </div>
+                              {selectedLead.ai_tags && selectedLead.ai_tags.length > 0 && (
+                                <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                  {selectedLead.ai_tags.map((t, idx) => (
+                                    <span key={idx} style={{ fontSize: 11, padding: '2px 10px', borderRadius: 12, background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)', color: '#fff', fontWeight: 600, boxShadow: '0 2px 4px rgba(99, 102, 241, 0.2)' }}>
+                                      {t}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
                           {selectedLead.detected_phone && (

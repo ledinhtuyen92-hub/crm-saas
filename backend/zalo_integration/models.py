@@ -241,6 +241,11 @@ class SocialLead(models.Model):
         null=True,
         verbose_name="AI tóm tắt hội thoại",
     )
+    ai_tags = models.JSONField(
+        blank=True,
+        null=True,
+        verbose_name="AI Tags",
+    )
     last_interaction_date = models.DateTimeField(
         default=timezone.now,
         verbose_name="Lần tương tác cuối",
@@ -288,6 +293,10 @@ class SocialLead(models.Model):
         default=False,
         verbose_name="Đã thêm vào Khách hàng",
         help_text="Đánh dấu True nếu SĐT này đã có hoặc đã được thêm vào Customer hệ thống."
+    )
+    has_ai_followed_up = models.BooleanField(
+        default=False,
+        verbose_name="Đã được AI bám đuổi",
     )
 
     # ── Phân công & Phân loại nội bộ ───────────────────────────────────

@@ -12,11 +12,25 @@ from celery import shared_task
 
 
 
-def process_ai_reply_zalo(lead_id, is_followup=False):
+def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
     try:
         lead = ZaloLead.objects.get(id=lead_id)
-        if not lead.is_ai_active or not lead.oa_config or not lead.oa_config.is_ai_active or not lead.oa_config.ai_agent:
+        if not lead.oa_config or not lead.oa_config.is_ai_active or not lead.oa_config.ai_agent:
             return
+        if not lead.is_ai_active and not is_followup:
+            return
+            
+        if not is_followup:
+            import time
+            delay = lead.oa_config.ai_agent.debounce_delay
+            time.sleep(delay)
+            
+        if not is_followup and trigger_msg_id:
+            from zalo_integration.models import ZaloMessage
+            latest_msg = ZaloMessage.objects.filter(social_lead=lead, direction=ZaloMessage.DIRECTION_INBOUND).order_by('-created_at').first()
+            if latest_msg and latest_msg.id != trigger_msg_id:
+                logger.info(f"Zalo AI debounce: Bỏ qua tin nhắn cũ {trigger_msg_id} do đã có tin mới {latest_msg.id}")
+                return
 
         # Lấy lịch sử
         messages = ZaloMessage.objects.filter(social_lead=lead).order_by('-created_at')[:10]
@@ -29,6 +43,11 @@ def process_ai_reply_zalo(lead_id, is_followup=False):
             history.append({'role': 'system', 'content': 'Khách hàng đã không phản hồi hơn 24 giờ. Hãy viết một câu chào hỏi, gợi mở hoặc hỏi thăm khéo léo để tiếp tục câu chuyện một cách tự nhiên nhất.'})
 
         result = generate_ai_reply(lead.oa_config.ai_agent, history, lead.display_name)
+        if result.get('error'):
+            lead.is_ai_active = False
+            lead.save(update_fields=['is_ai_active'])
+            return
+            
         ai_agent = lead.oa_config.ai_agent
         
         # 1. Trích xuất dữ liệu
@@ -45,11 +64,9 @@ def process_ai_reply_zalo(lead_id, is_followup=False):
         if ai_agent.enable_auto_tagging:
             tags = result.get('tags', [])
             if isinstance(tags, list) and tags:
-                from zalo_integration.models import ZaloLeadTag
-                for tag_name in tags:
-                    if isinstance(tag_name, str) and tag_name.strip():
-                        tag_obj, _ = ZaloLeadTag.objects.get_or_create(company=lead.company, name=tag_name.strip()[:50])
-                        lead.tags.add(tag_obj)
+                clean_tags = [t.strip()[:50] for t in tags if isinstance(t, str) and t.strip()]
+                if clean_tags:
+                    lead.ai_tags = clean_tags
                         
         # 3. Tóm tắt hội thoại
         if ai_agent.enable_auto_summary:
@@ -81,18 +98,38 @@ def process_ai_reply_zalo(lead_id, is_followup=False):
                 content=reply_text
             )
             
+            update_fields = []
             if lead.is_ai_active:
                 lead.has_unread_message = False
                 lead.unread_count = 0
-                lead.save(update_fields=['has_unread_message', 'unread_count'])
+                update_fields.extend(['has_unread_message', 'unread_count'])
+            if is_followup:
+                lead.has_ai_followed_up = True
+                update_fields.append('has_ai_followed_up')
+            if update_fields:
+                lead.save(update_fields=update_fields)
     except Exception as e:
         logger.error(f'Zalo AI Task Error: {e}')
 
-def process_ai_reply_facebook(lead_id, is_followup=False):
+def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
     try:
         lead = FacebookLead.objects.get(id=lead_id)
-        if not lead.is_ai_active or not lead.page_config or not lead.page_config.is_ai_active or not lead.page_config.ai_agent:
+        if not lead.page_config or not lead.page_config.is_ai_active or not lead.page_config.ai_agent:
             return
+        if not lead.is_ai_active and not is_followup:
+            return
+            
+        if not is_followup:
+            import time
+            delay = lead.page_config.ai_agent.debounce_delay
+            time.sleep(delay)
+            
+        if not is_followup and trigger_msg_id:
+            from facebook_integration.models import FacebookMessage
+            latest_msg = FacebookMessage.objects.filter(lead=lead, sender_type='customer').order_by('-created_at').first()
+            if latest_msg and latest_msg.id != trigger_msg_id:
+                logger.info(f"Facebook AI debounce: Bỏ qua tin nhắn cũ {trigger_msg_id} do đã có tin mới {latest_msg.id}")
+                return
 
         messages = FacebookMessage.objects.filter(lead=lead).order_by('-created_at')[:10]
         history = []
@@ -104,6 +141,11 @@ def process_ai_reply_facebook(lead_id, is_followup=False):
             history.append({'role': 'system', 'content': 'Khách hàng đã không phản hồi hơn 24 giờ. Hãy viết một câu chào hỏi, gợi mở hoặc hỏi thăm khéo léo để tiếp tục câu chuyện một cách tự nhiên nhất.'})
 
         result = generate_ai_reply(lead.page_config.ai_agent, history, lead.fb_user_name)
+        if result.get('error'):
+            lead.is_ai_active = False
+            lead.save(update_fields=['is_ai_active'])
+            return
+
         ai_agent = lead.page_config.ai_agent
 
         # 1. Trích xuất dữ liệu
@@ -120,11 +162,9 @@ def process_ai_reply_facebook(lead_id, is_followup=False):
         if ai_agent.enable_auto_tagging:
             tags = result.get('tags', [])
             if isinstance(tags, list) and tags:
-                from facebook_integration.models import FacebookLeadTag
-                for tag_name in tags:
-                    if isinstance(tag_name, str) and tag_name.strip():
-                        tag_obj, _ = FacebookLeadTag.objects.get_or_create(company=lead.company, name=tag_name.strip()[:50])
-                        lead.tags.add(tag_obj)
+                clean_tags = [t.strip()[:50] for t in tags if isinstance(t, str) and t.strip()]
+                if clean_tags:
+                    lead.ai_tags = clean_tags
                         
         # 3. Tóm tắt hội thoại
         if ai_agent.enable_auto_summary:
@@ -163,18 +203,34 @@ def process_ai_reply_facebook(lead_id, is_followup=False):
                 text=reply_text
             )
             
+            update_fields = []
             if lead.is_ai_active:
                 lead.has_unread_message = False
                 lead.unread_count = 0
-                lead.save(update_fields=['has_unread_message', 'unread_count'])
+                update_fields.extend(['has_unread_message', 'unread_count'])
+            if is_followup:
+                lead.has_ai_followed_up = True
+                update_fields.append('has_ai_followed_up')
+            if update_fields:
+                lead.save(update_fields=update_fields)
     except Exception as e:
         logger.error(f'Facebook AI Task Error: {e}')
 
 def trigger_zalo_ai(lead_id, is_followup=False):
-    threading.Thread(target=process_ai_reply_zalo, args=(lead_id, is_followup)).start()
+    from zalo_integration.models import ZaloMessage
+    latest_msg = None
+    if not is_followup:
+        latest_msg = ZaloMessage.objects.filter(social_lead_id=lead_id, direction=ZaloMessage.DIRECTION_INBOUND).order_by('-created_at').first()
+    msg_id = latest_msg.id if latest_msg else None
+    threading.Thread(target=process_ai_reply_zalo, args=(lead_id, is_followup, msg_id)).start()
 
 def trigger_facebook_ai(lead_id, is_followup=False):
-    threading.Thread(target=process_ai_reply_facebook, args=(lead_id, is_followup)).start()
+    from facebook_integration.models import FacebookMessage
+    latest_msg = None
+    if not is_followup:
+        latest_msg = FacebookMessage.objects.filter(lead_id=lead_id, sender_type='customer').order_by('-created_at').first()
+    msg_id = latest_msg.id if latest_msg else None
+    threading.Thread(target=process_ai_reply_facebook, args=(lead_id, is_followup, msg_id)).start()
 
 from celery import shared_task
 from datetime import timedelta
@@ -197,36 +253,28 @@ def ai_drip_followup():
         
         # 1. Quét Zalo
         zalo_leads = ZaloLead.objects.filter(
-            is_ai_active=True,
+            is_customer_converted=False,
+            has_ai_followed_up=False,
             oa_config__ai_agent=agent,
             last_interaction_date__gte=cutoff_start,
             last_interaction_date__lte=cutoff_end
         )
         
         for lead in zalo_leads:
-            last_2_msgs = ZaloMessage.objects.filter(social_lead=lead).order_by('-created_at')[:2]
-            if len(last_2_msgs) > 0 and last_2_msgs[0].direction == ZaloMessage.DIRECTION_OUTBOUND:
-                if len(last_2_msgs) == 2 and last_2_msgs[1].direction == ZaloMessage.DIRECTION_OUTBOUND:
-                    logger.info(f"[AI FollowUp] Bỏ qua {lead.social_id} vì đã follow-up trước đó.")
-                    continue
-                logger.info(f"[AI FollowUp] Trigger Zalo Follow-up cho {lead.social_id} sau {hours}h")
-                trigger_zalo_ai(lead.id, is_followup=True)
+            logger.info(f"[AI FollowUp] Trigger Zalo Follow-up cho {lead.social_id} sau {hours}h")
+            trigger_zalo_ai(lead.id, is_followup=True)
 
         # 2. Quét Facebook
         fb_leads = FacebookLead.objects.filter(
-            is_ai_active=True,
+            is_customer_converted=False,
+            has_ai_followed_up=False,
             page_config__ai_agent=agent,
             last_message_at__gte=cutoff_start,
             last_message_at__lte=cutoff_end
         )
 
         for lead in fb_leads:
-            last_2_msgs = FacebookMessage.objects.filter(lead=lead).order_by('-created_at')[:2]
-            if len(last_2_msgs) > 0 and last_2_msgs[0].sender_type == 'page':
-                if len(last_2_msgs) == 2 and last_2_msgs[1].sender_type == 'page':
-                    logger.info(f"[AI FollowUp] Bỏ qua {lead.fb_user_id} vì đã follow-up trước đó.")
-                    continue
-                logger.info(f"[AI FollowUp] Trigger Facebook Follow-up cho {lead.fb_user_id} sau {hours}h")
-                trigger_facebook_ai(lead.id, is_followup=True)
+            logger.info(f"[AI FollowUp] Trigger Facebook Follow-up cho {lead.fb_user_id} sau {hours}h")
+            trigger_facebook_ai(lead.id, is_followup=True)
             
     logger.info("[AI FollowUp] Hoàn thành quét follow-up.")

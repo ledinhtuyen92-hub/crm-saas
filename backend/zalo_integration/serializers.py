@@ -140,7 +140,7 @@ class SocialLeadListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "social_id", "display_name", "avatar_url",
             "platform", "platform_display", "oa_name", "oa_config",
-            "last_message", "last_interaction_date", "ai_summary",
+            "last_message", "last_interaction_date", "ai_summary", "ai_tags",
             "status", "status_display",
             "assigned_to", "assigned_to_name",
             "is_converted", "detected_phone", "detected_email", "detected_address",
@@ -182,7 +182,7 @@ class SocialLeadDetailSerializer(serializers.ModelSerializer):
         fields = [
             "id", "social_id", "display_name", "avatar_url",
             "platform", "platform_display", "oa_name", "oa_config",
-            "last_message", "last_interaction_date", "ai_summary",
+            "last_message", "last_interaction_date", "ai_summary", "ai_tags",
             "status", "status_display",
             "assigned_to", "assigned_to_name",
             "notes",
@@ -215,7 +215,7 @@ class SocialLeadUpdateSerializer(serializers.ModelSerializer):
     """Dùng để cập nhật note và phân công nhân viên."""
     class Meta:
         model = SocialLead
-        fields = ["assigned_to", "notes"]
+        fields = ["assigned_to", "notes", "is_ai_active"]
 
 
 class ConvertLeadSerializer(serializers.Serializer):
