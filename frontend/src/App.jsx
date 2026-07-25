@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { ConfigProvider, theme } from 'antd'
 import 'antd/dist/reset.css'
 
@@ -44,7 +44,38 @@ import FacebookInboxPage from './pages/FacebookInboxPage'
 import FacebookConfigPage from './pages/settings/FacebookConfigPage'
 import WebsiteIntegration from './pages/settings/WebsiteIntegration'
 import AiAgentSettings from './pages/settings/AiAgentSettings'
+import AiKnowledgeBase from './pages/settings/AiKnowledgeBase'
 import Announcements from './pages/Announcements'
+
+function DynamicTitle() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname;
+    let title = 'Fujitech Group CRM';
+
+    if (path.startsWith('/dashboard')) title = 'Dashboard | Fujitech Group CRM';
+    else if (path.startsWith('/customers')) title = 'Khách hàng | Fujitech Group CRM';
+    else if (path.startsWith('/products')) title = 'Sản phẩm | Fujitech Group CRM';
+    else if (path.startsWith('/quotations')) title = 'Báo giá | Fujitech Group CRM';
+    else if (path.startsWith('/orders')) title = 'Đơn hàng | Fujitech Group CRM';
+    else if (path.startsWith('/inventory')) title = 'Kho vận | Fujitech Group CRM';
+    else if (path.startsWith('/production')) title = 'Sản xuất | Fujitech Group CRM';
+    else if (path.startsWith('/delivery')) title = 'Giao hàng | Fujitech Group CRM';
+    else if (path.startsWith('/warranty')) title = 'Bảo hành | Fujitech Group CRM';
+    else if (path.startsWith('/zalo/inbox')) title = 'Zalo Inbox | Fujitech Group CRM';
+    else if (path.startsWith('/facebook/inbox')) title = 'Facebook Inbox | Fujitech Group CRM';
+    else if (path.startsWith('/settings')) title = 'Cấu hình | Fujitech Group CRM';
+    else if (path.startsWith('/admin')) title = 'Quản trị hệ thống | Fujitech Group CRM';
+    else if (path.startsWith('/login')) title = 'Đăng nhập | Fujitech Group CRM';
+    else if (path.startsWith('/approvals')) title = 'Phê duyệt | Fujitech Group CRM';
+    else if (path.startsWith('/announcements')) title = 'Thông báo | Fujitech Group CRM';
+
+    document.title = title;
+  }, [location.pathname]);
+
+  return null;
+}
 
 function ApplicationLayout({ isDarkMode, toggleTheme }) {
   return (
@@ -75,6 +106,7 @@ function App() {
       }}
     >
       <BrowserRouter>
+        <DynamicTitle />
         {/* AuthProvider must be inside BrowserRouter so useNavigate works */}
         <AuthProvider>
           <Routes>
@@ -206,18 +238,28 @@ function App() {
               <Route
                 path="/settings/website"
                 element={
-                  <CompanyAdminRoute>
+                  <PermissionRoute permissionCode="website_integration.manage" fallback="/dashboard">
                     <WebsiteIntegration />
-                  </CompanyAdminRoute>
+                  </PermissionRoute>
                 }
               />
               <Route
                 path="/settings/ai-agents"
                 element={
                   <ModuleRoute moduleCode="ai_agent">
-                    <CompanyAdminRoute>
+                    <PermissionRoute permissionCode={['ai_agent.view_dashboard', 'ai_agent.manage_agents', 'ai_agent.manage_keys', 'ai_agent.manage_knowledge']} fallback="/dashboard">
                       <AiAgentSettings />
-                    </CompanyAdminRoute>
+                    </PermissionRoute>
+                  </ModuleRoute>
+                }
+              />
+              <Route
+                path="/settings/ai-knowledge"
+                element={
+                  <ModuleRoute moduleCode="ai_agent">
+                    <PermissionRoute permissionCode="ai_agent.manage_knowledge" fallback="/dashboard">
+                      <AiKnowledgeBase />
+                    </PermissionRoute>
                   </ModuleRoute>
                 }
               />

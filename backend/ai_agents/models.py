@@ -1,5 +1,6 @@
 from django.db import models
 from users.models import Company
+from pgvector.django import VectorField
 
 class SystemAiKey(models.Model):
     """
@@ -26,6 +27,13 @@ class CompanyAiSettings(models.Model):
     company = models.OneToOneField(Company, on_delete=models.CASCADE, related_name='ai_settings')
     allow_system_keys = models.BooleanField(default=False, help_text="Super Admin cấp quyền dùng Quota hệ thống")
     use_system_keys = models.BooleanField(default=True, help_text="Công ty bật/tắt sử dụng Quota hệ thống")
+    
+    EMBEDDING_PROVIDER_CHOICES = (
+        ('openai', 'OpenAI (1536 chiều)'),
+        ('gemini', 'Google Gemini (768 chiều)')
+    )
+    default_embedding_provider = models.CharField(max_length=50, choices=EMBEDDING_PROVIDER_CHOICES, default='openai')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -109,9 +117,75 @@ class AiKnowledgeDocument(models.Model):
     """
     agent = models.ForeignKey(AiAgent, on_delete=models.CASCADE, related_name='knowledge_docs')
     title = models.CharField(max_length=200)
-    content = models.TextField(help_text="Nội dung văn bản (hoặc trích xuất từ file)")
+    content = models.TextField(help_text="Nội dung văn bản (hoặc trích xuất từ file)", blank=True)
     file_attachment = models.FileField(upload_to='ai_docs/', blank=True, null=True)
+    
+    DOC_TYPE_CHOICES = (
+        ('file', 'File tài liệu'),
+        ('qa', 'Hỏi - Đáp (Q&A)'),
+    )
+    doc_type = models.CharField(max_length=20, choices=DOC_TYPE_CHOICES, default='file')
+    
+    STATUS_CHOICES = (
+        ('pending', 'Chờ xử lý'),
+        ('processing', 'Đang học'),
+        ('completed', 'Hoàn thành'),
+        ('failed', 'Lỗi'),
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    error_message = models.TextField(blank=True, null=True)
+    
+    embedding_provider = models.CharField(max_length=20, default='openai', help_text="Nền tảng nhúng dữ liệu (openai hoặc gemini)")
+    
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return self.title
+        return f"{self.title} ({self.get_status_display()})"
+
+class AiKnowledgeChunk(models.Model):
+    """
+    Lưu trữ các đoạn văn bản (chunks) đã được băm nhỏ từ AiKnowledgeDocument
+    kèm theo vector nhúng (embedding) để tìm kiếm Semantic Search.
+    """
+    document = models.ForeignKey(AiKnowledgeDocument, on_delete=models.CASCADE, related_name='chunks')
+    content = models.TextField(help_text="Nội dung đoạn text đã băm nhỏ")
+    
+    embedding_provider = models.CharField(max_length=50, default='openai', help_text="Nền tảng đã dùng để nhúng Vector")
+    embedding = VectorField(dimensions=1536, blank=True, null=True, help_text="Vector sinh bởi OpenAI")
+    embedding_gemini = VectorField(dimensions=768, blank=True, null=True, help_text="Vector sinh bởi Gemini")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Chunk of {self.document.title}"
+
+
+class ApiUsageLog(models.Model):
+    """
+    Theo dõi lượng token và chi phí API của từng công ty.
+    """
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='api_usage_logs')
+    agent = models.ForeignKey(AiAgent, on_delete=models.SET_NULL, null=True, blank=True, related_name='usage_logs')
+    provider = models.CharField(max_length=50) # openai, gemini, anthropic
+    model_name = models.CharField(max_length=100)
+    input_tokens = models.IntegerField(default=0)
+    output_tokens = models.IntegerField(default=0)
+    total_cost_usd = models.DecimalField(max_digits=12, decimal_places=6, default=0.0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.company.name} - {self.model_name} - {self.total_cost_usd}$"
+
+class AiModelPricing(models.Model):
+    """
+    Bảng giá AI model để tham chiếu. Có thể tự động bét từ LiteLLM hoặc chỉnh sửa thủ công.
+    """
+    provider = models.CharField(max_length=50) # openai, gemini, anthropic...
+    model_name = models.CharField(max_length=100, unique=True)
+    input_price_per_1m = models.DecimalField(max_digits=12, decimal_places=6, default=0.0)
+    output_price_per_1m = models.DecimalField(max_digits=12, decimal_places=6, default=0.0)
+    is_custom = models.BooleanField(default=False, help_text="Nếu True, auto-sync sẽ không ghi đè giá này.")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.model_name} ({self.provider}) - Input: {self.input_price_per_1m}$ - Output: {self.output_price_per_1m}$"

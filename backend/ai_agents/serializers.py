@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import SystemAiKey, CompanyAiSettings, AiAgent, AiKnowledgeDocument, CompanyAiKey
+from .models import SystemAiKey, CompanyAiSettings, AiAgent, AiKnowledgeDocument, CompanyAiKey, AiModelPricing
 
 class SystemAiKeySerializer(serializers.ModelSerializer):
     class Meta:
@@ -29,3 +29,8 @@ class CompanyAiSettingsSerializer(serializers.ModelSerializer):
         model = CompanyAiSettings
         fields = '__all__'
         read_only_fields = ['company', 'allow_system_keys']
+
+class AiModelPricingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AiModelPricing
+        fields = '__all__'

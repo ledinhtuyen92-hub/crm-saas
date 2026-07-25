@@ -537,9 +537,30 @@ class CompanySettingsView(generics.RetrieveUpdateAPIView):
     http_method_names = ["get", "patch"]
 
     def get_permissions(self):
-        if self.request.method == "GET":
-            return [permissions.IsAuthenticated()]
-        return [CanManageCompanySettings()]
+        return [permissions.IsAuthenticated()]
+
+    def update(self, request, *args, **kwargs):
+        user = request.user
+        is_admin = user.is_superuser or user.is_company_admin or (user.role and user.role.permissions.filter(code="settings.company").exists())
+        
+        if not is_admin:
+            keys = request.data.keys()
+            perms = user.role.permissions.values_list('code', flat=True) if user.role else []
+            
+            allowed = False
+            # Allow website_integration.manage to update its specific settings
+            if 'website_integration.manage' in perms and all(k in ['is_website_integration_active', 'website_api_key'] for k in keys):
+                allowed = True
+            
+            # Allow ai_agent.manage_keys to update AI system keys usage
+            if 'ai_agent.manage_keys' in perms and all(k in ['use_system_keys'] for k in keys):
+                allowed = True
+                
+            if not allowed:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("Bạn không có quyền cập nhật cấu hình công ty này.")
+                
+        return super().update(request, *args, **kwargs)
 
     def get_object(self):
         settings_obj, _ = CompanySettings.objects.get_or_create(

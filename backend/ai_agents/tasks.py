@@ -278,3 +278,150 @@ def ai_drip_followup():
             trigger_facebook_ai(lead.id, is_followup=True)
             
     logger.info("[AI FollowUp] Hoàn thành quét follow-up.")
+
+
+
+@shared_task
+def sync_ai_model_pricing():
+    import requests
+    from decimal import Decimal
+    from .models import AiModelPricing, SystemAiKey, CompanyAiKey
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Thu thập danh sách mô hình thực tế từ API
+    allowed_models = set([
+        'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 
+        'claude-opus-4-5', 'claude-sonnet-4-5'
+    ])
+    
+    # Lấy 1 key active cho OpenAI
+    openai_key = SystemAiKey.objects.filter(provider='openai', is_active=True).first()
+    if not openai_key:
+        openai_key = CompanyAiKey.objects.filter(provider='openai', is_active=True).first()
+    if openai_key:
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=openai_key.api_key)
+            models = client.models.list()
+            for m in models.data:
+                allowed_models.add(m.id)
+        except Exception as e:
+            logger.error(f'OpenAI fetch models error: {e}')
+
+    # Lấy 1 key active cho Gemini
+    gemini_key = SystemAiKey.objects.filter(provider='gemini', is_active=True).first()
+    if not gemini_key:
+        gemini_key = CompanyAiKey.objects.filter(provider='gemini', is_active=True).first()
+    if gemini_key:
+        try:
+            from google import genai as google_genai
+            client = google_genai.Client(api_key=gemini_key.api_key)
+            for m in client.models.list():
+                if hasattr(m, 'supported_actions') and m.supported_actions and 'generateContent' in m.supported_actions:
+                    allowed_models.add(m.name.replace('models/', ''))
+        except Exception as e:
+            logger.error(f'Gemini fetch models error: {e}')
+
+    url = 'https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json'
+    logger.info(f'Đang đồng bộ giá AI từ: {url}')
+    
+    try:
+        response = requests.get(url, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+        
+        updated_count = 0
+        created_count = 0
+        
+        for model_name, info in data.items():
+            if not isinstance(info, dict):
+                continue
+                
+            input_price = info.get('input_cost_per_token', 0)
+            output_price = info.get('output_cost_per_token', 0)
+            provider = info.get('litellm_provider', 'unknown')
+            
+            if provider not in ['openai', 'gemini', 'anthropic']:
+                continue
+                
+            if model_name not in allowed_models:
+                clean_name = model_name.split('/')[-1]
+                if clean_name not in allowed_models:
+                    continue
+                model_name = clean_name
+            else:
+                model_name = model_name.split('/')[-1]
+            
+            if input_price is None or output_price is None:
+                continue
+                
+            try:
+                input_per_1m = Decimal(str(input_price)) * Decimal('1000000')
+                output_per_1m = Decimal(str(output_price)) * Decimal('1000000')
+                
+                pricing, created = AiModelPricing.objects.get_or_create(
+                    model_name=model_name,
+                    defaults={
+                        'provider': provider,
+                        'input_price_per_1m': input_per_1m,
+                        'output_price_per_1m': output_per_1m
+                    }
+                )
+                
+                if created:
+                    created_count += 1
+                else:
+                    if not pricing.is_custom:
+                        pricing.provider = provider
+                        pricing.input_price_per_1m = input_per_1m
+                        pricing.output_price_per_1m = output_per_1m
+                        pricing.save(update_fields=['provider', 'input_price_per_1m', 'output_price_per_1m', 'updated_at'])
+                        updated_count += 1
+            except Exception as e:
+                logger.error(f'Lỗi parse {model_name}: {e}')
+                
+        logger.info(f'Xong. Tạo mới {created_count}, Cập nhật {updated_count}')
+        return {'created': created_count, 'updated': updated_count}
+    except Exception as e:
+        logger.error(f'Lỗi đồng bộ: {e}')
+        return {'error': str(e)}
+
+@shared_task
+def process_document_rag(doc_id):
+    """
+    Celery task để xử lý tài liệu RAG ngầm.
+    """
+    from .models import AiKnowledgeDocument
+    from .rag_processor import process_and_save_document
+    from .services import get_api_keys
+    
+    try:
+        doc = AiKnowledgeDocument.objects.get(id=doc_id)
+        provider = getattr(doc.agent.company.ai_settings, 'default_embedding_provider', 'openai')
+        
+        # Lưu lại nền tảng đọc vào doc
+        doc.embedding_provider = provider
+        doc.save(update_fields=['embedding_provider'])
+        
+        # Lấy API key dựa trên provider đã chọn
+        keys = get_api_keys(doc.agent.company, provider)
+        api_key = keys[0] if keys else None
+        
+        if not api_key:
+            doc.status = 'failed'
+            doc.error_message = f'Không tìm thấy API Key hợp lệ cho {provider.upper()} để thực hiện nhúng (Embedding).'
+            doc.save()
+            return
+            
+        # Thực hiện xử lý
+        process_and_save_document(doc.id, api_key, provider)
+    except Exception as e:
+        # Catch any unexpected errors
+        try:
+            doc = AiKnowledgeDocument.objects.get(id=doc_id)
+            doc.status = 'failed'
+            doc.error_message = str(e)
+            doc.save()
+        except:
+            pass

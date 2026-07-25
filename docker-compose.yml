@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: crm_db
     environment:
       POSTGRES_USER: postgres
@@ -31,5 +31,19 @@ services:
       - db
       - redis
 
+  celery:
+    build: ./backend
+    container_name: crm_celery
+    command: celery -A core worker -l info
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/crm_db
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+
 volumes:
   postgres_data:
+      

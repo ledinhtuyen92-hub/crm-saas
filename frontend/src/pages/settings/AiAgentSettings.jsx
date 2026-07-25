@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, Switch, message, Space, Typography, Tag, Collapse, Row, Col, Divider, Alert, Slider, Tooltip } from 'antd';
-import { PlusOutlined, EditOutlined, RobotOutlined, SettingOutlined, KeyOutlined, SyncOutlined, InfoCircleOutlined, ThunderboltOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, Switch, message, Space, Typography, Tag, Collapse, Row, Col, Divider, Alert, Slider, Tooltip, Segmented, Radio } from 'antd';
+import { PlusOutlined, EditOutlined, RobotOutlined, SettingOutlined, KeyOutlined, SyncOutlined, InfoCircleOutlined, ThunderboltOutlined, DeleteOutlined, BookOutlined } from '@ant-design/icons';
 import api from '../../utils/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
@@ -20,6 +21,7 @@ const DEFAULT_CORE_PROMPT = `{
 }`;
 
 export default function AiAgentSettings() {
+  const { hasPermission } = useAuth();
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -36,6 +38,76 @@ export default function AiAgentSettings() {
   const [fetchedModels, setFetchedModels] = useState([]);
   const [fetchingModels, setFetchingModels] = useState(false);
   const [fetchedKey, setFetchedKey] = useState("");
+  // Company AI Keys (Custom Keys)
+  const [keys, setKeys] = useState([]);
+  const [keysLoading, setKeysLoading] = useState(false);
+  const [keyModalVisible, setKeyModalVisible] = useState(false);
+  const [editingKey, setEditingKey] = useState(null);
+  const [keyForm] = Form.useForm();
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  
+  // Pricing
+  const [pricings, setPricings] = useState([]);
+  const [pricingLoading, setPricingLoading] = useState(false);
+  const [syncingPricing, setSyncingPricing] = useState(false);
+  const [pricingSearch, setPricingSearch] = useState('');
+  const [statsPeriod, setStatsPeriod] = useState('month');
+  
+  const fetchPricings = async () => {
+    setPricingLoading(true);
+    try {
+      const res = await api.get('ai_agents/pricing/');
+      setPricings(Array.isArray(res.data) ? res.data : res.data?.results ?? []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setPricingLoading(false);
+    }
+  };
+  
+  const handleSyncPricing = async () => {
+    setSyncingPricing(true);
+    try {
+      const res = await api.post('ai_agents/pricing/sync/');
+      message.success(`Đã đồng bộ thành công! Tạo mới ${res.data.created}, Cập nhật ${res.data.updated} models.`);
+      fetchPricings();
+    } catch (error) {
+      message.error('Lỗi khi đồng bộ giá từ LiteLLM');
+    } finally {
+      setSyncingPricing(false);
+    }
+  };
+  
+  const handleResetPricing = async (id) => {
+    try {
+      await api.post(`ai_agents/pricing/${id}/reset/`);
+      message.success('Đã khôi phục giá về mặc định (sẽ tự động cập nhật trong lần sync tới).');
+      fetchPricings();
+    } catch (error) {
+      message.error('Lỗi khi khôi phục giá');
+    }
+  };
+  
+  const handleSavePricing = async (record) => {
+    try {
+      await api.put(`ai_agents/pricing/${record.id}/`, record);
+      message.success('Đã lưu cấu hình giá.');
+      fetchPricings();
+    } catch (error) {
+      message.error('Lỗi khi lưu cấu hình giá');
+    }
+  };
+
+  const handleDeletePricing = async (id) => {
+    try {
+      await api.delete(`ai_agents/pricing/${id}/`);
+      message.success('Đã xóa model khỏi bảng giá.');
+      fetchPricings();
+    } catch (error) {
+      message.error('Lỗi khi xóa bảng giá');
+    }
+  };
 
   const fetchAgents = async () => {
     setLoading(true);
@@ -71,12 +143,18 @@ export default function AiAgentSettings() {
     }
   };
 
-  useEffect(() => { 
-    fetchAgents(); 
-    fetchCompanySettings();
-    fetchKeys();
-    fetchAvailableProviders();
-  }, []);
+  const fetchStats = async () => {
+    setStatsLoading(true);
+    try {
+      const res = await api.get(`ai_agents/agents/usage_stats/?period=${statsPeriod}`);
+      setStats(res.data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
 
   const handleFetchModels = async (provider) => {
     if (!provider) return;
@@ -100,12 +178,7 @@ export default function AiAgentSettings() {
     }
   };
 
-  // Company AI Keys (Custom Keys)
-  const [keys, setKeys] = useState([]);
-  const [keysLoading, setKeysLoading] = useState(false);
-  const [keyModalVisible, setKeyModalVisible] = useState(false);
-  const [editingKey, setEditingKey] = useState(null);
-  const [keyForm] = Form.useForm();
+
 
   const fetchKeys = async () => {
     setKeysLoading(true);
@@ -258,68 +331,223 @@ export default function AiAgentSettings() {
     ) }
   ];
 
+  const pricingColumns = [
+    { title: 'Hãng', dataIndex: 'provider', key: 'provider', render: (t) => <Tag color='purple'>{t?.toUpperCase()}</Tag> },
+    { title: 'Tên Mô Hình', dataIndex: 'model_name', key: 'model_name', render: (t) => <Text strong>{t}</Text> },
+    { title: 'Input Price / 1M', dataIndex: 'input_price_per_1m', key: 'input_price_per_1m', render: (val, record) => (
+      <InputNumber 
+        prefix="$" 
+        size="small" 
+        value={val} 
+        precision={6}
+        step={0.01}
+        onChange={(v) => { record.input_price_per_1m = v; }}
+        onBlur={() => { record.is_custom = true; handleSavePricing(record); }}
+      />
+    )},
+    { title: 'Output Price / 1M', dataIndex: 'output_price_per_1m', key: 'output_price_per_1m', render: (val, record) => (
+      <InputNumber 
+        prefix="$" 
+        size="small" 
+        value={val} 
+        precision={6}
+        step={0.01}
+        onChange={(v) => { record.output_price_per_1m = v; }}
+        onBlur={() => { record.is_custom = true; handleSavePricing(record); }}
+      />
+    )},
+    { title: 'Tùy chỉnh', dataIndex: 'is_custom', key: 'is_custom', render: (isCustom, record) => (
+      <Space>
+        {isCustom ? <Tag color='orange'>Tự sửa</Tag> : <Tag color='green'>Auto</Tag>}
+        {isCustom && <Button size="small" type="link" onClick={() => handleResetPricing(record.id)}>Khôi phục</Button>}
+        <Button size="small" type="link" danger icon={<DeleteOutlined />} onClick={() => handleDeletePricing(record.id)} />
+      </Space>
+    )},
+  ];
+
+  useEffect(() => {
+    fetchStats();
+  }, [statsPeriod]);
+
+  useEffect(() => { 
+    fetchAgents(); 
+    fetchCompanySettings();
+    fetchKeys();
+    fetchAvailableProviders();
+    fetchPricings();
+  }, []);
+
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ padding: 24 }}>
       
-      {/* CẤU HÌNH API KEY CÔNG TY */}
-      <Card 
-        title={<Title level={4}><KeyOutlined /> Cấu hình API Key & Phân bổ Quota</Title>} 
-        style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}
-        loading={settingsLoading}
-      >
-
-
-        <Row gutter={[32, 32]}>
-          <Col xs={24} lg={16}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Title level={5} style={{ margin: 0 }}>Kho API Key cá nhân</Title>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenKeyModal()}>Thêm Key Mới</Button>
-            </div>
-            <Table 
-              columns={keyColumns} 
-              dataSource={keys} 
-              rowKey="id" 
-              loading={keysLoading} 
-              pagination={false} 
-              size="middle"
-              style={{ border: '1px solid #f0f0f0', borderRadius: 8 }}
+      {hasPermission('ai_agent.view_dashboard') && (
+        <Card 
+          title={<Title level={4} style={{ margin: 0 }}><ThunderboltOutlined style={{color: '#faad14'}} /> Thống kê Chi phí AI <Text type="secondary" style={{ fontSize: 16, fontWeight: 'normal' }}>{statsPeriod === 'today' ? '(Hôm nay)' : statsPeriod === 'week' ? '(Tuần này)' : statsPeriod === 'month' ? '(Tháng này)' : '(Trọn đời)'}</Text></Title>} 
+          extra={
+            <Segmented 
+              options={[
+                { label: 'Hôm nay', value: 'today' },
+                { label: 'Tuần này', value: 'week' },
+                { label: 'Tháng này', value: 'month' },
+                { label: 'Trọn đời', value: 'all' },
+              ]} 
+              value={statsPeriod} 
+              onChange={setStatsPeriod} 
             />
-          </Col>
-          
-          <Col xs={24} lg={8}>
-            <div style={{ 
-              padding: 24, 
-              background: 'linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)', 
-              borderRadius: 12,
-              border: '1px solid #e2e8f0'
-            }}>
-              <Form form={settingsForm} layout='vertical' onFinish={handleSaveCompanySettings}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                  <RobotOutlined style={{ fontSize: 20, color: '#1677ff' }} />
-                  <Title level={5} style={{ margin: 0 }}>Cơ chế Dự phòng (Fallback)</Title>
+          }
+          style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}
+          loading={statsLoading}
+        >
+          <Row gutter={[24, 24]}>
+            <Col xs={24} md={8}>
+              <div style={{ 
+                background: 'linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%)', 
+                padding: '24px', 
+                borderRadius: 16, 
+                border: '1px solid #b7eb8f', 
+                boxShadow: '0 8px 24px rgba(82, 196, 26, 0.15)',
+                display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
+              }}>
+                <Title level={5} style={{ color: '#389e0d', margin: 0, textTransform: 'uppercase', letterSpacing: 1, fontSize: 13 }}>Input Tokens</Title>
+                <Title level={2} style={{ margin: '12px 0 0 0', color: '#135200' }}>{stats?.total_input_tokens?.toLocaleString() || 0}</Title>
+              </div>
+            </Col>
+            <Col xs={24} md={8}>
+              <div style={{ 
+                background: 'linear-gradient(135deg, #e6f4ff 0%, #bae0ff 100%)', 
+                padding: '24px', 
+                borderRadius: 16, 
+                border: '1px solid #91caff', 
+                boxShadow: '0 8px 24px rgba(22, 119, 255, 0.15)',
+                display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
+              }}>
+                <Title level={5} style={{ color: '#0958d9', margin: 0, textTransform: 'uppercase', letterSpacing: 1, fontSize: 13 }}>Output Tokens</Title>
+                <Title level={2} style={{ margin: '12px 0 0 0', color: '#003eb3' }}>{stats?.total_output_tokens?.toLocaleString() || 0}</Title>
+              </div>
+            </Col>
+            <Col xs={24} md={8}>
+              <div style={{ 
+                background: 'linear-gradient(135deg, #fff2e8 0%, #ffbb96 100%)', 
+                padding: '24px', 
+                borderRadius: 16, 
+                border: '1px solid #ff9c6e', 
+                boxShadow: '0 8px 24px rgba(250, 84, 28, 0.15)',
+                display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
+              }}>
+                <Title level={5} style={{ color: '#d4380d', margin: 0, textTransform: 'uppercase', letterSpacing: 1, fontSize: 13 }}>Tổng Chi Phí</Title>
+                <Title level={2} style={{ margin: '12px 0 0 0', color: '#871400' }}>${parseFloat(stats?.total_cost_usd || 0).toFixed(4)}</Title>
+              </div>
+            </Col>
+          </Row>
+        
+        {stats?.agent_stats?.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            <Title level={5}>Chi tiết theo Trợ lý</Title>
+            <Table 
+              dataSource={stats.agent_stats} 
+              rowKey={(r, i) => i}
+              pagination={false}
+              size="small"
+              columns={[
+                { title: 'Tên Trợ lý', dataIndex: 'agent_name', key: 'agent_name' },
+                { title: 'Mô hình', dataIndex: 'model_name', key: 'model_name' },
+                { title: 'Input Tokens', dataIndex: 'input_tokens', key: 'input_tokens', render: (v) => v.toLocaleString() },
+                { title: 'Output Tokens', dataIndex: 'output_tokens', key: 'output_tokens', render: (v) => v.toLocaleString() },
+                { title: 'Chi phí ($)', dataIndex: 'total_cost_usd', key: 'total_cost_usd', render: (v) => <Text strong style={{ color: '#fa541c' }}>${parseFloat(v || 0).toFixed(4)}</Text> }
+              ]} 
+            />
+          </div>
+        )}
+      </Card>
+      )}
+      
+      {hasPermission('ai_agent.sync_pricing') && (
+      <Card 
+        title={<Title level={4}><InfoCircleOutlined style={{color: '#1677ff'}} /> Bảng Giá AI (Tham chiếu từ LiteLLM)</Title>} 
+        extra={
+          <Space>
+            <Input.Search 
+              placeholder="Tìm tên mô hình..." 
+              allowClear
+              onChange={e => setPricingSearch(e.target.value)} 
+              style={{ width: 250 }}
+            />
+            <Button type="primary" icon={<SyncOutlined spin={syncingPricing} />} loading={syncingPricing} onClick={handleSyncPricing}>Đồng bộ từ LiteLLM</Button>
+          </Space>
+        }
+        style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}
+      >
+        <Text type='secondary' style={{ display: 'block', marginBottom: 16 }}>
+          Bảng giá được đồng bộ tự động hàng ngày. Bạn có thể tự sửa giá (khi sửa sẽ bị đánh dấu "Tự sửa" và không bị tự động ghi đè).
+        </Text>
+        <Table 
+          dataSource={pricings.filter(p => p.model_name.toLowerCase().includes(pricingSearch.toLowerCase()))} 
+          rowKey="id"
+          pagination={{ pageSize: 10, showSizeChanger: false }}
+          size="small"
+          columns={pricingColumns} 
+          loading={pricingLoading}
+        />
+      </Card>
+      )}
+
+      {hasPermission('ai_agent.manage_keys') && (
+        <Card 
+          title={<Title level={4}><KeyOutlined /> Cấu hình API Key & Phân bổ Quota</Title>} 
+          style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}
+          loading={settingsLoading}
+        >
+          <Form form={settingsForm} layout='vertical' onFinish={handleSaveCompanySettings}>
+            <Row gutter={[32, 32]}>
+              <Col xs={24} lg={16}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <Title level={5} style={{ margin: 0 }}>Kho API Key cá nhân</Title>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenKeyModal()}>Thêm Key Mới</Button>
                 </div>
-                
-                <Text type='secondary' style={{ display: 'block', marginBottom: 20, lineHeight: '1.6' }}>
-                  Nếu Key riêng của bạn bị hết hạn mức (hết tiền), hệ thống sẽ tự động trượt sang dùng kho Key dự phòng của Server (System Quota) để đảm bảo Trợ lý AI luôn hoạt động 24/7.
-                </Text>
-                
-                {!companySettings?.allow_system_keys ? (
-                  <Alert
-                    message="Tính năng bị khóa"
-                    description="Bạn chưa được Admin hệ thống cấp quyền dùng Quota dự phòng. Vui lòng liên hệ Admin để nâng cấp."
-                    type="error"
-                    showIcon
-                    style={{ marginBottom: 20, borderRadius: 8 }}
-                  />
-                ) : (
-                  <Alert
-                    message="Đã được cấp quyền"
-                    description="Bạn có thể tự do bật/tắt tính năng sử dụng Quota dự phòng bên dưới."
-                    type="success"
-                    showIcon
-                    style={{ marginBottom: 20, borderRadius: 8 }}
-                  />
-                )}
+                <Table 
+                  columns={keyColumns} 
+                  dataSource={keys} 
+                  rowKey="id" 
+                  loading={keysLoading} 
+                  pagination={false} 
+                  size="middle"
+                  style={{ border: '1px solid #f0f0f0', borderRadius: 8 }}
+                />
+              </Col>
+              
+              <Col xs={24} lg={8}>
+                <div style={{ 
+                  padding: 24, 
+                  background: 'linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)', 
+                  borderRadius: 12,
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                    <RobotOutlined style={{ fontSize: 20, color: '#1677ff' }} />
+                    <Title level={5} style={{ margin: 0 }}>Cơ chế Dự phòng (Fallback)</Title>
+                  </div>
+                  
+                  <Text type='secondary' style={{ display: 'block', marginBottom: 20, lineHeight: '1.6' }}>
+                    Nếu Key riêng của bạn bị hết hạn mức (hết tiền), hệ thống sẽ tự động trượt sang dùng kho Key dự phòng của Server (System Quota) để đảm bảo Trợ lý AI luôn hoạt động 24/7.
+                  </Text>
+                  
+                  {!companySettings?.allow_system_keys ? (
+                    <Alert
+                      message="Tính năng bị khóa"
+                      description="Bạn chưa được Admin hệ thống cấp quyền dùng Quota dự phòng. Vui lòng liên hệ Admin để nâng cấp."
+                      type="error"
+                      showIcon
+                      style={{ marginBottom: 20, borderRadius: 8 }}
+                    />
+                  ) : (
+                    <Alert
+                      message="Đã được cấp quyền"
+                      description="Bạn có thể tự do bật/tắt tính năng sử dụng Quota dự phòng bên dưới."
+                      type="success"
+                      showIcon
+                      style={{ marginBottom: 20, borderRadius: 8 }}
+                    />
+                  )}
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0' }}>
                     <Text strong>Cho phép dùng System Quota</Text>
@@ -331,19 +559,22 @@ export default function AiAgentSettings() {
                       />
                     </Form.Item>
                   </div>
-                
-                <Divider style={{ margin: '20px 0' }} />
-                
-                <Button type='primary' htmlType='submit' block size='large' style={{ borderRadius: 8 }}>
-                  Lưu Cấu Hình
+                </div>
+              </Col>
+            </Row>
+            
+            <Divider style={{ margin: '24px 0' }} />
+              
+              <div style={{ textAlign: 'right' }}>
+                <Button type='primary' htmlType='submit' size='large' style={{ borderRadius: 8, minWidth: 200 }}>
+                  Lưu Cơ chế Dự phòng
                 </Button>
-              </Form>
-            </div>
-          </Col>
-        </Row>
-      </Card>
+              </div>
+          </Form>
+        </Card>
+      )}
 
-      {/* QUẢN LÝ TRỢ LÝ AI */}
+      {hasPermission('ai_agent.manage_agents') && (
       <Card 
         title={<Title level={4}><RobotOutlined /> Quản lý Đội ngũ Trợ lý AI</Title>} 
         extra={<Button type='primary' size='large' icon={<PlusOutlined />} onClick={() => handleOpenModal()}>Tạo Trợ lý AI mới</Button>}
@@ -351,6 +582,7 @@ export default function AiAgentSettings() {
       >
         <Table columns={columns} dataSource={agents} rowKey='id' loading={loading} pagination={false} />
       </Card>
+      )}
 
       <Modal 
         title={<Space><RobotOutlined style={{color: '#1677ff', fontSize: 20}} /> <span style={{fontSize: 18, fontWeight: 600}}>{editingAgent ? 'Chỉnh sửa Trợ lý AI' : 'Tạo Trợ lý AI mới'}</span></Space>} 

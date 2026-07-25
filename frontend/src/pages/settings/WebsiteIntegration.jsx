@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { Card, Typography, Switch, Button, message, Space, Divider, Alert, Input } from 'antd'
 import { ApiOutlined, ReloadOutlined, CheckCircleOutlined, CopyOutlined } from '@ant-design/icons'
 import api from '../../utils/api'
+import { useAuth } from '../../contexts/AuthContext'
 
 const { Title, Text, Paragraph } = Typography
 
 export default function WebsiteIntegration() {
+  const { hasPermission } = useAuth()
   const [settings, setSettings] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -89,6 +91,14 @@ export default function WebsiteIntegration() {
 })
 .then(res => res.json())
 .then(data => console.log(data));`
+
+  if (!hasPermission('website_integration.manage')) {
+    return (
+      <div style={{ padding: 24 }}>
+        <Alert type="error" message="Từ chối truy cập" description="Bạn không có quyền quản lý Tích hợp Website (website_integration.manage)." showIcon />
+      </div>
+    )
+  }
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', paddingBottom: 40 }}>

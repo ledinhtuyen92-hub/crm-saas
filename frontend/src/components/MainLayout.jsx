@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import api from '../utils/api'
 import {
@@ -55,7 +55,8 @@ import {
   UpOutlined,
   DownOutlined,
   ApiOutlined,
-  RobotOutlined,
+  RobotOutlined, BookOutlined,
+  FacebookOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -202,75 +203,101 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
           icon: <SafetyCertificateOutlined />,
           label: <Link to="/warranty">Bảo hành</Link>,
         }] : []),
-        ...(isModuleActive('zalo') && hasPermission('zalo.view') ? [{
-          key: '/zalo/inbox',
+        ...(isModuleActive('zalo') && (hasPermission('zalo.view') || hasPermission('zalo.config') || hasPermission('zalo.manage_templates')) ? [{
+          key: 'zalo-group',
           icon: <WechatOutlined style={{ color: '#0068ff' }} />,
-          label: <Link to="/zalo/inbox">Zalo Inbox</Link>,
+          label: 'Zalo (Omnichannel)',
+          children: [
+            ...(hasPermission('zalo.view') ? [{
+              key: '/zalo/inbox',
+              icon: <WechatOutlined style={{ color: '#0068ff' }} />,
+              label: <Link to="/zalo/inbox">Zalo Inbox</Link>,
+            }] : []),
+            ...(hasPermission('zalo.config') ? [{
+              key: '/settings/zalo',
+              icon: <SettingOutlined />,
+              label: <Link to="/settings/zalo">Cấu hình Zalo OA</Link>,
+            }] : []),
+            ...(hasPermission('zalo.manage_templates') ? [{
+              key: '/settings/zalo-templates',
+              icon: <MessageOutlined />,
+              label: <Link to="/settings/zalo-templates">Mẫu Zalo ZNS</Link>,
+            }] : []),
+          ],
         }] : []),
-        ...(isModuleActive('facebook') && hasPermission('facebook.view_inbox') ? [{
-          key: '/facebook/inbox',
+        ...(isModuleActive('facebook') && (hasPermission('facebook.view_inbox') || hasPermission('facebook.manage_config')) ? [{
+          key: 'facebook-group',
           icon: <span style={{ color: '#1877f2', fontWeight: 900, fontSize: 14 }}>𝐟</span>,
-          label: <Link to="/facebook/inbox">Facebook Inbox</Link>,
+          label: 'Facebook (Omnichannel)',
+          children: [
+            ...(hasPermission('facebook.view_inbox') ? [{
+              key: '/facebook/inbox',
+              icon: <span style={{ color: '#1877f2', fontWeight: 900, fontSize: 14 }}>𝐟</span>,
+              label: <Link to="/facebook/inbox">Facebook Inbox</Link>,
+            }] : []),
+            ...(hasPermission('facebook.manage_config') ? [{
+              key: '/settings/facebook',
+              icon: <SettingOutlined />,
+              label: <Link to="/settings/facebook">Cấu hình Facebook</Link>,
+            }] : []),
+          ],
         }] : []),
-        ...(isModuleActive('website_integration') && isCompanyAdmin ? [{
-          key: '/settings/website',
-          icon: <ApiOutlined style={{ color: '#eb2f96' }} />,
-          label: <Link to="/settings/website">Tích hợp Website</Link>,
-        }] : []),
-        ...(isModuleActive('ai_agent') && isCompanyAdmin ? [{
-          key: '/settings/ai-agents',
-          icon: <RobotOutlined style={{ color: '#52c41a' }} />,
-          label: <Link to="/settings/ai-agents">Trợ lý AI</Link>,
-        }] : []),
-        ...(isCompanyAdmin || (isModuleActive('zalo') && (hasPermission('zalo.config') || hasPermission('zalo.manage_templates'))) || (isModuleActive('facebook') && hasPermission('facebook.manage_config'))
-          ? [
-              { type: 'divider' },
-              {
-                key: 'settings-group',
-                icon: <SettingOutlined />,
-                label: isCompanyAdmin ? 'Quản lý công ty' : 'Cấu hình hệ thống',
-                children: [
-                  ...(isCompanyAdmin ? [
-                    {
-                      key: '/settings/general',
-                      icon: <SettingOutlined />,
-                      label: <Link to="/settings/general">Cài đặt & Mẫu báo giá</Link>,
-                    },
-                    {
-                      key: '/settings/users',
-                      icon: <UsergroupAddOutlined />,
-                      label: <Link to="/settings/users">Nhân viên</Link>,
-                    },
-                    {
-                      key: '/settings/departments',
-                      icon: <TeamOutlined />,
-                      label: <Link to="/settings/departments">Phòng ban</Link>,
-                    },
-                    {
-                      key: '/settings/roles',
-                      icon: <KeyOutlined />,
-                      label: <Link to="/settings/roles">Vai trò & Quyền</Link>,
-                    },
-                  ] : []),
-                  ...(isModuleActive('zalo') && hasPermission('zalo.config') ? [{
-                    key: '/settings/zalo',
-                    icon: <WechatOutlined />,
-                    label: <Link to="/settings/zalo">Cấu hình Zalo OA</Link>,
-                  }] : []),
-                  ...(isModuleActive('zalo') && (hasPermission('zalo.config') || hasPermission('zalo.manage_templates')) ? [{
-                    key: '/settings/zalo-templates',
-                    icon: <MessageOutlined />,
-                    label: <Link to="/settings/zalo-templates">Mẫu Zalo ZNS</Link>,
-                  }] : []),
-                  ...(isModuleActive('facebook') && hasPermission('facebook.manage_config') ? [{
-                    key: '/settings/facebook',
-                    icon: <span style={{ color: '#1877f2', fontWeight: 900 }}>𝐟</span>,
-                    label: <Link to="/settings/facebook">Cấu hình Facebook</Link>,
-                  }] : []),
-                ],
-              },
-            ]
-          : []),
+        ...(isModuleActive('ai_agent') || isModuleActive('website_integration') ? [
+          { type: 'divider' },
+          {
+            key: 'tools-group',
+            icon: <AppstoreAddOutlined style={{ color: '#fa8c16' }} />,
+            label: 'Công cụ mở rộng',
+            children: [
+              ...(isModuleActive('ai_agent') && (hasPermission('ai_agent.view_dashboard') || hasPermission('ai_agent.manage_agents') || hasPermission('ai_agent.manage_knowledge') || hasPermission('ai_agent.manage_keys')) ? [{
+              key: '/settings/ai-agents',
+              icon: <RobotOutlined style={{ color: '#52c41a' }} />,
+              label: <Link to="/settings/ai-agents">Trợ lý AI</Link>,
+            },
+            {
+              key: '/settings/ai-knowledge',
+              icon: <BookOutlined style={{ color: '#1890ff' }} />,
+              label: <Link to="/settings/ai-knowledge">Tri thức RAG</Link>,
+            }] : []),
+              ...(isModuleActive('website_integration') && hasPermission('website_integration.manage') ? [{
+                key: '/settings/website',
+                icon: <ApiOutlined style={{ color: '#eb2f96' }} />,
+                label: <Link to="/settings/website">Tích hợp Website</Link>,
+              }] : []),
+            ],
+          }
+        ] : []),
+        ...(isCompanyAdmin ? [
+            { type: 'divider' },
+            {
+              key: 'settings-group',
+              icon: <SettingOutlined />,
+              label: 'Quản lý công ty',
+              children: [
+                {
+                  key: '/settings/general',
+                  icon: <SettingOutlined />,
+                  label: <Link to="/settings/general">Cài đặt & Mẫu báo giá</Link>,
+                },
+                {
+                  key: '/settings/users',
+                  icon: <UsergroupAddOutlined />,
+                  label: <Link to="/settings/users">Nhân viên</Link>,
+                },
+                {
+                  key: '/settings/departments',
+                  icon: <TeamOutlined />,
+                  label: <Link to="/settings/departments">Phòng ban</Link>,
+                },
+                {
+                  key: '/settings/roles',
+                  icon: <KeyOutlined />,
+                  label: <Link to="/settings/roles">Vai trò & Quyền</Link>,
+                },
+              ],
+            },
+          ]
+        : []),
       ]
 
   // ── Modal Đổi mật khẩu ───────────────────────────────────────────
@@ -487,7 +514,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
         mode="inline"
         theme="dark"
         selectedKeys={[location.pathname]}
-        defaultOpenKeys={['settings-group']}
+        defaultOpenKeys={[]}
         items={menuItems}
         style={{
           borderRight: 0,

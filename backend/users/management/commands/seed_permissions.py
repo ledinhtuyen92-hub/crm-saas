@@ -134,6 +134,16 @@ PERMISSIONS = [
     {"code": "notifications.view_announcements", "name": "Xem thông báo nội bộ", "module": "notifications"},
     {"code": "notifications.create_announcements", "name": "Tạo và gửi thông báo nội bộ", "module": "notifications"},
     {"code": "notifications.delete_announcements", "name": "Xóa thông báo nội bộ", "module": "notifications"},
+
+    # 🤖 Trợ lý AI (ai_agent)
+    {"code": "ai_agent.view_dashboard", "name": "Xem bảng thống kê chi phí AI", "module": "ai_agent"},
+    {"code": "ai_agent.manage_agents", "name": "Quản lý Đội ngũ Trợ lý AI", "module": "ai_agent"},
+    {"code": "ai_agent.manage_knowledge", "name": "Quản lý Tài liệu Huấn luyện (RAG)", "module": "ai_agent"},
+    {"code": "ai_agent.manage_keys", "name": "Cấu hình API Key & Phân bổ Quota", "module": "ai_agent"},
+    {"code": "ai_agent.sync_pricing", "name": "Đồng bộ Bảng giá Models AI", "module": "ai_agent"},
+
+    # 🌐 Tích hợp Website (website_integration)
+    {"code": "website_integration.manage", "name": "Quản lý tích hợp Website (Webhooks)", "module": "website_integration"},
 ]
 
 # [FUTURE RESERVED PERMISSIONS - MỞ RỘNG SAU NÀY]

@@ -1,8 +1,11 @@
 from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import SystemAiKey, CompanyAiSettings, AiAgent, AiKnowledgeDocument, CompanyAiKey
-from .serializers import SystemAiKeySerializer, CompanyAiSettingsSerializer, AiAgentSerializer, AiKnowledgeDocumentSerializer, CompanyAiKeySerializer
+from .tasks import process_document_rag
+from rest_framework.response import Response
+from .models import AiKnowledgeChunk
+from .models import SystemAiKey, CompanyAiSettings, AiAgent, AiKnowledgeDocument, CompanyAiKey, AiModelPricing
+from .serializers import SystemAiKeySerializer, CompanyAiSettingsSerializer, AiAgentSerializer, AiKnowledgeDocumentSerializer, CompanyAiKeySerializer, AiModelPricingSerializer
 
 class SystemAiKeyViewSet(viewsets.ModelViewSet):
     queryset = SystemAiKey.objects.all().order_by('-priority', '-created_at')
@@ -73,12 +76,139 @@ class AiAgentViewSet(viewsets.ModelViewSet):
                     elif 'not found' in err or '404' in err or '403' in err or 'permission' in err:
                         raise serializers.ValidationError({"model_name": f"Mô hình '{model_name}' bị chặn hoặc tài khoản của bạn chưa được cấp quyền dùng nó. Vui lòng chọn mô hình khác."})
 
+    @action(detail=False, methods=['GET'])
+    def usage_stats(self, request):
+        from .models import ApiUsageLog
+        from django.db.models import Sum
+        from django.utils import timezone
+        
+        now = timezone.now()
+        period = request.query_params.get('period', 'month')
+        
+        import datetime
+        logs = ApiUsageLog.objects.filter(company=request.user.company)
+        if period == 'today':
+            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            logs = logs.filter(created_at__gte=start_date)
+        elif period == 'week':
+            start_date = (now - datetime.timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+            logs = logs.filter(created_at__gte=start_date)
+        elif period == 'month':
+            start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            logs = logs.filter(created_at__gte=start_date)
+        
+        total_input = logs.aggregate(Sum('input_tokens'))['input_tokens__sum'] or 0
+        total_output = logs.aggregate(Sum('output_tokens'))['output_tokens__sum'] or 0
+        total_cost = logs.aggregate(Sum('total_cost_usd'))['total_cost_usd__sum'] or 0
+        
+        agent_stats = []
+        for agent in AiAgent.objects.filter(company=request.user.company):
+            agent_logs = logs.filter(agent=agent)
+            if agent_logs.exists():
+                a_in = agent_logs.aggregate(Sum('input_tokens'))['input_tokens__sum'] or 0
+                a_out = agent_logs.aggregate(Sum('output_tokens'))['output_tokens__sum'] or 0
+                a_cost = agent_logs.aggregate(Sum('total_cost_usd'))['total_cost_usd__sum'] or 0
+                agent_stats.append({
+                    'agent_name': agent.name,
+                    'model_name': agent.model_name,
+                    'input_tokens': a_in,
+                    'output_tokens': a_out,
+                    'total_cost_usd': a_cost
+                })
+                
+        return Response({
+            'total_input_tokens': total_input,
+            'total_output_tokens': total_output,
+            'total_cost_usd': total_cost,
+            'agent_stats': agent_stats
+        })
+
 class AiKnowledgeDocumentViewSet(viewsets.ModelViewSet):
     serializer_class = AiKnowledgeDocumentSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
         return AiKnowledgeDocument.objects.filter(agent__company=self.request.user.company)
+        
+    def perform_create(self, serializer):
+        doc = serializer.save()
+        process_document_rag.delay(doc.id)
+        
+    def perform_update(self, serializer):
+        needs_reembed = 'content' in serializer.validated_data or 'file_attachment' in serializer.validated_data
+        doc = serializer.save()
+        if needs_reembed:
+            doc.status = 'pending'
+            doc.error_message = ''
+            doc.save(update_fields=['status', 'error_message'])
+            process_document_rag.delay(doc.id)
+
+    @action(detail=True, methods=['POST'])
+    def retry(self, request, pk=None):
+        doc = self.get_object()
+        doc.status = 'pending'
+        doc.error_message = ''
+        doc.save(update_fields=['status', 'error_message'])
+        process_document_rag.delay(doc.id)
+        return Response({'status': 'đã gửi yêu cầu học lại'})
+
+    @action(detail=False, methods=['POST'])
+    def test_retrieval(self, request):
+        query = request.data.get('query', '')
+        agent_id = request.data.get('agent_id')
+        
+        if not query or not agent_id:
+            return Response({'error': 'Vui lòng cung cấp query và agent_id'}, status=400)
+            
+        from .services import get_api_keys
+        from openai import OpenAI
+        import google.generativeai as genai
+        from pgvector.django import L2Distance
+        
+        company = request.user.company
+        provider = getattr(company.ai_settings, 'default_embedding_provider', 'openai')
+        keys = get_api_keys(company, provider)
+        api_key = keys[0] if keys else None
+        
+        if not api_key:
+            return Response({'error': f'Không có {provider.upper()} API Key hợp lệ để tìm kiếm'}, status=400)
+            
+        try:
+            # Lấy API Key để embed câu hỏi
+            if provider == 'gemini':
+                genai.configure(api_key=api_key)
+                response = genai.embed_content(
+                    model="models/embedding-001",
+                    content=query,
+                    task_type="retrieval_query"
+                )
+                query_embedding = response['embedding']
+                distance_expr = L2Distance('embedding_gemini', query_embedding)
+            else:
+                client = OpenAI(api_key=api_key)
+                res = client.embeddings.create(input=[query], model="text-embedding-3-small")
+                query_embedding = res.data[0].embedding
+                distance_expr = L2Distance('embedding', query_embedding)
+            
+            # Tìm kiếm vector bằng pgvector
+            chunks = AiKnowledgeChunk.objects.filter(
+                document__agent_id=agent_id,
+                embedding_provider=provider
+            ).annotate(
+                distance=distance_expr
+            ).order_by('distance')[:3]
+            
+            results = []
+            for chunk in chunks:
+                results.append({
+                    'document': chunk.document.title,
+                    'content': chunk.content,
+                    'distance': chunk.distance
+                })
+                
+            return Response({'results': results})
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
 
 class CompanyAiSettingsViewSet(viewsets.ModelViewSet):
     serializer_class = CompanyAiSettingsSerializer
@@ -188,3 +318,27 @@ class CompanyAiSettingsViewSet(viewsets.ModelViewSet):
             'count': len(models),
             'used_key': masked_key
         })
+
+class AiModelPricingViewSet(viewsets.ModelViewSet):
+    serializer_class = AiModelPricingSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
+    
+    def get_queryset(self):
+        return AiModelPricing.objects.all().order_by('provider', 'model_name')
+        
+    @action(detail=False, methods=['post'])
+    def sync(self, request):
+        try:
+            from .tasks import sync_ai_model_pricing
+            result = sync_ai_model_pricing() # Synchronous call for instant feedback
+            return Response(result)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+            
+    @action(detail=True, methods=['post'])
+    def reset(self, request, pk=None):
+        pricing = self.get_object()
+        pricing.is_custom = False
+        pricing.save()
+        return Response({'status': 'ok'})

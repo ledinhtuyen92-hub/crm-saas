@@ -69,7 +69,11 @@ def call_openai(api_key, agent, system_prompt, conversation_history):
         temperature=agent.temperature,
         response_format={ "type": "json_object" }
     )
-    return json.loads(response.choices[0].message.content)
+    usage = {
+        'input': response.usage.prompt_tokens if hasattr(response, 'usage') and response.usage else 0,
+        'output': response.usage.completion_tokens if hasattr(response, 'usage') and response.usage else 0,
+    }
+    return json.loads(response.choices[0].message.content), usage
 
 def call_gemini(api_key, agent, system_prompt, conversation_history):
     client = google_genai.Client(api_key=api_key)
@@ -94,7 +98,17 @@ def call_gemini(api_key, agent, system_prompt, conversation_history):
             response_mime_type='application/json',
         )
     )
-    return json.loads(response.text)
+    
+    # Extract usage from Gemini response
+    usage = {'input': 0, 'output': 0}
+    try:
+        if hasattr(response, 'usage_metadata') and response.usage_metadata:
+            usage['input'] = response.usage_metadata.prompt_token_count or 0
+            usage['output'] = response.usage_metadata.candidates_token_count or 0
+    except:
+        pass
+        
+    return json.loads(response.text), usage
 
 def call_anthropic(api_key, agent, system_prompt, conversation_history):
     client = anthropic.Anthropic(api_key=api_key)
@@ -113,7 +127,12 @@ def call_anthropic(api_key, agent, system_prompt, conversation_history):
     text_content = response.content[0].text
     if "```json" in text_content:
         text_content = text_content.split("```json")[1].split("```")[0]
-    return json.loads(text_content.strip())
+        
+    usage = {
+        'input': response.usage.input_tokens if hasattr(response, 'usage') and response.usage else 0,
+        'output': response.usage.output_tokens if hasattr(response, 'usage') and response.usage else 0,
+    }
+    return json.loads(text_content.strip()), usage
 
 def generate_ai_reply(agent: AiAgent, conversation_history: list, lead_name: str):
     provider = get_provider_for_model(agent.model_name)
@@ -148,15 +167,72 @@ TRẢ LỜI BẮT BUỘC THEO ĐỊNH DẠNG JSON SAU (không trả về Markdow
     for api_key in api_keys:
         try:
             if provider == 'openai':
-                return call_openai(api_key, agent, system_prompt, conversation_history)
+                result, usage = call_openai(api_key, agent, system_prompt, conversation_history)
             elif provider == 'gemini':
-                return call_gemini(api_key, agent, system_prompt, conversation_history)
+                result, usage = call_gemini(api_key, agent, system_prompt, conversation_history)
             elif provider == 'anthropic':
-                return call_anthropic(api_key, agent, system_prompt, conversation_history)
+                result, usage = call_anthropic(api_key, agent, system_prompt, conversation_history)
+            
+            # Log usage
+            try:
+                from .models import ApiUsageLog, AiModelPricing
+                from decimal import Decimal
+                
+                model_name = agent.model_name or ('gpt-4o-mini' if provider == 'openai' else 'gemini-2.5-flash' if provider == 'gemini' else 'claude-3-5-sonnet-20240620')
+                if model_name.startswith('models/'):
+                    model_name = model_name[7:]
+                    
+                input_price = 0.0
+                output_price = 0.0
+                
+                # Fetch exact match
+                pricing_obj = AiModelPricing.objects.filter(model_name=model_name).first()
+                if pricing_obj:
+                    input_price = float(pricing_obj.input_price_per_1m)
+                    output_price = float(pricing_obj.output_price_per_1m)
+                else:
+                    # Fallback: find any model name that is a substring
+                    pricing_obj = AiModelPricing.objects.filter(model_name__icontains=provider).first()
+                    if pricing_obj:
+                        input_price = float(pricing_obj.input_price_per_1m)
+                        output_price = float(pricing_obj.output_price_per_1m)
+                            
+                total_cost = (usage.get('input', 0) * input_price / 1_000_000) + (usage.get('output', 0) * output_price / 1_000_000)
+                
+                ApiUsageLog.objects.create(
+                    company=agent.company,
+                    agent=agent,
+                    provider=provider,
+                    model_name=model_name,
+                    input_tokens=usage.get('input', 0),
+                    output_tokens=usage.get('output', 0),
+                    total_cost_usd=Decimal(str(total_cost))
+                )
+            except Exception as log_e:
+                logger.error(f"Failed to log API usage: {log_e}")
+                
+            return result
         except Exception as e:
             logger.error(f"{provider.upper()} API Key Error (Key: {api_key[:8]}...): {str(e)}")
             last_error = str(e)
             continue
             
     logger.error(f"All {provider} keys failed. Last error: {last_error}")
-    return {'error': True, 'error_msg': 'Hệ thống AI đang quá tải.'}
+    
+    # Bắt lỗi Quota / Hết tiền để sinh Notification
+    if last_error and ('429' in last_error or 'quota' in last_error.lower() or 'insufficient' in last_error.lower()):
+        try:
+            from notifications.models import Notification
+            import json
+            Notification.objects.create(
+                company=agent.company,
+                user=None, # System wide
+                title="CẢNH BÁO QUOTA AI",
+                message=f"Hệ thống báo lỗi hết Quota / Hết tiền đối với API Key {provider.upper()}. Vui lòng kiểm tra lại thiết lập.",
+                type='ai_error',
+                related_data=json.dumps({"agent_id": agent.id, "error": last_error})
+            )
+        except:
+            pass
+            
+    return {'error': True, 'error_msg': 'Hệ thống AI đang quá tải hoặc hết Quota API.'}
