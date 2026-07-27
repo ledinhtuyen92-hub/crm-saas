@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Alert, Button, Card, Col, Form, Input,
   message, Modal, Row, Select, Space, Switch, Table, Tag, Typography, Tooltip
@@ -29,8 +29,9 @@ export default function ZaloTemplatePage() {
       const res = await api.get('/zalo/templates/')
       const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
       setTemplates(data)
-    } catch {
-      message.error('Không thể tải danh sách Mẫu ZNS.')
+    } catch (e) {
+      console.error(e)
+      message.error('Lỗi khi tải dữ liệu template.')
     } finally {
       setLoading(false)
     }

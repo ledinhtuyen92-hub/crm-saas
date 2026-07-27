@@ -28,7 +28,7 @@ call_command(
     'dumpdata', 
     natural_foreign=True, 
     natural_primary=True,
-    exclude=['contenttypes', 'auth.Permission', 'sessions.session'],
+    exclude=['contenttypes', 'auth.Permission', 'sessions.session', 'ai_agents.companyaikey', 'ai_agents.systemaikey'],
     stdout=out
 )
 

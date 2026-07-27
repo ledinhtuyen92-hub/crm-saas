@@ -18,7 +18,7 @@ export default function AiAgentSettings() {
   const [defaultJsonTemplate, setDefaultJsonTemplate] = useState('');
 
   useEffect(() => {
-    api.get('/ai/agents/default-prompt/').then(res => {
+    api.get('/ai_agents/agents/default-prompt/').then(res => {
       setDefaultJsonTemplate(res.data.template);
     }).catch(() => {});
   }, []);
@@ -384,6 +384,15 @@ export default function AiAgentSettings() {
   return (
     <div style={{ padding: 24 }}>
       
+      {hasPermission('ai_agent.manage_agents') && (
+      <Card 
+        title={<Title level={4}><RobotOutlined /> Quản lý Đội ngũ Trợ lý AI</Title>} 
+        extra={<Button type='primary' size='large' icon={<PlusOutlined />} onClick={() => handleOpenModal()}>Tạo Trợ lý AI mới</Button>}
+        style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}
+      >
+        <Table columns={columns} dataSource={agents} rowKey='id' loading={loading} pagination={false} />
+      </Card>
+      )}
       {hasPermission('ai_agent.view_dashboard') && (
         <Card 
           title={<Title level={4} style={{ margin: 0 }}><ThunderboltOutlined style={{color: '#faad14'}} /> Thống kê Chi phí AI <Text type="secondary" style={{ fontSize: 16, fontWeight: 'normal' }}>{statsPeriod === 'today' ? '(Hôm nay)' : statsPeriod === 'week' ? '(Tuần này)' : statsPeriod === 'month' ? '(Tháng này)' : '(Trọn đời)'}</Text></Title>} 
@@ -578,15 +587,7 @@ export default function AiAgentSettings() {
         </Card>
       )}
 
-      {hasPermission('ai_agent.manage_agents') && (
-      <Card 
-        title={<Title level={4}><RobotOutlined /> Quản lý Đội ngũ Trợ lý AI</Title>} 
-        extra={<Button type='primary' size='large' icon={<PlusOutlined />} onClick={() => handleOpenModal()}>Tạo Trợ lý AI mới</Button>}
-        style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-      >
-        <Table columns={columns} dataSource={agents} rowKey='id' loading={loading} pagination={false} />
-      </Card>
-      )}
+
 
       <Modal 
         title={<Space><RobotOutlined style={{color: '#1677ff', fontSize: 20}} /> <span style={{fontSize: 18, fontWeight: 600}}>{editingAgent ? 'Chỉnh sửa Trợ lý AI' : 'Tạo Trợ lý AI mới'}</span></Space>} 

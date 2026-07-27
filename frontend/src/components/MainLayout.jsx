@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import api from '../utils/api'
 import {
@@ -242,28 +242,28 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
             }] : []),
           ],
         }] : []),
-        ...(isModuleActive('ai_agent') || isModuleActive('website_integration') ? [
+        ...(isModuleActive('website_integration') && hasPermission('website_integration.manage') ? [{
+          key: '/settings/website',
+          icon: <ApiOutlined style={{ color: '#eb2f96' }} />,
+          label: <Link to="/settings/website">Tích hợp Website</Link>,
+        }] : []),
+        ...(isModuleActive('ai_agent') && (hasPermission('ai_agent.view_dashboard') || hasPermission('ai_agent.manage_agents') || hasPermission('ai_agent.manage_knowledge') || hasPermission('ai_agent.manage_keys')) ? [
           { type: 'divider' },
           {
             key: 'tools-group',
             icon: <AppstoreAddOutlined style={{ color: '#fa8c16' }} />,
-            label: 'Công cụ mở rộng',
+            label: 'AI Agents',
             children: [
-              ...(isModuleActive('ai_agent') && (hasPermission('ai_agent.view_dashboard') || hasPermission('ai_agent.manage_agents') || hasPermission('ai_agent.manage_knowledge') || hasPermission('ai_agent.manage_keys')) ? [{
-              key: '/settings/ai-agents',
-              icon: <RobotOutlined style={{ color: '#52c41a' }} />,
-              label: <Link to="/settings/ai-agents">Trợ lý AI</Link>,
-            },
-            {
-              key: '/settings/ai-knowledge',
-              icon: <BookOutlined style={{ color: '#1890ff' }} />,
-              label: <Link to="/settings/ai-knowledge">Tri thức RAG</Link>,
-            }] : []),
-              ...(isModuleActive('website_integration') && hasPermission('website_integration.manage') ? [{
-                key: '/settings/website',
-                icon: <ApiOutlined style={{ color: '#eb2f96' }} />,
-                label: <Link to="/settings/website">Tích hợp Website</Link>,
+              ...(hasPermission('ai_agent.manage_agents') || hasPermission('ai_agent.manage_keys') || hasPermission('ai_agent.view_dashboard') ? [{
+                key: '/settings/ai-agents',
+                icon: <RobotOutlined style={{ color: '#52c41a' }} />,
+                label: <Link to="/settings/ai-agents">Trợ lý AI</Link>,
               }] : []),
+              ...(hasPermission('ai_agent.manage_knowledge') ? [{
+                key: '/settings/ai-knowledge',
+                icon: <BookOutlined style={{ color: '#1890ff' }} />,
+                label: <Link to="/settings/ai-knowledge">Huấn luyện AI (RAG)</Link>,
+              }] : [])
             ],
           }
         ] : []),

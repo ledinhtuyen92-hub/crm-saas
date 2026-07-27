@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
-  Alert, Button, Card, Col, Collapse, Descriptions, Divider, Form, Input, InputNumber,
+  Alert, Button, Card, Col, Collapse, Divider, Form, Input, InputNumber,
   message, Modal, Popconfirm, Row, Select, Space, Switch, Tag, Tooltip, Typography
 } from 'antd'
 import {
   ApiOutlined, CheckCircleOutlined, CloseCircleOutlined,
-  DeleteOutlined, DisconnectOutlined, EditOutlined, InfoCircleOutlined, KeyOutlined,
+  DeleteOutlined, DisconnectOutlined, InfoCircleOutlined, KeyOutlined,
   ReloadOutlined, SettingOutlined, WarningOutlined,
 } from '@ant-design/icons'
-import dayjs from 'dayjs'
 import api from '../../utils/api'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -43,7 +42,10 @@ export default function ZaloConfigPage() {
       } else {
         setConfig(null)
       }
-    } catch { message.error('Không thể tải cấu hình Zalo.') }
+    } catch (error) {
+      console.error(error)
+      message.error('Không thể tải cấu hình Zalo.')
+    }
     finally { setLoading(false) }
   }
 

@@ -126,6 +126,7 @@ class AiKnowledgeDocument(models.Model):
     DOC_TYPE_CHOICES = (
         ('file', 'File tài liệu'),
         ('qa', 'Hỏi - Đáp (Q&A)'),
+        ('image', 'Hình ảnh Mẫu'),
     )
     doc_type = models.CharField(max_length=20, choices=DOC_TYPE_CHOICES, default='file')
     

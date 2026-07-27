@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react'
-import { Card, Table, Button, Space, Typography, Tag, Modal, Form, Input, Upload, message, Radio, Divider, Spin, Collapse, Alert, Checkbox } from 'antd'
-import { PlusOutlined, UploadOutlined, RobotOutlined, BookOutlined, EyeOutlined, EditOutlined, SyncOutlined, DeleteOutlined, BulbOutlined } from '@ant-design/icons'
+import { useState, useEffect, useMemo } from 'react'
+import { Card, Table, Button, Space, Typography, Tag, Modal, Form, Input, Upload, message, Radio, Divider, Spin, Collapse, Alert, Checkbox, Segmented, Row, Col } from 'antd'
+import { PlusOutlined, UploadOutlined, RobotOutlined, BookOutlined, EyeOutlined, EditOutlined, SyncOutlined, DeleteOutlined, BulbOutlined, MinusCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons'
 import api from '../../utils/api'
+import { useAuth } from '../../contexts/AuthContext'
 
 const { Title, Text } = Typography
 
 export default function AiKnowledgeBase() {
+  const { maintenanceMode, hasPermission } = useAuth()
   const [agents, setAgents] = useState([])
   const [documents, setDocuments] = useState([])
   const [loading, setLoading] = useState(false)
@@ -14,6 +16,9 @@ export default function AiKnowledgeBase() {
   const [form] = Form.useForm()
   const [settingsForm] = Form.useForm()
   const [fileList, setFileList] = useState([])
+  const [imageDetails, setImageDetails] = useState({})
+  const [selectedImageIds, setSelectedImageIds] = useState([])
+  const [bulkInput, setBulkInput] = useState({ title: '', content: '' })
   const [submitting, setSubmitting] = useState(false)
   const [manualSyncing, setManualSyncing] = useState(false)
   const [companySettings, setCompanySettings] = useState(null)
@@ -61,6 +66,10 @@ export default function AiKnowledgeBase() {
   }
 
   const handleManualSyncProducts = async () => {
+    if (maintenanceMode) {
+      message.warning('⚠️ Hệ thống đang bảo trì dữ liệu. Chức năng này tạm thời bị khóa!')
+      return
+    }
     setManualSyncing(true)
     try {
       const res = await api.post('ai_agents/settings/manual_sync_products/')
@@ -106,6 +115,10 @@ export default function AiKnowledgeBase() {
   }, [documents])
 
   const handleDelete = async (id) => {
+    if (maintenanceMode) {
+      message.warning('⚠️ Hệ thống đang bảo trì dữ liệu. Chức năng này tạm thời bị khóa!')
+      return
+    }
     try {
       await api.delete(`/ai_agents/knowledge/${id}/`)
       message.success('Đã xóa tài liệu')
@@ -147,7 +160,11 @@ export default function AiKnowledgeBase() {
   const handleSaveEdit = async (values) => {
     setEditSubmitting(true)
     try {
-      await api.patch(`/ai_agents/knowledge/${currentDoc.id}/`, values)
+      if (currentDoc.isGroup) {
+        await Promise.all(currentDoc.children.map(c => api.patch(`/ai_agents/knowledge/${c.id}/`, values)))
+      } else {
+        await api.patch(`/ai_agents/knowledge/${currentDoc.id}/`, values)
+      }
       message.success('Đã lưu thông tin tài liệu')
       setIsEditModalVisible(false)
       fetchData()
@@ -161,20 +178,53 @@ export default function AiKnowledgeBase() {
   const handleFinish = async (values) => {
     setSubmitting(true)
     try {
-      const formData = new FormData()
-      formData.append('title', values.title)
-      formData.append('agent', values.agent)
-      formData.append('doc_type', values.doc_type)
-      
-      if (docType === 'file' && fileList.length > 0) {
-        formData.append('file_attachment', fileList[0].originFileObj || fileList[0])
+      if (docType === 'image' && fileList.length > 0) {
+        const promises = fileList.map(file => {
+          const details = imageDetails[file.uid] || {}
+          if (!details.title) {
+            throw new Error(`Vui lòng nhập tên/tiêu đề cho ảnh: ${file.name}`)
+          }
+          const formData = new FormData()
+          formData.append('title', details.title)
+          formData.append('agent', values.agent)
+          formData.append('doc_type', 'image')
+          formData.append('file_attachment', file.originFileObj || file)
+          if (details.content) {
+            formData.append('content', details.content)
+          }
+          return api.post('/ai_agents/knowledge/', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          })
+        })
+        await Promise.all(promises)
+      } else if (docType === 'file' && fileList.length > 0) {
+        const promises = fileList.map(file => {
+          const formData = new FormData()
+          const finalTitle = fileList.length > 1 ? `${values.title} - ${file.name}` : values.title
+          formData.append('title', finalTitle)
+          formData.append('agent', values.agent)
+          formData.append('doc_type', 'file')
+          formData.append('file_attachment', file.originFileObj || file)
+          return api.post('/ai_agents/knowledge/', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          })
+        })
+        await Promise.all(promises)
       } else if (values.doc_type === 'qa') {
-        formData.append('content', values.content)
+        const formData = new FormData()
+        formData.append('title', values.title)
+        formData.append('agent', values.agent)
+        formData.append('doc_type', values.doc_type)
+        const qaContent = values.qa_list?.map(qa => `Hỏi: ${qa.question}\nĐáp: ${qa.answer}`).join('\n\n') || ''
+        formData.append('content', qaContent)
+        await api.post('/ai_agents/knowledge/', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+      } else {
+        message.warning('Vui lòng chọn file tải lên')
+        setSubmitting(false)
+        return
       }
-
-      await api.post('/ai_agents/knowledge/', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
       
       message.success('Đã thêm tài liệu, hệ thống đang tiến hành học (Mã hóa Vector ngầm)')
       setIsModalVisible(false)
@@ -193,12 +243,43 @@ export default function AiKnowledgeBase() {
       title: 'Tiêu đề tài liệu',
       dataIndex: 'title',
       key: 'title',
-      render: (text, record) => (
-        <Space>
-          {record.doc_type === 'file' ? <BookOutlined style={{color: '#1890ff'}} /> : <RobotOutlined style={{color: '#52c41a'}}/>}
-          <Text strong>{text}</Text>
-        </Space>
-      )
+      align: 'left',
+      render: (text, record) => {
+        if (record.doc_type === 'image') {
+          if (record.isGroup) {
+            return (
+              <Space direction="vertical" size={2}>
+                <Text strong>{text} <Tag color="blue">{record.children.length} ảnh</Tag></Text>
+                <Space wrap style={{ marginTop: 4 }}>
+                  {record.children.map(child => (
+                    <div key={child.id} style={{ width: 40, height: 40, borderRadius: 4, overflow: 'hidden', border: '1px solid #d9d9d9' }}>
+                      <img src={child.file_attachment} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  ))}
+                </Space>
+              </Space>
+            )
+          } else {
+            return (
+              <Space>
+                <div style={{ width: 32, height: 32, borderRadius: 4, overflow: 'hidden', border: '1px solid #d9d9d9' }}>
+                  <img src={record.file_attachment} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <Text strong>{text}</Text>
+              </Space>
+            )
+          }
+        }
+        
+        let icon = <RobotOutlined style={{color: '#52c41a'}}/>
+        if (record.doc_type === 'file') icon = <BookOutlined style={{color: '#1890ff'}} />
+        return (
+          <Space>
+            {icon}
+            <Text strong>{text}</Text>
+          </Space>
+        )
+      }
     },
     {
       title: 'Trợ lý AI',
@@ -215,7 +296,11 @@ export default function AiKnowledgeBase() {
       title: 'Loại',
       dataIndex: 'doc_type',
       key: 'doc_type',
-      render: (type) => type === 'file' ? 'File PDF/Word' : 'Hỏi & Đáp'
+      render: (type) => {
+        if (type === 'file') return 'File PDF/Word'
+        if (type === 'image') return 'Hình ảnh Mẫu'
+        return 'Hỏi & Đáp'
+      }
     },
     {
       title: 'Trạng thái học',
@@ -229,14 +314,29 @@ export default function AiKnowledgeBase() {
       ],
       onFilter: (value, record) => record.status === value,
       render: (status, record) => {
-        let color = 'default'
-        let text = status
-        if (status === 'pending') { color = 'default'; text = 'Chờ xử lý' }
-        else if (status === 'processing') { color = 'processing'; text = 'Đang học (Embedding)...' }
-        else if (status === 'completed') { color = 'success'; text = 'Đã học xong' }
-        else if (status === 'failed') { color = 'error'; text = 'Lỗi' }
-        
+        let finalStatus = status
         let errorMsg = record.error_message || ''
+        
+        if (record.isGroup) {
+          const statuses = record.children.map(c => c.status)
+          if (statuses.includes('failed')) finalStatus = 'failed'
+          else if (statuses.includes('processing')) finalStatus = 'processing'
+          else if (statuses.includes('pending')) finalStatus = 'pending'
+          else finalStatus = 'completed'
+          
+          if (finalStatus === 'failed') {
+            const failedChild = record.children.find(c => c.status === 'failed' && c.error_message)
+            if (failedChild) errorMsg = failedChild.error_message
+          }
+        }
+
+        let color = 'default'
+        let text = finalStatus
+        if (finalStatus === 'pending') { color = 'default'; text = 'Chờ xử lý' }
+        else if (finalStatus === 'processing') { color = 'processing'; text = 'Đang học (Embedding)...' }
+        else if (finalStatus === 'completed') { color = 'success'; text = 'Đã học xong' }
+        else if (finalStatus === 'failed') { color = 'error'; text = 'Lỗi' }
+        
         if (errorMsg) {
           if (errorMsg.includes('401')) errorMsg = 'Lỗi 401: Chìa khóa API (API Key) không hợp lệ hoặc bị từ chối.'
           else if (errorMsg.includes('429')) errorMsg = 'Lỗi 429: Tài khoản AI đã hết tiền (Quota) hoặc gửi quá nhanh.'
@@ -247,7 +347,7 @@ export default function AiKnowledgeBase() {
         return (
           <Space direction="vertical" size={0}>
             <Tag color={color}>{text}</Tag>
-            {status === 'failed' && <Text type="danger" style={{fontSize: 12}}>{errorMsg}</Text>}
+            {finalStatus === 'failed' && <Text type="danger" style={{fontSize: 12}}>{errorMsg}</Text>}
           </Space>
         )
       }
@@ -270,18 +370,71 @@ export default function AiKnowledgeBase() {
     {
       title: 'Thao tác',
       key: 'action',
-      render: (_, record) => (
-        <Space size="small">
-          <Button type="text" icon={<EyeOutlined />} onClick={() => handleView(record)} />
-          <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          {(record.status === 'failed' || record.status === 'completed') && (
-            <Button type="text" style={{ color: '#faad14' }} icon={<SyncOutlined />} onClick={() => handleRetry(record.id)} />
-          )}
-          <Button danger type="text" icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
-        </Space>
-      )
+      render: (_, record) => {
+        if (record.isGroup) {
+          const statuses = record.children.map(c => c.status)
+          const canRetry = statuses.includes('failed') || statuses.includes('completed')
+          return (
+            <Space>
+              <Button type="text" icon={<EyeOutlined />} onClick={() => {
+                setCurrentDoc(record)
+                setIsViewModalVisible(true)
+              }} />
+              <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+              {canRetry && (
+                <Button type="text" style={{ color: '#faad14' }} icon={<SyncOutlined />} onClick={async () => {
+                  try {
+                    await Promise.all(record.children.map(c => api.post(`/ai_agents/knowledge/${c.id}/retry/`)))
+                    message.success(`Đã gửi yêu cầu học lại cho ${record.children.length} ảnh`)
+                    fetchData()
+                  } catch (e) {
+                    message.error('Lỗi khi thử lại')
+                  }
+                }} />
+              )}
+              <Button type="text" danger icon={<DeleteOutlined />} onClick={() => {
+                Modal.confirm({
+                  title: `Xóa ${record.children.length} tài liệu này?`,
+                  onOk: async () => {
+                    await Promise.all(record.children.map(c => api.delete(`/ai_agents/knowledge/${c.id}/`)))
+                    fetchData()
+                  }
+                })
+              }} />
+            </Space>
+          )
+        }
+        return (
+          <Space size="small">
+            <Button type="text" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+            <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+            {(record.status === 'failed' || record.status === 'completed') && (
+              <Button type="text" style={{ color: '#faad14' }} icon={<SyncOutlined />} onClick={() => handleRetry(record.id)} />
+            )}
+            <Button danger type="text" icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
+          </Space>
+        )
+      }
     }
   ]
+
+  const groupedDocuments = useMemo(() => {
+    const groups = {}
+    const result = []
+    documents.forEach(doc => {
+      if (doc.doc_type === 'image' && doc.title) {
+        const key = `${doc.title}_${doc.agent}` // Group by title and agent
+        if (!groups[key]) {
+          groups[key] = { ...doc, id: `group_${key}`, isGroup: true, children: [] }
+          result.push(groups[key])
+        }
+        groups[key].children.push(doc)
+      } else {
+        result.push(doc)
+      }
+    })
+    return result
+  }, [documents])
 
   return (
     <div>
@@ -292,7 +445,13 @@ export default function AiKnowledgeBase() {
           </div>
           <Space>
             <Button icon={<RobotOutlined />} onClick={fetchData}>Làm mới trạng thái</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+          if (maintenanceMode) {
+            message.warning('⚠️ Hệ thống đang bảo trì dữ liệu. Chức năng này tạm thời bị khóa!')
+            return
+          }
+          setIsModalVisible(true)
+        }}>
               Dạy thêm kiến thức
             </Button>
           </Space>
@@ -386,10 +545,11 @@ export default function AiKnowledgeBase() {
           <Title level={5} style={{ marginBottom: 16 }}>Kho tài liệu đã huấn luyện</Title>
           <Table 
             columns={columns} 
-            dataSource={documents} 
+            dataSource={groupedDocuments} 
             rowKey="id" 
             loading={loading}
             pagination={{ pageSize: 10 }}
+            scroll={{ x: 'max-content' }}
           />
         </Card>
 
@@ -399,9 +559,13 @@ export default function AiKnowledgeBase() {
         onCancel={() => {
           setIsModalVisible(false)
           form.resetFields()
+          setFileList([])
+          setImageDetails({})
+          setBulkInput({ title: '', content: '' })
+          setSelectedImageIds([])
         }}
         footer={null}
-        width={600}
+        width={700}
       >
         <Form
           form={form}
@@ -426,29 +590,32 @@ export default function AiKnowledgeBase() {
           <Form.Item
             name="title"
             label="Tiêu đề tài liệu"
-            rules={[{ required: true, message: 'Vui lòng nhập tiêu đề' }]}
+            rules={[{ required: docType !== 'image', message: 'Vui lòng nhập tiêu đề' }]}
+            style={{ display: docType === 'image' ? 'none' : 'block' }}
           >
             <Input placeholder="Ví dụ: Chính sách bảo hành tủ lạnh 2026" />
           </Form.Item>
 
           <Form.Item name="doc_type" label="Hình thức cung cấp kiến thức">
-            <Radio.Group optionType="button" buttonStyle="solid">
-              <Radio value="file">Tải lên File (PDF/DOCX/TXT)</Radio>
-              <Radio value="image">Hình ảnh Mẫu (JPG/PNG)</Radio>
-              <Radio value="qa">Nhập trực tiếp Hỏi - Đáp</Radio>
-            </Radio.Group>
+            <Segmented
+              block
+              options={[
+                { label: 'Tải File (PDF/DOCX/TXT)', value: 'file' },
+                { label: 'Hình ảnh Mẫu (JPG/PNG)', value: 'image' },
+                { label: 'Nhập Hỏi - Đáp', value: 'qa' },
+              ]}
+            />
           </Form.Item>
 
           {docType === 'file' ? (
             <Form.Item label="File tài liệu">
               <Upload
+                multiple={true}
                 beforeUpload={() => false}
                 onChange={(info) => {
-                  setFileList(info.fileList.slice(-1))
+                  setFileList(info.fileList)
                 }}
                 fileList={fileList}
-                onRemove={() => setFileList([])}
-                maxCount={1}
                 accept=".pdf,.doc,.docx,.txt"
               >
                 <Button icon={<UploadOutlined />}>Chọn file tải lên</Button>
@@ -468,51 +635,177 @@ export default function AiKnowledgeBase() {
                 </span>
               }>
                 <Upload
+                  multiple={true}
                   beforeUpload={() => false}
+                  showUploadList={false}
                   onChange={(info) => {
-                    setFileList(info.fileList.slice(-1))
+                    setFileList(info.fileList)
+                    const newDetails = { ...imageDetails }
+                    info.fileList.forEach(file => {
+                      if (!newDetails[file.uid]) {
+                        newDetails[file.uid] = { title: '', content: '' }
+                      }
+                    })
+                    setImageDetails(newDetails)
                   }}
                   fileList={fileList}
-                  onRemove={() => setFileList([])}
-                  maxCount={1}
                   accept=".jpg,.jpeg,.png,.webp"
-                  listType="picture"
                 >
-                  <Button icon={<UploadOutlined />}>Chọn ảnh tải lên</Button>
+                  <Button icon={<UploadOutlined />}>Thêm ảnh tải lên</Button>
                 </Upload>
-                <div style={{ marginTop: 8 }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    AI Vision sẽ còn quét và ghi nhớ dấu hiệu thị giác của ảnh này.
-                  </Text>
+              </Form.Item>
+
+              {fileList.length > 0 && (
+                <div style={{ marginTop: 16, maxHeight: 400, overflowY: 'auto', paddingRight: 8 }}>
+                  {fileList.length > 1 && (
+                    <div style={{ marginBottom: 12, padding: 12, background: '#e6f7ff', borderRadius: 8, border: '1px solid #91d5ff' }}>
+                      <div style={{ marginBottom: 8 }}>
+                        <Text strong style={{ color: '#096dd9' }}>💡 Nhập nhanh chung cho nhiều góc chụp của 1 sản phẩm:</Text>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <Input 
+                            placeholder="Tiêu đề chung..." 
+                            value={bulkInput.title}
+                            onChange={e => setBulkInput({...bulkInput, title: e.target.value})}
+                          />
+                          <Input.TextArea 
+                            rows={2} 
+                            placeholder="Mô tả / Kịch bản tư vấn chung..." 
+                            value={bulkInput.content}
+                            onChange={e => setBulkInput({...bulkInput, content: e.target.value})}
+                          />
+                        </div>
+                        <Button 
+                          type="primary" 
+                          style={{ height: 'auto', padding: '24px 16px' }}
+                          onClick={() => {
+                            const targetIds = selectedImageIds.length > 0 ? selectedImageIds : fileList.map(f => f.uid);
+                            const newDetails = { ...imageDetails };
+                            targetIds.forEach(uid => {
+                              newDetails[uid] = { 
+                                title: bulkInput.title || newDetails[uid]?.title || '', 
+                                content: bulkInput.content || newDetails[uid]?.content || '' 
+                              };
+                            });
+                            setImageDetails(newDetails);
+                            setSelectedImageIds([]);
+                            message.success(selectedImageIds.length > 0 ? `Đã áp dụng chung cho ${selectedImageIds.length} ảnh được chọn!` : 'Đã áp dụng chung cho tất cả ảnh!');
+                          }}
+                        >
+                          {selectedImageIds.length > 0 ? `Áp dụng cho ${selectedImageIds.length} ảnh đang chọn` : 'Áp dụng tất cả'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  {fileList.map((file) => {
+                    let src = '';
+                    if (file.originFileObj) {
+                      src = URL.createObjectURL(file.originFileObj);
+                    } else if (file.url) {
+                      src = file.url;
+                    }
+                    
+                    return (
+                      <Card key={file.uid} size="small" style={{ marginBottom: 12, background: selectedImageIds.includes(file.uid) ? '#f0f5ff' : '#fafafa', border: selectedImageIds.includes(file.uid) ? '1px solid #1890ff' : '1px solid #e8e8e8' }}>
+                        <div style={{ display: 'flex', gap: 16 }}>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <Checkbox 
+                              checked={selectedImageIds.includes(file.uid)} 
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedImageIds([...selectedImageIds, file.uid])
+                                } else {
+                                  setSelectedImageIds(selectedImageIds.filter(id => id !== file.uid))
+                                }
+                              }}
+                            />
+                          </div>
+                          <div style={{ width: 100, height: 100, flexShrink: 0, overflow: 'hidden', borderRadius: 6, border: '1px solid #d9d9d9', position: 'relative' }}>
+                            <img src={src} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <Button 
+                              type="primary" 
+                              danger 
+                              size="small" 
+                              icon={<DeleteOutlined />} 
+                              style={{ position: 'absolute', top: 4, right: 4, opacity: 0.8 }}
+                              onClick={() => {
+                                setFileList(prev => prev.filter(f => f.uid !== file.uid))
+                                const newDetails = { ...imageDetails }
+                                delete newDetails[file.uid]
+                                setImageDetails(newDetails)
+                                setSelectedImageIds(prev => prev.filter(id => id !== file.uid))
+                              }}
+                            />
+                          </div>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <Input 
+                              placeholder="* Tên sản phẩm / Tiêu đề ảnh (Bắt buộc)..." 
+                              value={imageDetails[file.uid]?.title} 
+                              onChange={e => setImageDetails(prev => ({...prev, [file.uid]: {...prev[file.uid], title: e.target.value}}))}
+                            />
+                            <Input.TextArea 
+                              rows={2} 
+                              placeholder="Mô tả / Kịch bản tư vấn..." 
+                              value={imageDetails[file.uid]?.content} 
+                              onChange={e => setImageDetails(prev => ({...prev, [file.uid]: {...prev[file.uid], content: e.target.value}}))}
+                            />
+                          </div>
+                        </div>
+                      </Card>
+                    )
+                  })}
+                  <div style={{ marginBottom: 16 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      AI Vision sẽ quét, nhận diện và phân tích toàn bộ dấu hiệu thị giác của các bức ảnh này.
+                    </Text>
+                  </div>
                 </div>
-              </Form.Item>
-              <Form.Item
-                name="content"
-                label={
-                  <span>
-                    📝 Mô tả / Kịch bản tư vấn cho ảnh này
-                  </span>
-                }
-                rules={[{ required: true, message: 'Vui lòng nhập mô tả để AI biết cách tư vấn' }]}
-              >
-                <Input.TextArea
-                  rows={5}
-                  placeholder={`Ví dụ:\nĐây là mẫu cửa nhựa Composite phống ngang, màu trắng sữa, sân cao cấp. Giá tham khảo từ 3.5 triệu/m2, tối thiểu 5m2. Chính sách: miễn phí vận chuyển nội thành, bảo hành 10 năm.`}
-                />
-              </Form.Item>
+              )}
             </>
-          ) : (
-            <Form.Item
-              name="content"
-              label="Nội dung Kiến thức (QA)"
-              rules={[{ required: true, message: 'Vui lòng nhập nội dung' }]}
-            >
-              <Input.TextArea 
-                rows={6} 
-                placeholder="Hỏi: Bên em có giao hàng chủ nhật không?`nĐáp: Dạ bên em có giao hàng chủ nhật nhưng thu thêm phí 50k anh nhé." 
-              />
-            </Form.Item>
-          )}
+          ) : docType === 'qa' ? (
+            <Form.List name="qa_list" initialValue={[{ question: '', answer: '' }]}>
+              {(fields, { add, remove }) => (
+                <>
+                  <div style={{ marginBottom: 8 }}>
+                    <Text strong>Nội dung Kiến thức (Hỏi & Đáp)</Text>
+                  </div>
+                  {fields.map(({ key, name, ...restField }) => (
+                    <Card size="small" key={key} style={{ marginBottom: 12, background: '#fafafa', borderRadius: 8 }}>
+                      <Row gutter={12}>
+                        <Col span={22}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'question']}
+                            rules={[{ required: true, message: 'Nhập câu hỏi' }]}
+                            style={{ marginBottom: 12 }}
+                          >
+                            <Input placeholder="Câu hỏi (Ví dụ: Shop có giao hàng chủ nhật không?)" prefix={<QuestionCircleOutlined style={{ color: '#1677ff', marginRight: 4 }} />} />
+                          </Form.Item>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'answer']}
+                            rules={[{ required: true, message: 'Nhập câu trả lời' }]}
+                            style={{ marginBottom: 0 }}
+                          >
+                            <Input.TextArea autoSize={{ minRows: 2, maxRows: 6 }} placeholder="Câu trả lời (Ví dụ: Dạ bên em có giao hàng chủ nhật ạ)" />
+                          </Form.Item>
+                        </Col>
+                        <Col span={2} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Button type="text" danger icon={<MinusCircleOutlined />} onClick={() => remove(name)} />
+                        </Col>
+                      </Row>
+                    </Card>
+                  ))}
+                  <Form.Item>
+                    <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                      Thêm bộ Hỏi - Đáp mới
+                    </Button>
+                  </Form.Item>
+                </>
+              )}
+            </Form.List>
+          ) : null}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
             <Space>
@@ -533,10 +826,59 @@ export default function AiKnowledgeBase() {
         footer={[
           <Button key="close" onClick={() => setIsViewModalVisible(false)}>Đóng</Button>
         ]}
-        width={600}
+        width={700}
       >
-        <div style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, minHeight: 200, whiteSpace: 'pre-wrap' }}>
-          {currentDoc?.content}
+        <div style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, minHeight: 200, maxHeight: '60vh', overflowY: 'auto' }}>
+          {(() => {
+            if (!currentDoc) return null;
+            
+            const renderDoc = (doc) => (
+              <div key={doc.id || doc.title} style={{ marginBottom: 16 }}>
+                {doc?.doc_type === 'image' && doc?.file_attachment && (
+                  <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                    <img 
+                      src={doc.file_attachment} 
+                      alt={doc.title} 
+                      style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain', borderRadius: 8, border: '1px solid #d9d9d9' }} 
+                    />
+                  </div>
+                )}
+                <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                  {(() => {
+                    if (!doc?.content) return null;
+                    
+                    const parts = doc.content.split(/\|\s*Hình ảnh \(URL\):\s*([^\n]+)/g);
+                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/';
+                    const baseUrl = apiUrl.split('/api')[0];
+
+                    return parts.map((part, index) => {
+                      if (index % 2 === 1) { 
+                        const url = part.trim();
+                        if (!url || url === 'None') return null;
+                        const fullUrl = url.startsWith('/') ? `${baseUrl}${url}` : url;
+                        return (
+                          <div key={index} style={{ margin: '12px 0', padding: 8, background: '#fff', borderRadius: 8, display: 'block', width: 'fit-content', border: '1px solid #e8e8e8' }}>
+                            <img src={fullUrl} alt="product" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 4 }} />
+                          </div>
+                        );
+                      }
+                      return <span key={index}>{part}</span>;
+                    });
+                  })()}
+                </div>
+              </div>
+            );
+
+            if (currentDoc?.isGroup) {
+              return currentDoc.children.map((child, idx) => (
+                <div key={child.id}>
+                  {idx > 0 && <Divider />}
+                  {renderDoc(child)}
+                </div>
+              ));
+            }
+            return renderDoc(currentDoc);
+          })()}
         </div>
       </Modal>
 

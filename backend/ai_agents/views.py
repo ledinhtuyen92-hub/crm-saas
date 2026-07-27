@@ -1,4 +1,5 @@
 from rest_framework import viewsets, permissions
+from users.permissions import ActionBasedPermission
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .tasks import process_document_rag
@@ -15,7 +16,15 @@ class SystemAiKeyViewSet(viewsets.ModelViewSet):
 
 class CompanyAiKeyViewSet(viewsets.ModelViewSet):
     serializer_class = CompanyAiKeySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    action_permissions = {
+        'list': 'ai_agent.manage_keys',
+        'retrieve': 'ai_agent.manage_keys',
+        'create': 'ai_agent.manage_keys',
+        'update': 'ai_agent.manage_keys',
+        'partial_update': 'ai_agent.manage_keys',
+        'destroy': 'ai_agent.manage_keys',
+    }
 
     def get_queryset(self):
         return CompanyAiKey.objects.filter(company=self.request.user.company).order_by('-priority', '-created_at')
@@ -25,7 +34,19 @@ class CompanyAiKeyViewSet(viewsets.ModelViewSet):
 
 class AiAgentViewSet(viewsets.ModelViewSet):
     serializer_class = AiAgentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    action_permissions = {
+        'list': 'ai_agent.manage_agents',
+        'retrieve': 'ai_agent.manage_agents',
+        'create': 'ai_agent.manage_agents',
+        'update': 'ai_agent.manage_agents',
+        'partial_update': 'ai_agent.manage_agents',
+        'destroy': 'ai_agent.manage_agents',
+        'default_prompt': 'ai_agent.manage_agents',
+        'usage_stats': 'ai_agent.view_dashboard',
+        'extract_conversation': 'ai_agent.manage_knowledge',
+        'save_extracted_conversation': 'ai_agent.manage_knowledge',
+    }
     
     def get_queryset(self):
         return AiAgent.objects.filter(company=self.request.user.company)
@@ -82,6 +103,11 @@ class AiAgentViewSet(viewsets.ModelViewSet):
                     elif 'not found' in err or '404' in err or '403' in err or 'permission' in err:
                         raise serializers.ValidationError({"model_name": f"Mô hình '{model_name}' bị chặn hoặc tài khoản của bạn chưa được cấp quyền dùng nó. Vui lòng chọn mô hình khác."})
 
+    @action(detail=False, methods=['GET'], url_path='default-prompt')
+    def default_prompt(self, request):
+        from .services import DEFAULT_JSON_TEMPLATE
+        return Response({'template': DEFAULT_JSON_TEMPLATE})
+
     @action(detail=False, methods=['GET'])
     def usage_stats(self, request):
         from .models import ApiUsageLog
@@ -131,7 +157,17 @@ class AiAgentViewSet(viewsets.ModelViewSet):
 
 class AiKnowledgeDocumentViewSet(viewsets.ModelViewSet):
     serializer_class = AiKnowledgeDocumentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ActionBasedPermission]
+    action_permissions = {
+        'list': 'ai_agent.manage_knowledge',
+        'retrieve': 'ai_agent.manage_knowledge',
+        'create': 'ai_agent.manage_knowledge',
+        'update': 'ai_agent.manage_knowledge',
+        'partial_update': 'ai_agent.manage_knowledge',
+        'destroy': 'ai_agent.manage_knowledge',
+        'retry': 'ai_agent.manage_knowledge',
+        'test_retrieval': 'ai_agent.manage_knowledge',
+    }
     
     def get_queryset(self):
         return AiKnowledgeDocument.objects.filter(agent__company=self.request.user.company)

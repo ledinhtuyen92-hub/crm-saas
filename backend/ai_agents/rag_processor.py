@@ -148,3 +148,55 @@ def process_and_save_document(doc_id, api_key, provider='openai'):
         doc.error_message = str(e)
         doc.save()
         raise e
+
+def search_knowledge(agent, query: str, limit: int = 4):
+    """
+    Tìm kiếm chunk có semantic tương đồng với câu hỏi (query).
+    """
+    from .models import AiKnowledgeChunk
+    from .services import get_api_keys
+    from pgvector.django import CosineDistance
+    import logging
+    
+    if not query or not query.strip():
+        return ""
+        
+    try:
+        # Determine provider
+        provider = getattr(agent.company.ai_settings, 'default_embedding_provider', 'openai')
+        keys = get_api_keys(agent.company, provider)
+        api_key = keys[0] if keys else None
+        
+        if not api_key:
+            return ""
+            
+        if provider == 'gemini':
+            query_vector = get_gemini_embeddings([query], api_key)[0]
+            chunks = AiKnowledgeChunk.objects.filter(
+                document__agent=agent,
+                document__status='completed',
+                embedding_gemini__isnull=False
+            ).annotate(distance=CosineDistance('embedding_gemini', query_vector)).order_by('distance')[:limit]
+        else:
+            query_vector = get_embeddings([query], api_key)[0]
+            chunks = AiKnowledgeChunk.objects.filter(
+                document__agent=agent,
+                document__status='completed',
+                embedding__isnull=False
+            ).annotate(distance=CosineDistance('embedding', query_vector)).order_by('distance')[:limit]
+            
+        if chunks:
+            # We can filter out chunks with distance > 0.6 if needed to reduce noise
+            # but for now, just return top matches
+            knowledge_texts = []
+            for c in chunks:
+                if getattr(c, 'distance', 1) < 0.7:  # Threshold
+                    knowledge_texts.append(f"- (Nguồn: {c.document.title}) {c.content}")
+                    
+            if knowledge_texts:
+                return "\n\n[TRÍCH XUẤT KIẾN THỨC NỘI BỘ TỪ CÔNG TY (RAG)]:\n" + "\n".join(knowledge_texts) + "\n(Hãy ưu tiên sử dụng những kiến thức trên để trả lời khách hàng một cách chính xác nhất)."
+                
+    except Exception as e:
+        logging.getLogger(__name__).error(f"RAG Search Error: {e}")
+        
+    return ""

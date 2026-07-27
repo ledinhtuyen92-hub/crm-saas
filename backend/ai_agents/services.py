@@ -80,7 +80,17 @@ def call_openai(api_key, agent, system_prompt, conversation_history):
     client = OpenAI(api_key=api_key)
     messages = [{'role': 'system', 'content': system_prompt}]
     for msg in conversation_history[-10:]:
-        messages.append({'role': msg['role'], 'content': msg['content']})
+        if msg.get('image_url'):
+            content = []
+            if msg.get('content'):
+                content.append({"type": "text", "text": msg['content']})
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": msg['image_url']}
+            })
+            messages.append({'role': msg['role'], 'content': content})
+        else:
+            messages.append({'role': msg['role'], 'content': msg.get('content', '')})
 
     response = client.chat.completions.create(
         model=agent.model_name or 'gpt-4o-mini',
@@ -101,7 +111,26 @@ def call_gemini(api_key, agent, system_prompt, conversation_history):
     contents = []
     for msg in conversation_history[-10:]:
         role = 'model' if msg['role'] == 'assistant' else 'user'
-        contents.append(genai_types.Content(role=role, parts=[genai_types.Part(text=msg['content'])]))
+        parts = []
+        if msg.get('content'):
+            parts.append(genai_types.Part.from_text(text=msg['content']))
+            
+        if msg.get('image_url'):
+            import requests
+            try:
+                resp = requests.get(msg['image_url'], timeout=10)
+                if resp.status_code == 200:
+                    mime_type = resp.headers.get('content-type', 'image/jpeg')
+                    if not mime_type.startswith('image/'):
+                        mime_type = 'image/jpeg'
+                    parts.append(genai_types.Part.from_bytes(data=resp.content, mime_type=mime_type))
+            except Exception as e:
+                logger.error(f"Gemini image download error: {e}")
+                
+        if not parts:
+            parts.append(genai_types.Part.from_text(text="[Tin nhắn trống]"))
+            
+        contents.append(genai_types.Content(role=role, parts=parts))
     
     model_name = agent.model_name or 'gemini-2.5-flash'
     # Remove 'models/' prefix if present
@@ -228,7 +257,7 @@ TRẢ LỜI BẮT BUỘC THEO ĐỊNH DẠNG JSON SAU (không trả về Markdow
             import json
             Notification.objects.create(
                 company=agent.company,
-                user=None, # System wide
+                recipient=None, # System wide
                 title="CẢNH BÁO QUOTA AI",
                 message=f"Hệ thống báo lỗi hết Quota / Hết tiền đối với API Key {provider.upper()}. Vui lòng kiểm tra lại thiết lập.",
                 type='ai_error',
@@ -243,7 +272,7 @@ TRẢ LỜI BẮT BUỘC THEO ĐỊNH DẠNG JSON SAU (không trả về Markdow
         import json
         Notification.objects.create(
             company=agent.company,
-            user=None,
+            recipient=None,
             title="⚠️ AI bị tắt tự động do lỗi API",
             message=f"AI Agent '{agent.name}' không thể trả lời do tất cả API Key đều thất bại. Vui lòng kiểm tra API Key của {provider.upper()} và tiếp tục trả lời khách.",
             type='ai_error',
