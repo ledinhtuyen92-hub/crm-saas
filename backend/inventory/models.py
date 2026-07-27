@@ -1,5 +1,5 @@
 from django.db import models
-
+from pgvector.django import VectorField
 
 class ProductCategory(models.Model):
     """Loại sản phẩm — cô lập theo từng công ty."""
@@ -92,6 +92,12 @@ class ProductTemplate(models.Model):
         blank=True,
         null=True,
         verbose_name="Hình ảnh",
+    )
+    image_vector = VectorField(
+        dimensions=512, 
+        blank=True, 
+        null=True, 
+        help_text="Vector hình ảnh 512 chiều (CLIP)"
     )
     is_active = models.BooleanField(default=True, verbose_name="Đang kinh doanh")
     created_at = models.DateTimeField(auto_now_add=True)

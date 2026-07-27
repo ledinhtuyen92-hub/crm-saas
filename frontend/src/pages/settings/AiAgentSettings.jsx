@@ -7,19 +7,6 @@ import { useAuth } from '../../contexts/AuthContext';
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
 
-const DEFAULT_CORE_PROMPT = `{
-    "thought": "Phân tích tâm lý khách hàng và lên chiến thuật trả lời (Suy nghĩ nháp trước khi chat)",
-    "reply": "Câu trả lời gửi khách. Nếu KHÔNG BIẾT/không chắc chắn, xin phép đợi nhân viên kiểm tra.",
-    "sentiment": "angry / handoff / neutral (BẮT BUỘC chọn 'handoff' nếu bạn không biết, thiếu dữ liệu, phải nhờ người khác kiểm tra, báo khách đợi, hoặc khách đòi gặp Sale. Chọn 'angry' nếu khách chửi bậy/đe dọa. Còn lại chọn 'neutral')",
-    "extracted_info": {
-        "phone": "Trích xuất SĐT nếu có (nếu không có thì để rỗng)",
-        "address": "Trích xuất địa chỉ nếu có (nếu không có thì để rỗng)",
-        "notes": "Ghi chú (size, màu sắc...)"
-    },
-    "tags": ["Hỏi giá", "Khách VIP", "Đã chốt"...],
-    "summary": "Tóm tắt ngắn gọn lịch sử chat"
-}`;
-
 export default function AiAgentSettings() {
   const { hasPermission } = useAuth();
   const [agents, setAgents] = useState([]);
@@ -27,6 +14,14 @@ export default function AiAgentSettings() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingAgent, setEditingAgent] = useState(null);
   const [form] = Form.useForm();
+  // Template mặc định lấy từ Backend (Single Source of Truth - chỉ sửa tại services.py)
+  const [defaultJsonTemplate, setDefaultJsonTemplate] = useState('');
+
+  useEffect(() => {
+    api.get('/ai/agents/default-prompt/').then(res => {
+      setDefaultJsonTemplate(res.data.template);
+    }).catch(() => {});
+  }, []);
   
   // Company API Settings
   const [companySettings, setCompanySettings] = useState(null);
@@ -258,12 +253,21 @@ export default function AiAgentSettings() {
     }
   };
 
-  const handleOpenModal = (agent = null) => {
+  const handleOpenModal = async (agent = null) => {
     setEditingAgent(agent);
+
+    // Luôn lấy template mới nhất từ Backend trước khi điền vào form
+    let currentTemplate = defaultJsonTemplate;
+    try {
+      const res = await api.get('/ai/agents/default-prompt/');
+      currentTemplate = res.data.template;
+      setDefaultJsonTemplate(currentTemplate);
+    } catch (e) {}
+
     if (agent) {
       form.setFieldsValue({
         ...agent,
-        core_prompt_template: agent.core_prompt_template || DEFAULT_CORE_PROMPT
+        core_prompt_template: agent.core_prompt_template || currentTemplate
       });
     } else {
       form.resetFields();
@@ -286,7 +290,7 @@ export default function AiAgentSettings() {
         enable_drip_followup: false,
         drip_followup_hours: 24,
         debounce_delay: 4,
-        core_prompt_template: DEFAULT_CORE_PROMPT
+        core_prompt_template: currentTemplate
       });
     }
     setModalVisible(true);
@@ -727,6 +731,13 @@ export default function AiAgentSettings() {
                     <Tooltip title="Mặc định hệ thống đã cấu hình 1 JSON hoàn hảo (trích xuất SĐT, Nhãn, Tóm tắt). Chỉ chỉnh sửa nếu bạn hiểu về JSON và muốn thêm trường tuỳ chỉnh (VD: trích xuất Email, Ngân sách).">
                       <InfoCircleOutlined style={{ color: '#888' }} />
                     </Tooltip>
+                    <Button 
+                      size="small" 
+                      type="dashed" 
+                      onClick={() => form.setFieldsValue({ core_prompt_template: defaultJsonTemplate })}
+                    >
+                      ↺ Khôi phục mặc định
+                    </Button>
                   </Space>
                 }
               >
@@ -737,7 +748,7 @@ export default function AiAgentSettings() {
                 />
               </Form.Item>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                Lưu ý: Nếu nhập sai cú pháp JSON, AI có thể không hoạt động đúng. Khuyến cáo nên để trống nếu không rõ.
+                Lưu ý: Nếu nhập sai cú pháp JSON, AI có thể không hoạt động đúng. Để trống = dùng JSON mặc định từ Backend. Sửa trực tiếp = chỉ áp dụng riêng cho AI này.
               </Text>
             </Panel>
           </Collapse>

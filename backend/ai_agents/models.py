@@ -33,6 +33,8 @@ class CompanyAiSettings(models.Model):
         ('gemini', 'Google Gemini (768 chiều)')
     )
     default_embedding_provider = models.CharField(max_length=50, choices=EMBEDDING_PROVIDER_CHOICES, default='openai')
+    auto_sync_products = models.BooleanField(default=False, help_text="Tự động đồng bộ Sản phẩm làm Tri thức RAG")
+    enable_chat_extraction = models.BooleanField(default=True, help_text="Cho phép Đóng gói Hội thoại vào RAG")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -119,6 +121,7 @@ class AiKnowledgeDocument(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField(help_text="Nội dung văn bản (hoặc trích xuất từ file)", blank=True)
     file_attachment = models.FileField(upload_to='ai_docs/', blank=True, null=True)
+    image_vector = VectorField(dimensions=512, blank=True, null=True, help_text="Vector sinh ra nếu tải lên file ảnh (CLIP)")
     
     DOC_TYPE_CHOICES = (
         ('file', 'File tài liệu'),

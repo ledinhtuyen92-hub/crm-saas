@@ -11,6 +11,25 @@ import anthropic
 
 logger = logging.getLogger(__name__)
 
+# ========================================================
+# ► HẰẶNG DẪN JSON CHO AI: Điều chỉnh ở đây hoặc trực tiếp trên Giao diện
+# (Khi để trống trường Core Prompt trên UI, hệ thống sẽ dùng mẫu dưới đây)
+# ========================================================
+DEFAULT_JSON_TEMPLATE = """{
+    "thought": "Phân tích tâm lý khách hàng và lên chiến thuật trả lời (Suy nghĩ nháp trước khi chat)",
+    "reply": "Câu trả lời gửi khách. NẾU BẠN GỬI ẢNH (Bằng product_search_keyword) thì BẮT BUỘC trong câu trả lời phải nhắc đến việc bạn đang gửi ảnh (Ví dụ: 'Dạ anh xem thử mấy mẫu này nhé').",
+    "sentiment": "angry / handoff / neutral",
+    "image_url": "Đường link (URL) của ảnh sản phẩm (nếu khách yêu cầu 1 ảnh DUY NHẤT). Nên ưu tiên dùng product_search_keyword để gửi được nhiều mẫu hơn.",
+    "product_search_keyword": "BẮT BUỘC ĐIỀN TỪ KHÓA (Ví dụ: 'cửa gỗ', 'sofa') NẾU KHÁCH YÊU CẦU 'gửi ảnh', 'cho xem VÀI MẪU' hoặc hỏi 'nhà bạn có những loại nào'. Hệ thống sẽ TỰ ĐỘNG dùng từ khóa này tìm 3 ảnh sản phẩm và GỬI CHO KHÁCH. Đừng bắt khách chờ hoặc xin thêm thông tin nếu họ đã yêu cầu gửi mẫu. Nếu không cần thì ĐỂ TRỐNG.",
+    "extracted_info": {
+        "phone": "Trích xuất SĐT nếu có (nếu không có thì để rỗng)",
+        "address": "Trích xuất địa chỉ nếu có (nếu không có thì để rỗng)",
+        "notes": "Ghi chú (size, màu sắc...)"
+    },
+    "tags": ["Hỏi giá", "Khách VIP", "Đã chốt"...],
+    "summary": "Tóm tắt ngắn gọn lịch sử chat"
+}"""
+
 def get_provider_for_model(model_name: str) -> str:
     if not model_name:
         return 'openai'
@@ -142,20 +161,7 @@ def generate_ai_reply(agent: AiAgent, conversation_history: list, lead_name: str
         logger.warning(f"No API Key configured for provider {provider}")
         return {'reply': 'Hệ thống AI chưa được cấu hình API Key.', 'sentiment': 'neutral', 'summary': ''}
 
-    default_json_template = """{
-    "thought": "Phân tích tâm lý khách hàng và lên chiến thuật trả lời (Suy nghĩ nháp trước khi chat)",
-    "reply": "Câu trả lời gửi khách. Nếu KHÔNG BIẾT/không chắc chắn, xin phép đợi nhân viên kiểm tra.",
-    "sentiment": "angry / handoff / neutral (BẮT BUỘC chọn 'handoff' nếu bạn không biết, thiếu dữ liệu, phải nhờ người khác kiểm tra, báo khách đợi, hoặc khách đòi gặp Sale. Chọn 'angry' nếu khách chửi bậy/đe dọa. Còn lại chọn 'neutral')",
-    "extracted_info": {
-        "phone": "Trích xuất SĐT nếu có (nếu không có thì để rỗng)",
-        "address": "Trích xuất địa chỉ nếu có (nếu không có thì để rỗng)",
-        "notes": "Ghi chú (size, màu sắc...)"
-    },
-    "tags": ["Hỏi giá", "Khách VIP", "Đã chốt"...],
-    "summary": "Tóm tắt ngắn gọn lịch sử chat"
-}"""
-    
-    json_template = agent.core_prompt_template.strip() if agent.core_prompt_template else default_json_template
+    json_template = agent.core_prompt_template.strip() if agent.core_prompt_template else DEFAULT_JSON_TEMPLATE
 
     system_prompt = f"""Bạn là {agent.name}. {agent.system_prompt}
 Bạn đang chat với khách hàng tên là {lead_name}.
@@ -185,20 +191,17 @@ TRẢ LỜI BẮT BUỘC THEO ĐỊNH DẠNG JSON SAU (không trả về Markdow
                 input_price = 0.0
                 output_price = 0.0
                 
-                # Fetch exact match
                 pricing_obj = AiModelPricing.objects.filter(model_name=model_name).first()
                 if pricing_obj:
                     input_price = float(pricing_obj.input_price_per_1m)
                     output_price = float(pricing_obj.output_price_per_1m)
                 else:
-                    # Fallback: find any model name that is a substring
                     pricing_obj = AiModelPricing.objects.filter(model_name__icontains=provider).first()
                     if pricing_obj:
                         input_price = float(pricing_obj.input_price_per_1m)
                         output_price = float(pricing_obj.output_price_per_1m)
-                            
-                total_cost = (usage.get('input', 0) * input_price / 1_000_000) + (usage.get('output', 0) * output_price / 1_000_000)
                 
+                total_cost = (usage.get('input', 0) * input_price / 1_000_000) + (usage.get('output', 0) * output_price / 1_000_000)
                 ApiUsageLog.objects.create(
                     company=agent.company,
                     agent=agent,
@@ -210,17 +213,16 @@ TRẢ LỜI BẮT BUỘC THEO ĐỊNH DẠNG JSON SAU (không trả về Markdow
                 )
             except Exception as log_e:
                 logger.error(f"Failed to log API usage: {log_e}")
-                
+                    
             return result
         except Exception as e:
-            logger.error(f"{provider.upper()} API Key Error (Key: {api_key[:8]}...): {str(e)}")
-            last_error = str(e)
+            last_error = e
             continue
             
-    logger.error(f"All {provider} keys failed. Last error: {last_error}")
+    logger.error(f"All API Keys failed for provider {provider}. Last error: {last_error}")
     
-    # Bắt lỗi Quota / Hết tiền để sinh Notification
-    if last_error and ('429' in last_error or 'quota' in last_error.lower() or 'insufficient' in last_error.lower()):
+    # Catch quota errors
+    if last_error and ('429' in str(last_error) or 'quota' in str(last_error).lower() or 'insufficient' in str(last_error).lower()):
         try:
             from notifications.models import Notification
             import json
@@ -230,9 +232,68 @@ TRẢ LỜI BẮT BUỘC THEO ĐỊNH DẠNG JSON SAU (không trả về Markdow
                 title="CẢNH BÁO QUOTA AI",
                 message=f"Hệ thống báo lỗi hết Quota / Hết tiền đối với API Key {provider.upper()}. Vui lòng kiểm tra lại thiết lập.",
                 type='ai_error',
-                related_data=json.dumps({"agent_id": agent.id, "error": last_error})
+                related_data=json.dumps({"agent_id": agent.id, "error": str(last_error)})
             )
         except:
             pass
-            
-    return {'error': True, 'error_msg': 'Hệ thống AI đang quá tải hoặc hết Quota API.'}
+
+    # Gửi thông báo cho Sale team biết AI đã bị tắt do lỗi
+    try:
+        from notifications.models import Notification
+        import json
+        Notification.objects.create(
+            company=agent.company,
+            user=None,
+            title="⚠️ AI bị tắt tự động do lỗi API",
+            message=f"AI Agent '{agent.name}' không thể trả lời do tất cả API Key đều thất bại. Vui lòng kiểm tra API Key của {provider.upper()} và tiếp tục trả lời khách.",
+            type='ai_error',
+            related_data=json.dumps({"agent_id": agent.id, "error": str(last_error)})
+        )
+    except:
+        pass
+    
+    # Trả về cờ lỗi để task.py biết mà TẮT AI và ĐẢY HANDOFF - TUYỆT ĐỐI KHÔNG GỬi ra cho khách
+    return {
+        'error': True,
+        'reply': '',
+        'sentiment': 'handoff',
+        'summary': ''
+    }
+
+def generate_raw_text(agent: AiAgent, prompt: str) -> str:
+    provider = get_provider_for_model(agent.model_name)
+    api_keys = get_api_keys(agent.company, provider)
+    
+    if not api_keys:
+        return ""
+        
+    api_key = api_keys[0]
+    try:
+        if provider == 'openai':
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key)
+            res = client.chat.completions.create(
+                model=agent.model_name or 'gpt-4o-mini',
+                messages=[{"role": "user", "content": prompt}]
+            )
+            return res.choices[0].message.content
+        elif provider == 'gemini':
+            from google import genai as google_genai
+            client = google_genai.Client(api_key=api_key)
+            res = client.models.generate_content(
+                model=agent.model_name or 'gemini-2.5-flash',
+                contents=prompt
+            )
+            return res.text
+        elif provider == 'anthropic':
+            import anthropic
+            client = anthropic.Anthropic(api_key=api_key)
+            res = client.messages.create(
+                model=agent.model_name or 'claude-3-5-sonnet-20241022',
+                max_tokens=2048,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            return res.content[0].text
+    except Exception as e:
+        logger.error(f"Error in generate_raw_text: {e}")
+        return ""

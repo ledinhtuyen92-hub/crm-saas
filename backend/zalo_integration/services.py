@@ -588,7 +588,7 @@ def upload_image_to_zalo(oa_config, file_obj) -> str:
         return ""
 
 
-def send_zalo_chat_message(oa_config, zalo_uid: str, text: str = "", file_token: str = "", image_id: str = "", request_phone: bool = False) -> dict:
+def send_zalo_chat_message(oa_config, zalo_uid: str, text: str = "", file_token: str = "", image_id: str = "", image_url: str = "", request_phone: bool = False) -> dict:
     """
     Gửi tin nhắn chat thông thường tới Zalo User (Text hoặc File).
     Nếu request_phone=True, gửi yêu cầu chia sẻ số điện thoại.
@@ -622,6 +622,19 @@ def send_zalo_chat_message(oa_config, zalo_uid: str, text: str = "", file_token:
                 "elements": [{
                     "media_type": "image",
                     "attachment_id": image_id
+                }]
+            }
+        }
+        if text:
+            payload["message"]["text"] = text
+    elif image_url:
+        payload["message"]["attachment"] = {
+            "type": "template",
+            "payload": {
+                "template_type": "media",
+                "elements": [{
+                    "media_type": "image",
+                    "url": image_url
                 }]
             }
         }
@@ -680,3 +693,65 @@ def fetch_zalo_user_profile(oa_config, zalo_user_id: str) -> dict:
     except Exception as e:
         logger.warning(f"[ZaloProfile] Cannot fetch profile for {zalo_user_id}: {e}")
     return {}
+
+def send_zalo_carousel(oa_config, zalo_uid: str, elements: list) -> dict:
+    if oa_config.is_token_near_expiry:
+        refresh_zalo_access_token(oa_config)
+        oa_config.refresh_from_db()
+        
+    if not elements:
+        return {"error": -1, "message": "No elements"}
+
+    zalo_elements = []
+    # Add a header element as Zalo requires first element to have an image for list template
+    zalo_elements.append({
+        "title": "Kết quả Tìm kiếm Sản phẩm",
+        "subtitle": "Các sản phẩm phù hợp với yêu cầu của bạn",
+        "image_url": elements[0].get('image_url', '') if elements else "",
+        "default_action": {
+            "type": "oa.open.url",
+            "url": elements[0].get('image_url', '') if elements else ""
+        }
+    })
+    
+    for item in elements[:3]:  # Zalo list template allows max 4 elements
+        zalo_elements.append({
+            "title": item.get('title', '')[:100],
+            "subtitle": item.get('subtitle', '')[:100],
+            "image_url": item.get('image_url', ''),
+            "default_action": {
+                "type": "oa.open.url",
+                "url": item.get('image_url', '')
+            }
+        })
+
+    payload = {
+        "recipient": {"user_id": zalo_uid},
+        "message": {
+            "attachment": {
+                "type": "template",
+                "payload": {
+                    "template_type": "list",
+                    "elements": zalo_elements
+                }
+            }
+        }
+    }
+
+    try:
+        response = requests.post(
+            ZALO_SEND_MSG_URL,
+            headers={"access_token": oa_config.access_token, "Content-Type": "application/json"},
+            json=payload,
+            timeout=15,
+        )
+        try:
+            res_data = response.json()
+            if res_data.get("error") != 0:
+                logger.error(f"[ZaloCarousel] Error API: {res_data}")
+            return res_data
+        except Exception:
+            return {"error": -1, "message": f"HTTP {response.status_code}: {response.text}"}
+    except Exception as e:
+        logger.error(f"[ZaloCarousel] Send error: {e}")
+        return {"error": -1, "message": str(e)}

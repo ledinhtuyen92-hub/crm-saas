@@ -470,7 +470,15 @@ export default function FacebookInboxPage() {
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(false)
   const [msgLoading, setMsgLoading] = useState(false)
+  const [tags, setTags] = useState([])
+  const [quickReplies, setQuickReplies] = useState([])
   const [employees, setEmployees] = useState([])
+  const [companySettings, setCompanySettings] = useState(null)
+  
+  const [extracting, setExtracting] = useState(false)
+  const [extractModalVisible, setExtractModalVisible] = useState(false)
+  const [extractedText, setExtractedText] = useState('')
+  const [extractSaving, setExtractSaving] = useState(false)
   const [createForm] = Form.useForm()
   const [createModal, setCreateModal] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -522,6 +530,13 @@ export default function FacebookInboxPage() {
       const data = Array.isArray(res.data) ? res.data : res.data?.results ?? []
       setPages(data.filter(p => p.is_active !== false))
     } catch { /* silent */ }
+  }
+
+  const fetchCompanySettings = async () => {
+    try {
+      const res = await api.get('/ai_agents/settings/mine/')
+      setCompanySettings(res.data)
+    } catch {}
   }
 
   const fetchTags = async () => {
@@ -595,6 +610,7 @@ export default function FacebookInboxPage() {
     fetchPages()
     fetchTags()
     fetchQuickReplies()
+    fetchCompanySettings()
     // Gọi /users/users/ để lấy danh sách nhân viên trong công ty (lọc đúng theo tenant)
     api.get('/users/users/').then(res => {
       const data = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.results) ? res.data.results : [])
@@ -659,6 +675,52 @@ export default function FacebookInboxPage() {
   const handleSelectLead = (lead) => {
     setSelectedLead(lead)
     fetchMessages(lead)
+  }
+
+
+  const handleExtractConversation = async () => {
+    if (!selectedLead || !currentPage?.ai_agent) {
+      message.error('Chưa có khách hàng hoặc khách hàng chưa được cấu hình AI Agent')
+      return
+    }
+    setExtracting(true)
+    try {
+      const res = await api.post('/ai_agents/knowledge/extract_conversation/', {
+        lead_id: selectedLead.id,
+        platform: 'facebook',
+        agent_id: currentPage.ai_agent
+      })
+      if (res.data.status === 'success') {
+        setExtractedText(res.data.extracted_text)
+        setExtractModalVisible(true)
+      } else {
+        message.success(res.data.status || 'Đã đóng gói thành công!')
+      }
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Lỗi khi trích xuất hội thoại')
+    } finally {
+      setExtracting(false)
+    }
+  }
+
+  const handleSaveExtractedText = async () => {
+    if (!extractedText.trim()) {
+      message.error('Nội dung không được để trống')
+      return
+    }
+    setExtractSaving(true)
+    try {
+      await api.post('/ai_agents/knowledge/save_extracted_conversation/', {
+        extracted_text: extractedText,
+        agent_id: currentPage.ai_agent
+      })
+      message.success('Đã lưu thành công vào Cẩm nang AI!')
+      setExtractModalVisible(false)
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Lỗi khi lưu tài liệu')
+    } finally {
+      setExtractSaving(false)
+    }
   }
 
   const handleSend = async (file = null, requestPhone = false, requestEmail = false) => {
@@ -1504,6 +1566,20 @@ export default function FacebookInboxPage() {
                       {(currentPage?.is_ai_active && selectedLead.is_ai_active) ? <><RobotOutlined /> AI Đang Trực</> : <><UserOutlined /> Sale Tiếp Quản</>}
                     </span>
                   </div>
+                  {companySettings?.enable_chat_extraction && (
+                    <Tooltip title="Trích xuất các đoạn chat hay thành kiến thức cho AI học">
+                      <Button
+                        size="small"
+                        type="dashed"
+                        style={{ color: '#d48806', borderColor: '#ffe58f', background: '#fffbe6' }}
+                        icon={<span style={{fontSize: '12px'}}>⚡</span>}
+                        onClick={handleExtractConversation}
+                        loading={extracting}
+                      >
+                        Đóng gói vào RAG
+                      </Button>
+                    </Tooltip>
+                  )}
                   {!selectedLead.is_customer_converted && canCreateCustomer && (
                     <Button
                       type="primary"
@@ -2261,6 +2337,26 @@ export default function FacebookInboxPage() {
             )}
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        title="⚡ Duyệt nội dung Đóng gói Hội thoại (RAG)"
+        open={extractModalVisible}
+        onCancel={() => setExtractModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setExtractModalVisible(false)}>Hủy bỏ</Button>,
+          <Button key="save" type="primary" onClick={handleSaveExtractedText} loading={extractSaving}>Lưu vào Cẩm nang AI</Button>
+        ]}
+        width={700}
+      >
+        <div style={{ marginBottom: 12 }}>
+          <Typography.Text type="secondary">AI đã tự động trích xuất các thắc mắc và câu trả lời trong đoạn hội thoại này. Bạn có thể chỉnh sửa lại cho chuẩn xác trước khi nạp vào bộ nhớ RAG của AI.</Typography.Text>
+        </div>
+        <Input.TextArea
+          value={extractedText}
+          onChange={e => setExtractedText(e.target.value)}
+          autoSize={{ minRows: 8, maxRows: 16 }}
+        />
       </Modal>
     </div>
   )

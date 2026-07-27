@@ -71,7 +71,7 @@ def get_embeddings(texts, api_key):
 
 def get_gemini_embeddings(texts, api_key):
     """
-    Gọi Gemini API để lấy embeddings (models/embedding-001)
+    Gọi Gemini API để lấy embeddings (models/text-embedding-004)
     """
     genai.configure(api_key=api_key)
     embeddings = []
@@ -81,9 +81,10 @@ def get_gemini_embeddings(texts, api_key):
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i + batch_size]
         response = genai.embed_content(
-            model="models/embedding-001",
+            model="models/gemini-embedding-001",
             content=batch,
-            task_type="retrieval_document"
+            task_type="retrieval_document",
+            output_dimensionality=768
         )
         for emb in response['embedding']:
             embeddings.append(emb)
@@ -99,14 +100,16 @@ def process_and_save_document(doc_id, api_key, provider='openai'):
     doc.save()
     
     try:
+        text = ""
         if doc.doc_type == 'file' and doc.file_attachment:
             file_path = doc.file_attachment.path
             text = parse_document(file_path, doc.doc_type)
-        else:
-            text = doc.content
+            
+        if doc.content:
+            text += "\n" + doc.content
             
         if not text.strip():
-            raise Exception("Tài liệu trống, không có văn bản.")
+            raise Exception("Tài liệu trắng, không có văn bản hoặc mô tả.")
             
         chunks = chunk_text(text)
         

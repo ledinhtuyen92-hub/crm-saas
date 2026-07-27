@@ -48,19 +48,40 @@ Các vector này không thể lưu bằng MySQL hay PostgreSQL thông thường 
 
 ---
 
-## 3. Các module cần xây dựng cho chức năng này
+## 3. Các module cốt lõi đã được xây dựng thành công
 
-Để triển khai, em sẽ cần xây dựng các giao diện và chức năng sau:
+Hệ thống hiện tại đã hoàn thiện toàn bộ các module cốt lõi của một hệ thống RAG tiêu chuẩn:
 
 1. **Giao diện Quản lý Tri thức (Knowledge Base):**
-   - Danh sách các tài liệu đã tải lên (Tên, Định dạng, Trạng thái: *Đang học / Đã học xong / Lỗi*).
-   - Nút **[+ Thêm tài liệu mới]** (Hỗ trợ kéo thả PDF, Word).
-2. **Giao diện Quản lý QA (Cặp Câu hỏi - Trả lời):**
-   - Giúp Giám đốc/Quản lý Sale tự tay nhập các kịch bản sale xuất sắc vào hệ thống. AI sẽ ưu tiên lấy dữ liệu ở mục này trước.
+   - Quản lý tập trung tài liệu, trạng thái học thời gian thực, có bộ lọc thông minh theo Trợ lý, Trạng thái, và Nền tảng đọc.
+2. **Hỗ trợ Đa định dạng (Multi-format):**
+   - Đọc hiểu mượt mà các định dạng PDF, Word và nhập liệu trực tiếp dạng Hỏi & Đáp (Q&A).
 3. **Cấu hình Trợ lý & Gắn Tri thức:**
-   - Khi tạo 1 con AI (ví dụ: AI Chăm sóc Khách hàng), anh có thể tích chọn cho phép con AI này "Đọc" những tài liệu nào. (AI CSKH thì chỉ đọc chính sách, AI Kỹ thuật thì đọc tài liệu HDSD).
-4. **Backend Worker:** 
-   - Tiến trình chạy ngầm (Background Task) dùng Celery/Redis để xử lý file PDF nặng mà không làm đơ trang web.
+   - Mỗi Trợ lý AI đều có "Tính cách" (System Prompt) riêng biệt và được chỉ định đọc những tài liệu cụ thể.
+4. **Backend Worker xử lý ngầm:** 
+   - Sử dụng Celery để băm nhỏ (Chunking) và Vector hóa (Embedding) tài liệu dưới nền, không bao giờ làm đơ giật trang web.
+
+---
+
+## 4. Các tính năng Nâng cao (Advanced AI Features) đang sở hữu
+
+Được thiết kế theo chuẩn Enterprise, hệ thống của chúng ta đã vượt ra khỏi giới hạn của một Chatbot thông thường:
+
+### 🚀 Công nghệ lõi RAG Kép (Dual-Engine RAG)
+Tách biệt hoàn toàn 2 "bộ não" để tối ưu hiệu năng:
+- **Bộ não Tìm kiếm (Embedding Engine):** Hỗ trợ công nghệ nhúng của cả **OpenAI (1536 chiều)** và **Google Gemini (768 chiều)**. Áp dụng kỹ thuật nén Vector tiên tiến (MRL) giúp AI tìm kiếm siêu tốc trong hàng ngàn trang tài liệu.
+- **Bộ não Giao tiếp (Generative LLM):** Hỗ trợ linh hoạt các mô hình ngôn ngữ lớn như `GPT-4o`, `GPT-3.5-Turbo`, `Gemini 1.5 Pro` để viết ra các đoạn chat tự nhiên nhất.
+
+### 🌐 Xử lý Đa kênh Thông minh (Omnichannel AI)
+- Tự động "trực" 24/7 trên các kênh: **Zalo ZOA** và **Facebook Messenger**.
+- **Cơ chế chờ tin nhắn thông minh (Debounce Delay):** AI biết cách "chờ đợi" khi khách hàng gõ từng dòng lắt nhắt, sau đó gom tất cả lại để trả lời mượt mà trong 1 tin nhắn duy nhất, tránh tình trạng spam.
+
+### 🙋‍♂️ Cơ chế Ủy quyền cho Người thật (Human-in-the-loop)
+- **Công tắc AI linh hoạt:** Khi nhân viên Sales nhảy vào tư vấn thủ công, họ có thể tắt ngay công tắc AI của khách đó đi. Hệ thống sẽ lập tức im lặng nhường quyền cho người thật. AI không bao giờ "tranh cướp" khách của nhân viên.
+
+### 🛠 Cơ chế Auto-Healing & Sửa lỗi Tự động
+- Bắt và dịch toàn bộ các lỗi từ Google/OpenAI sang tiếng Việt (Sai API Key, Hết tiền quota, Máy chủ quá tải).
+- **Cơ chế "Học Lại" tự động dọn dẹp:** Khi người dùng chuyển đổi nền tảng đọc và ấn Học lại, hệ thống sẽ tự động quét, xóa sạch toàn bộ Vector rác cũ và băm lại từ đầu theo đúng chuẩn mới để bảo vệ Database.
 
 > [!TIP]
 > **Giải pháp nâng cao cho Tương lai (Advanced RAG):**

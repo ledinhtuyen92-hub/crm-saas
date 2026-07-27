@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from .models import AiKnowledgeChunk
 from .models import SystemAiKey, CompanyAiSettings, AiAgent, AiKnowledgeDocument, CompanyAiKey, AiModelPricing
 from .serializers import SystemAiKeySerializer, CompanyAiSettingsSerializer, AiAgentSerializer, AiKnowledgeDocumentSerializer, CompanyAiKeySerializer, AiModelPricingSerializer
+from .services import DEFAULT_JSON_TEMPLATE
 
 class SystemAiKeyViewSet(viewsets.ModelViewSet):
     queryset = SystemAiKey.objects.all().order_by('-priority', '-created_at')
@@ -28,6 +29,11 @@ class AiAgentViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         return AiAgent.objects.filter(company=self.request.user.company)
+
+    @action(detail=False, methods=['get'], url_path='default-prompt')
+    def default_prompt(self, request):
+        """Trả về cấu trúc JSON mặc định dùng trong Core Prompt (Single Source of Truth)."""
+        return Response({'template': DEFAULT_JSON_TEMPLATE})
         
     def perform_create(self, serializer):
         self._verify_agent_model(serializer.validated_data)
@@ -178,9 +184,10 @@ class AiKnowledgeDocumentViewSet(viewsets.ModelViewSet):
             if provider == 'gemini':
                 genai.configure(api_key=api_key)
                 response = genai.embed_content(
-                    model="models/embedding-001",
+                    model="models/gemini-embedding-001",
                     content=query,
-                    task_type="retrieval_query"
+                    task_type="retrieval_query",
+                    output_dimensionality=768
                 )
                 query_embedding = response['embedding']
                 distance_expr = L2Distance('embedding_gemini', query_embedding)
@@ -210,6 +217,89 @@ class AiKnowledgeDocumentViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=500)
 
+    @action(detail=False, methods=['POST'])
+    def extract_conversation(self, request):
+        lead_id = request.data.get('lead_id')
+        platform = request.data.get('platform')
+        agent_id = request.data.get('agent_id')
+        
+        if not all([lead_id, platform, agent_id]):
+            return Response({'error': 'Thiếu tham số'}, status=400)
+            
+        try:
+            agent = AiAgent.objects.get(id=agent_id, company=request.user.company)
+            # Fetch messages
+            messages_text = []
+            if platform == 'zalo':
+                from zalo_integration.models import ZaloMessage, SocialLead
+                lead = SocialLead.objects.get(id=lead_id, company=request.user.company)
+                msgs = ZaloMessage.objects.filter(social_lead=lead).order_by('created_at')[:30]
+                for m in msgs:
+                    sender = "Khách" if m.direction == 'inbound' else "Sale"
+                    messages_text.append(f"{sender}: {m.content}")
+            elif platform == 'facebook':
+                from facebook_integration.models import FacebookMessage, FacebookLead
+                lead = FacebookLead.objects.get(id=lead_id, company=request.user.company)
+                msgs = FacebookMessage.objects.filter(lead=lead).order_by('created_at')[:30]
+                for m in msgs:
+                    sender = "Khách" if m.sender_type == 'customer' else "Sale"
+                    messages_text.append(f"{sender}: {m.text}")
+                    
+            if not messages_text:
+                return Response({'error': 'Không có lịch sử hội thoại'}, status=400)
+                
+            transcript = "\n".join(messages_text)
+            
+            # Use agent.model_name to extract
+            from ai_agents.services import generate_raw_text
+            prompt = f"Bạn là chuyên gia huấn luyện AI. Hãy đọc đoạn hội thoại sau và bóc tách ra các thắc mắc khó của khách và cách Sale trả lời. Trình bày dưới dạng các cặp Hỏi - Đáp (Q&A) cực kỳ ngắn gọn, chuẩn mực. Không chứa tên riêng, số điện thoại hay khuyến mãi cá biệt.\nHội thoại:\n{transcript}"
+            
+            extracted_text = generate_raw_text(agent, prompt)
+            if not extracted_text:
+                return Response({'error': 'Lỗi khi trích xuất qua LLM'}, status=500)
+                
+            return Response({
+                'status': 'success',
+                'extracted_text': extracted_text,
+                'agent_id': agent_id
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({'error': str(e)}, status=500)
+
+    @action(detail=False, methods=['POST'])
+    def save_extracted_conversation(self, request):
+        extracted_text = request.data.get('extracted_text')
+        agent_id = request.data.get('agent_id')
+        
+        if not extracted_text or not agent_id:
+            return Response({'error': 'Thiếu tham số'}, status=400)
+            
+        try:
+            agent = AiAgent.objects.get(id=agent_id, company=request.user.company)
+            # Master document
+            provider = getattr(agent.company.ai_settings, 'default_embedding_provider', 'openai')
+            doc, created = AiKnowledgeDocument.objects.get_or_create(
+                agent=agent,
+                title='📚 Cẩm nang Xử lý Từ chối (Auto)',
+                doc_type='qa',
+                defaults={'content': extracted_text, 'status': 'pending', 'embedding_provider': provider}
+            )
+            
+            if not created:
+                doc.content = f"{doc.content}\n\n{extracted_text}"
+                doc.status = 'pending'
+                doc.embedding_provider = provider
+                doc.save()
+                
+            process_document_rag.delay(doc.id)
+            return Response({'status': 'Đã lưu thành công vào Cẩm nang'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
 class CompanyAiSettingsViewSet(viewsets.ModelViewSet):
     serializer_class = CompanyAiSettingsSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -226,7 +316,31 @@ class CompanyAiSettingsViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(settings, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
+                
             return Response(serializer.data)
+
+    @action(detail=False, methods=['POST'])
+    def manual_sync_products(self, request):
+        from .tasks import sync_company_products_to_rag
+        from .models import AiKnowledgeDocument, AiAgent
+        
+        # Tạo document trước để UI thấy ngay lập tức
+        first_agent = AiAgent.objects.filter(company_id=request.user.company.id).first()
+        if first_agent:
+            provider = getattr(request.user.company.ai_settings, 'default_embedding_provider', 'openai')
+            doc, created = AiKnowledgeDocument.objects.get_or_create(
+                agent=first_agent,
+                title='Danh mục Sản phẩm Hệ thống (Auto)',
+                doc_type='file',
+                defaults={'content': '', 'status': 'pending', 'embedding_provider': provider}
+            )
+            if not created:
+                doc.status = 'pending'
+                doc.embedding_provider = provider
+                doc.save(update_fields=['status', 'embedding_provider'])
+
+        sync_company_products_to_rag.delay(request.user.company.id)
+        return Response({'status': 'Đã gửi yêu cầu đồng bộ danh sách sản phẩm thành công'})
 
     @action(detail=False, methods=['GET'])
     def available_providers(self, request):

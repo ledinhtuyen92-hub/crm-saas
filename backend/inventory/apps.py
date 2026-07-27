@@ -10,3 +10,6 @@ class InventoryConfig(AppConfig):
         {"code": "products", "name": "Sản phẩm & Dịch vụ"},
         {"code": "inventory", "name": "Kho vận"}
     ]
+
+    def ready(self):
+        import inventory.signals

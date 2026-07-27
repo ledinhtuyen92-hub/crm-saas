@@ -867,3 +867,47 @@ def sync_page_conversations_history(page_config, max_conversations: int = 100, l
         "synced_messages": synced_messages,
     }
 
+def send_facebook_carousel(page_access_token: str, recipient_psid: str, elements: list) -> dict:
+    if not page_access_token or not recipient_psid or not elements:
+        return {"success": False, "error": "Thiếu thông tin."}
+
+    url = f"{FB_GRAPH_API_BASE}/me/messages"
+    params = {"access_token": page_access_token}
+    
+    # Format elements for Facebook Generic Template
+    fb_elements = []
+    for item in elements:
+        fb_elements.append({
+            "title": item.get('title', '')[:80],
+            "subtitle": item.get('subtitle', '')[:80],
+            "image_url": item.get('image_url', ''),
+            "buttons": [{
+                "type": "postback",
+                "title": "Nhận tư vấn",
+                "payload": f"CARE_{item.get('sku', '')}"
+            }]
+        })
+        
+    payload = {
+        "recipient": {"id": recipient_psid},
+        "message": {
+            "attachment": {
+                "type": "template",
+                "payload": {
+                    "template_type": "generic",
+                    "elements": fb_elements[:10]  # Facebook allows max 10 elements
+                }
+            }
+        }
+    }
+    
+    try:
+        resp = requests.post(url, params=params, json=payload, timeout=15)
+        resp_data = resp.json()
+        if "error" in resp_data:
+            logger.error(f"[Facebook] Carousel Error: {resp_data['error']}")
+            return {"success": False, "error": resp_data["error"].get("message", "Lỗi gửi Facebook Carousel")}
+        return {"success": True, "message_id": resp_data.get("message_id")}
+    except Exception as e:
+        logger.error(f"[Facebook] Exception Carousel: {e}")
+        return {"success": False, "error": str(e)}

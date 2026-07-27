@@ -207,6 +207,10 @@ export default function ZaloInboxPage() {
 
   const [leads, setLeads] = useState([])
   const [loading, setLoading] = useState(false)
+  const [extracting, setExtracting] = useState(false)
+  const [extractModalVisible, setExtractModalVisible] = useState(false)
+  const [extractedText, setExtractedText] = useState('')
+  const [extractSaving, setExtractSaving] = useState(false)
   const [selectedLead, setSelectedLead] = useState(null)
   const [selectedLeadDetail, setSelectedLeadDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -224,6 +228,7 @@ export default function ZaloInboxPage() {
   const [oaConfigs, setOaConfigs] = useState([])
   const [employees, setEmployees] = useState([])
   const [scanning, setScanning] = useState(false)
+  const [companySettings, setCompanySettings] = useState(null)
 
   // Chat states
   const [messages, setMessages] = useState([])
@@ -335,6 +340,13 @@ export default function ZaloInboxPage() {
     } catch {}
   }
 
+  const fetchCompanySettings = async () => {
+    try {
+      const res = await api.get('/ai_agents/settings/mine/')
+      setCompanySettings(res.data)
+    } catch {}
+  }
+
   const fetchLeads = useCallback(async (background = false) => {
     if (!background) setLoading(true)
     try {
@@ -389,6 +401,7 @@ export default function ZaloInboxPage() {
     fetchOaConfigs()
     fetchTags()
     fetchQuickReplies()
+    fetchCompanySettings()
   }, [])
 
   useEffect(() => {
@@ -461,6 +474,51 @@ export default function ZaloInboxPage() {
       message.success(`Đã ${checked ? 'Bật' : 'Tắt'} AI toàn cục cho Zalo OA!`)
     } catch {
       message.error('Không thể thay đổi trạng thái AI toàn cục')
+    }
+  }
+
+  const handleExtractConversation = async () => {
+    if (!selectedLead || !currentOa?.ai_agent) {
+      message.error('Chưa có khách hàng hoặc khách hàng chưa được cấu hình AI Agent')
+      return
+    }
+    setExtracting(true)
+    try {
+      const res = await api.post('/ai_agents/knowledge/extract_conversation/', {
+        lead_id: selectedLead.id,
+        platform: 'zalo',
+        agent_id: currentOa.ai_agent
+      })
+      if (res.data.status === 'success') {
+        setExtractedText(res.data.extracted_text)
+        setExtractModalVisible(true)
+      } else {
+        message.success(res.data.status || 'Đã đóng gói thành công!')
+      }
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Lỗi khi trích xuất hội thoại')
+    } finally {
+      setExtracting(false)
+    }
+  }
+
+  const handleSaveExtractedText = async () => {
+    if (!extractedText.trim()) {
+      message.error('Nội dung không được để trống')
+      return
+    }
+    setExtractSaving(true)
+    try {
+      await api.post('/ai_agents/knowledge/save_extracted_conversation/', {
+        extracted_text: extractedText,
+        agent_id: currentOa.ai_agent
+      })
+      message.success('Đã lưu thành công vào Cẩm nang AI!')
+      setExtractModalVisible(false)
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Lỗi khi lưu tài liệu')
+    } finally {
+      setExtractSaving(false)
     }
   }
 
@@ -1054,6 +1112,20 @@ export default function ZaloInboxPage() {
                       {(currentOa?.is_ai_active && selectedLead.is_ai_active) ? <><RobotOutlined /> AI Đang Trực</> : <><UserOutlined /> Sale Tiếp Quản</>}
                     </span>
                   </div>
+                  {companySettings?.enable_chat_extraction && (
+                    <Tooltip title="Trích xuất các đoạn chat hay thành kiến thức cho AI học">
+                      <Button
+                        size="small"
+                        type="dashed"
+                        style={{ color: '#d48806', borderColor: '#ffe58f', background: '#fffbe6' }}
+                        icon={<span style={{fontSize: '12px'}}>⚡</span>}
+                        onClick={handleExtractConversation}
+                        loading={extracting}
+                      >
+                        Đóng gói vào RAG
+                      </Button>
+                    </Tooltip>
+                  )}
                   <Tooltip title="Quét lại liên hệ cho hội thoại này">
                     <Button
                       size="small"
@@ -1539,6 +1611,26 @@ export default function ZaloInboxPage() {
             ))
           )}
         </div>
+      </Modal>
+
+      <Modal
+        title="⚡ Duyệt nội dung Đóng gói Hội thoại (RAG)"
+        open={extractModalVisible}
+        onCancel={() => setExtractModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setExtractModalVisible(false)}>Hủy bỏ</Button>,
+          <Button key="save" type="primary" onClick={handleSaveExtractedText} loading={extractSaving}>Lưu vào Cẩm nang AI</Button>
+        ]}
+        width={700}
+      >
+        <div style={{ marginBottom: 12 }}>
+          <Typography.Text type="secondary">AI đã tự động trích xuất các thắc mắc và câu trả lời trong đoạn hội thoại này. Bạn có thể chỉnh sửa lại cho chuẩn xác trước khi nạp vào bộ nhớ RAG của AI.</Typography.Text>
+        </div>
+        <Input.TextArea
+          value={extractedText}
+          onChange={e => setExtractedText(e.target.value)}
+          autoSize={{ minRows: 8, maxRows: 16 }}
+        />
       </Modal>
     </div>
   )
