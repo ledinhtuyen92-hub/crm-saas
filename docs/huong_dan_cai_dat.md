@@ -100,3 +100,26 @@ Gõ lệnh `rclone config`
   `rclone copy /root/crm_backups gdrive:CRM_Backups`
 - Gõ lệnh `crontab -e` trên VPS và dán dòng này vào cuối cùng để chạy tự động lúc 2h sáng:
   `0 2 * * * bash /root/crm-saas/backup.sh`
+
+---
+
+## BƯỚC 6: XỬ LÝ CÁC LỖI THƯỜNG GẶP (TROUBLESHOOTING)
+
+**1. Lỗi web hiện "500 Internal Server Error"**
+- **Nguyên nhân:** Máy chủ Ubuntu bảo mật quá chặt, Nginx không có quyền đọc file giao diện cài đặt trong thư mục `/root/...`
+- **Cách sửa:** Copy và dán lệnh sau vào màn hình VPS (để cấp quyền đọc cho Nginx):
+  ```bash
+  chmod 711 /root && chmod -R 755 /root/crm-saas/frontend/dist
+  ```
+
+**2. Quá trình cài đặt tự động bị lỗi ở bước SSL (DNS problem: NXDOMAIN)**
+- **Nguyên nhân:** Tên miền của bạn chưa được trỏ IP thành công, hoặc trỏ sai Name Server (rất hay gặp ở TenTen nếu chưa đổi NS về `ns-a1.tenten.vn`). Do đó Let's Encrypt từ chối cấp ổ khóa xanh.
+- **Hậu quả:** Vào web sẽ bị báo "Không bảo mật" (Not Secure). Nhưng phần mềm vẫn dùng bình thường.
+- **Cách sửa:**
+  1. Kiểm tra lại việc trỏ bản ghi A (hoặc Name Server) trên trang quản lý Tên miền.
+  2. Chờ 15-30 phút để mạng Internet quốc tế cập nhật.
+  3. Mở trình duyệt gõ `http://tenmien.com` (không có chữ `s`). Nếu web đã tải được giao diện bình thường thì vào màn hình VPS gõ lại lệnh sau để ốp ổ khóa xanh vào:
+  ```bash
+  certbot --nginx -d crm.congty.com
+  ```
+  *(Nhớ thay crm.congty.com bằng tên miền thực tế của bạn).*
