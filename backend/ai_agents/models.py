@@ -121,6 +121,11 @@ class AiKnowledgeDocument(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField(help_text="Nội dung văn bản (hoặc trích xuất từ file)", blank=True)
     file_attachment = models.FileField(upload_to='ai_docs/', blank=True, null=True)
+    image_description = models.TextField(
+        blank=True,
+        verbose_name="Mô tả ảnh (AI sinh ra)",
+        help_text="Được dùng để tìm kiếm tài liệu khi khách gửi ảnh"
+    )
     
     DOC_TYPE_CHOICES = (
         ('file', 'File tài liệu'),

@@ -11,4 +11,14 @@ def product_sync_to_rag(sender, instance, **kwargs):
     if hasattr(company, 'ai_settings') and company.ai_settings.auto_sync_products:
         sync_company_products_to_rag.delay(company.id)
 
+from .models import ProductTemplate
 
+@receiver(post_save, sender=ProductTemplate)
+def trigger_sync_product_image_description(sender, instance, created, **kwargs):
+    # Nếu có ảnh và chưa có mô tả ảnh, hoặc đang không trong quá trình sync
+    if instance.image and not instance.image_description and not getattr(instance, '_vector_syncing', False):
+        try:
+            from ai_agents.tasks import sync_product_image_description
+            sync_product_image_description.delay(instance.id)
+        except Exception:
+            pass

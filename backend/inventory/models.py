@@ -92,6 +92,11 @@ class ProductTemplate(models.Model):
         null=True,
         verbose_name="Hình ảnh",
     )
+    image_description = models.TextField(
+        blank=True,
+        verbose_name="Mô tả ảnh (AI sinh ra)",
+        help_text="Được dùng để tìm kiếm sản phẩm khi khách gửi ảnh"
+    )
     is_active = models.BooleanField(default=True, verbose_name="Đang kinh doanh")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

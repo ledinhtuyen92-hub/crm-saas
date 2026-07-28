@@ -125,12 +125,26 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
         # RAG Search (Semantic Text Search)
         rag_search_text = ""
         latest_user_msg = messages.first()
-        if latest_user_msg and latest_user_msg.direction == ZaloMessage.DIRECTION_INBOUND and latest_user_msg.content:
-            from ai_agents.rag_processor import search_knowledge
-            rag_search_text = search_knowledge(lead.oa_config.ai_agent, latest_user_msg.content, limit=4)
+        if latest_user_msg and latest_user_msg.direction == ZaloMessage.DIRECTION_INBOUND:
+            search_query = latest_user_msg.content or ""
+            
+            # Nếu tin nhắn có ảnh, dịch ảnh ra text để tìm kiếm
+            if latest_user_msg.attachment_url:
+                try:
+                    from ai_agents.services import generate_image_description, get_api_keys
+                    provider = getattr(lead.oa_config.ai_agent.company.ai_settings, 'default_embedding_provider', 'openai')
+                    keys = get_api_keys(lead.oa_config.ai_agent.company, provider)
+                    api_key = keys[0] if keys else None
+                    if api_key:
+                        img_desc = generate_image_description(latest_user_msg.attachment_url, api_key, provider)
+                        if img_desc:
+                            search_query += f" [Khách gửi ảnh: {img_desc}]"
+                except Exception as e:
+                    logger.error(f"Error generating image desc for Zalo lead {lead.id}: {e}")
 
-        # Ghi chú: Ảnh đính kèm (nếu có) sẽ được truyền thẳng URL cho VLM (Gemini/GPT-4o) 
-        # để tự động nhận diện và phân tích trong generate_ai_reply, không cần tìm kiếm vector CLIP tại đây nữa.
+            if search_query.strip():
+                from ai_agents.rag_processor import search_knowledge
+                rag_search_text = search_knowledge(lead.oa_config.ai_agent, search_query.strip(), limit=4)
 
         if is_followup:
             history.append({'role': 'system', 'content': 'Khách hàng đã không phản hồi hơn 24 giờ. Hãy viết một câu chào hỏi, gợi mở hoặc hỏi thăm khéo léo để tiếp tục câu chuyện một cách tự nhiên nhất.'})
@@ -258,12 +272,26 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
         # RAG Search (Semantic Text Search)
         rag_search_text = ""
         latest_user_msg = messages.first()
-        if latest_user_msg and latest_user_msg.sender_type == 'customer' and latest_user_msg.text:
-            from ai_agents.rag_processor import search_knowledge
-            rag_search_text = search_knowledge(lead.page_config.ai_agent, latest_user_msg.text, limit=4)
+        if latest_user_msg and latest_user_msg.sender_type == 'customer':
+            search_query = latest_user_msg.text or ""
+            
+            # Nếu tin nhắn có ảnh, dịch ảnh ra text để tìm kiếm
+            if latest_user_msg.attachment_url:
+                try:
+                    from ai_agents.services import generate_image_description, get_api_keys
+                    provider = getattr(lead.page_config.ai_agent.company.ai_settings, 'default_embedding_provider', 'openai')
+                    keys = get_api_keys(lead.page_config.ai_agent.company, provider)
+                    api_key = keys[0] if keys else None
+                    if api_key:
+                        img_desc = generate_image_description(latest_user_msg.attachment_url, api_key, provider)
+                        if img_desc:
+                            search_query += f" [Khách gửi ảnh: {img_desc}]"
+                except Exception as e:
+                    logger.error(f"Error generating image desc for FB lead {lead.id}: {e}")
 
-        # Ghi chú: Ảnh đính kèm (nếu có) sẽ được truyền thẳng URL cho VLM (Gemini/GPT-4o) 
-        # để tự động nhận diện và phân tích trong generate_ai_reply, không cần tìm kiếm vector CLIP tại đây nữa.
+            if search_query.strip():
+                from ai_agents.rag_processor import search_knowledge
+                rag_search_text = search_knowledge(lead.page_config.ai_agent, search_query.strip(), limit=4)
         if is_followup:
             history.append({'role': 'system', 'content': 'Khách hàng đã không phản hồi hơn 24 giờ. Hãy viết một câu chào hỏi, gợi mở hoặc hỏi thăm khéo léo để tiếp tục câu chuyện một cách tự nhiên nhất.'})
 
@@ -555,6 +583,23 @@ def process_document_rag(doc_id):
         api_key = keys[0] if keys else None
         
 
+        # Nếu là tài liệu dạng ảnh, dùng AI để dịch ảnh ra text trước
+        if doc.doc_type == 'image' and doc.file_attachment:
+            from .services import generate_image_description
+            from crm.utils import get_public_domain
+            image_url = doc.file_attachment.url
+            if image_url.startswith('/'):
+                image_url = f"{get_public_domain()}{image_url}"
+            
+            description = generate_image_description(image_url, api_key, provider)
+            if description:
+                doc.image_description = description
+                # Gộp mô tả vào content để RAG nhúng vector
+                if doc.content:
+                    doc.content = f"{doc.content}\n\n[Mô tả ảnh]: {description}"
+                else:
+                    doc.content = f"[Mô tả ảnh]: {description}"
+                doc.save(update_fields=['image_description', 'content'])
             
         # Thực hiện xử lý RAG (Text)
         process_and_save_document(doc.id, api_key, provider)
@@ -631,3 +676,39 @@ def sync_company_products_to_rag(company_id):
         
     # Kích hoạt học RAG
     process_document_rag.delay(doc.id)
+
+@shared_task
+def sync_product_image_description(template_id):
+    """
+    Dịch ảnh của ProductTemplate thành văn bản để dùng cho RAG.
+    """
+    from inventory.models import ProductTemplate
+    from .services import generate_image_description, get_api_keys
+    from crm.utils import get_public_domain
+    
+    try:
+        template = ProductTemplate.objects.get(id=template_id)
+        if not template.image:
+            return
+            
+        provider = getattr(template.company.ai_settings, 'default_embedding_provider', 'openai')
+        keys = get_api_keys(template.company, provider)
+        api_key = keys[0] if keys else None
+        
+        if not api_key:
+            return
+            
+        image_url = template.image.url
+        if image_url.startswith('/'):
+            image_url = f"{get_public_domain()}{image_url}"
+            
+        desc = generate_image_description(image_url, api_key, provider)
+        if desc:
+            template.image_description = desc
+            template.save(update_fields=['image_description'])
+            
+            # Cập nhật lại toàn bộ RAG cho công ty này
+            sync_company_products_to_rag.delay(template.company_id)
+            
+    except Exception as e:
+        logger.error(f"Error generating image description for template {template_id}: {e}")
