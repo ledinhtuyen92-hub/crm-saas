@@ -295,7 +295,7 @@ class ZaloMessageSerializer(serializers.ModelSerializer):
         model = ZaloMessage
         fields = [
             "id", "social_lead", "direction", "content",
-            "attachment_url", "attachment_type", "zalo_msg_id",
+            "attachment_url", "attachment_type", "payload", "zalo_msg_id",
             "sender_user", "sender_name", "created_at",
         ]
         read_only_fields = ["id", "social_lead", "direction", "zalo_msg_id", "created_at"]

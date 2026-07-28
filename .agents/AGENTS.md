@@ -22,11 +22,11 @@
 
 ## 4. Đồng bộ Dữ liệu & Quyền trước khi Push lên GitHub
 - **Bắt buộc:** Trước khi đẩy code lên GitHub, LUÔN LUÔN tạo file `sync_data.json` chứa toàn bộ dữ liệu hiện tại của database để đảm bảo khi pull code về máy khác chỉ cần nạp lại dữ liệu là hệ thống chạy bình thường.
-- **Lệnh thực thi (chạy tại thư mục `backend/`):**
+- **Lệnh thực thi (chạy tại thư mục gốc của dự án):**
   ```powershell
-  python manage.py dumpdata -e contenttypes -e auth.Permission -e sessions -e admin.logentry --indent 2 -o sync_data.json
+  docker exec -i crm_web python manage.py dumpdata -e contenttypes -e auth.Permission -e sessions -e admin.logentry --indent 2 -o sync_data.json
   ```
-- **Lưu ý:** Việc này giúp đồng bộ dữ liệu cài đặt, cấu hình, dữ liệu người dùng và phân quyền giữa các môi trường làm việc.
+- **Lưu ý Quan trọng về Lỗi Font chữ (Mojibake):** TUYỆT ĐỐI KHÔNG chạy lệnh `python manage.py dumpdata` trực tiếp trên Windows PowerShell/CMD (vì Python trên Windows mặc định dùng bảng mã cp1252/cp437 gây lỗi font tiếng Việt kiểu `Thanh to├ín`). Luôn dùng `docker exec -i crm_web` và cờ `-o` để Linux tự động ghi file bằng chuẩn UTF-8.
 
 ## 5. Quotation Template Snapshot (Chốt mẫu Báo giá)
 - **Luôn bảo lưu cấu hình mẫu:** Báo giá phải luôn lưu lại cấu hình mẫu (ngang/dọc) tại thời điểm tạo/sửa thông qua 	emplate_snapshot.

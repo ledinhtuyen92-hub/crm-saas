@@ -393,123 +393,17 @@ export default function AiAgentSettings() {
         <Table columns={columns} dataSource={agents} rowKey='id' loading={loading} pagination={false} />
       </Card>
       )}
-      {hasPermission('ai_agent.view_dashboard') && (
-        <Card 
-          title={<Title level={4} style={{ margin: 0 }}><ThunderboltOutlined style={{color: '#faad14'}} /> Thống kê Chi phí AI <Text type="secondary" style={{ fontSize: 16, fontWeight: 'normal' }}>{statsPeriod === 'today' ? '(Hôm nay)' : statsPeriod === 'week' ? '(Tuần này)' : statsPeriod === 'month' ? '(Tháng này)' : '(Trọn đời)'}</Text></Title>} 
-          extra={
-            <Segmented 
-              options={[
-                { label: 'Hôm nay', value: 'today' },
-                { label: 'Tuần này', value: 'week' },
-                { label: 'Tháng này', value: 'month' },
-                { label: 'Trọn đời', value: 'all' },
-              ]} 
-              value={statsPeriod} 
-              onChange={setStatsPeriod} 
-            />
-          }
-          style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}
-          loading={statsLoading}
-        >
-          <Row gutter={[24, 24]}>
-            <Col xs={24} md={8}>
-              <div style={{ 
-                background: 'linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%)', 
-                padding: '24px', 
-                borderRadius: 16, 
-                border: '1px solid #b7eb8f', 
-                boxShadow: '0 8px 24px rgba(82, 196, 26, 0.15)',
-                display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
-              }}>
-                <Title level={5} style={{ color: '#389e0d', margin: 0, textTransform: 'uppercase', letterSpacing: 1, fontSize: 13 }}>Input Tokens</Title>
-                <Title level={2} style={{ margin: '12px 0 0 0', color: '#135200' }}>{stats?.total_input_tokens?.toLocaleString() || 0}</Title>
-              </div>
-            </Col>
-            <Col xs={24} md={8}>
-              <div style={{ 
-                background: 'linear-gradient(135deg, #e6f4ff 0%, #bae0ff 100%)', 
-                padding: '24px', 
-                borderRadius: 16, 
-                border: '1px solid #91caff', 
-                boxShadow: '0 8px 24px rgba(22, 119, 255, 0.15)',
-                display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
-              }}>
-                <Title level={5} style={{ color: '#0958d9', margin: 0, textTransform: 'uppercase', letterSpacing: 1, fontSize: 13 }}>Output Tokens</Title>
-                <Title level={2} style={{ margin: '12px 0 0 0', color: '#003eb3' }}>{stats?.total_output_tokens?.toLocaleString() || 0}</Title>
-              </div>
-            </Col>
-            <Col xs={24} md={8}>
-              <div style={{ 
-                background: 'linear-gradient(135deg, #fff2e8 0%, #ffbb96 100%)', 
-                padding: '24px', 
-                borderRadius: 16, 
-                border: '1px solid #ff9c6e', 
-                boxShadow: '0 8px 24px rgba(250, 84, 28, 0.15)',
-                display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
-              }}>
-                <Title level={5} style={{ color: '#d4380d', margin: 0, textTransform: 'uppercase', letterSpacing: 1, fontSize: 13 }}>Tổng Chi Phí</Title>
-                <Title level={2} style={{ margin: '12px 0 0 0', color: '#871400' }}>${parseFloat(stats?.total_cost_usd || 0).toFixed(4)}</Title>
-              </div>
-            </Col>
-          </Row>
-        
-        {stats?.agent_stats?.length > 0 && (
-          <div style={{ marginTop: 24 }}>
-            <Title level={5}>Chi tiết theo Trợ lý</Title>
-            <Table 
-              dataSource={stats.agent_stats} 
-              rowKey={(r, i) => i}
-              pagination={false}
-              size="small"
-              columns={[
-                { title: 'Tên Trợ lý', dataIndex: 'agent_name', key: 'agent_name' },
-                { title: 'Mô hình', dataIndex: 'model_name', key: 'model_name' },
-                { title: 'Input Tokens', dataIndex: 'input_tokens', key: 'input_tokens', render: (v) => v.toLocaleString() },
-                { title: 'Output Tokens', dataIndex: 'output_tokens', key: 'output_tokens', render: (v) => v.toLocaleString() },
-                { title: 'Chi phí ($)', dataIndex: 'total_cost_usd', key: 'total_cost_usd', render: (v) => <Text strong style={{ color: '#fa541c' }}>${parseFloat(v || 0).toFixed(4)}</Text> }
-              ]} 
-            />
-          </div>
-        )}
-      </Card>
-      )}
-      
-      {hasPermission('ai_agent.sync_pricing') && (
-      <Card 
-        title={<Title level={4}><InfoCircleOutlined style={{color: '#1677ff'}} /> Bảng Giá AI (Tham chiếu từ LiteLLM)</Title>} 
-        extra={
-          <Space>
-            <Input.Search 
-              placeholder="Tìm tên mô hình..." 
-              allowClear
-              onChange={e => setPricingSearch(e.target.value)} 
-              style={{ width: 250 }}
-            />
-            <Button type="primary" icon={<SyncOutlined spin={syncingPricing} />} loading={syncingPricing} onClick={handleSyncPricing}>Đồng bộ từ LiteLLM</Button>
-          </Space>
-        }
-        style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}
-      >
-        <Text type='secondary' style={{ display: 'block', marginBottom: 16 }}>
-          Bảng giá được đồng bộ tự động hàng ngày. Bạn có thể tự sửa giá (khi sửa sẽ bị đánh dấu "Tự sửa" và không bị tự động ghi đè).
-        </Text>
-        <Table 
-          dataSource={pricings.filter(p => p.model_name.toLowerCase().includes(pricingSearch.toLowerCase()))} 
-          rowKey="id"
-          pagination={{ pageSize: 10, showSizeChanger: false }}
-          size="small"
-          columns={pricingColumns} 
-          loading={pricingLoading}
-        />
-      </Card>
-      )}
-
       {hasPermission('ai_agent.manage_keys') && (
-        <Card 
-          title={<Title level={4}><KeyOutlined /> Cấu hình API Key & Phân bổ Quota</Title>} 
-          style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}
-          loading={settingsLoading}
+        <Collapse 
+          style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 24, backgroundColor: '#fff' }}
+          expandIconPosition="end"
+          bordered={false}
         >
+          <Panel 
+            header={<Title level={4} style={{ margin: 0 }}><KeyOutlined style={{color: '#1677ff'}} /> Cấu hình API Key & Phân bổ Quota</Title>} 
+            key="keys"
+            style={{ border: 'none' }}
+          >
           <Form form={settingsForm} layout='vertical' onFinish={handleSaveCompanySettings}>
             <Row gutter={[32, 32]}>
               <Col xs={24} lg={16}>
@@ -584,10 +478,138 @@ export default function AiAgentSettings() {
                 </Button>
               </div>
           </Form>
-        </Card>
+          </Panel>
+        </Collapse>
       )}
 
 
+
+
+      {hasPermission('ai_agent.view_dashboard') && (
+        <Collapse 
+          style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 24, backgroundColor: '#fff' }}
+          expandIconPosition="end"
+          bordered={false}
+        >
+          <Panel 
+            header={<Title level={4} style={{ margin: 0 }}><ThunderboltOutlined style={{color: '#faad14'}} /> Thống kê Chi phí AI <Text type="secondary" style={{ fontSize: 16, fontWeight: 'normal' }}>{statsPeriod === 'today' ? '(Hôm nay)' : statsPeriod === 'week' ? '(Tuần này)' : statsPeriod === 'month' ? '(Tháng này)' : '(Trọn đời)'}</Text></Title>} 
+            extra={
+              <div onClick={e => e.stopPropagation()}>
+                <Segmented 
+                  options={[
+                    { label: 'Hôm nay', value: 'today' },
+                    { label: 'Tuần này', value: 'week' },
+                    { label: 'Tháng này', value: 'month' },
+                    { label: 'Trọn đời', value: 'all' },
+                  ]} 
+                  value={statsPeriod} 
+                  onChange={setStatsPeriod} 
+                />
+              </div>
+            }
+            key="stats"
+            style={{ border: 'none' }}
+          >
+          <Row gutter={[24, 24]}>
+            <Col xs={24} md={8}>
+              <div style={{ 
+                background: 'linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%)', 
+                padding: '24px', 
+                borderRadius: 16, 
+                border: '1px solid #b7eb8f', 
+                boxShadow: '0 8px 24px rgba(82, 196, 26, 0.15)',
+                display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
+              }}>
+                <Title level={5} style={{ color: '#389e0d', margin: 0, textTransform: 'uppercase', letterSpacing: 1, fontSize: 13 }}>Input Tokens</Title>
+                <Title level={2} style={{ margin: '12px 0 0 0', color: '#135200' }}>{stats?.total_input_tokens?.toLocaleString() || 0}</Title>
+              </div>
+            </Col>
+            <Col xs={24} md={8}>
+              <div style={{ 
+                background: 'linear-gradient(135deg, #e6f4ff 0%, #bae0ff 100%)', 
+                padding: '24px', 
+                borderRadius: 16, 
+                border: '1px solid #91caff', 
+                boxShadow: '0 8px 24px rgba(22, 119, 255, 0.15)',
+                display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
+              }}>
+                <Title level={5} style={{ color: '#0958d9', margin: 0, textTransform: 'uppercase', letterSpacing: 1, fontSize: 13 }}>Output Tokens</Title>
+                <Title level={2} style={{ margin: '12px 0 0 0', color: '#003eb3' }}>{stats?.total_output_tokens?.toLocaleString() || 0}</Title>
+              </div>
+            </Col>
+            <Col xs={24} md={8}>
+              <div style={{ 
+                background: 'linear-gradient(135deg, #fff2e8 0%, #ffbb96 100%)', 
+                padding: '24px', 
+                borderRadius: 16, 
+                border: '1px solid #ff9c6e', 
+                boxShadow: '0 8px 24px rgba(250, 84, 28, 0.15)',
+                display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
+              }}>
+                <Title level={5} style={{ color: '#d4380d', margin: 0, textTransform: 'uppercase', letterSpacing: 1, fontSize: 13 }}>Tổng Chi Phí</Title>
+                <Title level={2} style={{ margin: '12px 0 0 0', color: '#871400' }}>${parseFloat(stats?.total_cost_usd || 0).toFixed(4)}</Title>
+              </div>
+            </Col>
+          </Row>
+        
+        {stats?.agent_stats?.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            <Title level={5}>Chi tiết theo Trợ lý</Title>
+            <Table 
+              dataSource={stats.agent_stats} 
+              rowKey={(r, i) => i}
+              pagination={false}
+              size="small"
+              columns={[
+                { title: 'Tên Trợ lý', dataIndex: 'agent_name', key: 'agent_name' },
+                { title: 'Mô hình', dataIndex: 'model_name', key: 'model_name' },
+                { title: 'Input Tokens', dataIndex: 'input_tokens', key: 'input_tokens', render: (v) => v.toLocaleString() },
+                { title: 'Output Tokens', dataIndex: 'output_tokens', key: 'output_tokens', render: (v) => v.toLocaleString() },
+                { title: 'Chi phí ($)', dataIndex: 'total_cost_usd', key: 'total_cost_usd', render: (v) => <Text strong style={{ color: '#fa541c' }}>${parseFloat(v || 0).toFixed(4)}</Text> }
+              ]} 
+            />
+          </div>
+        )}
+        </Panel>
+      </Collapse>
+      )}
+      
+      {hasPermission('ai_agent.sync_pricing') && (
+      <Collapse 
+        style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 24, backgroundColor: '#fff' }}
+        expandIconPosition="end"
+        bordered={false}
+      >
+        <Panel 
+          header={<Title level={4} style={{ margin: 0 }}><InfoCircleOutlined style={{color: '#1677ff'}} /> Bảng Giá AI (Tham chiếu từ LiteLLM)</Title>} 
+          extra={
+            <Space onClick={e => e.stopPropagation()}>
+              <Input.Search 
+                placeholder="Tìm tên mô hình..." 
+                allowClear
+                onChange={e => setPricingSearch(e.target.value)} 
+                style={{ width: 250 }}
+              />
+              <Button type="primary" icon={<SyncOutlined spin={syncingPricing} />} loading={syncingPricing} onClick={handleSyncPricing}>Đồng bộ từ LiteLLM</Button>
+            </Space>
+          }
+          key="pricing"
+          style={{ border: 'none' }}
+        >
+        <Text type='secondary' style={{ display: 'block', marginBottom: 16 }}>
+          Bảng giá được đồng bộ tự động hàng ngày. Bạn có thể tự sửa giá (khi sửa sẽ bị đánh dấu "Tự sửa" và không bị tự động ghi đè).
+        </Text>
+        <Table 
+          dataSource={pricings.filter(p => p.model_name.toLowerCase().includes(pricingSearch.toLowerCase()))} 
+          rowKey="id"
+          pagination={{ pageSize: 10, showSizeChanger: false }}
+          size="small"
+          columns={pricingColumns} 
+          loading={pricingLoading}
+        />
+        </Panel>
+      </Collapse>
+      )}
 
       <Modal 
         title={<Space><RobotOutlined style={{color: '#1677ff', fontSize: 20}} /> <span style={{fontSize: 18, fontWeight: 600}}>{editingAgent ? 'Chỉnh sửa Trợ lý AI' : 'Tạo Trợ lý AI mới'}</span></Space>} 
@@ -743,8 +765,17 @@ export default function AiAgentSettings() {
                 }
               >
                 <Input.TextArea 
-                  rows={8} 
-                  style={{ fontFamily: 'monospace', fontSize: 13, backgroundColor: '#1e1e1e', color: '#d4d4d4' }} 
+                  autoSize={{ minRows: 10, maxRows: 25 }}
+                  style={{ 
+                    fontFamily: "'Consolas', 'Menlo', 'Courier New', monospace", 
+                    fontSize: 14, 
+                    lineHeight: '1.6',
+                    backgroundColor: '#1e1e1e', 
+                    color: '#e6e6e6',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: '1px solid #333'
+                  }} 
                   placeholder="Để trống để sử dụng JSON thông minh mặc định của hệ thống..." 
                 />
               </Form.Item>

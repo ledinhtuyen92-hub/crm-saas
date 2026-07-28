@@ -66,7 +66,7 @@ def normalize_phone(phone: str) -> str:
 
 # ── Convert SocialLead -> Customer ───────────────────────────────────────────
 
-def convert_social_lead(social_lead, phone_number: str, assigned_user=None, customer_name=None, email: str = None, address: str = None):
+def convert_social_lead(social_lead, phone_number: str, assigned_user=None, customer_name=None, email: str = None, address: str = None, action_user=None):
     """
     Chuyển đổi SocialLead (Tầng 1) thành Customer (Tầng 2 — hồ sơ chuẩn).
 
@@ -137,7 +137,6 @@ def convert_social_lead(social_lead, phone_number: str, assigned_user=None, cust
                 source="zalo",
                 status="new",
                 assigned_to=assigned_user or social_lead.assigned_to,
-                avatar=social_lead.avatar or "",
             )
             logger.info(f"[ZaloConvert] Created Customer #{customer.id} from SocialLead #{social_lead.id}")
 
@@ -151,6 +150,20 @@ def convert_social_lead(social_lead, phone_number: str, assigned_user=None, cust
         if phone_number and not social_lead.detected_phone:
             social_lead.detected_phone = phone_number
         social_lead.save(update_fields=["status", "is_customer_converted", "detected_phone", "updated_at"])
+
+    if getattr(social_lead, 'ai_summary', None):
+        creator = action_user or assigned_user or social_lead.assigned_to
+        if not creator:
+            from users.models import User
+            creator = User.objects.filter(company=social_lead.company).first()
+        if creator:
+            from crm.models import CustomerInteraction
+            CustomerInteraction.objects.create(
+                customer=customer,
+                type=CustomerInteraction.TYPE_CARE,
+                content=f"[AI Tóm tắt Hội thoại Zalo]\n{social_lead.ai_summary}",
+                created_by=creator
+            )
 
     return customer
 

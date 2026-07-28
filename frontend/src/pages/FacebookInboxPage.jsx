@@ -63,6 +63,18 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
 
+const cleanUrl = (url) => {
+  if (!url) return '';
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('ngrok-free.dev') || u.hostname.includes('ngrok.io')) {
+      const base = api.defaults.baseURL.replace(/\/api\/?$/, '');
+      return `${base}${u.pathname}`;
+    }
+  } catch (e) {}
+  return url;
+}
+
 const { Text } = Typography
 
 const STATUS_CONFIG = {
@@ -317,8 +329,22 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
         boxShadow: hasOnlyMedia ? 'none' : isPage ? '0 1px 4px rgba(24,119,242,0.25)' : '0 1px 4px rgba(0,0,0,0.08)',
         overflow: 'hidden',
       }}>
-        {msg.text && <div style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{msg.text}</div>}
-        {msg.attachment_url && (
+        {msg.attachment_type === 'carousel' && Array.isArray(msg.payload) && (
+          <div style={{ marginBottom: msg.text ? 8 : 0, display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, paddingRight: 12 }}>
+            {msg.payload.map((item, idx) => (
+              <div key={idx} style={{ width: 140, flexShrink: 0, border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+                <div style={{ width: '100%', height: 100, backgroundImage: `url(${cleanUrl(item.image_url)})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ padding: '6px 8px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.title}>{item.title}</div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.subtitle}>{item.subtitle}</div>
+                  <div style={{ marginTop: 6, textAlign: 'center', fontSize: 11, color: '#1877f2', fontWeight: 500, padding: '4px 0', borderTop: '1px solid #e2e8f0' }}>Nhận tư vấn</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {msg.text && msg.attachment_type !== 'carousel' && <div style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{msg.text}</div>}
+        {msg.attachment_url && msg.attachment_type !== 'carousel' && (
           <div style={{ marginTop: msg.text ? 8 : 0 }}>
             {isImage ? (
               <Image

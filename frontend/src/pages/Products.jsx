@@ -80,6 +80,7 @@ export default function Products() {
   const canCreate = hasPermission('products.create')
   const canEdit = hasPermission('products.edit')
   const canDelete = hasPermission('products.delete')
+  const canManageAIKnowledge = hasPermission('ai_agent.manage_knowledge')
 
   // ── Fetch Data ────────────────────────────────────────────────────────
   const fetchProducts = useCallback(async () => {
@@ -168,6 +169,7 @@ export default function Products() {
       formData.append('price', values.price || 0)
       formData.append('cost_price', values.cost_price || 0)
       formData.append('description', values.description || '')
+      formData.append('ai_knowledge', values.ai_knowledge || '')
       formData.append('is_active', values.is_active !== false)
       if (productImageFile) {
         formData.append('image', productImageFile)
@@ -748,9 +750,22 @@ export default function Products() {
             </Col>
             <Col xs={24} md={24}>
               <Form.Item name="description" label="Mô tả chi tiết">
-                <TextArea rows={3} placeholder="Mô tả quy cách, thông số kỹ thuật..." />
+                <TextArea rows={3} placeholder="Mô tả quy cách, thông số kỹ thuật (dành cho Báo giá/Đơn hàng)..." />
               </Form.Item>
             </Col>
+            
+            {canManageAIKnowledge && (
+              <Col xs={24} md={24}>
+                <Form.Item 
+                  name="ai_knowledge" 
+                  label={<span style={{ color: '#722ed1', fontWeight: 500 }}>✨ Tài liệu kiến thức AI (Ẩn trên Báo giá)</span>}
+                  tooltip="Mô tả chi tiết, kịch bản bán hàng, xuất xứ, tính năng nâng cao chỉ dành riêng cho AI đọc để tư vấn khách hàng."
+                >
+                  <TextArea rows={4} placeholder="Nhập thông tin chi tiết về sản phẩm để huấn luyện AI tư vấn..." />
+                </Form.Item>
+              </Col>
+            )}
+
             <Col xs={24} md={24}>
               <Form.Item name="is_active" valuePropName="checked" label="Trạng thái kinh doanh">
                 <Switch checkedChildren="Đang kinh doanh" unCheckedChildren="Ngừng kinh doanh" />

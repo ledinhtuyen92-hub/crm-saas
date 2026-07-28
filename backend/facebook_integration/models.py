@@ -389,7 +389,12 @@ class FacebookMessage(models.Model):
     attachment_type = models.CharField(
         max_length=50,
         blank=True,
-        verbose_name="Loại đính kèm (image, file, sticker...)",
+        verbose_name="Loại đính kèm (image, file, carousel...)",
+    )
+    payload = models.JSONField(
+        blank=True,
+        null=True,
+        verbose_name="Dữ liệu mở rộng (Carousel/JSON)",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -563,6 +563,11 @@ class ZaloMessage(models.Model):
         blank=True,
         verbose_name="Loại đính kèm",
     )
+    payload = models.JSONField(
+        blank=True,
+        null=True,
+        verbose_name="Dữ liệu mở rộng (Carousel/JSON)",
+    )
     zalo_msg_id = models.CharField(
         max_length=255,
         blank=True,

@@ -35,12 +35,16 @@ def search_products_for_carousel(company, keyword: str, limit: int = 3):
     if not keyword:
         return []
         
+
+    products_query = Q(name__icontains=keyword) | Q(template__description__icontains=keyword) | Q(sku__icontains=keyword)
+    for kw in keyword.split():
+        if len(kw) >= 3:
+            products_query |= Q(name__icontains=kw) | Q(sku__icontains=kw)
+            
     products = Product.objects.filter(
         company=company,
         is_active=True
-    ).filter(
-        Q(name__icontains=keyword) | Q(template__description__icontains=keyword) | Q(sku__icontains=keyword)
-    ).select_related('template')[:limit]
+    ).filter(products_query).select_related('template')[:limit]
     
     results = []
     for p in products:
@@ -56,35 +60,78 @@ def search_products_for_carousel(company, keyword: str, limit: int = 3):
                 
             results.append({
                 'title': p.name,
-                'subtitle': f"Giá: {p.price:,.0f} VNĐ" if p.price else ((p.template.description[:70] + "...") if p.template and p.template.description else p.name),
+                'subtitle': f"Mã SP: {p.sku}" if p.sku else "Nhận tư vấn chi tiết",
                 'image_url': image_url,
                 'sku': p.sku
             })
             
-    # Nếu chưa đủ limit, tìm thêm trong Kho tri thức (RAG) các file ảnh
-    if len(results) < limit:
-        remaining_limit = limit - len(results)
-        docs = AiKnowledgeDocument.objects.filter(
-            agent__company=company,
-            file_attachment__isnull=False
-        ).exclude(file_attachment="").filter(
-            Q(title__icontains=keyword) | Q(content__icontains=keyword)
-        )[:remaining_limit]
-        
-        for doc in docs:
-            file_url = doc.file_attachment.url
-            if any(file_url.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.webp', '.gif']):
-                if file_url.startswith('/'):
-                    file_url = f"{get_public_domain()}{file_url}"
-                    
-                results.append({
-                    'title': doc.title,
-                    'subtitle': (doc.content[:70] + "...") if doc.content else doc.title,
-                    'image_url': file_url,
-                    'sku': f"DOC-{doc.id}"
-                })
+    # Lấy thêm từ Kho tri thức (RAG) không phụ thuộc vào việc đã đủ limit hay chưa
+
+    docs_query = Q(title__icontains=keyword) | Q(content__icontains=keyword)
+    for kw in keyword.split():
+        if len(kw) >= 3:
+            docs_query |= Q(title__icontains=kw) | Q(content__icontains=kw)
+            
+    docs = AiKnowledgeDocument.objects.filter(
+        agent__company=company,
+        file_attachment__isnull=False
+    ).exclude(file_attachment="").filter(docs_query)[:limit]
+    
+    for doc in docs:
+        file_url = doc.file_attachment.url
+        if any(file_url.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.webp', '.gif']):
+            if file_url.startswith('/'):
+                file_url = f"{get_public_domain()}{file_url}"
                 
-    return results
+            results.append({
+                'title': doc.title,
+                'subtitle': "Nhận tư vấn chi tiết",
+                'image_url': file_url,
+                'sku': f"DOC-{doc.id}"
+            })
+            
+    # Giới hạn lại số lượng cuối cùng sau khi mix
+    return results[:limit]
+
+def get_product_context(company, search_query, history=None):
+    from inventory.models import Product
+    from django.db.models import Q
+    
+    full_text = (search_query or "").lower()
+    if history:
+        for h in history:
+            if h.get('role') == 'user' and h.get('content'):
+                full_text += " " + h['content'].lower()
+                
+    if not full_text.strip():
+        return ""
+        
+    products = Product.objects.filter(company=company, is_active=True)
+    matched_products = []
+    for p in products:
+        sku = getattr(p, 'sku', "")
+        name = getattr(p, 'name', "")
+        sku_lower = sku.lower() if sku else ""
+        name_lower = name.lower() if name else ""
+        
+        if (sku_lower and sku_lower in full_text) or (name_lower and len(name_lower) > 4 and name_lower in full_text):
+            matched_products.append(p)
+            if len(matched_products) >= 3:
+                break
+    
+    context = ""
+    if matched_products:
+        context += "\n\n[Thông tin Sản phẩm cập nhật mới nhất từ Hệ thống]:\n"
+        for p in matched_products:
+            desc = getattr(p, 'description', None) or (p.template.description if p.template else "")
+            ai_know = getattr(p, 'ai_knowledge', "")
+            
+            context += f"- Tên: {p.name} (Mã: {p.sku})\n  Giá bán: {getattr(p, 'price', 0):,.0f} VND\n"
+            if desc:
+                context += f"  Mô tả công khai: {desc}\n"
+            if ai_know:
+                context += f"  [Lưu ý: Nếu khách đang hỏi về sản phẩm này, hãy ưu tiên dùng thông tin nội bộ sau thay cho tài liệu cũ]: {ai_know}\n"
+    return context
 
 
 
@@ -136,7 +183,12 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
                     keys = get_api_keys(lead.oa_config.ai_agent.company, provider)
                     api_key = keys[0] if keys else None
                     if api_key:
-                        img_desc = generate_image_description(latest_user_msg.attachment_url, api_key, provider)
+                        img_desc = generate_image_description(
+                            latest_user_msg.attachment_url, 
+                            api_key, 
+                            provider,
+                            lead.oa_config.ai_agent.model_name
+                        )
                         if img_desc:
                             search_query += f" [Khách gửi ảnh: {img_desc}]"
                 except Exception as e:
@@ -145,6 +197,7 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
             if search_query.strip():
                 from ai_agents.rag_processor import search_knowledge
                 rag_search_text = search_knowledge(lead.oa_config.ai_agent, search_query.strip(), limit=4)
+                rag_search_text += get_product_context(lead.company, search_query.strip(), history)
 
         if is_followup:
             history.append({'role': 'system', 'content': 'Khách hàng đã không phản hồi hơn 24 giờ. Hãy viết một câu chào hỏi, gợi mở hoặc hỏi thăm khéo léo để tiếp tục câu chuyện một cách tự nhiên nhất.'})
@@ -154,6 +207,14 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
             lead.is_ai_active = False
             lead.has_unread_message = True  # Đánh dấu để Sale thấy và vào xử lý
             lead.save(update_fields=['is_ai_active', 'has_unread_message'])
+            if result.get('reply'):
+                from zalo_integration.models import ZaloMessage
+                ZaloMessage.objects.create(
+                    company=lead.company,
+                    social_lead=lead,
+                    direction=ZaloMessage.DIRECTION_OUTBOUND,
+                    content=result.get('reply')
+                )
             return
             
         ai_agent = lead.oa_config.ai_agent
@@ -200,14 +261,16 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
         product_search_keyword = result.get('product_search_keyword')
         if product_search_keyword:
             from zalo_integration.services import send_zalo_carousel
-            products_for_carousel = search_products_for_carousel(lead.company, product_search_keyword, limit=3)
+            products_for_carousel = search_products_for_carousel(lead.company, product_search_keyword, limit=5)
             if products_for_carousel:
                 send_zalo_carousel(lead.oa_config, lead.social_id, products_for_carousel)
                 ZaloMessage.objects.create(
                     company=lead.company,
                     social_lead=lead,
                     direction=ZaloMessage.DIRECTION_OUTBOUND,
-                    content=f"[Đã gửi Danh sách tìm kiếm: {product_search_keyword}]"
+                    content=f"[Đã gửi Danh sách tìm kiếm: {product_search_keyword}]",
+                    attachment_type="carousel",
+                    payload=products_for_carousel
                 )
 
         if reply_text or image_url:
@@ -283,7 +346,12 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
                     keys = get_api_keys(lead.page_config.ai_agent.company, provider)
                     api_key = keys[0] if keys else None
                     if api_key:
-                        img_desc = generate_image_description(latest_user_msg.attachment_url, api_key, provider)
+                        img_desc = generate_image_description(
+                            latest_user_msg.attachment_url, 
+                            api_key, 
+                            provider,
+                            lead.page_config.ai_agent.model_name
+                        )
                         if img_desc:
                             search_query += f" [Khách gửi ảnh: {img_desc}]"
                 except Exception as e:
@@ -292,6 +360,7 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
             if search_query.strip():
                 from ai_agents.rag_processor import search_knowledge
                 rag_search_text = search_knowledge(lead.page_config.ai_agent, search_query.strip(), limit=4)
+                rag_search_text += get_product_context(lead.company, search_query.strip(), history)
         if is_followup:
             history.append({'role': 'system', 'content': 'Khách hàng đã không phản hồi hơn 24 giờ. Hãy viết một câu chào hỏi, gợi mở hoặc hỏi thăm khéo léo để tiếp tục câu chuyện một cách tự nhiên nhất.'})
 
@@ -300,6 +369,13 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
             lead.is_ai_active = False
             lead.has_unread_message = True  # Đánh dấu để Sale thấy và vào xử lý
             lead.save(update_fields=['is_ai_active', 'has_unread_message'])
+            if result.get('reply'):
+                from facebook_integration.models import FacebookMessage
+                FacebookMessage.objects.create(
+                    lead=lead,
+                    sender_type='page',
+                    text=result.get('reply')
+                )
             return
 
         ai_agent = lead.page_config.ai_agent
@@ -360,13 +436,15 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
         product_search_keyword = result.get('product_search_keyword')
         if product_search_keyword:
             from facebook_integration.services import send_facebook_carousel
-            products_for_carousel = search_products_for_carousel(lead.company, product_search_keyword, limit=3)
+            products_for_carousel = search_products_for_carousel(lead.company, product_search_keyword, limit=5)
             if products_for_carousel:
                 send_facebook_carousel(lead.page_config.page_access_token, lead.fb_user_id, products_for_carousel)
                 FacebookMessage.objects.create(
                     lead=lead,
                     sender_type='page',
-                    text=f"[Đã gửi Carousel tìm kiếm: {product_search_keyword}]"
+                    text=f"[Đã gửi Carousel tìm kiếm: {product_search_keyword}]",
+                    attachment_type="carousel",
+                    payload=products_for_carousel
                 )
 
         if reply_text or image_url:
@@ -589,13 +667,18 @@ def process_document_rag(doc_id):
             image_url = doc.file_attachment.url
             if image_url.startswith('/'):
                 image_url = f"{get_public_domain()}{image_url}"
-            
-            description = generate_image_description(image_url, api_key, provider)
+                
+            description = generate_image_description(image_url, api_key, provider, doc.agent.model_name)
             if description:
                 doc.image_description = description
                 # Gộp mô tả vào content để RAG nhúng vector
                 if doc.content:
-                    doc.content = f"{doc.content}\n\n[Mô tả ảnh]: {description}"
+                    import re
+                    new_content = re.sub(r'\[Mô tả ảnh\]:.*$', '', doc.content, flags=re.DOTALL).strip()
+                    if new_content:
+                        doc.content = f"{new_content}\n\n[Mô tả ảnh]: {description}"
+                    else:
+                        doc.content = f"[Mô tả ảnh]: {description}"
                 else:
                     doc.content = f"[Mô tả ảnh]: {description}"
                 doc.save(update_fields=['image_description', 'content'])
@@ -639,6 +722,10 @@ def sync_company_products_to_rag(company_id):
         description = getattr(p, 'description', None) or (getattr(p.template, 'description', None) if p.template else None)
         if description:
             line += f" | Mô tả: {description}"
+            
+        ai_knowledge = getattr(p, 'ai_knowledge', None)
+        if ai_knowledge:
+            line += f" | KIẾN THỨC BÁN HÀNG DÀNH CHO AI: {ai_knowledge}"
             
         img_url = None
         if getattr(p, 'image', None):
@@ -700,7 +787,9 @@ def sync_product_image_description(template_id):
         if image_url.startswith('/'):
             image_url = f"{get_public_domain()}{image_url}"
             
-        desc = generate_image_description(image_url, api_key, provider)
+        agent = template.company.ai_agents.first()
+        model_name = agent.model_name if agent else None
+        desc = generate_image_description(image_url, api_key, provider, model_name)
         if desc:
             template.image_description = desc
             template.save(update_fields=['image_description'])

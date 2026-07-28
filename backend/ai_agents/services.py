@@ -16,15 +16,15 @@ logger = logging.getLogger(__name__)
 # (Khi để trống trường Core Prompt trên UI, hệ thống sẽ dùng mẫu dưới đây)
 # ========================================================
 DEFAULT_JSON_TEMPLATE = """{
-    "thought": "Phân tích tâm lý khách hàng và lên chiến thuật trả lời (Suy nghĩ nháp trước khi chat)",
-    "reply": "Câu trả lời gửi khách. NẾU BẠN GỬI ẢNH (Bằng product_search_keyword) thì BẮT BUỘC trong câu trả lời phải nhắc đến việc bạn đang gửi ảnh (Ví dụ: 'Dạ anh xem thử mấy mẫu này nhé').",
+    "thought": "Phân tích tâm lý khách. Quyết định chiến thuật: Ưu tiên đặt câu hỏi mở để giữ tương tác. CHỈ xin SĐT khi khách đã rất quan tâm, cần báo giá chi tiết, hoặc cần khảo sát tận nơi. Tuyệt đối không xin số dồn dập ở những câu đầu.",
+    "reply": "Câu trả lời gửi khách. NẾU BẠN GỬI ẢNH (Bằng product_search_keyword) thì BẮT BUỘC trong câu trả lời phải nhắc đến việc bạn đang gửi ảnh (Ví dụ: 'Để em gửi anh vài mẫu nhé'). LUÔN KẾT THÚC bằng một câu hỏi mở để khách phản hồi, trừ khi đã chốt được SĐT.",
     "sentiment": "angry / handoff / neutral",
     "image_url": "Đường link (URL) của ảnh sản phẩm (nếu khách yêu cầu 1 ảnh DUY NHẤT). Nên ưu tiên dùng product_search_keyword để gửi được nhiều mẫu hơn.",
-    "product_search_keyword": "BẮT BUỘC ĐIỀN TỪ KHÓA (Ví dụ: 'cửa gỗ', 'sofa') NẾU KHÁCH YÊU CẦU 'gửi ảnh', 'cho xem VÀI MẪU' hoặc hỏi 'nhà bạn có những loại nào'. Hệ thống sẽ TỰ ĐỘNG dùng từ khóa này tìm 3 ảnh sản phẩm và GỬI CHO KHÁCH. Đừng bắt khách chờ hoặc xin thêm thông tin nếu họ đã yêu cầu gửi mẫu. Nếu không cần thì ĐỂ TRỐNG.",
+    "product_search_keyword": "BẮT BUỘC ĐIỀN TỪ KHÓA NẾU KHÁCH YÊU CẦU 'gửi ảnh', 'cho xem VÀI MẪU', hoặc 'cho thêm mẫu khác'. LƯU Ý: Nếu khách nói 'cho thêm mẫu khác', BẮT BUỘC phải lấy lại TỪ KHÓA SẢN PHẨM Ở NGỮ CẢNH TRƯỚC (VD: khách đang hỏi 'cửa composite' thì điền 'cửa composite', tuyệt đối KHÔNG điền 'mẫu khác'). Hệ thống sẽ tự động tìm 5 mẫu gửi cho khách. Nếu không cần tìm ảnh thì ĐỂ TRỐNG.",
     "extracted_info": {
         "phone": "Trích xuất SĐT nếu có (nếu không có thì để rỗng)",
         "address": "Trích xuất địa chỉ nếu có (nếu không có thì để rỗng)",
-        "notes": "Ghi chú (size, màu sắc...)"
+        "notes": "Ghi chú (size, màu sắc, mã sản phẩm cần tư vấn...)"
     },
     "tags": ["Hỏi giá", "Khách VIP", "Đã chốt"...],
     "summary": "Tóm tắt ngắn gọn lịch sử chat"
@@ -182,7 +182,7 @@ def call_anthropic(api_key, agent, system_prompt, conversation_history):
     }
     return json.loads(text_content.strip()), usage
 
-def generate_image_description(image_url: str, api_key: str, provider: str = 'gemini') -> str:
+def generate_image_description(image_url: str, api_key: str, provider: str = 'gemini', model_name: str = None) -> str:
     """
     Sử dụng Gemini/OpenAI Vision API để mô tả hình ảnh thành văn bản.
     """
@@ -190,11 +190,17 @@ def generate_image_description(image_url: str, api_key: str, provider: str = 'ge
     conversation_history = [
         {"role": "user", "image_url": image_url}
     ]
+    
+    if not model_name:
+        model_name = 'gemini-2.0-flash' if provider == 'gemini' else 'gpt-4o-mini'
+    if model_name.startswith('models/'):
+        model_name = model_name[7:]
+        
     # Tạo một mock agent để tái sử dụng các hàm call_ (vì call_ cần đối tượng agent)
     from types import SimpleNamespace
     mock_agent = SimpleNamespace(
         temperature=0.1, 
-        model_name='gemini-2.0-flash' if provider == 'gemini' else 'gpt-4o-mini'
+        model_name=model_name
     )
     
     try:
@@ -212,7 +218,7 @@ def generate_image_description(image_url: str, api_key: str, provider: str = 'ge
                 part = genai_types.Part.from_bytes(data=resp.content, mime_type=mime_type)
                 
                 response = client.models.generate_content(
-                    model='gemini-2.0-flash',
+                    model=model_name,
                     contents=[part, system_prompt],
                 )
                 return response.text.strip()
@@ -220,7 +226,7 @@ def generate_image_description(image_url: str, api_key: str, provider: str = 'ge
         elif provider == 'openai':
             client = OpenAI(api_key=api_key)
             response = client.chat.completions.create(
-                model='gpt-4o-mini',
+                model=model_name,
                 messages=[
                     {'role': 'system', 'content': system_prompt},
                     {'role': 'user', 'content': [
@@ -245,9 +251,14 @@ def generate_ai_reply(agent: AiAgent, conversation_history: list, lead_name: str
     json_template = agent.core_prompt_template.strip() if agent.core_prompt_template else DEFAULT_JSON_TEMPLATE
 
     system_prompt = f"""Bạn là {agent.name}. {agent.system_prompt}
-Bạn đang chat với khách hàng tên là {lead_name}.
-Nhiệm vụ của bạn là tư vấn và hỗ trợ khách hàng.
-TRẢ LỜI BẮT BUỘC THEO ĐỊNH DẠNG JSON SAU (không trả về Markdown, chỉ JSON thô):
+Bạn đang chat với khách hàng (thông tin context bổ sung: {lead_name}).
+Nhiệm vụ của bạn là tư vấn tận tình, chuyên nghiệp và hỗ trợ khách hàng.
+NGUYÊN TẮC QUAN TRỌNG: 
+1. Tuyệt đối KHÔNG gọi đích danh tên khách hàng trong câu trả lời. Chỉ xưng hô chung là "anh" hoặc "chị" (tự suy đoán giới tính hoặc dùng "anh/chị").
+2. Luôn ưu tiên trả lời TRỰC TIẾP vào câu hỏi cuối cùng hoặc HÌNH ẢNH cuối cùng khách gửi. Nếu khách gửi ảnh, phải tập trung tư vấn về sản phẩm trong ảnh (dựa vào RAG Context) thay vì bị phân tâm bởi các sản phẩm ở tin nhắn cũ.
+3. KHÔNG XIN SỐ ĐIỆN THOẠI liên tục. Chỉ khéo léo xin SĐT khi khách hàng đã thực sự quan tâm, ưng ý sản phẩm.
+4. Luôn duy trì cuộc hội thoại bằng cách đặt CÂU HỎI MỞ ở cuối câu trả lời để kích thích khách hàng tương tác (hỏi về sở thích, màu sắc, kích thước, nhu cầu...).
+TRẢ LỜI BẮT BUỘC THEO ĐỊNH DẠNG JSON SAU (không trả về Markdown, chỉ JSON thôi):
 {json_template}"""
 
     last_error = None
@@ -336,7 +347,7 @@ TRẢ LỜI BẮT BUỘC THEO ĐỊNH DẠNG JSON SAU (không trả về Markdow
     # Trả về cờ lỗi để task.py biết mà TẮT AI và ĐẢY HANDOFF - TUYỆT ĐỐI KHÔNG GỬi ra cho khách
     return {
         'error': True,
-        'reply': '',
+        'reply': f'[Hệ thống AI] Lỗi API Key {provider.upper()}: {str(last_error)[:150]}...',
         'sentiment': 'handoff',
         'summary': ''
     }

@@ -56,6 +56,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "name",
             "product_type",
             "description",
+            "ai_knowledge",
             "attributes",
             "unit",
             "unit_display",

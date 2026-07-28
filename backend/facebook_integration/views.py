@@ -623,7 +623,7 @@ class FacebookLeadViewSet(mixins.UpdateModelMixin, mixins.DestroyModelMixin, vie
             return Response({"error": "Vui lòng nhập số điện thoại."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            customer = convert_facebook_lead(lead, phone, customer_name=name, email=email, address=address)
+            customer = convert_facebook_lead(lead, phone, customer_name=name, email=email, address=address, action_user=request.user)
             return Response({
                 "detail": f"Đã tạo khách hàng '{customer.name}' thành công!",
                 "customer_id": customer.id,

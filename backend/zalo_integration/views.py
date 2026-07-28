@@ -622,7 +622,7 @@ class SocialLeadViewSet(viewsets.ModelViewSet):
                 pass
 
         try:
-            customer = convert_social_lead(social_lead, phone_number, assigned_user, customer_name=customer_name, email=email, address=address)
+            customer = convert_social_lead(social_lead, phone_number, assigned_user, customer_name=customer_name, email=email, address=address, action_user=request.user)
             return Response({
                 "detail": "Chuyển đổi thành công! Hồ sơ khách hàng đã được tạo.",
                 "customer_id": customer.id,

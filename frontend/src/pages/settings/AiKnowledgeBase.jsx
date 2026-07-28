@@ -489,11 +489,16 @@ export default function AiKnowledgeBase() {
           ]}
         />
 
-        <Card 
-          title={<Title level={5}><BookOutlined /> Hệ thống Đọc Dữ liệu (Embedding Model)</Title>}
-          style={{ marginBottom: 24, borderRadius: 12 }}
-          bordered={false}
-        >
+          <Collapse 
+            style={{ marginBottom: 24, borderRadius: 12, backgroundColor: '#fff' }}
+            expandIconPosition="end"
+            bordered={false}
+          >
+            <Collapse.Panel 
+              header={<Title level={5} style={{ margin: 0 }}><BookOutlined style={{color: '#1677ff'}} /> Hệ thống Đọc Dữ liệu (Embedding Model)</Title>}
+              key="embedding_settings"
+              style={{ border: 'none' }}
+            >
           <Spin spinning={settingsLoading}>
             <Form form={settingsForm} layout='vertical' onFinish={handleSaveCompanySettings}>
               <Text type='secondary' style={{ display: 'block', marginBottom: 12, lineHeight: '1.6' }}>
@@ -536,8 +541,9 @@ export default function AiKnowledgeBase() {
                 </Button>
               </div>
             </Form>
-          </Spin>
-        </Card>
+            </Spin>
+            </Collapse.Panel>
+          </Collapse>
 
         <Card bordered={false} style={{ borderRadius: 12 }}>
           <Title level={5} style={{ marginBottom: 16 }}>Kho tài liệu đã huấn luyện</Title>
@@ -915,11 +921,11 @@ export default function AiKnowledgeBase() {
             </Radio.Group>
           </Form.Item>
 
-          {currentDoc?.doc_type === 'qa' && (
+          {(currentDoc?.doc_type === 'qa' || currentDoc?.doc_type === 'image') && (
             <Form.Item
               name="content"
-              label="Nội dung Kiến thức (QA)"
-              rules={[{ required: true, message: 'Vui lòng nhập nội dung' }]}
+              label="Nội dung / Mô tả Kiến thức"
+              rules={[{ required: currentDoc?.doc_type === 'qa', message: 'Vui lòng nhập nội dung' }]}
               extra="Lưu ý: Thay đổi nội dung sẽ yêu cầu AI phải học lại từ đầu."
             >
               <Input.TextArea rows={6} />

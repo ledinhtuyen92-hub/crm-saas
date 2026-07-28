@@ -79,7 +79,7 @@ class FacebookMessageSerializer(serializers.ModelSerializer):
         model = FacebookMessage
         fields = [
             "id", "fb_message_id", "sender_type", "text",
-            "attachment_url", "attachment_type", "created_at",
+            "attachment_url", "attachment_type", "payload", "created_at",
         ]
         read_only_fields = ["id", "created_at"]
 

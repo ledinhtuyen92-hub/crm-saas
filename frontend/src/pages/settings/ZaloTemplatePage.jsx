@@ -194,7 +194,7 @@ export default function ZaloTemplatePage() {
   ]
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+    <div>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>

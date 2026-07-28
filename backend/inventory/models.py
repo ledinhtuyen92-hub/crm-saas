@@ -209,6 +209,7 @@ class Product(models.Model):
     )
     
     description = models.TextField(blank=True, verbose_name="Mô tả")
+    ai_knowledge = models.TextField(blank=True, verbose_name="Tài liệu huấn luyện AI", help_text="Thông tin nội bộ dành riêng cho AI đọc để tư vấn khách hàng")
     attributes = models.JSONField(
         default=dict,
         blank=True,

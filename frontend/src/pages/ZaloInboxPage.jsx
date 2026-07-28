@@ -19,6 +19,18 @@ import 'dayjs/locale/vi'
 import api from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
 
+const cleanUrl = (url) => {
+  if (!url) return '';
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('ngrok-free.dev') || u.hostname.includes('ngrok.io')) {
+      const base = api.defaults.baseURL.replace(/\/api\/?$/, '');
+      return `${base}${u.pathname}`;
+    }
+  } catch (e) {}
+  return url;
+}
+
 dayjs.extend(relativeTime)
 dayjs.locale('vi')
 
@@ -1192,26 +1204,40 @@ export default function ZaloInboxPage() {
                         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexDirection: isOutbound ? 'row-reverse' : 'row' }}>
                           {!isOutbound && <Avatar size={28} src={selectedLead.avatar_url} icon={<UserOutlined />} />}
                           <div style={{
-                            background: isOutbound ? '#0068ff' : '#fff',
-                            color: isOutbound ? '#fff' : '#0f172a',
-                            border: isOutbound ? 'none' : '1px solid #e2e8f0',
-                            borderRadius: isOutbound ? '12px 0 12px 12px' : '0 12px 12px 12px',
-                            padding: '8px 12px',
-                            maxWidth: 380,
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                          }}>
-                            {msg.attachment_url && (
-                              <div style={{ marginBottom: msg.content ? 8 : 0 }}>
-                                {msg.attachment_type === 'image' ? (
-                                  <img src={msg.attachment_url} alt="attachment" style={{ maxWidth: '100%', borderRadius: 8 }} />
-                                ) : (
-                                  <a href={msg.attachment_url} target="_blank" rel="noreferrer" style={{ color: isOutbound ? '#fff' : '#0068ff', textDecoration: 'underline' }}>
-                                    <PaperClipOutlined /> Tệp đính kèm ({msg.attachment_type})
-                                  </a>
-                                )}
-                              </div>
-                            )}
-                            {msg.content && <Text style={{ color: 'inherit', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{msg.content}</Text>}
+                              background: isOutbound ? '#0068ff' : '#fff',
+                              color: isOutbound ? '#fff' : '#0f172a',
+                              border: isOutbound ? 'none' : '1px solid #e2e8f0',
+                              borderRadius: isOutbound ? '12px 0 12px 12px' : '0 12px 12px 12px',
+                              padding: msg.attachment_type === 'carousel' ? '8px 0 8px 12px' : '8px 12px',
+                              maxWidth: msg.attachment_type === 'carousel' ? 420 : 380,
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                            }}>
+                              {msg.attachment_type === 'carousel' && Array.isArray(msg.payload) && (
+                                <div style={{ marginBottom: msg.content ? 8 : 0, display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, paddingRight: 12 }}>
+                                  {msg.payload.map((item, idx) => (
+                                    <div key={idx} style={{ width: 140, flexShrink: 0, border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+                                      <div style={{ width: '100%', height: 100, backgroundImage: `url(${cleanUrl(item.image_url)})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                                      <div style={{ padding: '6px 8px' }}>
+                                        <div style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.title}>{item.title}</div>
+                                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.subtitle}>{item.subtitle}</div>
+                                        <div style={{ marginTop: 6, textAlign: 'center', fontSize: 11, color: '#0068ff', fontWeight: 500, padding: '4px 0', borderTop: '1px solid #e2e8f0' }}>Nhận tư vấn</div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {msg.attachment_url && msg.attachment_type !== 'carousel' && (
+                                <div style={{ marginBottom: msg.content ? 8 : 0 }}>
+                                  {msg.attachment_type === 'image' ? (
+                                    <img src={msg.attachment_url} alt="attachment" style={{ maxWidth: '100%', borderRadius: 8 }} />
+                                  ) : (
+                                    <a href={msg.attachment_url} target="_blank" rel="noreferrer" style={{ color: isOutbound ? '#fff' : '#0068ff', textDecoration: 'underline' }}>
+                                      <PaperClipOutlined /> Tệp đính kèm ({msg.attachment_type})
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                            {msg.content && msg.attachment_type !== 'carousel' && <Text style={{ color: 'inherit', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{msg.content}</Text>}
                           </div>
                         </div>
                         <Text type="secondary" style={{ fontSize: 10, marginTop: 4, marginRight: isOutbound ? 8 : 0, marginLeft: isOutbound ? 0 : 36 }}>

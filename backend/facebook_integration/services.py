@@ -435,16 +435,40 @@ def process_fb_webhook_message(entry: dict):
 
     for messaging in messaging_list:
         sender_psid = messaging.get("sender", {}).get("id")
-        message_data = messaging.get("message", {})
-        if not sender_psid or not message_data:
+        message_data = messaging.get("message")
+        postback_data = messaging.get("postback")
+        
+        if not sender_psid or (not message_data and not postback_data):
             continue
 
         # Bỏ qua tin nhắn do chính page gửi đi (echo)
         if str(sender_psid) == str(page_id):
             continue
 
-        msg_id = message_data.get("mid")
-        msg_text = message_data.get("text", "")
+        msg_id = ""
+        msg_text = ""
+        
+        if message_data:
+            msg_id = message_data.get("mid", "")
+            msg_text = message_data.get("text", "")
+        elif postback_data:
+            msg_id = f"pb_{messaging.get('timestamp', '')}"
+            payload = postback_data.get("payload", "")
+            title = postback_data.get("title", "")
+            
+            if payload.startswith("CARE_DOC-"):
+                doc_id = payload.replace("CARE_DOC-", "")
+                try:
+                    from ai_agents.models import AiKnowledgeDocument
+                    doc = AiKnowledgeDocument.objects.get(id=doc_id)
+                    msg_text = f"Tôi muốn nhận tư vấn cho mẫu: {doc.title}"
+                except:
+                    msg_text = f"Tôi muốn nhận tư vấn cho mẫu này"
+            elif payload.startswith("CARE_"):
+                sku = payload.replace("CARE_", "")
+                msg_text = f"Tôi muốn nhận tư vấn cho mã sản phẩm: {sku}"
+            else:
+                msg_text = title
 
         # Lấy thông tin profile khách
         profile = get_fb_user_profile(page_config.page_access_token, sender_psid)
@@ -480,7 +504,7 @@ def process_fb_webhook_message(entry: dict):
         lead.save()
 
         # Lưu tin nhắn
-        attachments = message_data.get("attachments", [])
+        attachments = message_data.get("attachments", []) if message_data else []
         att_url = None
         att_type = ""
         if attachments:
@@ -595,11 +619,11 @@ def extract_and_process_phone_fb(lead, text: str):
 # ── Chuyển đổi FacebookLead → Customer ───────────────────────────────────────
 
 @transaction.atomic
-def convert_facebook_lead(lead, phone_number: str, assigned_user=None, customer_name: str = None, email: str = None, address: str = None):
+def convert_facebook_lead(lead, phone_number: str, assigned_user=None, customer_name: str = None, email: str = None, address: str = None, action_user=None):
     """
     Tạo mới hoặc liên kết Customer từ FacebookLead.
     """
-    from crm.models import Customer
+    from crm.models import Customer, CustomerInteraction
 
     final_email = (email or lead.detected_email or "").strip()
     final_address = (address or lead.detected_address or "").strip()
@@ -607,6 +631,17 @@ def convert_facebook_lead(lead, phone_number: str, assigned_user=None, customer_
     # Bảo vệ: Nếu Lead đã gắn với Khách hàng CRM rồi thì trả về Khách hàng cũ, không tạo trùng
     if lead.customer:
         if not lead.is_customer_converted:
+            if getattr(lead, 'ai_summary', None):
+                creator = action_user or assigned_user or lead.assigned_to
+                if not creator:
+                    from users.models import User
+                    creator = User.objects.filter(company=lead.company).first()
+                CustomerInteraction.objects.create(
+                    customer=lead.customer,
+                    type=CustomerInteraction.TYPE_CARE,
+                    content=f"[AI Tóm tắt Hội thoại Facebook]\n{lead.ai_summary}",
+                    created_by=creator
+                )
             lead.is_customer_converted = True
             lead.save(update_fields=["is_customer_converted", "updated_at"])
         # Cập nhật email/address nếu thiếu hoặc được truyền
@@ -654,6 +689,19 @@ def convert_facebook_lead(lead, phone_number: str, assigned_user=None, customer_
     if phone_number and not lead.detected_phone:
         lead.detected_phone = phone_number
     lead.save(update_fields=["customer", "is_customer_converted", "detected_phone", "updated_at"])
+    
+    if getattr(lead, 'ai_summary', None):
+        creator = action_user or assigned_user or lead.assigned_to
+        if not creator:
+            from users.models import User
+            creator = User.objects.filter(company=lead.company).first()
+        if creator:
+            CustomerInteraction.objects.create(
+                customer=customer,
+                type=CustomerInteraction.TYPE_CARE,
+                content=f"[AI Tóm tắt Hội thoại Facebook]\n{lead.ai_summary}",
+                created_by=creator
+            )
 
     return customer
 
