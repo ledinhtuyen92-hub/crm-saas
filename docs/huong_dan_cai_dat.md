@@ -60,3 +60,21 @@ git pull
 sudo bash deploy_vps.sh
 ```
 *(Kịch bản sẽ tự động quét và chỉ build/cập nhật những phần code mới thay đổi cực kỳ nhanh chóng mà không làm gián đoạn hệ thống hiện tại).*
+
+---
+
+## BƯỚC 5: SAO LƯU DỮ LIỆU (CHỐNG HACK/MẤT DỮ LIỆU)
+
+Để hệ thống luôn an toàn tuyệt đối 100%, bạn nên kết hợp 2 phương án sao lưu sau:
+
+**1. Phương án Vàng: Bật tính năng Auto Backup của nhà cung cấp VPS**
+- Cách an toàn nhất chống lại Hacker/Ransomware là bạn lên trang quản trị của Bizfly hoặc Vultr, bật tính năng **"Auto Backup" (hoặc Snapshot)**. 
+- Tính năng này tốn thêm vài chục nghìn/tháng nhưng nó sẽ chụp ảnh (snapshot) toàn bộ máy chủ mỗi ngày. Nếu bị hack hoặc xóa nhầm, bạn chỉ cần bấm 1 nút là thời gian quay ngược lại y hệt ngày hôm qua.
+
+**2. Phương án Chủ động: Chạy file Backup bằng tay**
+Hệ thống đã có sẵn một công cụ sao lưu dữ liệu siêu tốc. Trên màn hình MobaXterm, bạn chỉ cần chạy lệnh:
+```bash
+sudo bash backup.sh
+```
+- Lệnh này sẽ tự động đóng gói toàn bộ Database khách hàng và Hình ảnh tải lên thành 1 tệp tin nén duy nhất nằm ở thư mục `/root/crm_backups/`.
+- Sau đó, ở cột bên trái của phần mềm MobaXterm (mục SFTP), bạn mở thư mục đó ra và **kéo file nén thả về máy tính cá nhân** để cất vào ổ cứng hoặc đẩy lên Google Drive. Rất an toàn và đơn giản!
