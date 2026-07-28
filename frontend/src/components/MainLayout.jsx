@@ -306,7 +306,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
 
   const handlePasswordSubmit = async (values) => {
     try {
-      await api.patch('/users/me/change-password/', values)
+      await api.post('/users/change-password/', values)
       message.success('Đổi mật khẩu thành công!')
       setPasswordModalOpen(false)
     } catch (err) {
