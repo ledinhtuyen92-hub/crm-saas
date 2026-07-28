@@ -1833,7 +1833,7 @@ export default function QuotationList() {
         }}
         bodyStyle={{ padding: 16 }}
       >
-        <Row gutter={16} align="middle">
+        <Row gutter={[16, 16]} align="middle">
           <Col xs={24} sm={12} md={8}>
             <Input
               placeholder="Tìm theo mã báo giá, tên, SĐT khách hàng..."
@@ -2176,76 +2176,75 @@ export default function QuotationList() {
           const hoursLeft = expiresAt && !isExpired ? dayjs(expiresAt).diff(dayjs(), 'hour') : 0
           
           return (
-            <Space direction="vertical" size={0}>
-              <Space>
-                <PrinterOutlined style={{ color: '#2563eb' }} />
-                <Text strong>Chi tiết Báo Giá {selectedQuotation?.quotation_number}</Text>
-                {isLandEt && <Tag color="purple">📐 Khổ Ngang A4</Tag>}
-                {selectedQuotation?.custom_data?.template_snapshot?.code && (
-                  <Tag color="cyan" style={{ fontSize: 11 }}>🔒 {selectedQuotation.custom_data.template_snapshot.name}</Tag>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+              <Space direction="vertical" size={0} style={{ flex: 1, minWidth: 250 }}>
+                <Space wrap>
+                  <PrinterOutlined style={{ color: '#2563eb' }} />
+                  <Text strong>Chi tiết Báo Giá {selectedQuotation?.quotation_number}</Text>
+                  {isLandEt && <Tag color="purple">📐 Khổ Ngang A4</Tag>}
+                  {selectedQuotation?.custom_data?.template_snapshot?.code && (
+                    <Tag color="cyan" style={{ fontSize: 11 }}>🔒 {selectedQuotation.custom_data.template_snapshot.name}</Tag>
+                  )}
+                </Space>
+                {expiresAt && (
+                  <div style={{ marginTop: 4 }}>
+                    {isExpired ? (
+                      <Text type="danger" style={{ fontSize: 13, fontWeight: 600 }}>
+                        <CloseCircleOutlined /> Link gửi khách đã HẾT HẠN. Vui lòng bấm "Gia hạn" để khách có thể xem lại!
+                      </Text>
+                    ) : (
+                      <Text type={hoursLeft <= 6 ? 'danger' : 'warning'} style={{ fontSize: 13, fontWeight: 600 }}>
+                        <ClockCircleOutlined /> Link hết hạn lúc {dayjs(expiresAt).format('HH:mm DD/MM/YYYY')} (Còn {hoursLeft} tiếng) - Hãy gọi điện giục khách ký!
+                      </Text>
+                    )}
+                  </div>
                 )}
               </Space>
-              {expiresAt && (
-                <div style={{ marginTop: 4 }}>
-                  {isExpired ? (
-                    <Text type="danger" style={{ fontSize: 13, fontWeight: 600 }}>
-                      <CloseCircleOutlined /> Link gửi khách đã HẾT HẠN. Vui lòng bấm "Gia hạn" để khách có thể xem lại!
-                    </Text>
-                  ) : (
-                    <Text type={hoursLeft <= 6 ? 'danger' : 'warning'} style={{ fontSize: 13, fontWeight: 600 }}>
-                      <ClockCircleOutlined /> Link hết hạn lúc {dayjs(expiresAt).format('HH:mm DD/MM/YYYY')} (Còn {hoursLeft} tiếng) - Hãy gọi điện giục khách ký!
-                    </Text>
-                  )}
-                </div>
-              )}
-            </Space>
-          )
-        })()}
-        extra={
-          <Space>
-            {selectedQuotation?.public_token && (isCompanyAdmin || !hasPermission('sales.bypass_customer_signature')) && selectedQuotation?.status !== 'pending_approval' && (!requireApproval || ['approved', 'sent', 'accepted'].includes(selectedQuotation?.status)) && (() => {
-              const expiresAt = selectedQuotation.public_link_expires_at
-              const isExpired = expiresAt && dayjs(expiresAt).isBefore(dayjs())
-              
-              if (isExpired) {
-                return (
+
+              <Space wrap>
+                {selectedQuotation?.public_token && (isCompanyAdmin || !hasPermission('sales.bypass_customer_signature')) && selectedQuotation?.status !== 'pending_approval' && (!requireApproval || ['approved', 'sent', 'accepted'].includes(selectedQuotation?.status)) && (() => {
+                  if (isExpired) {
+                    return (
+                      <Button
+                        type="primary"
+                        danger
+                        icon={<ClockCircleOutlined />}
+                        style={{ fontWeight: 600 }}
+                        onClick={() => handleCopyLink(selectedQuotation, true)}
+                      >
+                        Gia hạn Link 24h
+                      </Button>
+                    )
+                  }
+                  return (
+                    <Button
+                      type="dashed"
+                      icon={<SendOutlined />}
+                      style={{ color: '#059669', borderColor: '#059669', fontWeight: 600 }}
+                      onClick={() => handleCopyLink(selectedQuotation, false)}
+                    >
+                      Copy Link Gửi Khách
+                    </Button>
+                  )
+                })()}
+                {canExportPdf && (
                   <Button
                     type="primary"
-                    danger
-                    icon={<ClockCircleOutlined />}
-                    style={{ fontWeight: 600 }}
-                    onClick={() => handleCopyLink(selectedQuotation, true)}
+                    icon={<PrinterOutlined />}
+                    style={{ background: '#1d4ed8', fontWeight: 600, padding: '0 20px' }}
+                    onClick={handlePrintOrPDF}
                   >
-                    Gia hạn Link 24h
+                    In / Xuất PDF Báo Giá
                   </Button>
-                )
-              }
-              return (
-                <Button
-                  type="dashed"
-                  icon={<SendOutlined />}
-                  style={{ color: '#059669', borderColor: '#059669', fontWeight: 600 }}
-                  onClick={() => handleCopyLink(selectedQuotation, false)}
-                >
-                  Copy Link Gửi Khách
-                </Button>
-              )
-            })()}
-            {canExportPdf && (
-              <Button
-                type="primary"
-                icon={<PrinterOutlined />}
-                style={{ background: '#1d4ed8', fontWeight: 600, padding: '0 20px' }}
-                onClick={handlePrintOrPDF}
-              >
-                In / Xuất PDF Báo Giá
-              </Button>
-            )}
-          </Space>
-        }
+                )}
+              </Space>
+            </div>
+          )
+        })()}
         width={(() => {
           const et = getEffectiveTemplate(selectedQuotation)
-          return (et?.layout_config?.paper_orientation === 'landscape' || et?.code === 'production_landscape_a4') ? 1080 : 920
+          const targetW = (et?.layout_config?.paper_orientation === 'landscape' || et?.code === 'production_landscape_a4') ? 1080 : 920
+          return window.innerWidth < targetW ? '100%' : targetW
         })()}
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}

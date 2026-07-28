@@ -42,13 +42,15 @@ import { useCallback, useEffect, useState, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
 import ProductTemplateTab from './inventory/ProductTemplateTab'
+import { useResponsive } from '../hooks/useResponsive'
 
 const { Title, Text } = Typography
 const { Option } = Select
 const { TextArea } = Input
 
 export default function Products() {
-  const { isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
+  const { hasPermission, checkMaintenance, isCompanyAdmin } = useAuth()
+  const { isMobile } = useResponsive()
   const [messageApi, contextHolder] = message.useMessage()
   const fileInputRef = useRef(null)
 
@@ -439,8 +441,8 @@ export default function Products() {
       {contextHolder}
 
       {/* ── Page Header ────────────────────────────────────────────────── */}
-      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
-        <Col>
+      <Row justify="space-between" align="middle" gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} md={10}>
           <Title level={3} style={{ margin: 0, fontWeight: 800 }}>
             <DatabaseOutlined style={{ color: '#0284c7', marginRight: 10 }} />
             Quản lý Sản Phẩm & Dịch Vụ
@@ -449,8 +451,8 @@ export default function Products() {
             Quản lý danh mục hàng hóa, dịch vụ và phân loại sản phẩm.
           </Text>
         </Col>
-        <Col>
-          <Space>
+        <Col xs={24} md={14} style={{ textAlign: isMobile ? 'left' : 'right' }}>
+          <Space wrap style={{ justifyContent: isMobile ? 'flex-start' : 'flex-end' }}>
             {(activeTab === 'products' || activeTab === 'services') && (
               <>
                 <input

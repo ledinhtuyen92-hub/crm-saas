@@ -28,6 +28,7 @@ import {
 } from 'recharts'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
+import { useResponsive } from '../hooks/useResponsive'
 
 const { Text, Title } = Typography
 
@@ -96,6 +97,7 @@ const contractColumns = [
 
 function Dashboard() {
   const { token } = theme.useToken()
+  const { isMobile, padding } = useResponsive()
   const { isSuperAdmin, hasPermission, isCompanyAdmin } = useAuth()
   const canViewRevenue = isCompanyAdmin || hasPermission('dashboard.view_revenue') || hasPermission('reports.view_all')
   const canViewDebt = canViewRevenue || hasPermission('orders.view_all')
@@ -264,7 +266,7 @@ function Dashboard() {
   ]
 
   return (
-    <div style={{ width: '100%', minWidth: 0 }}>
+    <div style={{ padding, width: '100%', minWidth: 0 }}>
       {contextHolder}
       <Row justify="space-between" align="top" gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} md={12}>
@@ -277,14 +279,14 @@ function Dashboard() {
             </Text>
           </Space>
         </Col>
-        <Col xs={24} md={12} style={{ textAlign: 'right' }}>
-          <Space direction="vertical" align="end" size={8} style={{ width: '100%' }}>
-          <Space>
+        <Col xs={24} md={12} style={{ textAlign: isMobile ? 'left' : 'right' }}>
+          <Space direction="vertical" align={isMobile ? 'start' : 'end'} size={8} style={{ width: '100%' }}>
+          <Space wrap style={{ width: isMobile ? '100%' : 'auto', flexDirection: isMobile ? 'column' : 'row' }}>
             {(canScopeCompany || canScopeAnyDept || canScopeMyDept) && (
               <Select
                 value={scopeFilter}
                 onChange={setScopeFilter}
-                style={{ minWidth: 200, height: 40 }}
+                style={{ width: isMobile ? '100%' : 200, height: 40 }}
                 options={[
                   { label: <Space><UserOutlined style={{ color: '#8b5cf6' }} /> Cá nhân</Space>, value: 'personal' },
                   ...(canScopeMyDept || canScopeAnyDept || canScopeCompany ? [{ label: <Space><TeamOutlined style={{ color: '#0ea5e9' }} /> Phòng ban của tôi</Space>, value: 'my_department' }] : []),
@@ -299,19 +301,30 @@ function Dashboard() {
                 placeholder="Chọn phòng ban"
                 value={departmentId}
                 onChange={setDepartmentId}
-                style={{ width: 200, height: 40 }}
+                style={{ width: isMobile ? '100%' : 200, height: 40 }}
                 allowClear
                 options={departments.map(d => ({ label: d.name, value: d.id }))}
               />
             )}
           </Space>
-          <Segmented 
-            options={timeFilterOptions} 
-            value={timeFilter} 
-            onChange={setTimeFilter} 
-            size="large"
-            style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
-          />
+          {isMobile ? (
+            <Select 
+              value={timeFilter}
+              onChange={setTimeFilter}
+              options={timeFilterOptions}
+              style={{ width: '100%', minWidth: 200, height: 40, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+            />
+          ) : (
+            <div style={{ maxWidth: '100%', overflowX: 'auto', paddingBottom: 4 }}>
+              <Segmented 
+                options={timeFilterOptions} 
+                value={timeFilter} 
+                onChange={setTimeFilter} 
+                size="large"
+                style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+              />
+            </div>
+          )}
         </Space>
         </Col>
       </Row>

@@ -36,6 +36,7 @@ import {
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useResponsive } from '../../hooks/useResponsive'
 import api from '../../utils/api'
 
 const { Title, Text, Paragraph } = Typography
@@ -58,7 +59,8 @@ function TokenStatusBadge({ config }) {
 }
 
 export default function FacebookConfigPage() {
-  const { maintenanceMode } = useAuth()
+  const { isCompanyAdmin, hasPermission, maintenanceMode } = useAuth()
+  const { isMobile } = useResponsive()
   const [pages, setPages] = useState([])
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
@@ -294,48 +296,50 @@ export default function FacebookConfigPage() {
   }
 
   return (
-    <div style={{ maxWidth: 880, margin: '0 auto' }}>
+    <div style={{ maxWidth: 880, margin: '0 auto', overflowX: 'hidden', padding: isMobile ? '0 8px' : 0 }}>
       {/* Header */}
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <Row justify="space-between" align="middle" gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} md={14}>
+          <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ color: FB_BLUE, fontWeight: 900, fontSize: 22 }}>𝐟</span>
-            Cấu hình Facebook Multi-Page Inbox
+            <span>Cấu hình Facebook Multi-Page Inbox</span>
           </Title>
-          <Text type="secondary">Kết nối Fanpage Facebook để nhận tin nhắn và quản lý khách hàng trực tiếp trong CRM</Text>
-        </div>
-        <Space>
-          {pages.length > 0 && (
-            <Button onClick={() => handleOpenModal(null, true)} style={{ borderRadius: 16 }}>
-              + Thêm Trang mới
+          <Text type="secondary" style={{ display: 'block', marginTop: 4 }}>Kết nối Fanpage Facebook để nhận tin nhắn và quản lý khách hàng trực tiếp trong CRM</Text>
+        </Col>
+        <Col xs={24} md={10} style={{ display: 'flex', justifyContent: isMobile ? 'flex-start' : 'flex-end' }}>
+          <Space wrap>
+            {pages.length > 0 && (
+              <Button onClick={() => handleOpenModal(null, true)} style={{ borderRadius: 16 }}>
+                + Thêm Trang mới
+              </Button>
+            )}
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => handleOpenModal(null, true)}
+              style={{ background: FB_BLUE, borderColor: FB_BLUE, borderRadius: 20 }}
+              disabled={pages.length > 0}
+            >
+              Kết nối Trang Facebook
             </Button>
-          )}
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => handleOpenModal(null, true)}
-            style={{ background: FB_BLUE, borderColor: FB_BLUE, borderRadius: 20 }}
-            disabled={pages.length > 0}
-          >
-            Kết nối Trang Facebook
-          </Button>
-        </Space>
-      </div>
+          </Space>
+        </Col>
+      </Row>
 
       {/* Webhook Guide */}
       <Alert
         type="info"
         showIcon
-        style={{ marginBottom: 20, borderRadius: 10 }}
+        style={{ marginBottom: 20, borderRadius: 10, padding: isMobile ? '8px 12px' : '8px 15px', overflow: 'hidden' }}
         message="Hướng dẫn cấu hình Webhook trên Meta Developers"
         description={
           <div style={{ marginTop: 6 }}>
             <p style={{ margin: '2px 0' }}>
               Vào <b>Meta Developers → App → Messenger → Webhooks</b>, điền:
             </p>
-            <p style={{ margin: '2px 0' }}>
+            <p style={{ margin: '2px 0', wordBreak: 'break-all' }}>
               • <b>Callback URL:</b>{' '}
-              <code style={{ background: '#e8f4fd', padding: '1px 6px', borderRadius: 4 }}>
+              <code style={{ background: '#e8f4fd', padding: '1px 6px', borderRadius: 4, wordBreak: 'break-all' }}>
                 {window.location.origin}/api/facebook/webhook/
               </code>
             </p>
@@ -349,15 +353,15 @@ export default function FacebookConfigPage() {
             <p style={{ margin: '2px 0', fontWeight: 'bold' }}>
               Cấu hình Đăng nhập Facebook (Facebook Login → Cài đặt)
             </p>
-            <p style={{ margin: '2px 0' }}>
+            <p style={{ margin: '2px 0', wordBreak: 'break-word' }}>
               • <b>Miền ứng dụng (App Domains) [Cài đặt cơ bản]:</b>{' '}
-              <code style={{ background: '#e8f4fd', padding: '1px 6px', borderRadius: 4 }}>
+              <code style={{ background: '#e8f4fd', padding: '1px 6px', borderRadius: 4, wordBreak: 'break-all' }}>
                 {window.location.hostname}
               </code>
             </p>
-            <p style={{ margin: '2px 0' }}>
+            <p style={{ margin: '2px 0', wordBreak: 'break-word' }}>
               • <b>URI chuyển hướng OAuth hợp lệ (Valid OAuth Redirect URIs):</b>{' '}
-              <code style={{ background: '#e8f4fd', padding: '1px 6px', borderRadius: 4 }}>
+              <code style={{ background: '#e8f4fd', padding: '1px 6px', borderRadius: 4, wordBreak: 'break-all' }}>
                 {window.location.origin + window.location.pathname}
               </code>
             </p>
@@ -392,8 +396,8 @@ export default function FacebookConfigPage() {
               }}
               bodyStyle={{ padding: '20px 24px' }}
             >
-              <Row align="middle" gutter={16}>
-                <Col flex="auto">
+              <Row align="middle" gutter={[16, 16]}>
+                <Col xs={24} md={12} lg={14}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                     <div style={{
                       width: 52, height: 52, borderRadius: 12, background: '#dbeafe',
@@ -420,7 +424,7 @@ export default function FacebookConfigPage() {
                     </div>
                   </div>
                 </Col>
-                <Col>
+                <Col xs={24} md={12} lg={10}>
                   <Space wrap>
                     {page.is_active ? (
                       <>

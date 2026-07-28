@@ -18,6 +18,7 @@ import {
 } from 'antd'
 import { SafetyCertificateOutlined, SearchOutlined, EditOutlined, EyeOutlined, PlusOutlined, DeleteOutlined, PrinterOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import { useResponsive } from '../hooks/useResponsive'
 
 import api from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -350,16 +351,18 @@ export default function WarrantyList() {
     },
   ]
 
+  const { isMobile, padding } = useResponsive()
+
   return (
-    <div style={{ padding: 24, width: '100%', minWidth: 0 }}>
-      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-        <Title level={3} style={{ margin: 0 }}>
+    <div style={{ padding, width: '100%', minWidth: 0 }}>
+      <Row justify="space-between" align="middle" style={{ marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+        <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>
           <SafetyCertificateOutlined style={{ marginRight: 8, color: '#059669' }} />
           Quản lý Bảo hành
         </Title>
         {canCreate && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()} size="large" style={{ borderRadius: 8 }}>
-            Tạo Phiếu Bảo Hành
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()} size={isMobile ? 'middle' : 'large'} style={{ borderRadius: 8 }}>
+            {isMobile ? 'Tạo BH' : 'Tạo Phiếu Bảo Hành'}
           </Button>
         )}
       </Row>

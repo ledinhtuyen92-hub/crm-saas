@@ -2226,36 +2226,38 @@ export default function OrderList() {
       {/* ── Drawer View Order Details ──────────────────────────────────── */}
       <Drawer
         title={
-          <Space>
-            <PrinterOutlined style={{ color: '#10b981' }} />
-            <Text strong>Chi tiết Đơn Hàng {selectedOrder?.order_number}</Text>
-          </Space>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+            <Space style={{ flex: 1, minWidth: 250 }}>
+              <PrinterOutlined style={{ color: '#10b981' }} />
+              <Text strong>Chi tiết Đơn Hàng {selectedOrder?.order_number}</Text>
+            </Space>
+
+            <Space wrap>
+              {(isModuleActive('zalo') && (isCompanyAdmin || hasPermission('zalo.send_zns'))) && (
+                <Button
+                  type="primary"
+                  icon={<MessageOutlined />}
+                  onClick={() => setZnsModalVisible(true)}
+                  style={{ background: '#10b981', borderColor: '#10b981' }}
+                >
+                  Gửi ZNS
+                </Button>
+              )}
+              {canExportPdf && (
+                <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrintOrPDF} style={{ background: '#10b981', borderColor: '#10b981' }}>
+                  In Đơn Hàng
+                </Button>
+              )}
+            </Space>
+          </div>
         }
         width={(() => {
           const et = getEffectiveTemplate(selectedOrder)
-          return (et?.layout_config?.paper_orientation === 'landscape' || et?.code === 'production_landscape_a4') ? 1080 : 920
+          const targetW = (et?.layout_config?.paper_orientation === 'landscape' || et?.code === 'production_landscape_a4') ? 1080 : 920
+          return window.innerWidth < targetW ? '100%' : targetW
         })()}
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
-        extra={
-          <Space>
-            {(isModuleActive('zalo') && (isCompanyAdmin || hasPermission('zalo.send_zns'))) && (
-              <Button
-                type="primary"
-                icon={<MessageOutlined />}
-                onClick={() => setZnsModalVisible(true)}
-                style={{ background: '#10b981', borderColor: '#10b981' }}
-              >
-                Gửi ZNS
-              </Button>
-            )}
-            {canExportPdf && (
-              <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrintOrPDF} style={{ background: '#10b981', borderColor: '#10b981' }}>
-                In Đơn Hàng
-              </Button>
-            )}
-          </Space>
-        }
       >
         {selectedOrder && (
           <div>

@@ -26,12 +26,14 @@ import {
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../utils/api'
 import { useAuth } from '../../contexts/AuthContext'
+import { useResponsive } from '../../hooks/useResponsive'
 
 const { Title, Text } = Typography
 
 export default function FactoryManagement() {
   const { token } = theme.useToken()
   const { checkMaintenance } = useAuth()
+  const { isMobile } = useResponsive()
   const [messageApi, contextHolder] = message.useMessage()
 
   const [factories, setFactories] = useState([])
@@ -209,6 +211,7 @@ export default function FactoryManagement() {
       </Typography.Paragraph>
 
       <Table
+        scroll={{ x: 'max-content' }}
         columns={columns}
         dataSource={factories}
         rowKey="id"
@@ -222,6 +225,7 @@ export default function FactoryManagement() {
         onCancel={() => setModalOpen(false)}
         footer={null}
         destroyOnClose
+        width={isMobile ? '95vw' : 520}
       >
         <Form
           form={form}

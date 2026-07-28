@@ -18,6 +18,7 @@ import {
 } from 'antd'
 import { CarOutlined, SearchOutlined, EditOutlined, EyeOutlined, PlusOutlined, DeleteOutlined, UserAddOutlined, FileTextOutlined, PrinterOutlined, CheckCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import { useResponsive } from '../hooks/useResponsive'
 
 import api from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -449,16 +450,18 @@ export default function DeliveryList() {
     },
   ]
 
+  const { isMobile, padding } = useResponsive()
+
   return (
-    <div style={{ padding: 24 }}>
-      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-        <Title level={3} style={{ margin: 0 }}>
+    <div style={{ padding }}>
+      <Row justify="space-between" align="middle" style={{ marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+        <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>
           <CarOutlined style={{ marginRight: 8, color: '#f59e0b' }} />
           Quản lý Giao hàng
         </Title>
         {canCreate && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()} size="large" style={{ borderRadius: 8 }}>
-            Tạo Giao Hàng Mới
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()} size={isMobile ? 'middle' : 'large'} style={{ borderRadius: 8 }}>
+            {isMobile ? 'Tạo GH' : 'Tạo Giao Hàng Mới'}
           </Button>
         )}
       </Row>

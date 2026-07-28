@@ -4,6 +4,7 @@ import dayjs from 'dayjs'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
+import { useResponsive } from '../hooks/useResponsive'
 
 const { Title, Text, Paragraph } = Typography
 const { TextArea } = Input
@@ -191,27 +192,29 @@ export default function ApprovalList() {
     }
   ]
 
+  const { isMobile, padding } = useResponsive()
+
   return (
-    <div style={{ padding: 24, width: '100%', minWidth: 0 }}>
+    <div style={{ padding, width: '100%', minWidth: 0 }}>
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }} gutter={[16, 16]}>
         <Col xs={24} md={12}>
-          <Title level={3} style={{ margin: 0 }}>Luồng Phê Duyệt</Title>
+          <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>Luồng Phê Duyệt</Title>
           <Text type="secondary">Quản lý và xét duyệt các yêu cầu tập trung</Text>
         </Col>
-        <Col xs={24} md={12} style={{ textAlign: 'right' }}>
+        <Col xs={24} md={12} style={{ textAlign: isMobile ? 'left' : 'right' }}>
           <Space wrap>
             <Input.Search
               placeholder="Tìm theo tiêu đề..."
               allowClear
               onSearch={(val) => setSearch(val)}
-              style={{ width: 220 }}
+              style={{ width: isMobile ? '100%' : 220 }}
             />
             <Select
               placeholder="Lọc trạng thái"
               allowClear
               value={statusFilter || undefined}
               onChange={(val) => setStatusFilter(val || '')}
-              style={{ width: 150 }}
+              style={{ width: isMobile ? '100%' : 150 }}
             >
               <Select.Option value="pending">Chờ duyệt</Select.Option>
               <Select.Option value="approved">Đã duyệt</Select.Option>

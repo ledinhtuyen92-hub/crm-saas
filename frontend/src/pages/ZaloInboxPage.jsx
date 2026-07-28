@@ -11,13 +11,14 @@ import {
   InfoCircleOutlined, TeamOutlined, PaperClipOutlined, SendOutlined,
   PictureOutlined, DeleteOutlined, StarFilled, TagOutlined,
   ThunderboltOutlined, MailOutlined, PlusOutlined, ClockCircleOutlined,
-  RobotOutlined, StopOutlined
+  RobotOutlined, StopOutlined, ArrowLeftOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/vi'
 import api from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
+import { useResponsive } from '../hooks/useResponsive'
 
 const cleanUrl = (url) => {
   if (!url) return '';
@@ -211,6 +212,7 @@ function LeadListItem({ lead, selected, onClick }) {
 export default function ZaloInboxPage() {
   const { token } = theme.useToken()
   const { user, isCompanyAdmin, maintenanceMode, hasPermission } = useAuth()
+  const { isMobile } = useResponsive()
   const canDeleteConversation = isCompanyAdmin || user?.is_superuser || hasPermission('zalo.delete_conversation')
   // Sale có thể xem toàn bộ hội thoại nếu là admin hoặc có quyền zalo.view_all_inbox
   const canViewAllInbox = isCompanyAdmin || hasPermission('zalo.view_all_inbox')
@@ -809,6 +811,7 @@ export default function ZaloInboxPage() {
       {/* Main 4-column layout */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Cột 1: Pancake-style Vertical Filter Sidebar */}
+        {(!isMobile || !selectedLead) && (
         <div style={{
           width: 52,
           background: '#0f172a',
@@ -1039,9 +1042,11 @@ export default function ZaloInboxPage() {
             </div>
           </Tooltip>
         </div>
+        )}
 
         {/* Cột 2: Danh sách hội thoại */}
-        <div style={{ width: leftColWidth, borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', background: '#fff', flexShrink: 0 }}>
+        {(!isMobile || !selectedLead) && (
+        <div style={{ width: isMobile ? 'calc(100% - 52px)' : leftColWidth, borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', background: '#fff', flexShrink: 0 }}>
           <div style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>
             <Search
               placeholder="Tìm tên, tin nhắn..."
@@ -1086,22 +1091,29 @@ export default function ZaloInboxPage() {
             Tổng: {leads.length} hội thoại
           </div>
         </div>
+        )}
 
         {/* Resizer Trái */}
+        {!isMobile && (
         <div
           onMouseDown={startDragLeft}
           style={{ width: 4, cursor: 'col-resize', background: '#f1f5f9', borderRight: '1px solid #e2e8f0', flexShrink: 0 }}
           onMouseEnter={e => e.currentTarget.style.background = '#3b82f6'}
           onMouseLeave={e => { if (!isDraggingLeft.current) e.currentTarget.style.background = '#f1f5f9' }}
         />
+        )}
 
         {/* Cột 3: Khung Chat */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f8fafc', minWidth: 0 }}>
+        {(!isMobile || selectedLead) && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f8fafc', minWidth: 0, width: isMobile ? '100%' : 'auto' }}>
           {selectedLead ? (
             <>
               {/* Chat Header */}
               <div style={{ padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {isMobile && (
+                    <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => setSelectedLead(null)} style={{ padding: 4, marginRight: 4 }} />
+                  )}
                   <Avatar size={40} src={selectedLead.avatar_url} icon={<UserOutlined />} style={{ background: '#dbeafe', color: '#2563eb' }} />
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1323,16 +1335,20 @@ export default function ZaloInboxPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* Resizer Phải */}
+        {!isMobile && selectedLead && (
         <div
           onMouseDown={startDragRight}
           style={{ width: 4, cursor: 'col-resize', background: '#f1f5f9', borderLeft: '1px solid #e2e8f0', flexShrink: 0 }}
           onMouseEnter={e => e.currentTarget.style.background = '#3b82f6'}
           onMouseLeave={e => { if (!isDraggingRight.current) e.currentTarget.style.background = '#f1f5f9' }}
         />
+        )}
 
         {/* Cột 4: CRM Right Profile & Notes Panel */}
+        {!isMobile && selectedLead && (
         <div style={{ width: rightColWidth, background: '#fff', borderLeft: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto' }}>
           {selectedLeadDetail ? (
             <div style={{ padding: 16 }}>
@@ -1510,6 +1526,7 @@ export default function ZaloInboxPage() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Modal Convert Khách Hàng CRM */}

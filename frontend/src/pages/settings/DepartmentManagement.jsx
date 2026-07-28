@@ -26,12 +26,14 @@ import {
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../utils/api'
 import { useAuth } from '../../contexts/AuthContext'
+import { useResponsive } from '../../hooks/useResponsive'
 
 const { Title, Text } = Typography
 
 export default function DepartmentManagement() {
   const { token } = theme.useToken()
   const { checkMaintenance } = useAuth()
+  const { isMobile } = useResponsive()
   const [messageApi, contextHolder] = message.useMessage()
 
   const [departments, setDepartments] = useState([])
@@ -211,7 +213,7 @@ export default function DepartmentManagement() {
         }}
       >
         <div>
-          <Title level={2} style={{ margin: 0 }}>
+          <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
             Quản lý Phòng ban
           </Title>
           <Text type="secondary">
@@ -247,7 +249,7 @@ export default function DepartmentManagement() {
         onCancel={() => setModalOpen(false)}
         footer={null}
         destroyOnClose
-        width={500}
+        width={isMobile ? '95vw' : 500}
       >
         <Form
           form={form}

@@ -47,6 +47,7 @@ import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
 import ProductTemplateTab from './inventory/ProductTemplateTab'
 import TransactionPrintView from '../components/TransactionPrintView'
+import { useResponsive } from '../hooks/useResponsive'
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -54,6 +55,7 @@ const { TextArea } = Input
 
 export default function Inventory() {
   const { isCompanyAdmin, hasPermission, checkMaintenance, user } = useAuth()
+  const { isMobile } = useResponsive()
   const [messageApi, contextHolder] = message.useMessage()
 
   const [activeTab, setActiveTab] = useState('transactions')
@@ -1209,8 +1211,8 @@ export default function Inventory() {
       {contextHolder}
 
       {/* ── Page Header ────────────────────────────────────────────────── */}
-      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
-        <Col>
+      <Row justify="space-between" align="middle" gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} md={10}>
           <Title level={3} style={{ margin: 0, fontWeight: 800 }}>
             <DatabaseOutlined style={{ color: '#0284c7', marginRight: 10 }} />
             Quản lý Kho Vận
@@ -1219,10 +1221,8 @@ export default function Inventory() {
             Kiểm soát tồn kho theo thời gian thực và lịch sử biến động kho.
           </Text>
         </Col>
-        <Col>
-          <Space>
-
-
+        <Col xs={24} md={14} style={{ textAlign: isMobile ? 'left' : 'right' }}>
+          <Space wrap style={{ justifyContent: isMobile ? 'flex-start' : 'flex-end' }}>
             {activeTab === 'transactions' && canCreate && (
               <Button
                 type="primary"
@@ -1238,7 +1238,7 @@ export default function Inventory() {
                 type="primary"
                 icon={<MinusOutlined />}
                 onClick={() => openTxnModal('export')}
-                style={{ background: '#ea580c', fontWeight: 600, borderRadius: 8, marginLeft: 8 }}
+                style={{ background: '#ea580c', fontWeight: 600, borderRadius: 8 }}
               >
                 Tạo Phiếu Xuất Kho
               </Button>
@@ -1248,7 +1248,7 @@ export default function Inventory() {
                 type="primary"
                 icon={<TagOutlined />}
                 onClick={() => openTxnModal('transfer')}
-                style={{ background: '#3b82f6', fontWeight: 600, borderRadius: 8, marginLeft: 8 }}
+                style={{ background: '#3b82f6', fontWeight: 600, borderRadius: 8 }}
               >
                 Điều chuyển kho
               </Button>
@@ -1306,53 +1306,61 @@ export default function Inventory() {
                 <div>
                   <Row gutter={16} align="middle" justify="space-between" style={{ marginBottom: 16 }}>
                     <Col xs={24} lg={18}>
-                      <Space wrap>
-                        <Input
-                          placeholder="Tìm mã phiếu, mã ĐH, SP..."
-                          prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
-                          value={txnSearchText}
-                          onChange={(e) => setTxnSearchText(e.target.value)}
-                          allowClear
-                          style={{ borderRadius: 8, minWidth: 250 }}
-                        />
-                        <Select
-                          placeholder="Loại phiếu"
-                          value={txnTypeFilter || undefined}
-                          onChange={(val) => setTxnTypeFilter(val || '')}
-                          allowClear
-                          style={{ minWidth: 150 }}
-                        >
-                          <Option value="import">Nhập kho</Option>
-                          <Option value="export">Xuất kho</Option>
-                          <Option value="adjust">Điều chỉnh</Option>
-                        </Select>
-                        <Select
-                          placeholder="Trạng thái"
-                          value={txnStatusFilter || undefined}
-                          onChange={(val) => setTxnStatusFilter(val || '')}
-                          allowClear
-                          style={{ minWidth: 130 }}
-                        >
-                          <Option value="completed">Hoàn thành</Option>
-                          <Option value="pending">Chờ duyệt</Option>
-                          <Option value="rejected">Đã hủy</Option>
-                          <Option value="deleted_mo">Lệnh SX bị xóa!</Option>
-                        </Select>
-                        <Select
-                          placeholder="Chọn kho hàng..."
-                          value={txnWarehouseFilter || undefined}
-                          onChange={(val) => setTxnWarehouseFilter(val || '')}
-                          allowClear
-                          style={{ minWidth: 180 }}
-                        >
-                          {warehouses.map((w) => (
-                            <Option key={w.id} value={w.id}>{w.name}</Option>
-                          ))}
-                        </Select>
-                      </Space>
+                      <Row gutter={[8, 8]}>
+                        <Col xs={24} sm={12} md={8}>
+                          <Input
+                            placeholder="Tìm mã phiếu, mã ĐH, SP..."
+                            prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
+                            value={txnSearchText}
+                            onChange={(e) => setTxnSearchText(e.target.value)}
+                            allowClear
+                            style={{ borderRadius: 8, width: '100%' }}
+                          />
+                        </Col>
+                        <Col xs={12} sm={6} md={4}>
+                          <Select
+                            placeholder="Loại phiếu"
+                            value={txnTypeFilter || undefined}
+                            onChange={(val) => setTxnTypeFilter(val || '')}
+                            allowClear
+                            style={{ width: '100%' }}
+                          >
+                            <Option value="import">Nhập kho</Option>
+                            <Option value="export">Xuất kho</Option>
+                            <Option value="adjust">Điều chỉnh</Option>
+                          </Select>
+                        </Col>
+                        <Col xs={12} sm={6} md={4}>
+                          <Select
+                            placeholder="Trạng thái"
+                            value={txnStatusFilter || undefined}
+                            onChange={(val) => setTxnStatusFilter(val || '')}
+                            allowClear
+                            style={{ width: '100%' }}
+                          >
+                            <Option value="completed">Hoàn thành</Option>
+                            <Option value="pending">Chờ duyệt</Option>
+                            <Option value="rejected">Đã hủy</Option>
+                            <Option value="deleted_mo">Lệnh SX bị xóa!</Option>
+                          </Select>
+                        </Col>
+                        <Col xs={24} sm={12} md={8}>
+                          <Select
+                            placeholder="Chọn kho hàng..."
+                            value={txnWarehouseFilter || undefined}
+                            onChange={(val) => setTxnWarehouseFilter(val || '')}
+                            allowClear
+                            style={{ width: '100%' }}
+                          >
+                            {warehouses.map((w) => (
+                              <Option key={w.id} value={w.id}>{w.name}</Option>
+                            ))}
+                          </Select>
+                        </Col>
+                      </Row>
                     </Col>
-                    {(isCompanyAdmin || hasPermission('inventory.delete_history')) && transactions.length > 0 && (
-                      <Col xs={24} lg={6} style={{ textAlign: 'right', marginTop: window.innerWidth < 992 ? 16 : 0 }}>
+                     {(isCompanyAdmin || hasPermission('inventory.delete_history')) && transactions.length > 0 && (
+                      <Col xs={24} lg={6} style={{ textAlign: isMobile ? 'left' : 'right', marginTop: isMobile ? 8 : 0 }}>
                         <Button
                           danger
                           icon={<DeleteOutlined />}

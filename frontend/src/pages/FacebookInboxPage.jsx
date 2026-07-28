@@ -27,6 +27,7 @@ import {
   VideoCameraOutlined,
   RobotOutlined,
   StopOutlined,
+  ArrowLeftOutlined
 } from '@ant-design/icons'
 import {
   AutoComplete,
@@ -59,6 +60,7 @@ import {
   message,
   theme
 } from 'antd'
+import { useResponsive } from '../hooks/useResponsive'
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
@@ -431,6 +433,7 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
 export default function FacebookInboxPage() {
   const { token } = theme.useToken()
   const { user, maintenanceMode, hasPermission, isCompanyAdmin } = useAuth()
+  const { isMobile } = useResponsive()
   const canDeleteConversation = isCompanyAdmin || user?.is_superuser || hasPermission('facebook.delete_conversation')
   const canViewAllInbox = isCompanyAdmin || hasPermission('facebook.view_all_inbox')
   const canChat = isCompanyAdmin || hasPermission('facebook.chat')
@@ -1492,7 +1495,8 @@ export default function FacebookInboxPage() {
 
         {/* Left: Conversation List */}
         {/* Drag handle between filter sidebar and left column — unused, left col already flex */}
-        <div style={{ width: leftColWidth, flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#fff', minWidth: 0, borderRight: 'none' }}>
+        {(!isMobile || !selectedLead) && (
+        <div style={{ width: isMobile ? '100%' : leftColWidth, flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#fff', minWidth: 0, borderRight: 'none' }}>
           {/* Active Filter Banner */}
           {(replyFilter || sortBy || hasUnreadOnly || (phoneFilterMode !== 'all' && phoneFilterMode !== '') || hasPhoneOnly || statusFilter || isArchivedOnly || isStarredOnly || tagFilter !== 'all' || assignedToFilter !== 'all') && (
             <div style={{ padding: '6px 10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
@@ -1555,8 +1559,10 @@ export default function FacebookInboxPage() {
             )}
           </div>
         </div>
+        )}
 
         {/* Drag handle: Left | Mid */}
+        {!isMobile && (
         <div
           onMouseDown={startDragLeft}
           style={{
@@ -1566,9 +1572,11 @@ export default function FacebookInboxPage() {
           onMouseEnter={e => e.currentTarget.style.background = '#dbeafe'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         />
+        )}
 
         {/* Middle: Chat */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', minWidth: 0 }}>
+        {(!isMobile || selectedLead) && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', minWidth: 0, width: isMobile ? '100%' : 'auto' }}>
           {!selectedLead ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', flexDirection: 'column', gap: 12 }}>
               <MessageOutlined style={{ fontSize: 48, color: '#d1d5db' }} />
@@ -1578,6 +1586,9 @@ export default function FacebookInboxPage() {
             <>
               {/* Chat header */}
               <div style={{ padding: '10px 14px', borderBottom: '1px solid #e5e7eb', background: '#fff', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
+                {isMobile && (
+                  <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => setSelectedLead(null)} style={{ padding: 4, marginRight: 0 }} />
+                )}
                 <LeadAvatar lead={selectedLead} size={36} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <Text strong style={{ fontSize: 14, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1784,8 +1795,10 @@ export default function FacebookInboxPage() {
             </>
           )}
         </div>
+        )}
 
         {/* Drag handle: Mid | Right */}
+        {!isMobile && selectedLead && (
         <div
           onMouseDown={startDragRight}
           style={{
@@ -1795,7 +1808,9 @@ export default function FacebookInboxPage() {
           onMouseEnter={e => e.currentTarget.style.background = '#dbeafe'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         />
+        )}
         {/* Right: CRM Customer Profile */}
+        {!isMobile && selectedLead && (
         <div style={{ width: rightColWidth, flexShrink: 0, background: '#fafafa', overflowY: 'auto', padding: 12, minWidth: 0 }}>
           {selectedLead ? (
             <>
@@ -1982,6 +1997,7 @@ export default function FacebookInboxPage() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Sync History Modal */}

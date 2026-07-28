@@ -1386,7 +1386,7 @@
   "pk": 2,
   "fields": {
     "password": "pbkdf2_sha256$1000000$gogv5if640Ve4r5k5DvYiY$Co2C/05RkNJOSvpBH4uiONSzdeTJAZ/vJysA2SrgpDY=",
-    "last_login": "2026-07-27T15:20:00.963Z",
+    "last_login": "2026-07-28T15:54:45.232Z",
     "is_superuser": false,
     "username": "giamdoc",
     "first_name": "",

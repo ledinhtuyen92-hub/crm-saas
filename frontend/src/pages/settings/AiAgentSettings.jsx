@@ -3,6 +3,7 @@ import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, Switch, m
 import { PlusOutlined, EditOutlined, RobotOutlined, SettingOutlined, KeyOutlined, SyncOutlined, InfoCircleOutlined, ThunderboltOutlined, DeleteOutlined, BookOutlined } from '@ant-design/icons';
 import api from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useResponsive } from '../../hooks/useResponsive';
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
@@ -381,16 +382,22 @@ export default function AiAgentSettings() {
     fetchPricings();
   }, []);
 
+  const { isMobile, padding } = useResponsive();
+
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding }}>
       
       {hasPermission('ai_agent.manage_agents') && (
       <Card 
-        title={<Title level={4}><RobotOutlined /> Quản lý Đội ngũ Trợ lý AI</Title>} 
-        extra={<Button type='primary' size='large' icon={<PlusOutlined />} onClick={() => handleOpenModal()}>Tạo Trợ lý AI mới</Button>}
+        title={
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: 12, width: '100%' }}>
+            <Title level={isMobile ? 5 : 4} style={{ margin: 0, whiteSpace: 'normal', wordBreak: 'break-word' }}><RobotOutlined /> Quản lý Đội ngũ Trợ lý AI</Title>
+            <Button type='primary' size={isMobile ? 'middle' : 'large'} icon={<PlusOutlined />} onClick={() => handleOpenModal()}>{isMobile ? 'Tạo mới' : 'Tạo Trợ lý AI mới'}</Button>
+          </div>
+        } 
         style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}
       >
-        <Table columns={columns} dataSource={agents} rowKey='id' loading={loading} pagination={false} />
+        <Table scroll={{ x: 'max-content' }} columns={columns} dataSource={agents} rowKey='id' loading={loading} pagination={false} />
       </Card>
       )}
       {hasPermission('ai_agent.manage_keys') && (
@@ -400,7 +407,7 @@ export default function AiAgentSettings() {
           bordered={false}
         >
           <Panel 
-            header={<Title level={4} style={{ margin: 0 }}><KeyOutlined style={{color: '#1677ff'}} /> Cấu hình API Key & Phân bổ Quota</Title>} 
+            header={<Title level={isMobile ? 5 : 4} style={{ margin: 0, whiteSpace: 'normal', wordBreak: 'break-word' }}><KeyOutlined style={{color: '#1677ff'}} /> Cấu hình API Key & Phân bổ Quota</Title>} 
             key="keys"
             style={{ border: 'none' }}
           >
@@ -492,19 +499,26 @@ export default function AiAgentSettings() {
           bordered={false}
         >
           <Panel 
-            header={<Title level={4} style={{ margin: 0 }}><ThunderboltOutlined style={{color: '#faad14'}} /> Thống kê Chi phí AI <Text type="secondary" style={{ fontSize: 16, fontWeight: 'normal' }}>{statsPeriod === 'today' ? '(Hôm nay)' : statsPeriod === 'week' ? '(Tuần này)' : statsPeriod === 'month' ? '(Tháng này)' : '(Trọn đời)'}</Text></Title>} 
-            extra={
-              <div onClick={e => e.stopPropagation()}>
-                <Segmented 
-                  options={[
-                    { label: 'Hôm nay', value: 'today' },
-                    { label: 'Tuần này', value: 'week' },
-                    { label: 'Tháng này', value: 'month' },
-                    { label: 'Trọn đời', value: 'all' },
-                  ]} 
-                  value={statsPeriod} 
-                  onChange={setStatsPeriod} 
-                />
+            header={
+              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: 12, width: '100%' }}>
+                <Title level={isMobile ? 5 : 4} style={{ margin: 0, whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                  <ThunderboltOutlined style={{color: '#faad14'}} /> Thống kê Chi phí AI 
+                  <Text type="secondary" style={{ fontSize: isMobile ? 14 : 16, fontWeight: 'normal', display: isMobile ? 'block' : 'inline', marginLeft: isMobile ? 0 : 8 }}>
+                    {statsPeriod === 'today' ? '(Hôm nay)' : statsPeriod === 'week' ? '(Tuần này)' : statsPeriod === 'month' ? '(Tháng này)' : '(Trọn đời)'}
+                  </Text>
+                </Title>
+                <div onClick={e => e.stopPropagation()} style={{ maxWidth: '100%', overflowX: 'auto', paddingBottom: isMobile ? 4 : 0 }}>
+                  <Segmented 
+                    options={[
+                      { label: 'Hôm nay', value: 'today' },
+                      { label: 'Tuần này', value: 'week' },
+                      { label: 'Tháng này', value: 'month' },
+                      { label: 'Trọn đời', value: 'all' },
+                    ]} 
+                    value={statsPeriod} 
+                    onChange={setStatsPeriod} 
+                  />
+                </div>
               </div>
             }
             key="stats"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    Card, Table, Button, Space, Tag, Modal, Form, 
+    Card, Table, Button, Space, Tag, Modal, Form, Row, Col,
     Input, Upload, Switch, message, Popconfirm, Typography, Select, Drawer, Badge, Divider
 } from 'antd';
 import { 
@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import JoditEditor from 'jodit-react';
+import { useResponsive } from '../hooks/useResponsive';
 
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
@@ -19,6 +20,7 @@ const { Title, Text } = Typography;
 
 const Announcements = () => {
     const { hasPermission, isSuperAdmin, isCompanyAdmin, checkMaintenance } = useAuth();
+    const { isMobile, padding } = useResponsive();
     const canCreate = hasPermission('notifications.create_announcements') || isSuperAdmin || isCompanyAdmin;
     const canDelete = hasPermission('notifications.delete_announcements') || isSuperAdmin || isCompanyAdmin;
 
@@ -291,22 +293,24 @@ const Announcements = () => {
     };
 
     return (
-        <div style={{ padding: '24px' }}>
+        <div style={{ padding }}>
             <Card 
-                title={<Space><NotificationOutlined /> Thông báo nội bộ</Space>}
-                extra={
-                    canCreate && (
-                        <Button 
-                            type="primary" 
-                            icon={<PlusOutlined />} 
-                            onClick={() => {
-                                if (checkMaintenance()) return;
-                                setCreateModalVisible(true);
-                            }}
-                        >
-                            Đăng thông báo
-                        </Button>
-                    )
+                title={
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+                        <Space><NotificationOutlined /> Thông báo nội bộ</Space>
+                        {canCreate && (
+                            <Button 
+                                type="primary" 
+                                icon={<PlusOutlined />} 
+                                onClick={() => {
+                                    if (checkMaintenance()) return;
+                                    setCreateModalVisible(true);
+                                }}
+                            >
+                                Đăng thông báo
+                            </Button>
+                        )}
+                    </div>
                 }
             >
                 <Table 
@@ -372,8 +376,9 @@ const Announcements = () => {
                         <JoditEditor config={{ height: 300, readonly: false }} />
                     </Form.Item>
 
-                    <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-                        <Form.Item name="category" label="Loại thông báo" style={{ minWidth: 200, flex: 1 }}>
+                    <Row gutter={[16, 0]}>
+                        <Col xs={24} sm={12}>
+                        <Form.Item name="category" label="Loại thông báo">
                             <Select
                                 placeholder="Chọn hoặc nhập loại mới"
                                 showSearch
@@ -431,15 +436,17 @@ const Announcements = () => {
                                 ))}
                             </Select>
                         </Form.Item>
-
-                        <Form.Item name="priority" label="Độ ưu tiên" style={{ minWidth: 150 }}>
+                        </Col>
+                        <Col xs={24} sm={12}>
+                        <Form.Item name="priority" label="Độ ưu tiên">
                             <Select>
                                 <Select.Option value="low">Thấp</Select.Option>
                                 <Select.Option value="normal">Thường</Select.Option>
                                 <Select.Option value="high">Cao</Select.Option>
                             </Select>
                         </Form.Item>
-
+                        </Col>
+                        <Col xs={24}>
                         <Form.Item label="Gửi toàn công ty (Tất cả)">
                             <Switch 
                                 checked={isAllCompany} 
@@ -448,10 +455,13 @@ const Announcements = () => {
                                 unCheckedChildren="Tắt"
                             />
                         </Form.Item>
+                        </Col>
+                        </Row>
 
                         {!isAllCompany && (
-                            <>
-                                <Form.Item name="target_users" label="Nhân viên nhận" style={{ minWidth: 200, flex: 1 }}>
+                            <Row gutter={[16, 0]}>
+                                <Col xs={24} sm={12}>
+                                <Form.Item name="target_users" label="Nhân viên nhận">
                                     <Select 
                                         mode="multiple" 
                                         options={usersList} 
@@ -462,8 +472,10 @@ const Announcements = () => {
                                         showSearch
                                     />
                                 </Form.Item>
+                                </Col>
 
-                                <Form.Item name="departments" label="Phòng ban nhận" style={{ minWidth: 200, flex: 1 }}>
+                                <Col xs={24} sm={12}>
+                                <Form.Item name="departments" label="Phòng ban nhận">
                                     <Select 
                                         mode="multiple" 
                                         options={departmentsList} 
@@ -474,9 +486,9 @@ const Announcements = () => {
                                         showSearch
                                     />
                                 </Form.Item>
-                            </>
+                                </Col>
+                            </Row>
                         )}
-                    </div>
 
                     <Form.Item name="is_pinned" valuePropName="checked">
                         <Switch checkedChildren="Đã ghim" unCheckedChildren="Không ghim" />

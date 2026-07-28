@@ -3,6 +3,7 @@ import { Card, Typography, Switch, Button, message, Space, Divider, Alert, Input
 import { ApiOutlined, ReloadOutlined, CheckCircleOutlined, CopyOutlined } from '@ant-design/icons'
 import api from '../../utils/api'
 import { useAuth } from '../../contexts/AuthContext'
+import { useResponsive } from '../../hooks/useResponsive'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -92,26 +93,28 @@ export default function WebsiteIntegration() {
 .then(res => res.json())
 .then(data => console.log(data));`
 
+  const { padding, isMobile } = useResponsive()
+
   if (!hasPermission('website_integration.manage')) {
     return (
-      <div style={{ padding: 24 }}>
+      <div style={{ padding }}>
         <Alert type="error" message="Từ chối truy cập" description="Bạn không có quyền quản lý Tích hợp Website (website_integration.manage)." showIcon />
       </div>
     )
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', paddingBottom: 40 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
-        <div>
-          <Title level={2} style={{ margin: 0 }}>
+    <div style={{ maxWidth: 900, margin: '0 auto', paddingBottom: 40, padding: isMobile ? '0 8px 40px' : '0 0 40px', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-start', marginBottom: 24, gap: 16 }}>
+        <div style={{ minWidth: 0 }}>
+          <Title level={isMobile ? 4 : 2} style={{ margin: 0, wordBreak: 'break-word', whiteSpace: 'normal' }}>
             Tích hợp Website (Webhooks)
           </Title>
-          <Text type="secondary">
+          <Text type="secondary" style={{ display: 'block', marginTop: 4 }}>
             Đấu nối và tự động đẩy dữ liệu khách hàng từ Website/Landing Page về CRM
           </Text>
         </div>
-        <Space style={{ background: '#fff', padding: '12px 20px', borderRadius: 8, border: '1px solid #d9d9d9' }}>
+        <Space style={{ background: '#fff', padding: '12px 20px', borderRadius: 8, border: '1px solid #d9d9d9', justifyContent: isMobile ? 'space-between' : 'flex-start' }}>
           <Text strong>Trạng thái nhận dữ liệu:</Text>
           <Switch 
             checked={settings?.is_website_integration_active} 
@@ -134,7 +137,7 @@ export default function WebsiteIntegration() {
 
           <div>
             <Text strong style={{ display: 'block', marginBottom: 8 }}>API Endpoint URL (Đường dẫn nhận Webhook):</Text>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexDirection: isMobile ? 'column' : 'row' }}>
               <Input value={endpointUrl} readOnly size="large" />
               <Button icon={<CopyOutlined />} size="large" onClick={() => copyToClipboard(endpointUrl)}>Copy</Button>
             </div>
@@ -142,12 +145,14 @@ export default function WebsiteIntegration() {
 
           <div>
             <Text strong style={{ display: 'block', marginBottom: 8 }}>API Key (Token xác thực):</Text>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexDirection: isMobile ? 'column' : 'row' }}>
               <Input.Password value={settings?.website_api_key || ''} readOnly size="large" visibilityToggle />
-              <Button icon={<CopyOutlined />} size="large" onClick={() => copyToClipboard(settings?.website_api_key)}>Copy</Button>
-              <Button type="primary" danger icon={<ReloadOutlined />} size="large" onClick={generateNewKey}>
-                Tạo mã mới
-              </Button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Button icon={<CopyOutlined />} size="large" onClick={() => copyToClipboard(settings?.website_api_key)} style={{ flex: 1 }}>Copy</Button>
+                <Button type="primary" danger icon={<ReloadOutlined />} size="large" onClick={generateNewKey} style={{ flex: 1 }}>
+                  Tạo mã mới
+                </Button>
+              </div>
             </div>
             {!settings?.website_api_key && (
               <Text type="danger" style={{ marginTop: 8, display: 'block' }}>* Hiện tại chưa có mã xác thực. Vui lòng bấm Tạo mã mới.</Text>
@@ -157,10 +162,10 @@ export default function WebsiteIntegration() {
         </Space>
       </Card>
 
-      <Title level={4}>Tài liệu Hướng dẫn Gửi dữ liệu (Dành cho Developer)</Title>
+      <Title level={4} style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>Tài liệu Hướng dẫn Gửi dữ liệu (Dành cho Developer)</Title>
       
-      <Card style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(15,23,42,0.08)' }}>
-        <Title level={5}>Yêu cầu bắt buộc:</Title>
+      <Card style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(15,23,42,0.08)', width: '100%', overflowX: 'hidden' }}>
+        <Title level={5} style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>Yêu cầu bắt buộc:</Title>
         <ul>
           <li><strong>Method:</strong> POST</li>
           <li><strong>Header:</strong> <code>X-API-Key</code> phải chứa mã API Key ở trên.</li>
@@ -169,8 +174,8 @@ export default function WebsiteIntegration() {
         <Divider />
         
         <Title level={5}>Ví dụ dùng cURL:</Title>
-        <div style={{ position: 'relative' }}>
-          <pre style={{ background: '#1e293b', color: '#e2e8f0', padding: 16, borderRadius: 8, overflowX: 'auto' }}>
+        <div style={{ position: 'relative', width: '100%', overflowX: 'hidden' }}>
+          <pre style={{ background: '#1e293b', color: '#e2e8f0', padding: 16, borderRadius: 8, overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
             {curlSnippet}
           </pre>
           <Button 
@@ -182,8 +187,8 @@ export default function WebsiteIntegration() {
         </div>
 
         <Title level={5} style={{ marginTop: 24 }}>Ví dụ dùng JavaScript (Fetch API):</Title>
-        <div style={{ position: 'relative' }}>
-          <pre style={{ background: '#1e293b', color: '#e2e8f0', padding: 16, borderRadius: 8, overflowX: 'auto' }}>
+        <div style={{ position: 'relative', width: '100%', overflowX: 'hidden' }}>
+          <pre style={{ background: '#1e293b', color: '#e2e8f0', padding: 16, borderRadius: 8, overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
             {jsSnippet}
           </pre>
           <Button 

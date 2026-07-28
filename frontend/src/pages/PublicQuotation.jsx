@@ -128,7 +128,8 @@ export default function PublicQuotation() {
           <AlertBox />
         )}
 
-        <div style={{ background: '#fff', minWidth: 920 }}>
+        <div style={{ background: '#fff', overflowX: 'auto' }}>
+          <div style={{ minWidth: 700 }}>
           <QuotationPrintView 
             quotation={quotation} 
             effectiveTemplate={quotation?.custom_data?.template_snapshot}
@@ -189,6 +190,7 @@ export default function PublicQuotation() {
               )
             )}
           />
+          </div>
         </div>
       </div>
     </div>

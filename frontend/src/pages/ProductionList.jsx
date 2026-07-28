@@ -42,6 +42,7 @@ import { useAuth } from '../contexts/AuthContext'
 import api from '../utils/api'
 import TransactionPrintView from '../components/TransactionPrintView'
 import QuotationPrintView from '../components/QuotationPrintView'
+import { useResponsive } from '../hooks/useResponsive'
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -62,6 +63,7 @@ const stepStatusConfig = {
 
 export default function ProductionList() {
   const { isCompanyAdmin, hasPermission, checkMaintenance, user } = useAuth()
+  const { isMobile } = useResponsive()
   const [messageApi, contextHolder] = message.useMessage()
   const navigate = useNavigate()
 
@@ -739,8 +741,8 @@ export default function ProductionList() {
       {contextHolder}
 
       {/* ── Page Header ────────────────────────────────────────────────── */}
-      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
-        <Col>
+      <Row justify="space-between" align="middle" gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} md={10}>
           <Title level={3} style={{ margin: 0, fontWeight: 800 }}>
             <ToolOutlined style={{ color: '#0284c7', marginRight: 10 }} />
             Quản lý Lệnh Sản Xuất & Gia Công
@@ -749,8 +751,8 @@ export default function ProductionList() {
             Theo dõi tiến độ gia công từng đơn hàng, phân công công đoạn thi công cho kỹ thuật viên.
           </Text>
         </Col>
-        <Col>
-          <Space>
+        <Col xs={24} md={14} style={{ textAlign: isMobile ? 'left' : 'right' }}>
+          <Space wrap style={{ justifyContent: isMobile ? 'flex-start' : 'flex-end' }}>
             {(isCompanyAdmin || hasPermission('production.manage_factory')) && (
               <Button
                 size="large"
@@ -783,7 +785,7 @@ export default function ProductionList() {
 
       {/* ── Search & Filter Bar ────────────────────────────────────────── */}
       <Card style={{ borderRadius: 12, marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }} bodyStyle={{ padding: 16 }}>
-        <Row gutter={16} align="middle">
+        <Row gutter={[16, 16]} align="middle">
           <Col xs={24} sm={12} md={8}>
             <Input
               placeholder="Tìm theo mã đơn hàng liên kết..."

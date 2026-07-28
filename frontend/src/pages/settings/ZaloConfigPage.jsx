@@ -10,11 +10,13 @@ import {
 } from '@ant-design/icons'
 import api from '../../utils/api'
 import { useAuth } from '../../contexts/AuthContext'
+import { useResponsive } from '../../hooks/useResponsive'
 
 const { Title, Text, Paragraph } = Typography
 
 export default function ZaloConfigPage() {
   const { maintenanceMode } = useAuth()
+  const { isMobile } = useResponsive()
   const [configs, setConfigs] = useState([])
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -227,26 +229,28 @@ export default function ZaloConfigPage() {
   }
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto' }}>
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div style={{ maxWidth: 860, margin: '0 auto', overflowX: 'hidden', padding: isMobile ? '0 8px' : 0 }}>
+      <Row justify="space-between" align="middle" gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} md={14}>
+          <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <ApiOutlined style={{ color: '#0068ff' }} />
-            Cấu hình Zalo OA
+            <span>Cấu hình Zalo OA</span>
           </Title>
-          <Text type="secondary">Kết nối Official Account Zalo để nhận Lead và gửi ZNS tự động</Text>
-        </div>
-        <Space>
-          <Button
-            type="primary"
-            icon={<SettingOutlined />}
-            onClick={() => handleOpenModal(null, true)}
-            style={{ background: '#0068ff', borderColor: '#0068ff', borderRadius: 16 }}
-          >
-            + Thêm Zalo OA mới
-          </Button>
-        </Space>
-      </div>
+          <Text type="secondary" style={{ display: 'block', marginTop: 4 }}>Kết nối Official Account Zalo để nhận Lead và gửi ZNS tự động</Text>
+        </Col>
+        <Col xs={24} md={10} style={{ display: 'flex', justifyContent: isMobile ? 'flex-start' : 'flex-end' }}>
+          <Space wrap>
+            <Button
+              type="primary"
+              icon={<SettingOutlined />}
+              onClick={() => handleOpenModal(null, true)}
+              style={{ background: '#0068ff', borderColor: '#0068ff', borderRadius: 16 }}
+            >
+              + Thêm Zalo OA mới
+            </Button>
+          </Space>
+        </Col>
+      </Row>
 
       {configs.length === 0 && !loading ? (
         <Card style={{ textAlign: 'center', padding: '40px 20px', borderRadius: 12 }}>
@@ -272,7 +276,7 @@ export default function ZaloConfigPage() {
               bodyStyle={{ padding: '20px 24px' }}
             >
               <Row align="middle" gutter={[16, 16]}>
-                <Col flex="auto">
+                <Col xs={24} md={12} lg={14}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                     <div style={{
                       width: 52, height: 52, borderRadius: 12,
@@ -304,7 +308,7 @@ export default function ZaloConfigPage() {
                     </div>
                   </div>
                 </Col>
-                <Col>
+                <Col xs={24} md={12} lg={10}>
                   <Space wrap style={{ rowGap: 8 }}>
                     {item.is_active ? (
                       <>
@@ -389,11 +393,12 @@ export default function ZaloConfigPage() {
           <Alert
             type="info"
             showIcon
+            style={{ padding: isMobile ? '8px 12px' : '8px 15px', overflow: 'hidden' }}
             message="Cấu hình Callback URL & Webhook trên Zalo Developers"
             description={
               <div>
                 <div>1. <b>Official Account Callback Url (Để Đăng nhập lấy Token tự động):</b></div>
-                <div style={{ marginTop: 4, marginBottom: 12, background: '#f3f4f6', padding: '6px 12px', borderRadius: 6, display: 'inline-block', fontWeight: 600, color: '#1f2937' }}>
+                <div style={{ marginTop: 4, marginBottom: 12, background: '#f3f4f6', padding: '6px 12px', borderRadius: 6, display: 'block', fontWeight: 600, color: '#1f2937', wordBreak: 'break-all' }}>
                   {window.location.origin + window.location.pathname}
                 </div>
                 <div>2. <b>URL Webhook (Để Zalo đẩy tin nhắn về CRM khi khách chat):</b></div>
