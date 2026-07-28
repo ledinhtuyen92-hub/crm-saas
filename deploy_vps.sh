@@ -61,6 +61,10 @@ fi
 
 echo "VITE_API_URL=$PROTOCOL://$DOMAIN/api/" > frontend/.env.production
 
+# Cấp quyền cho Nginx đọc thư mục root
+chmod 711 /root
+chmod -R 755 $(pwd)/frontend/dist
+
 # 5. Khởi động Backend bằng Docker
 echo "=> Đang khởi chạy Backend (Django, Redis, Postgres, Celery)..."
 # Set permission cho db volume de tranh loi postgres
