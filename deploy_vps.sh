@@ -59,10 +59,17 @@ echo "VITE_API_URL=$PROTOCOL://$DOMAIN/api/" > frontend/.env.production
 chmod 711 /root
 chmod -R 755 $(pwd)/frontend/dist
 
+# Tự động nhận diện lệnh docker compose phù hợp với mọi đời Ubuntu
+if command -v docker-compose &> /dev/null; then
+    DOCKER_CMD="docker-compose"
+else
+    DOCKER_CMD="docker compose"
+fi
+
 # 5. Khởi động Backend bằng Docker
 echo "=> Đang khởi chạy Backend (Django, Redis, Postgres, Celery)..."
 mkdir -p backend/postgres_data
-docker compose up -d --build
+$DOCKER_CMD up -d --build
 
 # Chờ Database sẵn sàng và nạp dữ liệu
 echo "=> Đang đợi Database khởi động (10s)..."
