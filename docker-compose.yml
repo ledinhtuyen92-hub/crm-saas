@@ -4,6 +4,7 @@ services:
   db:
     image: pgvector/pgvector:pg15
     container_name: crm_db
+    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 123
@@ -14,12 +15,14 @@ services:
   redis:
     image: redis:7-alpine
     container_name: crm_redis
+    restart: always
 
   web:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: crm_web
+    restart: always
     # Lệnh thông minh giải quyết bài toán con gà quả trứng
     command: sh -c "if [ ! -f manage.py ]; then django-admin startproject core .; fi && python manage.py runserver 0.0.0.0:8000"
     volumes:
@@ -34,6 +37,7 @@ services:
   celery:
     build: ./backend
     container_name: crm_celery
+    restart: always
     command: celery -A core worker -l info
     volumes:
       - ./backend:/app
