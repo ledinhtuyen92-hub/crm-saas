@@ -78,7 +78,7 @@ class Customer(models.Model):
     city = models.CharField(max_length=100, blank=True, verbose_name="Tỉnh/Thành phố")
     birthday = models.DateField(null=True, blank=True, verbose_name="Ngày sinh")
     source = models.CharField(
-        max_length=20,
+        max_length=100,
         choices=SOURCE_CHOICES,
         default=SOURCE_OTHER,
         verbose_name="Nguồn khách",

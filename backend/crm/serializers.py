@@ -58,6 +58,7 @@ class AssignedUserSerializer(serializers.Serializer):
 
 
 class CustomerSerializer(serializers.ModelSerializer):
+    source = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
     contacts = CustomerContactSerializer(many=True, read_only=True)
     interactions = CustomerInteractionSerializer(many=True, read_only=True)
     tags = CustomerTagSerializer(many=True, read_only=True)
