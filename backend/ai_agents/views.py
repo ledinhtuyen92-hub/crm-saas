@@ -3,7 +3,7 @@ from users.permissions import ActionBasedPermission
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .tasks import process_document_rag
-from rest_framework.response import Response
+from django.db import transaction
 from .models import AiKnowledgeChunk
 from .models import SystemAiKey, CompanyAiSettings, AiAgent, AiKnowledgeDocument, CompanyAiKey, AiModelPricing
 from .serializers import SystemAiKeySerializer, CompanyAiSettingsSerializer, AiAgentSerializer, AiKnowledgeDocumentSerializer, CompanyAiKeySerializer, AiModelPricingSerializer
@@ -174,7 +174,7 @@ class AiKnowledgeDocumentViewSet(viewsets.ModelViewSet):
         
     def perform_create(self, serializer):
         doc = serializer.save()
-        process_document_rag.delay(doc.id)
+        transaction.on_commit(lambda: process_document_rag.delay(doc.id))
         
     def perform_update(self, serializer):
         needs_reembed = 'content' in serializer.validated_data or 'file_attachment' in serializer.validated_data
@@ -183,7 +183,7 @@ class AiKnowledgeDocumentViewSet(viewsets.ModelViewSet):
             doc.status = 'pending'
             doc.error_message = ''
             doc.save(update_fields=['status', 'error_message'])
-            process_document_rag.delay(doc.id)
+            transaction.on_commit(lambda: process_document_rag.delay(doc.id))
 
     @action(detail=True, methods=['POST'])
     def retry(self, request, pk=None):
@@ -191,7 +191,7 @@ class AiKnowledgeDocumentViewSet(viewsets.ModelViewSet):
         doc.status = 'pending'
         doc.error_message = ''
         doc.save(update_fields=['status', 'error_message'])
-        process_document_rag.delay(doc.id)
+        transaction.on_commit(lambda: process_document_rag.delay(doc.id))
         return Response({'status': 'đã gửi yêu cầu học lại'})
 
     @action(detail=False, methods=['POST'])

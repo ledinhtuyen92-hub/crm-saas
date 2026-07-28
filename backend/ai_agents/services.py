@@ -132,7 +132,7 @@ def call_gemini(api_key, agent, system_prompt, conversation_history):
             
         contents.append(genai_types.Content(role=role, parts=parts))
     
-    model_name = agent.model_name or 'gemini-2.5-flash'
+    model_name = agent.model_name or 'gemini-2.0-flash'
     # Remove 'models/' prefix if present
     if model_name.startswith('models/'):
         model_name = model_name[7:]
@@ -194,7 +194,7 @@ def generate_image_description(image_url: str, api_key: str, provider: str = 'ge
     from types import SimpleNamespace
     mock_agent = SimpleNamespace(
         temperature=0.1, 
-        model_name='gemini-2.5-flash' if provider == 'gemini' else 'gpt-4o-mini'
+        model_name='gemini-2.0-flash' if provider == 'gemini' else 'gpt-4o-mini'
     )
     
     try:
@@ -212,7 +212,7 @@ def generate_image_description(image_url: str, api_key: str, provider: str = 'ge
                 part = genai_types.Part.from_bytes(data=resp.content, mime_type=mime_type)
                 
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-2.0-flash',
                     contents=[part, system_prompt],
                 )
                 return response.text.strip()
@@ -265,7 +265,7 @@ TRẢ LỜI BẮT BUỘC THEO ĐỊNH DẠNG JSON SAU (không trả về Markdow
                 from .models import ApiUsageLog, AiModelPricing
                 from decimal import Decimal
                 
-                model_name = agent.model_name or ('gpt-4o-mini' if provider == 'openai' else 'gemini-2.5-flash' if provider == 'gemini' else 'claude-3-5-sonnet-20240620')
+                model_name = agent.model_name or ('gpt-4o-mini' if provider == 'openai' else 'gemini-2.0-flash' if provider == 'gemini' else 'claude-3-5-sonnet-20240620')
                 if model_name.startswith('models/'):
                     model_name = model_name[7:]
                     

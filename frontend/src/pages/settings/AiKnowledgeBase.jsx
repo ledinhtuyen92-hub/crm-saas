@@ -408,9 +408,7 @@ export default function AiKnowledgeBase() {
           <Space size="small">
             <Button type="text" icon={<EyeOutlined />} onClick={() => handleView(record)} />
             <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-            {(record.status === 'failed' || record.status === 'completed') && (
-              <Button type="text" style={{ color: '#faad14' }} icon={<SyncOutlined />} onClick={() => handleRetry(record.id)} />
-            )}
+            <Button type="text" style={{ color: '#faad14' }} icon={<SyncOutlined />} onClick={() => handleRetry(record.id)} />
             <Button danger type="text" icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
           </Space>
         )

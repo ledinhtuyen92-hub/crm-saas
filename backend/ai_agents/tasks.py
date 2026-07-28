@@ -586,7 +586,6 @@ def process_document_rag(doc_id):
         # Nếu là tài liệu dạng ảnh, dùng AI để dịch ảnh ra text trước
         if doc.doc_type == 'image' and doc.file_attachment:
             from .services import generate_image_description
-            from crm.utils import get_public_domain
             image_url = doc.file_attachment.url
             if image_url.startswith('/'):
                 image_url = f"{get_public_domain()}{image_url}"
@@ -684,7 +683,6 @@ def sync_product_image_description(template_id):
     """
     from inventory.models import ProductTemplate
     from .services import generate_image_description, get_api_keys
-    from crm.utils import get_public_domain
     
     try:
         template = ProductTemplate.objects.get(id=template_id)
