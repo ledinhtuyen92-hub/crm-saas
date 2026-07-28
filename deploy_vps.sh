@@ -29,17 +29,11 @@ echo "=> Cập nhật hệ thống và cài đặt công cụ cơ bản..."
 apt-get update -y
 apt-get install -y curl wget git nginx certbot python3-certbot-nginx
 
-# Cài Docker nếu chưa có
+# Cài Docker nếu chưa có (phiên bản mới đã bao gồm docker compose plugin)
 if ! command -v docker &> /dev/null; then
     echo "=> Đang cài đặt Docker..."
     curl -fsSL https://get.docker.com -o get-docker.sh
     sh get-docker.sh
-fi
-
-# Cài Docker Compose
-if ! command -v docker-compose &> /dev/null; then
-    echo "=> Đang cài đặt Docker Compose..."
-    apt-get install -y docker-compose
 fi
 
 # Cài Node.js 20.x để build Frontend
@@ -67,9 +61,8 @@ chmod -R 755 $(pwd)/frontend/dist
 
 # 5. Khởi động Backend bằng Docker
 echo "=> Đang khởi chạy Backend (Django, Redis, Postgres, Celery)..."
-# Set permission cho db volume de tranh loi postgres
 mkdir -p backend/postgres_data
-docker-compose up -d --build
+docker compose up -d --build
 
 # Chờ Database sẵn sàng và nạp dữ liệu
 echo "=> Đang đợi Database khởi động (10s)..."
