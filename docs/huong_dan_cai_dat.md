@@ -114,12 +114,13 @@ Gõ lệnh `rclone config`
 
 **2. Quá trình cài đặt tự động bị lỗi ở bước SSL (DNS problem: NXDOMAIN)**
 - **Nguyên nhân:** Tên miền của bạn chưa được trỏ IP thành công, hoặc trỏ sai Name Server (rất hay gặp ở TenTen nếu chưa đổi NS về `ns-a1.tenten.vn`). Do đó Let's Encrypt từ chối cấp ổ khóa xanh.
-- **Hậu quả:** Vào web sẽ bị báo "Không bảo mật" (Not Secure). Nhưng phần mềm vẫn dùng bình thường.
+- **Hậu quả:** Vào web sẽ bị báo "Không bảo mật" (Not Secure). Nghiêm trọng hơn, khi bạn cố gắng đăng nhập sẽ bị báo lỗi **"Không thể đăng nhập. Vui lòng kiểm tra lại thông tin"** (Do giao diện không thể gửi mật khẩu qua đường ống HTTPS bị hỏng).
 - **Cách sửa:**
   1. Kiểm tra lại việc trỏ bản ghi A (hoặc Name Server) trên trang quản lý Tên miền.
-  2. Chờ 15-30 phút để mạng Internet quốc tế cập nhật.
+  2. Chờ 15-60 phút để mạng Internet toàn cầu cập nhật.
   3. Mở trình duyệt gõ `http://tenmien.com` (không có chữ `s`). Nếu web đã tải được giao diện bình thường thì vào màn hình VPS gõ lại lệnh sau để ốp ổ khóa xanh vào:
   ```bash
   certbot --nginx -d crm.congty.com
   ```
   *(Nhớ thay crm.congty.com bằng tên miền thực tế của bạn).*
+  **Lưu ý:** Nếu màn hình hiện ra câu hỏi *"What would you like to do?"*, bạn chỉ cần gõ số **`1`** (Attempt to reinstall this existing certificate) rồi nhấn **Enter** là xong.
