@@ -78,3 +78,25 @@ sudo bash backup.sh
 ```
 - Lệnh này sẽ tự động đóng gói toàn bộ Database khách hàng và Hình ảnh tải lên thành 1 tệp tin nén duy nhất nằm ở thư mục `/root/crm_backups/`.
 - Sau đó, ở cột bên trái của phần mềm MobaXterm (mục SFTP), bạn mở thư mục đó ra và **kéo file nén thả về máy tính cá nhân** để cất vào ổ cứng hoặc đẩy lên Google Drive. Rất an toàn và đơn giản!
+
+**3. Phương án Nâng cao: Tự động đồng bộ lên Google Drive mỗi đêm**
+Nếu bạn muốn hệ thống tự động backup và đẩy lên Google Drive lúc 2h sáng mỗi ngày mà không cần thao tác tay, hãy cài đặt Rclone:
+
+**Bước 3.1: Cài đặt Rclone**
+Gõ lệnh sau vào VPS:
+```bash
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
+```
+
+**Bước 3.2: Kết nối Google Drive**
+Gõ lệnh `rclone config`
+- Bấm `n` (New remote) -> Đặt tên là `gdrive`.
+- Chọn loại lưu trữ là Google Drive (thường là số `18`).
+- Cứ nhấn Enter để bỏ qua các mục không quan trọng cho đến khi nó đưa cho bạn 1 đường link.
+- Copy link đó dán vào trình duyệt, đăng nhập Gmail và bấm Cho phép (Allow).
+
+**Bước 3.3: Lên lịch chạy tự động**
+- Mở file backup.sh ra và thêm dòng lệnh rclone copy vào cuối file:
+  `rclone copy /root/crm_backups gdrive:CRM_Backups`
+- Gõ lệnh `crontab -e` trên VPS và dán dòng này vào cuối cùng để chạy tự động lúc 2h sáng:
+  `0 2 * * * bash /root/crm-saas/backup.sh`
