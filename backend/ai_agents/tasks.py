@@ -310,9 +310,9 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
                 )
                 
                 if lead.is_ai_active:
-                lead.has_unread_message = False
-                lead.unread_count = 0
-                update_fields.extend(['has_unread_message', 'unread_count'])
+                    lead.has_unread_message = False
+                    lead.unread_count = 0
+                    update_fields.extend(['has_unread_message', 'unread_count'])
             if is_followup:
                 lead.has_ai_followed_up = True
                 update_fields.append('has_ai_followed_up')
