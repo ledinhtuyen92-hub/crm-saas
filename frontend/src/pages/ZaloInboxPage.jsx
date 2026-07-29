@@ -1398,6 +1398,16 @@ export default function ZaloInboxPage() {
                   <div style={{ textAlign: 'center', marginTop: 40, color: '#9ca3af' }}>Chưa có tin nhắn nào.</div>
                 ) : (
                   messages.map((msg) => {
+                    if (msg.payload?.is_system_alert) {
+                      return (
+                        <div key={msg.id} style={{ textAlign: 'center', margin: '16px 0' }}>
+                          <span style={{ background: '#fee2e2', color: '#dc2626', padding: '6px 12px', borderRadius: 16, fontSize: 11, fontWeight: 500, display: 'inline-block', maxWidth: '80%', wordBreak: 'break-word' }}>
+                            ⚠️ {msg.payload.error_code ? `Lỗi API Zalo (${msg.payload.error_code}): ` : 'Lỗi hệ thống: '}
+                            {msg.payload.error_message || msg.content}
+                          </span>
+                        </div>
+                      )
+                    }
                     const isOutbound = msg.direction === 'outbound'
                     return (
                       <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isOutbound ? 'flex-end' : 'flex-start', marginBottom: 16 }}>
@@ -1444,11 +1454,6 @@ export default function ZaloInboxPage() {
                           </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, marginRight: isOutbound ? 8 : 0, marginLeft: isOutbound ? 0 : 36 }}>
-                          {msg.payload?.error && (
-                            <Tooltip title={msg.payload.error_code ? `Zalo từ chối gửi tin nhắn (Mã lỗi ${msg.payload.error_code}: ${msg.payload.error_message})` : `Lỗi hệ thống: ${msg.payload.error_message}`}>
-                              <InfoCircleOutlined style={{ color: '#dc2626', fontSize: 12, cursor: 'pointer' }} />
-                            </Tooltip>
-                          )}
                           <Text type="secondary" style={{ fontSize: 10 }}>
                             {dayjs(msg.created_at).format('HH:mm DD/MM/YYYY')}
                           </Text>

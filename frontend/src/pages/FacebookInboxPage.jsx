@@ -280,6 +280,17 @@ function ConvItem({ lead, selected, onClick }) {
 // Message bubble (Meta Messenger style & Zalo clean UX)
 function MessageBubble({ msg, lead, showAvatar = true }) {
   if (!msg) return null
+
+  if (msg.payload?.is_system_alert) {
+    return (
+      <div style={{ textAlign: 'center', margin: '16px 0' }}>
+        <span style={{ background: '#fee2e2', color: '#dc2626', padding: '6px 12px', borderRadius: 16, fontSize: 11, fontWeight: 500, display: 'inline-block', maxWidth: '80%', wordBreak: 'break-word' }}>
+          ⚠️ Lỗi hệ thống: {msg.payload.error_message || msg.text}
+        </span>
+      </div>
+    )
+  }
+
   const isPage = msg.sender_type === 'page'
   const urlLower = (msg.attachment_url || '').toLowerCase()
   const attachType = (msg.attachment_type || '').toLowerCase()
@@ -424,17 +435,8 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
           textAlign: isPage ? 'right' : 'left',
           textShadow: hasOnlyMedia ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
           color: hasOnlyMedia ? '#6b7280' : 'inherit',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: isPage ? 'flex-end' : 'flex-start',
-          gap: 4
         }}>
-          {msg.payload?.error && (
-            <Tooltip title={msg.payload.error_code ? `Meta từ chối gửi tin nhắn (Mã lỗi ${msg.payload.error_code}: ${msg.payload.error_message})` : `Lỗi hệ thống: ${msg.payload.error_message}`}>
-              <InfoCircleOutlined style={{ color: '#dc2626', fontSize: 12, cursor: 'pointer', opacity: 1 }} />
-            </Tooltip>
-          )}
-          <span>{formatTime(msg.created_at)}</span>
+          {formatTime(msg.created_at)}
         </div>
       </div>
     </div>
