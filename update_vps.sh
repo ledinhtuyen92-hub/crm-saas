@@ -1,7 +1,13 @@
 #!/bin/bash
 # CRM SaaS - Script CẬP NHẬT code mới lên VPS (chạy khi đã có hệ thống rồi)
-# Cách dùng: sudo bash update_vps.sh
-# Chạy trên VPS, KHÔNG phải máy tính anh
+#
+# ✅ Cách dùng (mỗi lần cần update):
+#    cd /duong-dan-du-an   (vào thư mục dự án)
+#    sudo bash update_vps.sh
+#
+# ℹ️  Script này đã tự động git pull bên trong, KHÔNG cần chạy git pull thủ công trước.
+# ℹ️  Lần đầu tiên: cần git pull 1 lần để tải file này về VPS, sau đó KHÔNG cần nữa.
+# Chạy trên VPS, KHÔNG phải máy tính local.
 
 set -e  # Dừng ngay nếu có lỗi
 
