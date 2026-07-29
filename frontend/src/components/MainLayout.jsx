@@ -705,9 +705,8 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                   margin: 0,
                   fontSize: 22,
                   fontWeight: 800,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  wordBreak: 'break-word',
+                  fontFamily: "'Outfit', sans-serif"
                 }}
               >
                 <span
@@ -724,7 +723,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                   Xin chào, {user?.full_name || user?.username}!
                 </span>
               </Title>
-              <Text type="secondary" style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <Text type="secondary" style={{ fontSize: 13, fontWeight: 500, fontFamily: "'Outfit', sans-serif" }}>
                 {greetingMessage}
               </Text>
             </div>

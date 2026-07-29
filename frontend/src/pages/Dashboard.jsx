@@ -271,10 +271,10 @@ function Dashboard() {
       <Row justify="space-between" align="top" gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} md={12}>
           <Space direction="vertical" size={2}>
-            <Title level={2} style={{ margin: 0 }}>
+            <Title level={2} style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 700 }}>
               Dashboard
             </Title>
-            <Text type="secondary">
+            <Text type="secondary" style={{ fontFamily: "'Outfit', sans-serif" }}>
               Tổng quan hiệu quả kinh doanh và tiến độ thi công nội thất
             </Text>
           </Space>
@@ -329,7 +329,7 @@ function Dashboard() {
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ width: '100%', marginInline: 0 }}>
+      <Row gutter={[16, 16]}>
         {statisticCards.map((item) => {
           const primaryColor = item.valueStyle?.color || '#2563eb';
           const bgColor = item.iconStyle?.background || 'rgba(37, 99, 235, 0.12)';
@@ -388,7 +388,7 @@ function Dashboard() {
         })}
       </Row>
 
-      <Row gutter={[16, 16]} style={{ width: '100%', marginTop: 16, marginInline: 0 }}>
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={16}>
           <Card title={`Doanh thu & Số lượng đơn hàng (${timeFilter === 'all' ? '6 tháng gần nhất' : timeFilterOptions.find(opt => opt.value === timeFilter)?.label?.toLowerCase() || ''})`} bordered={false} style={cardStyle} loading={loading}>
             <ResponsiveContainer width="100%" height={300}>
@@ -477,7 +477,7 @@ function Dashboard() {
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ width: '100%', marginTop: 16, marginInline: 0 }}>
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={12}>
           <Card title={`Công nợ phát sinh (${timeFilter === 'all' ? '6 tháng gần nhất' : timeFilterOptions.find(opt => opt.value === timeFilter)?.label?.toLowerCase() || ''})`} bordered={false} style={cardStyle} loading={loading}>
             <ResponsiveContainer width="100%" height={300}>
@@ -555,7 +555,7 @@ function Dashboard() {
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ width: '100%', marginTop: 16, marginInline: 0 }}>
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24}>
           <Card title="10 đơn hàng mới nhất" bordered={false} style={cardStyle} loading={loading}>
             <Table
