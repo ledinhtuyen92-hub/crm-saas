@@ -651,7 +651,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
             justifyContent: 'space-between',
             background: isDarkMode
               ? '#1e293b'
-              : 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 50%, #eff6ff 100%)',
+              : 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
             boxShadow: isDarkMode
               ? '0 4px 18px rgba(0, 0, 0, 0.28)'
               : '0 4px 18px rgba(15, 23, 42, 0.08)',
@@ -705,7 +705,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                 level={3}
                 style={{
                   margin: 0,
-                  fontSize: isMobile ? 18 : 22,
+                  fontSize: isMobile ? 16 : 22,
                   fontWeight: 800,
                   wordBreak: 'break-word',
                   fontFamily: "'Outfit', sans-serif",
@@ -850,7 +850,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                 >
                   {initials || <UserOutlined />}
                 </Avatar>
-                <div style={{ lineHeight: 1.3 }}>
+                <div style={{ lineHeight: 1.3, display: isMobile ? 'none' : 'block' }}>
                   <div>
                     <Text strong style={{ fontSize: 14 }}>
                       {displayName}
