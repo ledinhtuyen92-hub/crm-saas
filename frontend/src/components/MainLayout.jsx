@@ -643,17 +643,19 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
 
         <Header
           style={{
-            height: headerCollapsed ? 0 : 80,
-            minHeight: headerCollapsed ? 0 : 80,
+            height: headerCollapsed ? 0 : (isMobile ? 'auto' : 80),
+            minHeight: headerCollapsed ? 0 : (isMobile ? 70 : 80),
             lineHeight: 'normal',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: token.colorBgContainer,
+            background: isDarkMode
+              ? '#1e293b'
+              : 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 50%, #eff6ff 100%)',
             boxShadow: isDarkMode
               ? '0 4px 18px rgba(0, 0, 0, 0.28)'
               : '0 4px 18px rgba(15, 23, 42, 0.08)',
-            padding: isMobile ? '0 16px' : '0 24px',
+            padding: isMobile ? '12px 16px' : '0 24px',
             position: 'sticky',
             top: 0,
             zIndex: 10,
@@ -703,10 +705,12 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                 level={3}
                 style={{
                   margin: 0,
-                  fontSize: 22,
+                  fontSize: isMobile ? 18 : 22,
                   fontWeight: 800,
                   wordBreak: 'break-word',
-                  fontFamily: "'Outfit', sans-serif"
+                  fontFamily: "'Outfit', sans-serif",
+                  lineHeight: 1.2,
+                  marginBottom: isMobile ? 4 : 0
                 }}
               >
                 <span
@@ -723,7 +727,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                   Xin chào, {user?.full_name || user?.username}!
                 </span>
               </Title>
-              <Text type="secondary" style={{ fontSize: 13, fontWeight: 500, fontFamily: "'Outfit', sans-serif" }}>
+              <Text type="secondary" style={{ fontSize: isMobile ? 11 : 13, fontWeight: 500, fontFamily: "'Outfit', sans-serif", lineHeight: 1.3 }}>
                 {greetingMessage}
               </Text>
             </div>
