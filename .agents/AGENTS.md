@@ -17,6 +17,7 @@
 - **Quy tắc thực thi khi code Frontend:**
   - **Grid & Form:** Tuyệt đối không dùng fix cứng `span={12}` (hoặc tương tự) cho `Col` trong Grid/Form mà không có responsive. Phải dùng `xs={24} md={12}` để trên điện thoại các trường nhập liệu tự động dàn thành 1 cột dọc (100% width).
   - **Tables:** Mọi bảng dữ liệu (Table) bắt buộc phải có thuộc tính `scroll={{ x: 'max-content' }}` (hoặc một số pixel cụ thể) để tránh bị bóp méo chữ trên màn hình hẹp.
+  - **Danh sách trên Di động (Mobile Lists):** Đối với các danh sách hiển thị trên di động (ví dụ 10 đơn hàng mới nhất), NÊN sử dụng component `List` của Ant Design để render dạng các thẻ (card) theo chiều dọc thay vì dùng `Table` phải cuộn ngang. Các thẻ phải bo góc, có padding chuẩn, chia layout rõ ràng (ví dụ: title, meta, tags trạng thái, icon) tương tự như thiết kế trong `CustomerList.jsx`. Luôn bọc Table/List bằng `{isMobile ? <List .../> : <Table .../>}`.
   - **Layout & Modal:** Modal phải có chiều rộng linh hoạt (Ant Design tự động xử lý tốt, nhưng không được fix cứng bằng px quá kích thước màn hình). Sidebar/Menu phải dùng cơ chế ẩn/Drawer trên mobile (đã được setup ở MainLayout).
   - **Charts:** Mọi biểu đồ đều phải được bọc trong `<ResponsiveContainer>`.
 
