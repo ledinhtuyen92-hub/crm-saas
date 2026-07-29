@@ -1386,7 +1386,7 @@
   "pk": 2,
   "fields": {
     "password": "pbkdf2_sha256$1000000$gogv5if640Ve4r5k5DvYiY$Co2C/05RkNJOSvpBH4uiONSzdeTJAZ/vJysA2SrgpDY=",
-    "last_login": "2026-07-29T06:13:54.711Z",
+    "last_login": "2026-07-29T07:51:54.184Z",
     "is_superuser": false,
     "username": "giamdoc",
     "first_name": "",
@@ -1927,6 +1927,16 @@
   }
 },
 {
+  "model": "users.companysequence",
+  "pk": 22,
+  "fields": {
+    "company": 15,
+    "prefix": "FUJI-DH",
+    "date_str": "29072026",
+    "last_seq": 1
+  }
+},
+{
   "model": "crm.customertag",
   "pk": 2,
   "fields": {
@@ -2064,7 +2074,7 @@
     "city": "",
     "birthday": null,
     "source": "zalo",
-    "status": "new",
+    "status": "has_order",
     "is_inactive": false,
     "assigned_to": null,
     "created_by": null,
@@ -2257,6 +2267,127 @@
     "is_active": true,
     "created_at": "2026-07-09T02:23:26.411Z",
     "updated_at": "2026-07-22T02:21:03.002Z"
+  }
+},
+{
+  "model": "orders.order",
+  "pk": 15,
+  "fields": {
+    "company": 15,
+    "order_number": "FUJI-DH-29072026-001",
+    "customer": 37,
+    "quotation": null,
+    "created_by": 2,
+    "approved_by": 2,
+    "status": "approved",
+    "financial_status": "unpaid",
+    "payment_term": "Cọc 30% - Giao hàng 70%",
+    "payment_terms_schedule": [
+      {
+        "type": "deposit",
+        "title": "Thanh toán đợt 1",
+        "percentage": 100
+      }
+    ],
+    "installation_date": null,
+    "notes": "",
+    "subtotal": "3900000.00",
+    "vat_rate": "0.00",
+    "vat_amount": "0.00",
+    "shipping_fee": "0.00",
+    "installation_fee": "0.00",
+    "delivery_time": "3-5 ngày làm việc",
+    "warranty_months": 12,
+    "validity_days": 30,
+    "discount_total": "0.00",
+    "total_amount": "3900000.00",
+    "approved_at": "2026-07-29T07:54:46.262Z",
+    "custom_data": {
+      "template_snapshot": {
+        "id": 2,
+        "code": "default",
+        "name": "Báo giá FUJITECH",
+        "layout_style": "modern_navy",
+        "layout_config": {
+          "sections": [
+            {
+              "id": "header",
+              "name": "🏢 Khối Header & Logo Công ty",
+              "order": 1,
+              "visible": true
+            },
+            {
+              "id": "title",
+              "name": "📌 Khối Tiêu đề & Lời chào",
+              "order": 2,
+              "visible": true
+            },
+            {
+              "id": "customer_info",
+              "name": "👤 Khối Thông tin Khách hàng / Đối tác",
+              "order": 3,
+              "visible": true
+            },
+            {
+              "id": "items_table",
+              "name": "📦 Khối Bảng Hạng mục Sản phẩm & Dịch vụ",
+              "order": 4,
+              "visible": true
+            },
+            {
+              "id": "summary",
+              "name": "💰 Khối Tổng kết Thanh toán & Chiết khấu",
+              "order": 5,
+              "visible": true
+            },
+            {
+              "id": "terms",
+              "name": "📜 Khối Ghi chú & Điều khoản (Từ Admin Công ty)",
+              "order": 6,
+              "visible": true
+            },
+            {
+              "id": "signatures",
+              "name": "✍️ Khối Chữ ký Xác nhận",
+              "order": 7,
+              "columns": 2,
+              "visible": true
+            }
+          ],
+          "table_style": "classic_border",
+          "theme_color": "#d97706",
+          "custom_title": "BÁO GIÁ SẢN XUẤT CỬA COMPOSITE",
+          "paper_orientation": "landscape"
+        },
+        "footer_content": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao."
+      }
+    },
+    "created_at": "2026-07-29T07:54:42.505Z",
+    "updated_at": "2026-07-29T07:54:46.263Z"
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": 32,
+  "fields": {
+    "order": 15,
+    "product": 7,
+    "item_type": "product",
+    "product_name": "Cửa composite CCP01 - Mẫu mới",
+    "unit_price": "3900000.00",
+    "width": "0.00",
+    "height": "0.00",
+    "quantity": 1,
+    "discount_percent": "0.00",
+    "line_total": "0.00",
+    "note": "",
+    "length": "0.00",
+    "area": "0.00",
+    "spec": "",
+    "warranty": "12 tháng",
+    "thickness": "0.00",
+    "product_image": null,
+    "custom_data": {}
   }
 },
 {
@@ -7173,6 +7304,36 @@
   }
 },
 {
+  "model": "notifications.notification",
+  "pk": 389,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": 2,
+    "type": "order_new",
+    "title": "Đơn hàng mới cần duyệt",
+    "message": "Đơn hàng FUJI-DH-29072026-001 của khách Khách Zalo (0463) đang chờ duyệt.",
+    "link": "/orders/15",
+    "is_read": false,
+    "created_at": "2026-07-29T07:54:42.576Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 390,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "order_new",
+    "title": "Đơn hàng mới cần duyệt",
+    "message": "Đơn hàng FUJI-DH-29072026-001 của khách Khách Zalo (0463) đang chờ duyệt.",
+    "link": "/orders/15",
+    "is_read": false,
+    "created_at": "2026-07-29T07:54:42.671Z"
+  }
+},
+{
   "model": "notifications.internalannouncement",
   "pk": 4,
   "fields": {
@@ -7407,6 +7568,21 @@
   }
 },
 {
+  "model": "approvals.approvalrequest",
+  "pk": 123,
+  "fields": {
+    "company": 15,
+    "content_type": 23,
+    "object_id": 15,
+    "requester": 2,
+    "title": "Phê duyệt Đơn hàng FUJI-DH-29072026-001",
+    "description": "Đơn hàng FUJI-DH-29072026-001 — Khách hàng: Khách Zalo (0463)",
+    "status": "approved",
+    "created_at": "2026-07-29T07:54:42.745Z",
+    "updated_at": "2026-07-29T07:54:42.745Z"
+  }
+},
+{
   "model": "approvals.approvalstep",
   "pk": 96,
   "fields": {
@@ -7539,6 +7715,39 @@
     "comment": "",
     "comments": "",
     "acted_at": "2026-07-22T03:53:22.778Z"
+  }
+},
+{
+  "model": "approvals.approvalstep",
+  "pk": 122,
+  "fields": {
+    "request": 123,
+    "step_order": 1,
+    "approver_user": null,
+    "approver_role": null,
+    "acted_by": 2,
+    "status": "approved",
+    "comment": "",
+    "comments": "",
+    "acted_at": null
+  }
+},
+{
+  "model": "finance.orderpaymentmilestone",
+  "pk": 37,
+  "fields": {
+    "company": 15,
+    "order": 15,
+    "milestone_type": "deposit",
+    "title": "Thanh toán đợt 1",
+    "percentage": "100.00",
+    "amount": "3900000.00",
+    "paid_amount": "0.00",
+    "status": "pending",
+    "due_date": null,
+    "note": "",
+    "created_at": "2026-07-29T07:54:46.353Z",
+    "updated_at": "2026-07-29T07:54:46.353Z"
   }
 },
 {

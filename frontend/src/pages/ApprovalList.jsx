@@ -1,5 +1,5 @@
-import { CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, EyeOutlined, CheckOutlined, CloseOutlined, DeleteOutlined } from '@ant-design/icons'
-import { Alert, Badge, Button, Card, Col, Divider, Form, Input, Modal, Row, Select, Space, Table, Tag, Tooltip, Typography, message, Tabs, Steps } from 'antd'
+import { CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, EyeOutlined, CheckOutlined, CloseOutlined, DeleteOutlined, AuditOutlined } from '@ant-design/icons'
+import { Alert, Badge, Button, Card, Col, Divider, Form, Input, Modal, Row, Select, Space, Table, Tag, Tooltip, Typography, message, Tabs, Steps, List, Collapse } from 'antd'
 import dayjs from 'dayjs'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -194,11 +194,81 @@ export default function ApprovalList() {
 
   const { isMobile, padding } = useResponsive()
 
+  const renderMobileList = () => (
+    <List
+      dataSource={requests}
+      loading={loading}
+      pagination={{ pageSize: 10, size: "small" }}
+      renderItem={(record) => {
+        const cfg = statusConfig[record.status] || { label: record.status, color: 'default' }
+        const pendingStep = (record.steps || []).find(s => s.status === 'pending')
+        let canAct = false
+        if (activeTab === 'to_approve' && pendingStep && record.status === 'pending') {
+          if (pendingStep.approver_user === user.id) canAct = true
+          if (pendingStep.approver_role === user.role) canAct = true
+          if (user.is_superuser || user.is_company_admin) canAct = true
+          if (hasPermission('orders.approve') && record.title?.toLowerCase().includes('đơn hàng')) canAct = true
+          if (hasPermission('sales.approve') && record.title?.toLowerCase().includes('báo giá')) canAct = true
+          if (hasPermission('approvals.approve') && !record.title?.toLowerCase().includes('đơn hàng') && !record.title?.toLowerCase().includes('báo giá')) canAct = true
+        }
+
+        return (
+          <List.Item
+            style={{ background: '#fff', borderRadius: 8, padding: 12, marginBottom: 8, border: '1px solid #f0f0f0' }}
+          >
+            <List.Item.Meta
+              title={
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+                  <div style={{ flex: 1, paddingRight: 8 }}>
+                    <Text strong style={{ fontSize: 14, color: '#1649c9' }}>{record.title}</Text>
+                    <div style={{ marginTop: 4 }}>
+                      <Tag color="blue">{record.content_type}</Tag>
+                      <Text type="secondary" style={{ fontSize: 12 }}>ID: {record.object_id}</Text>
+                    </div>
+                  </div>
+                  <Tag color={cfg.color} icon={cfg.icon} style={{ fontSize: 12 }}>{cfg.label}</Tag>
+                </div>
+              }
+              description={
+                <div style={{ marginTop: 8 }}>
+                  <Space direction="vertical" size={2}>
+                    <Text type="secondary">Gửi bởi: <Text strong>{record.requester_name}</Text></Text>
+                    <Text type="secondary">Ngày tạo: {dayjs(record.created_at).format('DD/MM/YYYY HH:mm')}</Text>
+                  </Space>
+                  <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <Button type="default" size="small" icon={<EyeOutlined style={{ color: '#2563eb' }} />} onClick={() => setSelectedReq(record)}>Chi tiết</Button>
+                    {canAct && (
+                      <>
+                        <Button type="primary" size="small" icon={<CheckOutlined />} style={{ background: '#16a34a' }} onClick={() => openActionModal(record, pendingStep, 'approve')}>
+                          Duyệt
+                        </Button>
+                        <Button danger size="small" icon={<CloseOutlined />} onClick={() => openActionModal(record, pendingStep, 'reject')}>
+                          Từ chối
+                        </Button>
+                      </>
+                    )}
+                    {canDelete && (
+                      <Button danger size="small" icon={<DeleteOutlined />} disabled={record.status === 'pending'} onClick={() => openDeleteModal('single', record)}>Xóa</Button>
+                    )}
+                  </div>
+                </div>
+              }
+            />
+          </List.Item>
+        )
+      }}
+    />
+  )
+
+
   return (
     <section style={{ width: '100%', minWidth: 0 }}>
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }} gutter={[16, 16]}>
         <Col xs={24} md={12}>
-          <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>Luồng Phê Duyệt</Title>
+          <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>
+            <AuditOutlined style={{ color: '#0284c7', marginRight: 10 }} />
+            Luồng Phê Duyệt
+          </Title>
           <Text type="secondary">Quản lý và xét duyệt các yêu cầu tập trung</Text>
         </Col>
         <Col xs={24} md={12} style={{ textAlign: isMobile ? 'left' : 'right' }}>
@@ -238,24 +308,51 @@ export default function ApprovalList() {
         bodyStyle={{ padding: 0 }} 
         style={{ borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}
       >
-        <Tabs 
-          activeKey={activeTab} 
-          onChange={setActiveTab}
-          style={{ padding: '0 24px' }}
-          tabBarStyle={{ marginBottom: 0 }}
-          items={[
-            { label: 'Cần tôi duyệt', key: 'to_approve' },
-            { label: 'Yêu cầu của tôi', key: 'my_requests' },
-            { label: 'Tất cả', key: 'all' },
-          ]}
-        />
-        <Table scroll={{ x: 'max-content' }} 
-          columns={columns} 
-          dataSource={requests} 
-          rowKey="id" 
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-        />
+        {isMobile ? (
+          <Collapse
+            accordion
+            activeKey={activeTab}
+            onChange={(key) => setActiveTab(key || 'to_approve')}
+            items={[
+              {
+                label: <Text strong>Cần tôi duyệt</Text>,
+                key: 'to_approve',
+                children: renderMobileList()
+              },
+              {
+                label: <Text strong>Yêu cầu của tôi</Text>,
+                key: 'my_requests',
+                children: renderMobileList()
+              },
+              {
+                label: <Text strong>Tất cả</Text>,
+                key: 'all',
+                children: renderMobileList()
+              },
+            ]}
+          />
+        ) : (
+          <>
+            <Tabs 
+              activeKey={activeTab} 
+              onChange={setActiveTab}
+              style={{ padding: '0 24px' }}
+              tabBarStyle={{ marginBottom: 0 }}
+              items={[
+                { label: 'Cần tôi duyệt', key: 'to_approve' },
+                { label: 'Yêu cầu của tôi', key: 'my_requests' },
+                { label: 'Tất cả', key: 'all' },
+              ]}
+            />
+            <Table scroll={{ x: 'max-content' }} 
+              columns={columns} 
+              dataSource={requests} 
+              rowKey="id" 
+              loading={loading}
+              pagination={{ pageSize: 10 }}
+            />
+          </>
+        )}
       </Card>
 
       {/* Modal Detail & Action */}

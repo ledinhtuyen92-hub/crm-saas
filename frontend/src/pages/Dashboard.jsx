@@ -10,7 +10,8 @@ import {
   FrownOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { Card, Col, Row, Space, Statistic, Table, Tag, Typography, theme, message, Segmented, Select } from 'antd'
+import { Card, Col, Row, Space, Statistic, Table, Tag, Typography, theme, message, Segmented, Select, List, Badge } from 'antd'
+import { DashboardOutlined } from '@ant-design/icons'
 import {
   Bar,
   BarChart,
@@ -272,6 +273,7 @@ function Dashboard() {
         <Col xs={24} md={12}>
           <Space direction="vertical" size={2}>
             <Title level={2} style={{ margin: 0, fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>
+              <DashboardOutlined style={{ color: '#0284c7', marginRight: 10 }} />
               Dashboard
             </Title>
               <Text type="secondary" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -558,14 +560,70 @@ function Dashboard() {
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24}>
           <Card title="10 đơn hàng mới nhất" bordered={false} style={cardStyle} loading={loading}>
-            <Table
-              columns={contractColumns}
-              dataSource={latestOrders}
-              rowKey="id"
-              pagination={false}
-              size="middle"
-              scroll={{ x: 'max-content' }}
-            />
+            {isMobile ? (
+              <List
+                itemLayout="horizontal"
+                dataSource={latestOrders}
+                pagination={false}
+                renderItem={(record) => {
+                  const statusItem = {
+                    color: {
+                      'completed': 'green',
+                      'in_production': 'blue',
+                      'approved': 'gold',
+                      'pending': 'orange',
+                      'rejected': 'red',
+                      'cancelled': 'default'
+                    }[record.status] || 'default',
+                    label: {
+                      'completed': 'Hoàn thành',
+                      'in_production': 'Đang sản xuất',
+                      'approved': 'Đã duyệt',
+                      'pending': 'Chờ duyệt',
+                      'rejected': 'Từ chối',
+                      'cancelled': 'Đã huỷ'
+                    }[record.status] || record.status
+                  }
+                  
+                  return (
+                    <List.Item
+                      style={{ background: '#fff', borderRadius: 8, padding: 12, marginBottom: 8, border: '1px solid #f0f0f0' }}
+                    >
+                      <List.Item.Meta
+                        title={
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <Text strong style={{ fontSize: 15, color: '#1649c9' }}>{record.order_number}</Text>
+                            <Badge color={statusItem.color} text={statusItem.label} />
+                          </div>
+                        }
+                        description={
+                          <div style={{ marginTop: 4 }}>
+                            <Space direction="vertical" size={2}>
+                              <Text type="secondary"><UserOutlined /> {record.customer_name || 'Khách lẻ'}</Text>
+                              <Text type="secondary">
+                                <DollarCircleOutlined /> Tổng tiền: <Text strong style={{ color: '#059669' }}>{Number(record.total_amount).toLocaleString('vi-VN')} đ</Text>
+                              </Text>
+                              <Text type="secondary">
+                                <BankOutlined /> Người tạo: {record.created_by_name || 'N/A'}
+                              </Text>
+                            </Space>
+                          </div>
+                        }
+                      />
+                    </List.Item>
+                  )
+                }}
+              />
+            ) : (
+              <Table
+                columns={contractColumns}
+                dataSource={latestOrders}
+                rowKey="id"
+                pagination={false}
+                size="middle"
+                scroll={{ x: 'max-content' }}
+              />
+            )}
           </Card>
         </Col>
       </Row>

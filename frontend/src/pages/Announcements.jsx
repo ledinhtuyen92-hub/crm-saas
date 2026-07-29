@@ -301,6 +301,7 @@ const Announcements = () => {
                 <Col xs={24} md={12}>
                     <Space direction="vertical" size={2}>
                         <Title level={2} style={{ margin: 0, fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>
+                            <NotificationOutlined style={{ color: '#0284c7', marginRight: 10 }} />
                             Thông báo nội bộ
                         </Title>
                         <Text type="secondary" style={{ fontFamily: "'Inter', sans-serif" }}>

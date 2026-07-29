@@ -804,7 +804,7 @@ function CustomerList() {
             <TeamOutlined style={{ marginRight: 10, color: '#1649c9' }} />
             Quản lý Khách hàng
           </Title>
-          <Text type="secondary">Theo dõi hành trình khách hàng từ Lead đến giao dịch</Text>
+          <Text type="secondary">Theo dõi và quản lý khách hàng</Text>
         </div>
 
         <Space wrap style={{ flex: 1, justifyContent: 'flex-end' }}>
