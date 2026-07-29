@@ -606,12 +606,12 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
       <Layout style={{ minWidth: 0, background: token.colorBgLayout, marginLeft: isMobile ? 0 : (collapsed ? 80 : 260), transition: 'all 0.2s', position: 'relative' }}>
         
         {/* Toggle Header Button */}
-        {!isMobile && (
+        {true && (
           <div
             onClick={() => setHeaderCollapsed(!headerCollapsed)}
             style={{
               position: 'fixed',
-              top: headerCollapsed ? 0 : 80,
+              top: headerCollapsed ? 0 : (isMobile ? 70 : 80),
               right: 24,
               zIndex: 101,
               width: 32,
@@ -626,7 +626,6 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
               cursor: 'pointer',
               color: '#64748b',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = '#2563eb'
@@ -757,7 +756,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
 
             <Popover
               content={
-                <div style={{ width: 300, maxHeight: 400, overflowY: 'auto' }}>
+                <div style={{ width: isMobile ? '85vw' : 320, maxWidth: 350, maxHeight: '70vh', overflowY: 'auto', overflowX: 'hidden' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                     <Text strong>Thông báo</Text>
                     {notifications.length > 0 && (
@@ -789,15 +788,15 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                           <List.Item.Meta
                             title={
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <Text strong={!item.is_read} style={{ fontSize: 13, color: item.is_read ? '#595959' : '#1890ff' }}>
+                                <Text strong={!item.is_read} style={{ fontSize: 13, color: item.is_read ? '#595959' : '#1890ff', wordBreak: 'break-word', whiteSpace: 'normal', flex: 1, paddingRight: 8 }}>
                                   {item.title}
                                 </Text>
-                                {!item.is_read && <Badge status="processing" />}
+                                {!item.is_read && <Badge status="processing" style={{ flexShrink: 0, marginTop: 4 }} />}
                               </div>
                             }
                             description={
                               <div>
-                                <Text style={{ fontSize: 12, color: item.is_read ? '#8c8c8c' : '#595959', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginTop: 4 }}>
+                                <Text style={{ fontSize: 12, color: item.is_read ? '#8c8c8c' : '#595959', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginTop: 4, wordBreak: 'break-word' }}>
                                   {item.message ? item.message.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ') : ''}
                                 </Text>
                                 <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
@@ -813,7 +812,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                 </div>
               }
               trigger="click"
-              placement="bottomRight"
+              placement={isMobile ? 'bottom' : 'bottomRight'}
               open={notifVisible}
               onOpenChange={handleNotifVisibleChange}
             >

@@ -1231,7 +1231,7 @@ export default function ZaloInboxPage() {
 
         {/* Cột 2: Danh sách hội thoại */}
         {(!isMobile || !selectedLead) && (
-        <div style={{ width: isMobile ? '100%' : leftColWidth, borderRight: isMobile ? 'none' : '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', background: '#fff', flexShrink: 0 }}>
+        <div style={{ width: isMobile ? '100%' : leftColWidth, flex: isMobile ? 1 : 'none', height: isMobile ? 'auto' : '100%', borderRight: isMobile ? 'none' : '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', background: '#fff', flexShrink: 0 }}>
           <div style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>
             <Search
               placeholder="Tìm tên, tin nhắn..."
