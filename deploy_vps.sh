@@ -1,6 +1,12 @@
 #!/bin/bash
 # CRM SaaS - Auto Deploy Script for Ubuntu VPS (22.04/24.04)
 # Make sure to run this script as root! (sudo bash deploy_vps.sh)
+#
+# ⚠️⚠️⚠️  CẢNH BÁO QUAN TRỌNG  ⚠️⚠️⚠️
+# Script này CHỈ dùng cho lần CÀI ĐẶT ĐẦU TIÊN trên VPS TRỐNG.
+# Script này sẽ XÓA SẠCH TOÀN BỘ DỮ LIỆU database hiện tại (lệnh flush).
+# ĐỂ CẬP NHẬT code mới lên VPS đang chạy, hãy dùng: sudo bash update_vps.sh
+# ⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 
 echo "=========================================================="
 echo "      🚀 KHOI TAO HE THONG CRM SAAS (ONE-CLICK) 🚀"
