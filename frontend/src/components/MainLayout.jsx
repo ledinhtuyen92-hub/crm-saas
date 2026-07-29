@@ -708,7 +708,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                   fontSize: isMobile ? 16 : 22,
                   fontWeight: 800,
                   wordBreak: 'break-word',
-                  fontFamily: "'Outfit', sans-serif",
+                  fontFamily: "'Inter', sans-serif",
                   lineHeight: 1.2,
                   marginBottom: isMobile ? 4 : 0
                 }}
@@ -727,7 +727,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
                   Xin chào, {user?.full_name || user?.username}!
                 </span>
               </Title>
-              <Text type="secondary" style={{ fontSize: isMobile ? 11 : 13, fontWeight: 500, fontFamily: "'Outfit', sans-serif", lineHeight: 1.3 }}>
+              <Text type="secondary" style={{ fontSize: isMobile ? 11 : 13, fontWeight: 500, fontFamily: "'Inter', sans-serif", lineHeight: 1.3 }}>
                 {greetingMessage}
               </Text>
             </div>

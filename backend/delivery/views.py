@@ -62,11 +62,15 @@ class DeliveryOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     def perform_update(self, serializer):
         instance = self.get_object()
         new_status = serializer.validated_data.get("status", instance.status)
-        if new_status != instance.status and hasattr(instance.order, 'warranty_card'):
-            warranty = instance.order.warranty_card
-            if warranty.status == "active" and new_status != "delivered":
-                from rest_framework.exceptions import ValidationError
-                raise ValidationError({"status": "Không thể lùi trạng thái khi Đơn hàng đã có Phiếu bảo hành đang hiệu lực."})
+        
+        # Chỉ chặn lùi trạng thái nếu TRƯỚC ĐÓ là delivered và muốn đổi sang trạng thái khác
+        if instance.status == "delivered" and new_status != "delivered":
+            if hasattr(instance.order, 'warranty_card'):
+                warranty = instance.order.warranty_card
+                if warranty.status == "active":
+                    from rest_framework.exceptions import ValidationError
+                    raise ValidationError({"status": "Không thể lùi trạng thái khi Đơn hàng đã có Phiếu bảo hành đang hiệu lực. Vui lòng hủy Phiếu bảo hành trước."})
+        
         serializer.save()
 
     @action(detail=True, methods=["post"])

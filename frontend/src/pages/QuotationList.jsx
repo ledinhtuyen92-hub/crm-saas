@@ -1,5 +1,5 @@
 import { AlertOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, DeleteOutlined, EditOutlined, FileDoneOutlined, FilePdfOutlined, FileTextOutlined, PlusOutlined, PrinterOutlined, SearchOutlined, SendOutlined, SettingOutlined, UserOutlined, CameraOutlined } from '@ant-design/icons'
-import { AutoComplete, Badge, Button, Card, Col, DatePicker, Divider, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space, Table, Tag, Tooltip, Typography, message, theme, Upload, Avatar, Image } from 'antd' 
+import { AutoComplete, Badge, Button, Card, Col, DatePicker, Divider, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space, Table, Tag, Tooltip, Typography, message, theme, Upload, Avatar, Image, List } from 'antd' 
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -7,6 +7,7 @@ import { useLocation } from 'react-router-dom'
 
 import QuotationPrintView from '../components/QuotationPrintView'
 import api from '../utils/api'
+import { useResponsive } from '../hooks/useResponsive'
 
 const { Title, Text, Paragraph } = Typography
 const { Option } = Select
@@ -23,6 +24,7 @@ const statusConfig = {
 }
 
 export default function QuotationList() {
+  const { isMobile } = useResponsive()
   const { token } = theme.useToken()
   const { user, isCompanyAdmin, hasPermission, checkMaintenance } = useAuth()
   const location = useLocation()
@@ -925,6 +927,140 @@ export default function QuotationList() {
   }
 
   // ── Table Columns ─────────────────────────────────────────────────────
+  const renderQuotationActions = (record) => (
+    <Space wrap size={8}>
+      {(() => {
+        const hasBypass = hasPermission('sales.bypass_customer_signature');
+        
+        const requireApproval = companySettings?.require_quotation_approval ?? true;
+        const canCreateOrder = record.status === 'accepted' || 
+          (hasBypass && ['approved', 'sent'].includes(record.status)) ||
+          (hasBypass && record.status === 'draft' && !requireApproval);
+        
+        if (!canCreateOrder) return null;
+
+        if (record.order_status === 'pending') {
+          return (
+            <Tooltip title="Đơn hàng đang chờ quản lý phê duyệt">
+              <Button size="small" disabled style={{ background: '#f1f5f9', color: '#64748b' }}>
+                <ClockCircleOutlined /> Đang chờ duyệt ĐH
+              </Button>
+            </Tooltip>
+          )
+        }
+        if (record.order_status === 'approved' || record.order_status === 'in_production' || record.order_status === 'shipping' || record.order_status === 'completed') {
+          return (
+            <Tooltip title="Đơn hàng đã được duyệt chính thức">
+              <Button size="small" disabled style={{ background: '#dcfce7', color: '#15803d', borderColor: '#86efac' }}>
+                <CheckCircleOutlined /> Đã tạo ĐH
+              </Button>
+            </Tooltip>
+          )
+        }
+        if (record.order_status === 'rejected') {
+          return (
+            <Tooltip title="Đơn hàng đã bị từ chối. Vui lòng sang phần Đơn hàng để sửa lại.">
+              <Button size="small" disabled style={{ background: '#fee2e2', color: '#b91c1c', borderColor: '#fca5a5' }}>
+                <CloseCircleOutlined /> ĐH bị từ chối
+              </Button>
+            </Tooltip>
+          )
+        }
+        return (
+          <Popconfirm
+            title="Xác nhận tạo đơn hàng?"
+            description={hasBypass && record.status !== 'accepted' 
+              ? "Khách hàng chưa ký xác nhận nhưng bạn có quyền Bỏ qua. Xác nhận tạo Đơn hàng?" 
+              : "Bạn có chắc chắn muốn chuyển đổi báo giá này thành Đơn hàng chính thức không?"}
+            onConfirm={() => handleConvertToOrder(record.id)}
+            okText="Đồng ý tạo"
+            cancelText="Hủy"
+          >
+            <Button
+              type="primary"
+              size="small"
+              icon={<FileDoneOutlined />}
+              style={{ background: '#16a34a', borderColor: '#16a34a' }}
+            >
+              Tạo Đơn Hàng
+            </Button>
+          </Popconfirm>
+        )
+      })()}
+      <Tooltip title="Xem chi tiết & In PDF">
+        <Button
+          type="text"
+          shape="circle"
+          icon={<FileTextOutlined style={{ color: '#2563eb' }} />}
+          onClick={() => {
+            setSelectedQuotation(record)
+            setDrawerVisible(true)
+            if (!record?.custom_data?.template_snapshot?.code) {
+              setTimeout(() => backfillTemplateSnapshot(record), 500)
+            }
+          }}
+        />
+      </Tooltip>
+      {(record.status === 'draft' || record.status === 'rejected') && hasPermission('sales.require_approval') ? (
+        <Button
+          type="default"
+          size="small"
+          onClick={() => openApprovalModal(record)}
+        >
+          Trình duyệt
+        </Button>
+      ) : null}
+      {record.status === 'pending_approval' && hasPermission('sales.approve') && (
+        <Space size={4}>
+          <Tooltip title="Duyệt báo giá">
+            <Button
+              type="primary"
+              size="small"
+              icon={<CheckCircleOutlined />}
+              style={{ background: '#16a34a', borderColor: '#16a34a' }}
+              onClick={() => handleQuickApprove(record.id)}
+            >
+              Duyệt
+            </Button>
+          </Tooltip>
+          <Tooltip title="Từ chối">
+            <Button
+              danger
+              type="primary"
+              size="small"
+              icon={<CloseCircleOutlined />}
+              onClick={() => handleQuickReject(record.id)}
+            >
+              Từ chối
+            </Button>
+          </Tooltip>
+        </Space>
+      )}
+      {canEdit && (isCompanyAdmin || record.status !== 'accepted') && (
+        <Tooltip title="Sửa báo giá">
+          <Button
+            type="text"
+            shape="circle"
+            icon={<EditOutlined style={{ color: '#d97706' }} />}
+            onClick={() => handleEditClick(record)}
+          />
+        </Tooltip>
+      )}
+      {canDelete && record.status !== 'pending_approval' && (isCompanyAdmin || record.status !== 'accepted') && (
+        <Popconfirm
+          title="Xoá báo giá?"
+          description="Bạn có chắc chắn muốn xoá báo giá này không?"
+          onConfirm={() => handleDelete(record.id)}
+          okText="Xoá"
+          cancelText="Hủy"
+          okButtonProps={{ danger: true }}
+        >
+          <Tooltip title="Xoá"><Button type="text" danger shape="circle" icon={<DeleteOutlined />} /></Tooltip>
+        </Popconfirm>
+      )}
+    </Space>
+  )
+
   const columns = [
     {
       title: 'Mã báo giá',
@@ -1011,138 +1147,7 @@ export default function QuotationList() {
       title: 'Hành động',
       key: 'action',
       align: 'right',
-      render: (_, record) => (
-        <Space>
-          {(() => {
-            const hasBypass = hasPermission('sales.bypass_customer_signature');
-            
-            const canCreateOrder = record.status === 'accepted' || 
-              (hasBypass && ['approved', 'sent'].includes(record.status)) ||
-              (hasBypass && record.status === 'draft' && !requireApproval);
-            
-            if (!canCreateOrder) return null;
-
-            if (record.order_status === 'pending') {
-              return (
-                <Tooltip title="Đơn hàng đang chờ quản lý phê duyệt">
-                  <Button size="small" disabled style={{ background: '#f1f5f9', color: '#64748b' }}>
-                    <ClockCircleOutlined /> Đang chờ duyệt ĐH
-                  </Button>
-                </Tooltip>
-              )
-            }
-            if (record.order_status === 'approved' || record.order_status === 'in_production' || record.order_status === 'shipping' || record.order_status === 'completed') {
-              return (
-                <Tooltip title="Đơn hàng đã được duyệt chính thức">
-                  <Button size="small" disabled style={{ background: '#dcfce7', color: '#15803d', borderColor: '#86efac' }}>
-                    <CheckCircleOutlined /> Đã tạo ĐH
-                  </Button>
-                </Tooltip>
-              )
-            }
-            if (record.order_status === 'rejected') {
-              return (
-                <Tooltip title="Đơn hàng đã bị từ chối. Vui lòng sang phần Đơn hàng để sửa lại.">
-                  <Button size="small" disabled style={{ background: '#fee2e2', color: '#b91c1c', borderColor: '#fca5a5' }}>
-                    <CloseCircleOutlined /> ĐH bị từ chối
-                  </Button>
-                </Tooltip>
-              )
-            }
-            return (
-              <Popconfirm
-                title="Xác nhận tạo đơn hàng?"
-                description={hasBypass && record.status !== 'accepted' 
-                  ? "Khách hàng chưa ký xác nhận nhưng bạn có quyền Bỏ qua. Xác nhận tạo Đơn hàng?" 
-                  : "Bạn có chắc chắn muốn chuyển đổi báo giá này thành Đơn hàng chính thức không?"}
-                onConfirm={() => handleConvertToOrder(record.id)}
-                okText="Đồng ý tạo"
-                cancelText="Hủy"
-              >
-                <Button
-                  type="primary"
-                  size="small"
-                  icon={<FileDoneOutlined />}
-                  style={{ background: '#16a34a', borderColor: '#16a34a' }}
-                >
-                  Tạo Đơn Hàng
-                </Button>
-              </Popconfirm>
-            )
-          })()}
-          <Tooltip title="Xem chi tiết & In PDF">
-            <Button
-              type="text"
-              shape="circle"
-              icon={<FileTextOutlined style={{ color: '#2563eb' }} />}
-              onClick={() => {
-                setSelectedQuotation(record)
-                setDrawerVisible(true)
-                if (!record?.custom_data?.template_snapshot?.code) {
-                  setTimeout(() => backfillTemplateSnapshot(record), 500)
-                }
-              }}
-            />
-          </Tooltip>
-          {(record.status === 'draft' || record.status === 'rejected') && hasPermission('sales.require_approval') ? (
-            <Button
-              type="default"
-              size="small"
-              onClick={() => openApprovalModal(record)}
-            >
-              Trình duyệt
-            </Button>
-          ) : null}
-          {record.status === 'pending_approval' && hasPermission('sales.approve') && (
-            <Space size={4}>
-              <Tooltip title="Duyệt báo giá">
-                <Button
-                  type="primary"
-                  size="small"
-                  icon={<CheckCircleOutlined />}
-                  style={{ background: '#16a34a', borderColor: '#16a34a' }}
-                  onClick={() => handleQuickApprove(record.id)}
-                >
-                  Duyệt
-                </Button>
-              </Tooltip>
-              <Tooltip title="Từ chối">
-                <Button
-                  danger
-                  type="primary"
-                  size="small"
-                  icon={<CloseCircleOutlined />}
-                  onClick={() => handleQuickReject(record.id)}
-                >
-                  Từ chối
-                </Button>
-              </Tooltip>
-            </Space>
-          )}
-          {canEdit && (isCompanyAdmin || record.status !== 'accepted') && (
-            <Tooltip title="Sửa báo giá">
-              <Button
-                type="text"
-                shape="circle"
-                icon={<EditOutlined style={{ color: '#d97706' }} />}
-                onClick={() => handleEditClick(record)}
-              />
-            </Tooltip>
-          )}
-          {canDelete && record.status !== 'pending_approval' && (isCompanyAdmin || record.status !== 'accepted') && (
-            <Popconfirm
-              title="Xoá báo giá?"
-              description="Bạn có chắc chắn muốn xoá báo giá này không?"
-              onConfirm={() => handleDelete(record.id)}
-              okText="Xoá"
-              cancelText="Hủy"
-              okButtonProps={{ danger: true }}
-            >
-              <Tooltip title="Xoá"><Button type="text" danger shape="circle" icon={<DeleteOutlined />} /></Tooltip>
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+      render: (_, record) => renderQuotationActions(record),
     },
   ]
 
@@ -1672,7 +1677,7 @@ export default function QuotationList() {
   }
 
   return (
-    <div style={{ padding: '24px 32px' }}>
+    <section>
       {contextHolder}
 
       {/* ── Page Header & Stats ────────────────────────────────────────── */}
@@ -1869,17 +1874,53 @@ export default function QuotationList() {
         }}
         bodyStyle={{ padding: 0 }}
       >
-        <Table scroll={{ x: 'max-content' }}
-          columns={columns}
-          dataSource={filteredQuotations}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: false,
-            showTotal: (total) => `Tổng cộng ${total} báo giá`,
-          }}
-        />
+        {isMobile ? (
+          <List
+            dataSource={filteredQuotations}
+            loading={loading}
+            pagination={{ pageSize: 10, size: 'small', showTotal: (total) => `Tổng cộng ${total} báo giá` }}
+            renderItem={(record) => {
+              const cfg = statusConfig[record.status] || statusConfig.draft
+              return (
+                <List.Item
+                  style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                    <Text strong style={{ color: '#2563eb' }}>{record.quotation_number}</Text>
+                    <Tag color={cfg.color} icon={cfg.icon} style={{ margin: 0 }}>{cfg.label}</Tag>
+                  </div>
+                  <div style={{ marginBottom: 4 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>Khách hàng: </Text>
+                    <Text strong>{record.customer_name || 'Khách lẻ'}</Text>
+                  </div>
+                  <div style={{ marginBottom: 4 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>Ngày tạo: </Text>
+                    <Text>{dayjs(record.created_at).format('DD/MM/YYYY')}</Text>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>Tổng tiền: </Text>
+                    <Text strong style={{ color: '#16a34a', fontSize: 15 }}>{Number(record.total_amount || 0).toLocaleString('vi-VN')} đ</Text>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-start', flexWrap: 'wrap' }}>
+                    {renderQuotationActions(record)}
+                  </div>
+                </List.Item>
+              )
+            }}
+          />
+        ) : (
+          <Table scroll={{ x: 'max-content' }}
+            columns={columns}
+            dataSource={filteredQuotations}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: false,
+              showTotal: (total) => `Tổng cộng ${total} báo giá`,
+            }}
+          />
+        )}
       </Card>
 
       {/* ── Modal Add / Edit Quotation ─────────────────────────────────── */}
@@ -2264,6 +2305,6 @@ export default function QuotationList() {
           )
         })()}
       </Drawer>
-    </div>
+    </section>
   )
 }

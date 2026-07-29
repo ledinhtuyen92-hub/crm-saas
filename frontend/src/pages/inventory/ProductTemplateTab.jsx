@@ -6,19 +6,24 @@ import {
   SisternodeOutlined
 } from '@ant-design/icons'
 import {
-  Button, Card, Col, Form, Input, Modal, Popconfirm, Row, Select, Space, Table, Tag, Typography, message
+  Button, Card, Col, Form, Input, Modal, Popconfirm, Row, Select, Space, Table, Tag, Typography, message, List, Upload
 } from 'antd'
 import React, { useCallback, useEffect, useState } from 'react'
 import api from '../../utils/api'
+import { useResponsive } from '../../hooks/useResponsive'
 
 const { Text } = Typography
 
 export default function ProductTemplateTab({ categories }) {
+  const { isMobile } = useResponsive()
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [variantModalOpen, setVariantModalOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState(null)
+  
+  const [variantImageFile, setVariantImageFile] = useState(null)
+  const [variantPreviewImage, setVariantPreviewImage] = useState(null)
   
   const [form] = Form.useForm()
   const [variantForm] = Form.useForm()
@@ -43,8 +48,8 @@ export default function ProductTemplateTab({ categories }) {
     setEditingTemplate(template)
     form.setFieldsValue(
       template
-        ? { name: template.name, category: template.category, description: template.description }
-        : { name: '', category: null, description: '' }
+        ? { name: template.name, sku: template.sku, category: template.category, description: template.description }
+        : { name: '', sku: '', category: null, description: '' }
     )
     setModalOpen(true)
   }
@@ -77,6 +82,8 @@ export default function ProductTemplateTab({ categories }) {
 
   const handleOpenVariantModal = (template) => {
     setEditingTemplate(template)
+    setVariantImageFile(null)
+    setVariantPreviewImage(null)
     variantForm.setFieldsValue({
       attributes: [
         { name: 'Màu sắc', values: [] },
@@ -90,8 +97,15 @@ export default function ProductTemplateTab({ categories }) {
     try {
       // attributes structure: [{name: 'Màu', values: ['Đỏ', 'Xanh']}]
       const validAttributes = values.attributes.filter(a => a.name && a.values && a.values.length > 0)
-      await api.post(`/inventory/product-templates/${editingTemplate.id}/generate_variants/`, {
-        attributes: validAttributes
+      
+      const formData = new FormData()
+      formData.append('attributes', JSON.stringify(validAttributes))
+      if (variantImageFile) {
+        formData.append('image', variantImageFile)
+      }
+      
+      await api.post(`/inventory/product-templates/${editingTemplate.id}/generate_variants/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       })
       message.success('Sinh biến thể thành công! Bạn có thể xem trong tab Sản phẩm.')
       setVariantModalOpen(false)
@@ -106,6 +120,12 @@ export default function ProductTemplateTab({ categories }) {
       dataIndex: 'name',
       key: 'name',
       render: (name) => <Text strong>{name}</Text>
+    },
+    {
+      title: 'Mã mẫu',
+      dataIndex: 'sku',
+      key: 'sku',
+      render: (sku) => sku ? <Text type="secondary">{sku}</Text> : <Text type="secondary">—</Text>
     },
     {
       title: 'Loại sản phẩm',
@@ -151,7 +171,61 @@ export default function ProductTemplateTab({ categories }) {
         </Button>
       </div>
 
-      <Table scroll={{ x: 'max-content' }} columns={columns} dataSource={templates} rowKey="id" loading={loading} />
+      {isMobile ? (
+        <List
+          dataSource={templates}
+          loading={loading}
+          pagination={{ pageSize: 10, size: "small" }}
+          renderItem={(record) => {
+            const c = categories.find(x => x.id === record.category)
+            return (
+              <List.Item style={{ background: '#fff', borderRadius: 8, padding: 12, marginBottom: 8, border: '1px solid #f0f0f0' }}>
+                <List.Item.Meta
+                  title={
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <Text strong style={{ fontSize: 14, display: 'block' }}>{record.name}</Text>
+                        {record.sku && <Text type="secondary" style={{ fontSize: 12 }}>Mã: {record.sku}</Text>}
+                      </div>
+                      <Space size={0}>
+                        <Button type="text" size="small" icon={<EditOutlined style={{ color: '#d97706' }} />} onClick={() => handleOpenModal(record)} />
+                        <Popconfirm title="Xóa mẫu này?" onConfirm={() => handleDelete(record.id)}>
+                          <Button danger type="text" size="small" icon={<DeleteOutlined />} />
+                        </Popconfirm>
+                      </Space>
+                    </div>
+                  }
+                  description={
+                    <div style={{ marginTop: 4 }}>
+                      <div style={{ marginBottom: 8 }}>
+                        {c ? <Tag color="blue">{c.name}</Tag> : <Text type="secondary">—</Text>}
+                      </div>
+                      <Text type="secondary" style={{ display: 'block' }}>{record.description || 'Không có mô tả'}</Text>
+                      <Button 
+                        type="primary" 
+                        icon={<SisternodeOutlined />} 
+                        onClick={() => handleOpenVariantModal(record)}
+                        size="small"
+                        style={{ marginTop: 8 }}
+                      >
+                        Sinh biến thể
+                      </Button>
+                    </div>
+                  }
+                />
+              </List.Item>
+            )
+          }}
+        />
+      ) : (
+        <Table 
+          columns={columns} 
+          dataSource={templates} 
+          rowKey="id" 
+          loading={loading}
+          scroll={{ x: 'max-content' }}
+        />
+      )}
 
       {/* CRUD Modal */}
       <Modal
@@ -163,6 +237,9 @@ export default function ProductTemplateTab({ categories }) {
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item name="name" label="Tên mẫu" rules={[{ required: true }]}>
             <Input placeholder="VD: Áo thun Polo nam..." />
+          </Form.Item>
+          <Form.Item name="sku" label="Mã mẫu (Tiền tố SKU)" help="Dùng làm tiền tố khi sinh biến thể tự động (ví dụ: POLO)">
+            <Input placeholder="VD: POLO" />
           </Form.Item>
           <Form.Item name="category" label="Loại sản phẩm">
             <Select placeholder="Chọn loại...">
@@ -193,6 +270,29 @@ export default function ProductTemplateTab({ categories }) {
           <Text type="secondary">Nhập các thuộc tính để hệ thống tự động nhân bản thành các sản phẩm con (biến thể).</Text>
         </div>
         <Form form={variantForm} layout="vertical" onFinish={handleGenerateVariants}>
+          <Form.Item label="Hình ảnh dùng chung cho các biến thể">
+            <Upload
+              listType="picture-card"
+              showUploadList={false}
+              beforeUpload={(file) => {
+                setVariantImageFile(file)
+                const reader = new FileReader()
+                reader.onload = (e) => setVariantPreviewImage(e.target.result)
+                reader.readAsDataURL(file)
+                return false
+              }}
+            >
+              {variantPreviewImage ? (
+                <img src={variantPreviewImage} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div>
+                  <PlusOutlined />
+                  <div style={{ marginTop: 8 }}>Tải ảnh lên</div>
+                </div>
+              )}
+            </Upload>
+          </Form.Item>
+          
           <Form.List name="attributes">
             {(fields, { add, remove }) => (
               <>

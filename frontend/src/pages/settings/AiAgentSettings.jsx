@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, Switch, message, Space, Typography, Tag, Collapse, Row, Col, Divider, Alert, Slider, Tooltip, Segmented, Radio } from 'antd';
+import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, Switch, message, Space, Typography, Tag, Collapse, Row, Col, Divider, Alert, Slider, Tooltip, Segmented, Radio, List } from 'antd';
 import { PlusOutlined, EditOutlined, RobotOutlined, SettingOutlined, KeyOutlined, SyncOutlined, InfoCircleOutlined, ThunderboltOutlined, DeleteOutlined, BookOutlined } from '@ant-design/icons';
 import api from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -397,7 +397,42 @@ export default function AiAgentSettings() {
         } 
         style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}
       >
-        <Table scroll={{ x: 'max-content' }} columns={columns} dataSource={agents} rowKey='id' loading={loading} pagination={false} />
+        {isMobile ? (
+          <List
+            dataSource={agents}
+            loading={loading}
+            pagination={false}
+            renderItem={(item) => (
+              <List.Item style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block', background: '#fff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                  <Text strong style={{ fontSize: 15, color: '#1677ff' }}>
+                    <RobotOutlined /> {item.name}
+                  </Text>
+                  <Tag color={item.is_active ? 'green' : 'red'} style={{ margin: 0 }}>
+                    {item.is_active ? 'Đang hoạt động' : 'Đã tắt'}
+                  </Tag>
+                </div>
+                <div style={{ marginBottom: 4 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>Nền tảng: </Text>
+                  <Tag color='purple'>{item.provider?.toUpperCase()}</Tag>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>Mô hình: </Text>
+                  <Tag color='blue'>{item.model_name}</Tag>
+                </div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <Button
+                    type="text"
+                    icon={<EditOutlined style={{ color: '#d97706' }} />}
+                    onClick={() => handleOpenModal(item)}
+                  />
+                </div>
+              </List.Item>
+            )}
+          />
+        ) : (
+          <Table scroll={{ x: 'max-content' }} columns={columns} dataSource={agents} rowKey='id' loading={loading} pagination={false} />
+        )}
       </Card>
       )}
       {hasPermission('ai_agent.manage_keys') && (
@@ -418,15 +453,46 @@ export default function AiAgentSettings() {
                   <Title level={5} style={{ margin: 0 }}>Kho API Key cá nhân</Title>
                   <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenKeyModal()}>Thêm Key Mới</Button>
                 </div>
-                <Table 
-                  columns={keyColumns} 
-                  dataSource={keys} 
-                  rowKey="id" 
-                  loading={keysLoading} 
-                  pagination={false} 
-                  size="middle"
-                  style={{ border: '1px solid #f0f0f0', borderRadius: 8 }}
-                />
+                {isMobile ? (
+                  <List
+                    dataSource={keys}
+                    loading={keysLoading}
+                    pagination={false}
+                    renderItem={(item) => (
+                      <List.Item style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block', background: '#fff' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                          <Tag color='blue'>{item.provider?.toUpperCase()}</Tag>
+                          <Tag color={item.is_active ? 'green' : 'red'} style={{ margin: 0 }}>
+                            {item.is_active ? 'Đang hoạt động' : 'Tạm ngưng'}
+                          </Tag>
+                        </div>
+                        <div style={{ marginBottom: 4 }}>
+                          <Text type="secondary" style={{ fontSize: 13 }}>API Key: </Text>
+                          <Text>{item.api_key?.substring(0, 8)}...{item.api_key?.slice(-4)}</Text>
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                          <Text type="secondary" style={{ fontSize: 13 }}>Độ ưu tiên: </Text>
+                          <Text>{item.priority}</Text>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                          <Button type='text' icon={<EditOutlined style={{ color: '#1677ff' }} />} onClick={() => handleOpenKeyModal(item)} />
+                          <Button type='text' danger icon={<DeleteOutlined />} onClick={() => handleDeleteKey(item.id)} />
+                        </div>
+                      </List.Item>
+                    )}
+                  />
+                ) : (
+                  <Table 
+                    scroll={{ x: 'max-content' }}
+                    columns={keyColumns} 
+                    dataSource={keys} 
+                    rowKey="id" 
+                    loading={keysLoading} 
+                    pagination={false} 
+                    size="small"
+                    style={{ border: '1px solid #f0f0f0', borderRadius: 8 }}
+                  />
+                )}
               </Col>
               
               <Col xs={24} lg={8}>
@@ -507,17 +573,31 @@ export default function AiAgentSettings() {
                     {statsPeriod === 'today' ? '(Hôm nay)' : statsPeriod === 'week' ? '(Tuần này)' : statsPeriod === 'month' ? '(Tháng này)' : '(Trọn đời)'}
                   </Text>
                 </Title>
-                <div onClick={e => e.stopPropagation()} style={{ maxWidth: '100%', overflowX: 'auto', paddingBottom: isMobile ? 4 : 0 }}>
-                  <Segmented 
-                    options={[
-                      { label: 'Hôm nay', value: 'today' },
-                      { label: 'Tuần này', value: 'week' },
-                      { label: 'Tháng này', value: 'month' },
-                      { label: 'Trọn đời', value: 'all' },
-                    ]} 
-                    value={statsPeriod} 
-                    onChange={setStatsPeriod} 
-                  />
+                <div onClick={e => e.stopPropagation()} style={{ width: isMobile ? '100%' : 'auto', paddingBottom: isMobile ? 4 : 0 }}>
+                  {isMobile ? (
+                    <Select
+                      value={statsPeriod}
+                      onChange={setStatsPeriod}
+                      style={{ width: '100%', marginTop: 8 }}
+                      options={[
+                        { label: 'Hôm nay', value: 'today' },
+                        { label: 'Tuần này', value: 'week' },
+                        { label: 'Tháng này', value: 'month' },
+                        { label: 'Trọn đời', value: 'all' },
+                      ]}
+                    />
+                  ) : (
+                    <Segmented 
+                      options={[
+                        { label: 'Hôm nay', value: 'today' },
+                        { label: 'Tuần này', value: 'week' },
+                        { label: 'Tháng này', value: 'month' },
+                        { label: 'Trọn đời', value: 'all' },
+                      ]} 
+                      value={statsPeriod} 
+                      onChange={setStatsPeriod} 
+                    />
+                  )}
                 </div>
               </div>
             }
@@ -570,6 +650,7 @@ export default function AiAgentSettings() {
           <div style={{ marginTop: 24 }}>
             <Title level={5}>Chi tiết theo Trợ lý</Title>
             <Table 
+              scroll={{ x: 'max-content' }}
               dataSource={stats.agent_stats} 
               rowKey={(r, i) => i}
               pagination={false}
@@ -595,18 +676,22 @@ export default function AiAgentSettings() {
         bordered={false}
       >
         <Panel 
-          header={<Title level={4} style={{ margin: 0 }}><InfoCircleOutlined style={{color: '#1677ff'}} /> Bảng Giá AI (Tham chiếu từ LiteLLM)</Title>} 
-          extra={
-            <Space onClick={e => e.stopPropagation()}>
-              <Input.Search 
-                placeholder="Tìm tên mô hình..." 
-                allowClear
-                onChange={e => setPricingSearch(e.target.value)} 
-                style={{ width: 250 }}
-              />
-              <Button type="primary" icon={<SyncOutlined spin={syncingPricing} />} loading={syncingPricing} onClick={handleSyncPricing}>Đồng bộ từ LiteLLM</Button>
-            </Space>
-          }
+          header={
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: 12, width: '100%' }}>
+              <Title level={isMobile ? 5 : 4} style={{ margin: 0, whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                <InfoCircleOutlined style={{color: '#1677ff'}} /> Bảng Giá AI (Tham chiếu từ LiteLLM)
+              </Title>
+              <Space onClick={e => e.stopPropagation()} direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: isMobile ? '100%' : 'auto' }}>
+                <Input.Search 
+                  placeholder="Tìm tên mô hình..." 
+                  allowClear
+                  onChange={e => setPricingSearch(e.target.value)} 
+                  style={{ width: isMobile ? '100%' : 250 }}
+                />
+                <Button type="primary" icon={<SyncOutlined spin={syncingPricing} />} loading={syncingPricing} onClick={handleSyncPricing} block={isMobile}>Đồng bộ từ LiteLLM</Button>
+              </Space>
+            </div>
+          } 
           key="pricing"
           style={{ border: 'none' }}
         >
@@ -614,6 +699,7 @@ export default function AiAgentSettings() {
           Bảng giá được đồng bộ tự động hàng ngày. Bạn có thể tự sửa giá (khi sửa sẽ bị đánh dấu "Tự sửa" và không bị tự động ghi đè).
         </Text>
         <Table 
+          scroll={{ x: 'max-content' }}
           dataSource={pricings.filter(p => p.model_name.toLowerCase().includes(pricingSearch.toLowerCase()))} 
           rowKey="id"
           pagination={{ pageSize: 10, showSizeChanger: false }}

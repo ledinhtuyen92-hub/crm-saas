@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Card, Table, Button, Space, Typography, Tag, Modal, Form, Input, Upload, message, Radio, Divider, Spin, Collapse, Alert, Checkbox, Segmented, Row, Col } from 'antd'
+import { Card, Table, Button, Space, Typography, Tag, Modal, Form, Input, Upload, message, Radio, Divider, Spin, Collapse, Alert, Checkbox, Segmented, Row, Col, List } from 'antd'
 import { PlusOutlined, UploadOutlined, RobotOutlined, BookOutlined, EyeOutlined, EditOutlined, SyncOutlined, DeleteOutlined, BulbOutlined, MinusCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons'
 import api from '../../utils/api'
 import { useAuth } from '../../contexts/AuthContext'
+import { useResponsive } from '../../hooks/useResponsive'
 
 const { Title, Text } = Typography
 
 export default function AiKnowledgeBase() {
   const { maintenanceMode, hasPermission } = useAuth()
+  const { isMobile } = useResponsive()
   const [agents, setAgents] = useState([])
   const [documents, setDocuments] = useState([])
   const [loading, setLoading] = useState(false)
@@ -436,14 +438,14 @@ export default function AiKnowledgeBase() {
 
   return (
     <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: 24, gap: isMobile ? 16 : 0 }}>
           <div>
-            <Title level={4} style={{ margin: 0 }}>Huấn luyện Trợ lý AI (RAG)</Title>
-            <Text type="secondary">Quản lý kho tri thức, tài liệu bán hàng để AI học và trả lời khách</Text>
+            <Title level={isMobile ? 5 : 4} style={{ margin: 0, whiteSpace: 'normal', wordBreak: 'break-word' }}>Huấn luyện Trợ lý AI (RAG)</Title>
+            <Text type="secondary" style={{ display: 'block' }}>Quản lý kho tri thức, tài liệu bán hàng để AI học và trả lời khách</Text>
           </div>
-          <Space>
-            <Button icon={<RobotOutlined />} onClick={fetchData}>Làm mới trạng thái</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+          <Space direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: isMobile ? '100%' : 'auto' }}>
+            <Button icon={<RobotOutlined />} onClick={() => fetchData()} block={isMobile}>Làm mới trạng thái</Button>
+            <Button type="primary" icon={<PlusOutlined />} block={isMobile} onClick={() => {
           if (maintenanceMode) {
             message.warning('⚠️ Hệ thống đang bảo trì dữ liệu. Chức năng này tạm thời bị khóa!')
             return
@@ -545,16 +547,161 @@ export default function AiKnowledgeBase() {
             </Collapse.Panel>
           </Collapse>
 
-        <Card bordered={false} style={{ borderRadius: 12 }}>
+        <Card bordered={false} style={{ borderRadius: 12 }} styles={{ body: { padding: isMobile ? '16px 12px' : 24 } }}>
           <Title level={5} style={{ marginBottom: 16 }}>Kho tài liệu đã huấn luyện</Title>
-          <Table 
-            columns={columns} 
-            dataSource={groupedDocuments} 
-            rowKey="id" 
-            loading={loading}
-            pagination={{ pageSize: 10 }}
-            scroll={{ x: 'max-content' }}
-          />
+          {isMobile ? (
+            <List
+              dataSource={groupedDocuments}
+              loading={loading}
+              pagination={{ pageSize: 10, size: 'small' }}
+              renderItem={(record) => {
+                let finalStatus = record.status
+                let errorMsg = record.error_message || ''
+                if (record.isGroup) {
+                  const statuses = record.children.map(c => c.status)
+                  if (statuses.includes('failed')) finalStatus = 'failed'
+                  else if (statuses.includes('processing')) finalStatus = 'processing'
+                  else if (statuses.includes('pending')) finalStatus = 'pending'
+                  else finalStatus = 'completed'
+                  
+                  if (finalStatus === 'failed') {
+                    const failedChild = record.children.find(c => c.status === 'failed' && c.error_message)
+                    if (failedChild) errorMsg = failedChild.error_message
+                  }
+                }
+
+                let color = 'default'
+                let textStatus = finalStatus
+                if (finalStatus === 'pending') { color = 'default'; textStatus = 'Chờ xử lý' }
+                else if (finalStatus === 'processing') { color = 'processing'; textStatus = 'Đang học (Embedding)...' }
+                else if (finalStatus === 'completed') { color = 'success'; textStatus = 'Đã học xong' }
+                else if (finalStatus === 'failed') { color = 'error'; textStatus = 'Lỗi' }
+                
+                if (errorMsg) {
+                  if (errorMsg.includes('401')) errorMsg = 'Lỗi 401: Chìa khóa API không hợp lệ.'
+                  else if (errorMsg.includes('429')) errorMsg = 'Lỗi 429: Hết tiền (Quota) hoặc quá tải.'
+                  else if (errorMsg.includes('503')) errorMsg = 'Lỗi 503: Máy chủ quá tải.'
+                  else if (errorMsg.includes('500')) errorMsg = 'Lỗi 500: Lỗi máy chủ.'
+                }
+
+                const agent = agents.find(a => a.id === record.agent)
+
+                let titleContent = null
+                if (record.doc_type === 'image') {
+                  if (record.isGroup) {
+                    titleContent = (
+                      <div style={{ marginBottom: 12 }}>
+                        <Text strong style={{ fontSize: 15, display: 'block', marginBottom: 4 }}>
+                          {record.title} <Tag color="blue">{record.children.length} ảnh</Tag>
+                        </Text>
+                        <Space wrap size={4}>
+                          {record.children.map(child => (
+                            <div key={child.id} style={{ width: 40, height: 40, borderRadius: 4, overflow: 'hidden', border: '1px solid #d9d9d9' }}>
+                              <img src={child.file_attachment} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                          ))}
+                        </Space>
+                      </div>
+                    )
+                  } else {
+                    titleContent = (
+                      <div style={{ marginBottom: 12, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 4, overflow: 'hidden', border: '1px solid #d9d9d9', flexShrink: 0 }}>
+                          <img src={record.file_attachment} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                        <Text strong style={{ fontSize: 15 }}>{record.title}</Text>
+                      </div>
+                    )
+                  }
+                } else {
+                  titleContent = (
+                    <div style={{ marginBottom: 12 }}>
+                      {record.doc_type === 'file' ? <BookOutlined style={{color: '#1890ff', marginRight: 8}} /> : <RobotOutlined style={{color: '#52c41a', marginRight: 8}}/>}
+                      <Text strong style={{ fontSize: 15 }}>{record.title}</Text>
+                    </div>
+                  )
+                }
+
+                const canRetry = record.isGroup 
+                  ? record.children.some(c => c.status === 'failed' || c.status === 'completed')
+                  : true 
+
+                let typeStr = 'Hỏi & Đáp'
+                if (record.doc_type === 'file') typeStr = 'File PDF/Word'
+                if (record.doc_type === 'image') typeStr = 'Hình ảnh Mẫu'
+
+                return (
+                  <List.Item style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block', background: '#fff' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                      <Tag color={record.embedding_provider === 'gemini' ? 'purple' : 'geekblue'}>
+                        {record.embedding_provider === 'gemini' ? 'Gemini' : 'OpenAI'}
+                      </Tag>
+                      <Space direction="vertical" size={0} align="end">
+                        <Tag color={color} style={{ margin: 0 }}>{textStatus}</Tag>
+                      </Space>
+                    </div>
+                    {finalStatus === 'failed' && <div style={{ textAlign: 'right', marginBottom: 8 }}><Text type="danger" style={{fontSize: 12}}>{errorMsg}</Text></div>}
+
+                    {titleContent}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div><Text type="secondary" style={{ fontSize: 13 }}>Loại:</Text> <Text>{typeStr}</Text></div>
+                        <div><Text type="secondary" style={{ fontSize: 13 }}>Trợ lý:</Text> <Tag color="blue" style={{ margin: 0 }}>{agent ? agent.name : 'Unknown'}</Tag></div>
+                      </div>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px dashed #f0f0f0', paddingTop: 12, marginTop: 4 }}>
+                        <Space size="small">
+                        {record.isGroup ? (
+                          <>
+                            <Button type="text" icon={<EyeOutlined />} onClick={() => { setCurrentDoc(record); setIsViewModalVisible(true) }} />
+                            <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+                            {canRetry && (
+                              <Button type="text" style={{ color: '#faad14' }} icon={<SyncOutlined />} onClick={async () => {
+                                try {
+                                  await Promise.all(record.children.map(c => api.post(`/ai_agents/knowledge/${c.id}/retry/`)))
+                                  message.success(`Đã gửi yêu cầu học lại`)
+                                  fetchData()
+                                } catch (e) {
+                                  message.error('Lỗi khi thử lại')
+                                }
+                              }} />
+                            )}
+                            <Button type="text" danger icon={<DeleteOutlined />} onClick={() => {
+                              Modal.confirm({
+                                title: `Xóa ${record.children.length} tài liệu này?`,
+                                onOk: async () => {
+                                  await Promise.all(record.children.map(c => api.delete(`/ai_agents/knowledge/${c.id}/`)))
+                                  fetchData()
+                                }
+                              })
+                            }} />
+                          </>
+                        ) : (
+                          <>
+                            <Button type="text" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+                            <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+                            <Button type="text" style={{ color: '#faad14' }} icon={<SyncOutlined />} onClick={() => handleRetry(record.id)} />
+                            <Button danger type="text" icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
+                          </>
+                        )}
+                      </Space>
+                    </div>
+                    </div>
+                  </List.Item>
+                )
+              }}
+            />
+          ) : (
+            <Table 
+              columns={columns} 
+              dataSource={groupedDocuments} 
+              rowKey="id" 
+              loading={loading}
+              pagination={{ pageSize: 10 }}
+              scroll={{ x: 'max-content' }}
+            />
+          )}
         </Card>
 
       <Modal

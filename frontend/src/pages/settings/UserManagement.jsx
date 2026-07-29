@@ -27,9 +27,11 @@ import {
   Typography,
   message,
   theme,
+  List,
 } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useResponsive } from '../../hooks/useResponsive'
 import api from '../../utils/api'
 
 const { Title, Text } = Typography
@@ -51,6 +53,7 @@ function getInitials(name) {
 export default function UserManagement() {
   const { token } = theme.useToken()
   const { user: currentUser, checkMaintenance } = useAuth()
+  const { isMobile } = useResponsive()
   const [messageApi, contextHolder] = message.useMessage()
 
   const [users, setUsers] = useState([])
@@ -373,7 +376,7 @@ export default function UserManagement() {
           <Input.Search
             placeholder="Tìm kiếm theo tên, tài khoản, email, SĐT..."
             allowClear
-            style={{ width: 320 }}
+            style={{ width: isMobile ? '100%' : 320 }}
             onChange={(e) => setSearchText(e.target.value)}
           />
           <Select
@@ -381,20 +384,85 @@ export default function UserManagement() {
             optionFilterProp="label"
             placeholder="Lọc theo Phòng ban"
             allowClear
-            style={{ width: 250 }}
+            style={{ width: isMobile ? '100%' : 250 }}
             value={selectedDepId}
             onChange={setSelectedDepId}
             options={departments.map((d) => ({ value: d.id, label: d.name }))}
           />
         </div>
-        <Table scroll={{ x: 'max-content' }}
-          id="user-table"
-          columns={columns}
-          dataSource={filteredUsers}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10, showTotal: (total) => `${total} nhân viên` }}
-        />
+        {isMobile ? (
+          <List
+            dataSource={filteredUsers}
+            loading={loading}
+            pagination={{ pageSize: 10, size: 'small' }}
+            renderItem={(record) => {
+              const isSelf = record.id === currentUser?.id
+              return (
+                <List.Item style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block', background: '#fff' }}>
+                  <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                    <Avatar
+                      size={48}
+                      style={{
+                        background: `linear-gradient(135deg, ${getAvatarColor(record.full_name)} 0%, #1e3a8a 100%)`,
+                        fontWeight: 700,
+                        fontSize: 16,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {getInitials(record.full_name)}
+                    </Avatar>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, color: token.colorText, fontSize: 15 }}>{record.full_name}</div>
+                      <Text type="secondary" style={{ fontSize: 13 }}>@{record.username}</Text>
+                      {record.is_company_admin ? (
+                        <Tag color="gold" style={{ fontWeight: 600, marginTop: 4, display: 'block', width: 'fit-content' }}>Admin công ty</Tag>
+                      ) : (
+                        <Tag color="default" style={{ marginTop: 4, display: 'block', width: 'fit-content' }}>Nhân viên</Tag>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, marginBottom: 4 }}><MailOutlined style={{ marginRight: 6, color: token.colorTextSecondary }} />{record.email}</div>
+                    {record.phone && <div style={{ fontSize: 13 }}><PhoneOutlined style={{ marginRight: 6, color: token.colorTextSecondary }} />{record.phone}</div>}
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                    {record.department_name ? (
+                      <Tag color="geekblue" style={{ fontWeight: 600, margin: 0 }}>{record.department_name}</Tag>
+                    ) : (
+                      <Tag style={{ margin: 0 }}>Chưa gán phòng</Tag>
+                    )}
+                    {record.role_name ? (
+                      <Tag color="purple" style={{ fontWeight: 600, margin: 0 }}>{record.role_name}</Tag>
+                    ) : (
+                      <Tag style={{ margin: 0 }}>Chưa gán quyền</Tag>
+                    )}
+                    {record.job_title && <Text type="secondary" style={{ fontSize: 12, width: '100%' }}>Chức danh: {record.job_title}</Text>}
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #f0f0f0', paddingTop: 12 }}>
+                    {record.is_active ? <Tag color="success" style={{ margin: 0 }}>Đang làm việc</Tag> : <Tag color="error" style={{ margin: 0 }}>Đã khóa</Tag>}
+                    <Space size="small">
+                      <Button type="text" icon={<EditOutlined style={{ color: '#1677ff' }}/>} onClick={() => openModal(record)} />
+                      <Button type="text" danger={record.is_active} icon={record.is_active ? <LockOutlined /> : <UnlockOutlined />} disabled={isSelf} onClick={() => toggleActive(record)} />
+                      {!isSelf && <Button type="text" danger icon={<DeleteOutlined />} onClick={() => { if (!checkMaintenance()) setDeletingUser(record) }} />}
+                    </Space>
+                  </div>
+                </List.Item>
+              )
+            }}
+          />
+        ) : (
+          <Table scroll={{ x: 'max-content' }}
+            id="user-table"
+            columns={columns}
+            dataSource={filteredUsers}
+            rowKey="id"
+            loading={loading}
+            pagination={{ pageSize: 10, showTotal: (total) => `${total} nhân viên` }}
+          />
+        )}
       </Card>
 
       {/* ── Modal ──────────────────────────────────────────────── */}

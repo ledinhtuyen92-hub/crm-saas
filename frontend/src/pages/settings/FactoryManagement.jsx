@@ -22,6 +22,7 @@ import {
   Typography,
   message,
   theme,
+  List,
 } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../utils/api'
@@ -193,31 +194,84 @@ export default function FactoryManagement() {
         </Space>
       }
       extra={
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => openModal()}
-        >
-          Thêm nhà máy
-        </Button>
+        !isMobile && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => openModal()}
+          >
+            Thêm nhà máy
+          </Button>
+        )
       }
       styles={{ body: { padding: '16px 24px' } }}
       bordered={false}
     >
       {contextHolder}
+      {isMobile && (
+        <div style={{ marginBottom: 16 }}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => openModal()}
+            block
+          >
+            Thêm nhà máy
+          </Button>
+        </div>
+      )}
       <Typography.Paragraph type="secondary" style={{ marginBottom: 24 }}>
         Thiết lập các xưởng / nhà máy sản xuất của công ty và liên kết với Kho vật tư mặc định.
         Hệ thống sẽ dựa vào liên kết này để tự động gợi ý nhà máy tương ứng khi xuất kho.
       </Typography.Paragraph>
 
-      <Table
-        scroll={{ x: 'max-content' }}
-        columns={columns}
-        dataSource={factories}
-        rowKey="id"
-        loading={loading}
-        pagination={{ pageSize: 20 }}
-      />
+      {isMobile ? (
+        <List
+          dataSource={factories}
+          loading={loading}
+          pagination={{ pageSize: 20, size: 'small' }}
+          renderItem={(item) => (
+            <List.Item style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block', background: '#fff' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                <Text strong style={{ fontSize: 15, color: '#4f46e5' }}>{item.name}</Text>
+                <Tag color={item.is_active ? 'success' : 'default'} style={{ margin: 0 }}>
+                  {item.is_active ? 'Hoạt động' : 'Tạm ngưng'}
+                </Tag>
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <Text type="secondary" style={{ fontSize: 13 }}>Địa chỉ: </Text>
+                <Text>{item.location || '—'}</Text>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <Text type="secondary" style={{ fontSize: 13 }}>Kho liên kết: </Text>
+                {item.linked_warehouse_name ? <Text>{item.linked_warehouse_name}</Text> : <Text type="secondary">Chưa liên kết</Text>}
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <Button
+                  type="text"
+                  icon={<EditOutlined style={{ color: token.colorPrimary }} />}
+                  onClick={() => openModal(item)}
+                />
+                <Button
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => openDeleteModal(item)}
+                />
+              </div>
+            </List.Item>
+          )}
+        />
+      ) : (
+        <Table
+          scroll={{ x: 'max-content' }}
+          columns={columns}
+          dataSource={factories}
+          rowKey="id"
+          loading={loading}
+          pagination={{ pageSize: 20 }}
+        />
+      )}
 
       <Modal
         title={editingFactory ? 'Chỉnh sửa nhà máy' : 'Thêm nhà máy mới'}

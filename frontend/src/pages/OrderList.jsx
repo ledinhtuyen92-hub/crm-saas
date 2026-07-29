@@ -29,6 +29,7 @@ import {
   theme,
   Upload,
   Avatar,
+  List,
 } from 'antd' 
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState, useRef } from 'react'
@@ -38,6 +39,7 @@ import api from '../utils/api'
 import QuotationPrintView from '../components/QuotationPrintView'
 import ReceiptPrintView from '../components/ReceiptPrintView'
 import ZnsSendModal from '../components/ZnsSendModal'
+import { useResponsive } from '../hooks/useResponsive'
 
 const { Title, Text, Paragraph } = Typography
 const { Option } = Select
@@ -53,6 +55,7 @@ const statusConfig = {
 }
 
 export default function OrderList() {
+  const { isMobile } = useResponsive()
   const { token } = theme.useToken()
   const { user, isCompanyAdmin, hasPermission, checkMaintenance, isModuleActive } = useAuth()
   const [messageApi, contextHolder] = message.useMessage()
@@ -1511,6 +1514,105 @@ export default function OrderList() {
   }
 
   // ── Table Columns ─────────────────────────────────────────────────────
+  const renderOrderActions = (record) => (
+    <Space wrap size={8}>
+      {record.status === 'pending' && canApprove && (
+        <>
+          <Popconfirm
+            title="Duyệt đơn hàng?"
+            description="Sau khi duyệt, hệ thống sẽ tự động xuất kho và tạo lệnh sản xuất."
+            onConfirm={() => handleApprove(record.id)}
+            okText="Duyệt đơn"
+            cancelText="Hủy"
+          >
+            <Button
+              type="primary"
+              size="small"
+              icon={<CheckCircleOutlined />}
+              style={{ background: '#16a34a', borderColor: '#16a34a' }}
+            >
+              Duyệt
+            </Button>
+          </Popconfirm>
+
+          <Popconfirm
+            title="Từ chối đơn hàng?"
+            description="Bạn có chắc chắn muốn từ chối đơn hàng này không?"
+            onConfirm={() => handleReject(record.id)}
+            okText="Từ chối"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+          >
+            <Button size="small" danger icon={<CloseCircleOutlined />}>
+              Từ chối
+            </Button>
+          </Popconfirm>
+        </>
+      )}
+
+      <Tooltip title="Xem chi tiết & In PDF">
+        <Button
+          type="text"
+          shape="circle"
+          icon={<FileTextOutlined style={{ color: '#2563eb' }} />}
+          onClick={() => {
+            setSelectedOrder(record)
+            setDrawerVisible(true)
+          }}
+        />
+      </Tooltip>
+
+      {canEdit && record.status !== 'cancelled' && record.status !== 'completed' && (
+        <Tooltip title="Sửa đơn hàng">
+          <Button
+            type="text"
+            shape="circle"
+            icon={<EditOutlined style={{ color: '#d97706' }} />}
+            onClick={() => openModal(record)}
+          />
+        </Tooltip>
+      )}
+
+      {canEdit && record.status === 'rejected' && (
+        <Popconfirm
+          title="Trình duyệt lại?"
+          description="Bạn muốn gửi đơn hàng này để giám đốc duyệt lại?"
+          onConfirm={() => handleResubmit(record.id)}
+          okText="Trình duyệt"
+          cancelText="Hủy"
+        >
+          <Tooltip title="Trình duyệt lại"><Button type="text" shape="circle" icon={<CheckCircleOutlined style={{ color: '#0284c7' }} />} /></Tooltip>
+        </Popconfirm>
+      )}
+
+      {canCancel && record.status !== 'cancelled' && record.status !== 'completed' && (
+        <Popconfirm
+          title="Hủy đơn hàng?"
+          description="Bạn có chắc chắn muốn hủy đơn hàng này không? Các lệnh kho và sản xuất liên quan cũng sẽ bị hủy."
+          onConfirm={() => handleCancelOrder(record.id)}
+          okText="Đồng ý hủy"
+          cancelText="Không"
+          okButtonProps={{ danger: true }}
+        >
+          <Tooltip title="Hủy đơn hàng"><Button type="text" shape="circle" icon={<CloseCircleOutlined style={{ color: '#dc2626' }} />} /></Tooltip>
+        </Popconfirm>
+      )}
+
+      {canDelete && (
+        <Popconfirm
+          title="Xoá đơn hàng?"
+          description="Bạn có chắc chắn muốn xoá đơn hàng này không?"
+          onConfirm={() => handleDelete(record.id)}
+          okText="Xoá"
+          cancelText="Hủy"
+          okButtonProps={{ danger: true }}
+        >
+          <Tooltip title="Xoá"><Button type="text" danger shape="circle" icon={<DeleteOutlined />} /></Tooltip>
+        </Popconfirm>
+      )}
+    </Space>
+  )
+
   const columns = [
     {
       title: 'Mã đơn hàng',
@@ -1629,109 +1731,12 @@ export default function OrderList() {
       title: 'Hành động',
       key: 'action',
       align: 'right',
-      render: (_, record) => (
-        <Space>
-          {record.status === 'pending' && canApprove && (
-            <>
-              <Popconfirm
-                title="Duyệt đơn hàng?"
-                description="Sau khi duyệt, hệ thống sẽ tự động xuất kho và tạo lệnh sản xuất."
-                onConfirm={() => handleApprove(record.id)}
-                okText="Duyệt đơn"
-                cancelText="Hủy"
-              >
-                <Button
-                  type="primary"
-                  size="small"
-                  icon={<CheckCircleOutlined />}
-                  style={{ background: '#16a34a', borderColor: '#16a34a' }}
-                >
-                  Duyệt
-                </Button>
-              </Popconfirm>
-
-              <Popconfirm
-                title="Từ chối đơn hàng?"
-                description="Bạn có chắc chắn muốn từ chối đơn hàng này không?"
-                onConfirm={() => handleReject(record.id)}
-                okText="Từ chối"
-                cancelText="Hủy"
-                okButtonProps={{ danger: true }}
-              >
-                <Button size="small" danger icon={<CloseCircleOutlined />}>
-                  Từ chối
-                </Button>
-              </Popconfirm>
-            </>
-          )}
-
-          <Tooltip title="Xem chi tiết & In PDF">
-            <Button
-              type="text"
-              shape="circle"
-              icon={<FileTextOutlined style={{ color: '#2563eb' }} />}
-              onClick={() => {
-                setSelectedOrder(record)
-                setDrawerVisible(true)
-              }}
-            />
-          </Tooltip>
-
-          {canEdit && record.status !== 'cancelled' && record.status !== 'completed' && (
-            <Tooltip title="Sửa đơn hàng">
-              <Button
-                type="text"
-                shape="circle"
-                icon={<EditOutlined style={{ color: '#d97706' }} />}
-                onClick={() => openModal(record)}
-              />
-            </Tooltip>
-          )}
-
-          {canEdit && record.status === 'rejected' && (
-            <Popconfirm
-              title="Trình duyệt lại?"
-              description="Bạn muốn gửi đơn hàng này để giám đốc duyệt lại?"
-              onConfirm={() => handleResubmit(record.id)}
-              okText="Trình duyệt"
-              cancelText="Hủy"
-            >
-              <Tooltip title="Trình duyệt lại"><Button type="text" shape="circle" icon={<CheckCircleOutlined style={{ color: '#0284c7' }} />} /></Tooltip>
-            </Popconfirm>
-          )}
-
-          {canCancel && record.status !== 'cancelled' && record.status !== 'completed' && (
-            <Popconfirm
-              title="Hủy đơn hàng?"
-              description="Bạn có chắc chắn muốn hủy đơn hàng này không? Các lệnh kho và sản xuất liên quan cũng sẽ bị hủy."
-              onConfirm={() => handleCancelOrder(record.id)}
-              okText="Đồng ý hủy"
-              cancelText="Không"
-              okButtonProps={{ danger: true }}
-            >
-              <Tooltip title="Hủy đơn hàng"><Button type="text" shape="circle" icon={<CloseCircleOutlined style={{ color: '#dc2626' }} />} /></Tooltip>
-            </Popconfirm>
-          )}
-
-          {canDelete && (
-            <Popconfirm
-              title="Xoá đơn hàng?"
-              description="Bạn có chắc chắn muốn xoá đơn hàng này không?"
-              onConfirm={() => handleDelete(record.id)}
-              okText="Xoá"
-              cancelText="Hủy"
-              okButtonProps={{ danger: true }}
-            >
-              <Tooltip title="Xoá"><Button type="text" danger shape="circle" icon={<DeleteOutlined />} /></Tooltip>
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+      render: (_, record) => renderOrderActions(record),
     },
   ]
 
   return (
-    <div style={{ padding: '24px 32px' }}>
+    <section>
       {contextHolder}
 
       {/* ── Page Header & Stats ────────────────────────────────────────── */}
@@ -1955,18 +1960,54 @@ export default function OrderList() {
         }}
         bodyStyle={{ padding: 0 }}
       >
-        <Table
-          columns={columns}
-          dataSource={filteredOrders}
-          rowKey="id"
-          loading={loading}
-          scroll={{ x: 'max-content' }}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: false,
-            showTotal: (total) => `Tổng cộng ${total} đơn hàng`,
-          }}
-        />
+        {isMobile ? (
+          <List
+            dataSource={filteredOrders}
+            loading={loading}
+            pagination={{ pageSize: 10, size: 'small', showTotal: (total) => `Tổng cộng ${total} đơn hàng` }}
+            renderItem={(record) => {
+              const cfg = statusConfig[record.status] || { label: record.status, color: 'default' }
+              return (
+                <List.Item
+                  style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                    <Text strong style={{ color: '#2563eb' }}>{record.order_number}</Text>
+                    <Tag color={cfg.color} icon={cfg.icon} style={{ margin: 0 }}>{cfg.label}</Tag>
+                  </div>
+                  <div style={{ marginBottom: 4 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>Khách hàng: </Text>
+                    <Text strong>{record.customer_name || 'Khách lẻ'}</Text>
+                  </div>
+                  <div style={{ marginBottom: 4 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>Ngày tạo: </Text>
+                    <Text>{dayjs(record.created_at).format('DD/MM/YYYY')}</Text>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>Tổng tiền: </Text>
+                    <Text strong style={{ color: '#16a34a', fontSize: 15 }}>{Number(record.total_amount || 0).toLocaleString('vi-VN')} đ</Text>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                    {renderOrderActions(record)}
+                  </div>
+                </List.Item>
+              )
+            }}
+          />
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={filteredOrders}
+            rowKey="id"
+            loading={loading}
+            scroll={{ x: 'max-content' }}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: false,
+              showTotal: (total) => `Tổng cộng ${total} đơn hàng`,
+            }}
+          />
+        )}
       </Card>
 
       {/* ── Modal Add / Edit Order ─────────────────────────────────────── */}
@@ -2587,6 +2628,6 @@ export default function OrderList() {
           }}
         />
       )}
-    </div>
+    </section>
   )
 }

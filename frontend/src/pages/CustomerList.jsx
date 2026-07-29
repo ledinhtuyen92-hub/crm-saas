@@ -25,6 +25,8 @@ import {
   message,
   Upload,
   Switch,
+  Dropdown,
+  List,
 } from 'antd'
 import {
   HistoryOutlined,
@@ -48,10 +50,13 @@ import {
   FileDoneOutlined,
   MessageOutlined,
   SettingOutlined,
+  MoreOutlined,
+  MailOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import api from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
+import { useResponsive } from '../hooks/useResponsive'
 import dayjs from 'dayjs'
 
 import TagManagementModal from '../components/TagManagementModal'
@@ -106,6 +111,7 @@ const INTERACTION_RESULTS = {
 
 function CustomerList() {
   const { isCompanyAdmin, hasPermission, checkMaintenance, isModuleActive, pipelineStatusLabels = {}, getPipelineLabel, refreshSettings } = useAuth()
+  const { isMobile } = useResponsive()
   const navigate = useNavigate()
   const [customers, setCustomers] = useState([])
   const [salesUsers, setSalesUsers] = useState([])
@@ -755,20 +761,55 @@ function CustomerList() {
     },
   ]
 
+  const moreActionItems = [
+    (isCompanyAdmin) && {
+      key: 'pipeline',
+      icon: <SettingOutlined />,
+      label: 'Tùy chỉnh Trạng thái Pipeline',
+      onClick: () => { if (!checkMaintenance()) setPipelineModalVisible(true) }
+    },
+    (hasPermission('crm.manage_tags')) && {
+      key: 'tags',
+      icon: <TagsOutlined />,
+      label: 'Quản lý Tags',
+      onClick: () => { if (!checkMaintenance()) setTagModalVisible(true) }
+    },
+    { type: 'divider' },
+    (hasPermission('crm.import')) && {
+      key: 'import',
+      icon: <ImportOutlined />,
+      label: 'Nhập CSV',
+      onClick: () => { if (!checkMaintenance()) setImportModalVisible(true) }
+    },
+    (hasPermission('crm.export')) && {
+      key: 'export',
+      icon: <ExportOutlined />,
+      label: 'Xuất CSV',
+      onClick: handleExportCsv
+    },
+    { type: 'divider' },
+    (hasPermission('crm.auto_assign')) && {
+      key: 'auto_assign',
+      icon: <ReloadOutlined />,
+      label: 'Phân bổ khách tự động',
+      onClick: handleRoundRobinAssign
+    }
+  ].filter(Boolean);
+
   return (
     <section>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
         <div style={{ flexShrink: 0 }}>
-          <Title level={3} style={{ margin: 0, whiteSpace: 'nowrap' }}>
+          <Title level={2} style={{ margin: 0, whiteSpace: 'nowrap' }}>
             <TeamOutlined style={{ marginRight: 10, color: '#1649c9' }} />
-            Quản lý Khách hàng & Leads
+            Quản lý Khách hàng
           </Title>
           <Text type="secondary">Theo dõi hành trình khách hàng từ Lead đến giao dịch</Text>
         </div>
 
         <Space wrap style={{ flex: 1, justifyContent: 'flex-end' }}>
           {isCompanyAdmin && (
-            <Tooltip title="Khi BẬT, hệ thống tự động chia đều khách hàng mới (từ Facebook, Zalo hoặc nhập mới) cho Sale có ít khách nhất">
+            <Tooltip title="Khi BẬT, hệ thống tự động chia đều khách hàng mới cho Sale có ít khách nhất">
               <Space style={{ background: '#eff6ff', padding: '4px 12px', borderRadius: 8, border: '1px solid #bfdbfe', marginRight: 4 }}>
                 <Text strong style={{ fontSize: 13, color: '#1e40af' }}>Tự động chia khách:</Text>
                 <Switch
@@ -782,17 +823,6 @@ function CustomerList() {
             </Tooltip>
           )}
 
-          {(hasPermission('crm.auto_assign')) && (
-            <Tooltip title="Tự động chia đều khách hàng chưa phân công cho Sale">
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={handleRoundRobinAssign}
-              >
-                Phân bổ khách tự động
-              </Button>
-            </Tooltip>
-          )}
-
           {(isModuleActive('zalo') && (isCompanyAdmin || hasPermission('zalo.send_zns'))) && (
             <Button 
               type="primary" 
@@ -801,45 +831,14 @@ function CustomerList() {
               disabled={selectedRowKeys.length === 0}
               onClick={() => { if (!checkMaintenance()) setBulkZnsModalVisible(true) }}
             >
-              Gửi ZNS Hàng loạt {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length})` : ''}
+              Gửi ZNS {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length})` : ''}
             </Button>
           )}
 
-          {(hasPermission('crm.import')) && (
-            <Button
-              icon={<ImportOutlined />}
-              onClick={() => { if (!checkMaintenance()) setImportModalVisible(true) }}
-            >
-              Nhập CSV
-            </Button>
-          )}
-
-          {(hasPermission('crm.export')) && (
-            <Button
-              icon={<ExportOutlined />}
-              onClick={handleExportCsv}
-            >
-              Xuất CSV
-            </Button>
-          )}
-
-          {(hasPermission('crm.manage_tags')) && (
-            <Button
-              icon={<TagsOutlined />}
-              onClick={() => { if (!checkMaintenance()) setTagModalVisible(true) }}
-            >
-              Quản lý Tags
-            </Button>
-          )}
-
-          {isCompanyAdmin && (
-            <Button
-              icon={<SettingOutlined />}
-              onClick={() => { if (!checkMaintenance()) setPipelineModalVisible(true) }}
-              style={{ borderColor: '#2563eb', color: '#2563eb' }}
-            >
-              Tùy chỉnh Trạng thái Pipeline
-            </Button>
+          {moreActionItems.length > 0 && (
+            <Dropdown menu={{ items: moreActionItems }} trigger={['click']}>
+              <Button icon={<MoreOutlined />}>Tác vụ khác</Button>
+            </Dropdown>
           )}
 
           {(hasPermission('crm.create')) && (
@@ -927,21 +926,75 @@ function CustomerList() {
       </Card>
 
       {/* Main Table */}
-      <Table scroll={{ x: 'max-content' }}
-        rowSelection={{
-          selectedRowKeys,
-          onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
-        }}
-        columns={columns}
-        dataSource={customers}
-        loading={loading}
-        rowKey="id"
-        pagination={{ pageSize: 15, showSizeChanger: false }}
-        onRow={(record) => ({
-          onClick: () => handleOpenDrawer(record),
-          style: { cursor: 'pointer' },
-        })}
-      />
+      {isMobile ? (
+        <List
+          itemLayout="horizontal"
+          dataSource={customers}
+          loading={loading}
+          pagination={{ pageSize: 15, showSizeChanger: false, size: "small" }}
+          renderItem={(record) => {
+            const statusItem = getStatusItem(record.status)
+            return (
+              <List.Item
+                actions={[
+                  hasPermission('crm.edit') ? <Button key="edit" type="text" size="small" icon={<EditOutlined style={{color:'#faad14'}}/>} onClick={(e) => handleOpenEditModal(record, e)} /> : null,
+                  hasPermission('crm.delete') ? (
+                    <Popconfirm key="del" title="Xóa khách hàng này?" onConfirm={(e) => handleDeleteCustomer(record.id, e)} onCancel={(e) => e?.stopPropagation()}>
+                      <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={(e) => e?.stopPropagation()} />
+                    </Popconfirm>
+                  ) : null,
+                ].filter(Boolean)}
+                style={{ cursor: 'pointer', background: '#fff', borderRadius: 8, padding: 12, marginBottom: 8, border: '1px solid #f0f0f0' }}
+                onClick={() => handleOpenDrawer(record)}
+              >
+                <List.Item.Meta
+                  avatar={<Avatar src={record.assigned_to_avatar} icon={<UserOutlined />} />}
+                  title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <Text strong style={{ fontSize: 15, color: '#1649c9' }}>{record.name}</Text>
+                      <Badge color={statusItem?.color} text={statusItem?.label} />
+                    </div>
+                  }
+                  description={
+                    <div style={{ marginTop: 4 }}>
+                      <Space direction="vertical" size={2}>
+                        <Text type="secondary"><PhoneOutlined /> {record.phone}</Text>
+                        {record.assigned_to && (
+                          <Text type="secondary">
+                            <UserOutlined /> Sale: {record.assigned_to.full_name || record.assigned_to.username}
+                          </Text>
+                        )}
+                        {record.source && (
+                          <Text type="secondary">
+                            <span style={{ marginRight: 6 }}>{SOURCE_ICON[record.source] || '✏️'}</span> Nguồn: {SOURCE_MAP[record.source] || record.source}
+                          </Text>
+                        )}
+                        {record.zalo_id && <Tag color="blue" style={{ marginTop: 4 }}>Đã kết nối Zalo</Tag>}
+                      </Space>
+                    </div>
+                  }
+                />
+              </List.Item>
+            )
+          }}
+        />
+      ) : (
+        <Table scroll={{ x: 'max-content' }}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
+          }}
+          columns={columns}
+          dataSource={customers}
+          loading={loading}
+          rowKey="id"
+          pagination={{ pageSize: 15, showSizeChanger: false }}
+          onRow={(record) => ({
+            onClick: () => handleOpenDrawer(record),
+            style: { cursor: 'pointer' },
+          })}
+        />
+      )}
 
       {/* Modal Add/Edit Customer */}
       <Modal
@@ -1109,52 +1162,76 @@ function CustomerList() {
       {/* Drawer Details & Timeline */}
       <Drawer
         title={
-          <Space>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <TeamOutlined style={{ color: '#1649c9' }} />
-            <Text strong>{currentCustomer?.name}</Text>
+            <Text strong ellipsis={{ tooltip: currentCustomer?.name }} style={{ maxWidth: isMobile ? 180 : '100%' }}>
+              {currentCustomer?.name}
+            </Text>
             {currentCustomer && (
               <Tag color={getStatusItem(currentCustomer.status).color}>
                 {getStatusItem(currentCustomer.status).label}
               </Tag>
             )}
-          </Space>
+          </div>
         }
         width={700}
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
         extra={
           currentCustomer && (
-            <Space>
-              {(isModuleActive('zalo') && (isCompanyAdmin || hasPermission('zalo.send_zns'))) && (
+            isMobile ? (
+              <Dropdown menu={{
+                items: [
+                  (isModuleActive('zalo') && (isCompanyAdmin || hasPermission('zalo.send_zns'))) && {
+                    key: 'zns',
+                    icon: <MessageOutlined style={{ color: '#10b981' }}/>,
+                    label: 'Gửi ZNS',
+                    onClick: () => setZnsModalVisible(true)
+                  },
+                  {
+                    key: 'quote',
+                    icon: <FileAddOutlined style={{ color: '#1649c9' }}/>,
+                    label: 'Tạo báo giá',
+                    onClick: () => handleCreateQuotationFromCustomer(currentCustomer)
+                  }
+                ].filter(Boolean)
+              }} trigger={['click']}>
+                <Button type="text" icon={<MoreOutlined style={{ fontSize: 18 }}/>} />
+              </Dropdown>
+            ) : (
+              <Space>
+                {(isModuleActive('zalo') && (isCompanyAdmin || hasPermission('zalo.send_zns'))) && (
+                  <Button
+                    type="primary"
+                    icon={<MessageOutlined />}
+                    onClick={() => setZnsModalVisible(true)}
+                    style={{ background: '#10b981', borderColor: '#10b981' }}
+                  >
+                    Gửi ZNS
+                  </Button>
+                )}
                 <Button
                   type="primary"
-                  icon={<MessageOutlined />}
-                  onClick={() => setZnsModalVisible(true)}
-                  style={{ background: '#10b981', borderColor: '#10b981' }}
+                  icon={<FileAddOutlined />}
+                  onClick={() => handleCreateQuotationFromCustomer(currentCustomer)}
                 >
-                  Gửi ZNS
+                  Tạo báo giá
                 </Button>
-              )}
-              <Button
-                type="primary"
-                icon={<FileAddOutlined />}
-                onClick={() => handleCreateQuotationFromCustomer(currentCustomer)}
-              >
-                Tạo báo giá
-              </Button>
-            </Space>
+              </Space>
+            )
           )
         }
       >
         {currentCustomer && (
           <Tabs
             defaultActiveKey="timeline"
+            size={isMobile ? "small" : "middle"}
             items={[
               {
                 key: 'timeline',
                 label: (
                   <span>
-                    <HistoryOutlined /> Lịch sử chăm sóc ({interactions.length})
+                    <HistoryOutlined /> {isMobile ? `Lịch sử (${interactions.length})` : `Lịch sử chăm sóc (${interactions.length})`}
                   </span>
                 ),
                 children: (
@@ -1236,7 +1313,7 @@ function CustomerList() {
                 key: 'contacts',
                 label: (
                   <span>
-                    <UserAddOutlined /> Đầu mối liên hệ ({contacts.length})
+                    <UserAddOutlined /> {isMobile ? `Liên hệ (${contacts.length})` : `Đầu mối liên hệ (${contacts.length})`}
                   </span>
                 ),
                 children: (
@@ -1293,7 +1370,7 @@ function CustomerList() {
               },
               {
                 key: 'info',
-                label: 'Thông tin chi tiết',
+                label: isMobile ? 'Thông tin' : 'Thông tin chi tiết',
                 children: (
                   <Form layout="vertical">
                     <Row gutter={16}>

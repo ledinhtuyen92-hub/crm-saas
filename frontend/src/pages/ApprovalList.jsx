@@ -195,7 +195,7 @@ export default function ApprovalList() {
   const { isMobile, padding } = useResponsive()
 
   return (
-    <div style={{ padding, width: '100%', minWidth: 0 }}>
+    <section style={{ width: '100%', minWidth: 0 }}>
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }} gutter={[16, 16]}>
         <Col xs={24} md={12}>
           <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>Luồng Phê Duyệt</Title>
@@ -360,6 +360,6 @@ export default function ApprovalList() {
         </div>
       </Modal>
 
-    </div>
+    </section>
   )
 }

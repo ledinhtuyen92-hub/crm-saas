@@ -39,6 +39,8 @@ import {
   Typography,
   Upload,
   message,
+  List,
+  Collapse,
 } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState, useMemo } from 'react'
@@ -1026,6 +1028,52 @@ export default function Inventory() {
     },
   ]
 
+  const renderTxnActions = (r) => {
+    const canApprove = isCompanyAdmin || hasPermission('inventory.approve_export')
+    const isPendingExport = r.status === 'pending' && r.type === 'export'
+    
+    return (
+      <Space wrap size={8}>
+        {canApprove && isPendingExport && (
+          <Button
+            type="primary"
+            size="small"
+            icon={<CheckCircleOutlined />}
+            onClick={() => handleOpenApproveExport(r)}
+            style={{ background: '#16a34a', borderColor: '#16a34a' }}
+            title="Duyệt xuất"
+          />
+        )}
+        {canApprove && isPendingExport && (
+          <Popconfirm
+            title="Từ chối lệnh xuất?"
+            onConfirm={() => handleRejectExport(r)}
+            okText="Từ chối"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+          >
+            <Button danger size="small" icon={<CloseCircleOutlined />} title="Từ chối" />
+          </Popconfirm>
+        )}
+        <Button
+          type="text"
+          icon={<PrinterOutlined />}
+          onClick={() => handlePrintTxn(r)}
+          title="Thông tin chi tiết"
+        />
+        {hasPermission('inventory.delete_history') && (
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDeleteSingleTxnClick(r)}
+            title="Xoá giao dịch"
+          />
+        )}
+      </Space>
+    )
+  }
+
   const txnColumns = [
     {
       title: 'Mã phiếu',
@@ -1158,56 +1206,12 @@ export default function Inventory() {
       title: 'Thao tác',
       key: 'action',
       align: 'right',
-      render: (_, r) => {
-        const canApprove = isCompanyAdmin || hasPermission('inventory.approve_export')
-        const isPendingExport = r.status === 'pending' && r.type === 'export'
-        
-        return (
-          <Space>
-            {canApprove && isPendingExport && (
-              <Button
-                type="primary"
-                size="small"
-                icon={<CheckCircleOutlined />}
-                onClick={() => handleOpenApproveExport(r)}
-                style={{ background: '#16a34a', borderColor: '#16a34a' }}
-                title="Duyệt xuất"
-              />
-            )}
-            {canApprove && isPendingExport && (
-              <Popconfirm
-                title="Từ chối lệnh xuất?"
-                onConfirm={() => handleRejectExport(r)}
-                okText="Từ chối"
-                cancelText="Hủy"
-                okButtonProps={{ danger: true }}
-              >
-                <Button danger size="small" icon={<CloseCircleOutlined />} title="Từ chối" />
-              </Popconfirm>
-            )}
-            <Button
-              type="text"
-              icon={<PrinterOutlined />}
-              onClick={() => handlePrintTxn(r)}
-              title="Thông tin chi tiết"
-            />
-            {hasPermission('inventory.delete_history') && (
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => handleDeleteSingleTxnClick(r)}
-                title="Xoá giao dịch"
-              />
-            )}
-          </Space>
-        )
-      },
+      render: (_, r) => renderTxnActions(r),
     },
   ]
 
   return (
-    <div style={{ padding: '24px 32px' }}>
+    <section>
       {contextHolder}
 
       {/* ── Page Header ────────────────────────────────────────────────── */}
@@ -1288,12 +1292,10 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* ── Tabs ───────────────────────────────────────────────────────── */}
+      {/* ── Tabs / Collapse ───────────────────────────────────────────────────────── */}
       <Card style={{ borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }} bodyStyle={{ padding: 16 }}>
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={[
+        {(() => {
+          const tabItems = [
             {
               key: 'transactions',
               label: (
@@ -1371,53 +1373,142 @@ export default function Inventory() {
                       </Col>
                     )}
                   </Row>
-                  <Table
-                    columns={txnColumns}
-                    dataSource={groupedFilteredTransactions}
-                    rowKey="id"
-                    loading={loading}
-                    pagination={{ pageSize: 10 }}
-                    scroll={{ x: 'max-content' }}
-                    expandable={{
-                      expandedRowRender: (record) => {
-                        if (!record.items || record.items.length <= 1) return null;
+                  {isMobile ? (
+                    <List
+                      dataSource={groupedFilteredTransactions}
+                      loading={loading}
+                      pagination={{ pageSize: 10, size: 'small' }}
+                      renderItem={(r) => {
+                        let statusTag
+                        if (r.status === 'pending') statusTag = <Tag color="warning">{r.status_display || 'Chờ duyệt'}</Tag>
+                        else if (r.status === 'rejected') statusTag = <Tag color="default">{r.status_display || 'Đã hủy'}</Tag>
+                        else {
+                          const completedTag = <Tag color="success">{r.status_display || 'Hoàn thành'}</Tag>
+                          if (r.type === 'export' && r.status === 'completed' && r.reference_order && r.has_production_order === false) {
+                            const canRecreateMO = isCompanyAdmin || hasPermission('production.create')
+                            statusTag = (
+                              <Space size={4} wrap>
+                                {completedTag}
+                                <Tag
+                                  color="red"
+                                  icon={<ExclamationCircleOutlined />}
+                                  style={{
+                                    cursor: canRecreateMO ? 'pointer' : 'not-allowed',
+                                    fontWeight: 600,
+                                    opacity: canRecreateMO ? 1 : 0.75,
+                                  }}
+                                  title={canRecreateMO ? 'Nhấn để tạo lại Lệnh Sản Xuất' : 'Bạn không có quyền tạo lệnh sản xuất'}
+                                  onClick={() => canRecreateMO && setRecreateMOTxn(r)}
+                                >
+                                  Lệnh SX bị xóa!
+                                </Tag>
+                              </Space>
+                            )
+                          } else {
+                            statusTag = completedTag
+                          }
+                        }
+
+                        let typeTag
+                        if (r.type === 'import') typeTag = <Tag color="success">Nhập kho</Tag>
+                        else if (r.type === 'export') typeTag = <Tag color="error">Xuất kho</Tag>
+                        else if (r.type === 'transfer') typeTag = <Tag color="blue">Điều chuyển</Tag>
+                        else typeTag = <Tag color="warning">Điều chỉnh</Tag>
+
+                        let qtyDisplay
+                        const totalQty = r.items ? r.items.reduce((sum, item) => sum + item.quantity, 0) : r.quantity
+                        if (r.type === 'export') {
+                          qtyDisplay = <Text strong style={{ color: '#dc2626', fontSize: 15 }}>-{totalQty}</Text>
+                        } else {
+                          qtyDisplay = <Text strong style={{ color: '#16a34a', fontSize: 15 }}>+{totalQty}</Text>
+                        }
+
+                        let prodDisplay = ''
+                        if (r.items && r.items.length > 1) {
+                          prodDisplay = <Text strong style={{ color: '#0284c7' }}>{r.items.length} sản phẩm</Text>
+                        } else {
+                          const id = r.items ? r.items[0].product : r.product
+                          const p = products.find((item) => item.id === id)
+                          const txnName = r.items ? r.items[0].product_name : r.product_name
+                          prodDisplay = p ? <Text strong>{txnName || p.name}</Text> : `SP #${id}`
+                        }
+
                         return (
-                          <Table
-                            dataSource={record.items}
-                            pagination={false}
-                            rowKey="id"
-                            size="small"
-                            columns={[
-                              { 
-                                title: 'Sản phẩm', 
-                                dataIndex: 'product', 
-                                render: (id, r) => {
-                                  const p = products.find((item) => item.id === id)
-                                  return p ? <Text strong>{r.product_name || p.name} <Text type="secondary" style={{fontWeight: 'normal'}}>({p.sku})</Text></Text> : `SP #${id}`
-                                } 
-                              },
-                              { 
-                                title: 'Số lượng', 
-                                dataIndex: 'quantity', 
-                                render: (qty) => <Text strong>{qty}</Text> 
-                              },
-                              { 
-                                title: 'Đơn giá', 
-                                dataIndex: 'unit_cost', 
-                                render: (cost) => <Text>{Number(cost || 0).toLocaleString('vi-VN')} đ</Text> 
-                              },
-                              { 
-                                title: 'Thành tiền', 
-                                key: 'total', 
-                                render: (_, r) => <Text strong>{Number((r.quantity || 0) * (r.unit_cost || 0)).toLocaleString('vi-VN')} đ</Text> 
-                              }
-                            ]}
-                          />
+                          <List.Item
+                            style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block' }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                              <Text strong style={{ color: '#2563eb' }}>{r.transaction_code}</Text>
+                              {statusTag}
+                            </div>
+                            <div style={{ marginBottom: 4 }}>
+                              <Text type="secondary" style={{ fontSize: 13 }}>Loại phiếu: </Text>
+                              {typeTag}
+                            </div>
+                            <div style={{ marginBottom: 4 }}>
+                              <Text type="secondary" style={{ fontSize: 13 }}>Sản phẩm: </Text>
+                              {prodDisplay}
+                            </div>
+                            <div style={{ marginBottom: 12 }}>
+                              <Text type="secondary" style={{ fontSize: 13 }}>Số lượng: </Text>
+                              {qtyDisplay}
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                              {renderTxnActions(r)}
+                            </div>
+                          </List.Item>
                         )
-                      },
-                      rowExpandable: (record) => record.items && record.items.length > 1,
-                    }}
-                  />
+                      }}
+                    />
+                  ) : (
+                    <Table
+                      columns={txnColumns}
+                      dataSource={groupedFilteredTransactions}
+                      rowKey="id"
+                      loading={loading}
+                      pagination={{ pageSize: 10 }}
+                      scroll={{ x: 'max-content' }}
+                      expandable={{
+                        expandedRowRender: (record) => {
+                          if (!record.items || record.items.length <= 1) return null;
+                          return (
+                            <Table
+                              dataSource={record.items}
+                              pagination={false}
+                              rowKey="id"
+                              size="small"
+                              columns={[
+                                { 
+                                  title: 'Sản phẩm', 
+                                  dataIndex: 'product', 
+                                  render: (id, r) => {
+                                    const p = products.find((item) => item.id === id)
+                                    return p ? <Text strong>{r.product_name || p.name} <Text type="secondary" style={{fontWeight: 'normal'}}>({p.sku})</Text></Text> : `SP #${id}`
+                                  } 
+                                },
+                                { 
+                                  title: 'Số lượng', 
+                                  dataIndex: 'quantity', 
+                                  render: (qty) => <Text strong>{qty}</Text> 
+                                },
+                                { 
+                                  title: 'Đơn giá', 
+                                  dataIndex: 'unit_cost', 
+                                  render: (cost) => <Text>{Number(cost || 0).toLocaleString('vi-VN')} đ</Text> 
+                                },
+                                { 
+                                  title: 'Thành tiền', 
+                                  key: 'total', 
+                                  render: (_, r) => <Text strong>{Number((r.quantity || 0) * (r.unit_cost || 0)).toLocaleString('vi-VN')} đ</Text> 
+                                }
+                              ]}
+                            />
+                          )
+                        },
+                        rowExpandable: (record) => record.items && record.items.length > 1,
+                      }}
+                    />
+                  )}
                 </div>
               ),
             },
@@ -1471,58 +1562,99 @@ export default function Inventory() {
                       </Space>
                     </Col>
                   </Row>
-                  <Table
-                    columns={stockColumns}
-                    dataSource={groupedFilteredStockLevels}
-                    rowKey="id"
-                    loading={loading}
-                    pagination={{ pageSize: 10 }}
-                    scroll={{ x: 'max-content' }}
-                    expandable={{
-                      expandedRowRender: (record) => {
-                        if (!record.items || record.items.length <= 1) return null;
+                  {isMobile ? (
+                    <List
+                      dataSource={groupedFilteredStockLevels}
+                      loading={loading}
+                      pagination={{ pageSize: 10, size: 'small' }}
+                      renderItem={(r) => {
+                        const isGroup = r.items && r.items.length > 1;
                         return (
-                          <Table
-                            dataSource={record.items}
-                            pagination={false}
-                            rowKey="id"
-                            size="small"
-                            columns={[
-                              { 
-                                title: 'Kho hàng', 
-                                dataIndex: 'warehouse',
-                                render: (whId) => {
-                                  const wh = warehouses.find((w) => w.id === whId)
-                                  return <Text strong>{wh ? wh.name : `Kho #${whId}`}</Text>
-                                } 
-                              },
-                              { 
-                                title: 'Số lượng tồn', 
-                                dataIndex: 'quantity', 
-                                render: (qty) => <Text strong>{qty}</Text> 
-                              },
-                              { 
-                                title: 'Ngưỡng cảnh báo (Min)', 
-                                dataIndex: 'min_quantity', 
-                                render: (min, record) => (
-                                  <Text 
-                                    type="secondary"
-                                    editable={{
-                                      onChange: (val) => handleUpdateMinQty(record.id, val),
-                                      tooltip: 'Click để sửa ngưỡng'
-                                    }}
-                                  >
-                                    {min || 0}
-                                  </Text>
-                                )
-                              }
-                            ]}
-                          />
+                          <List.Item style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block', background: '#fff' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'flex-start' }}>
+                              <Text strong style={{ color: '#2563eb', fontSize: 15 }}>{r.product_name}</Text>
+                              {r.is_low_stock && <Tag color="error">Cảnh báo</Tag>}
+                            </div>
+                            <div style={{ marginBottom: 4 }}>
+                              <Text type="secondary" style={{ fontSize: 13 }}>SKU: </Text>
+                              <Text>{r.product_sku || 'N/A'}</Text>
+                            </div>
+                            <div style={{ marginBottom: 4 }}>
+                              <Text type="secondary" style={{ fontSize: 13 }}>Tổng tồn: </Text>
+                              <Text strong style={{ color: '#16a34a', fontSize: 15 }}>{r.quantity}</Text> {r.product_unit}
+                            </div>
+                            {isGroup && (
+                              <div style={{ marginTop: 12, padding: '8px', background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                                <Text strong style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>Chi tiết các kho:</Text>
+                                {r.items.map(item => {
+                                  const wh = warehouses.find(w => w.id === item.warehouse);
+                                  return (
+                                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13 }}>
+                                      <Text>{wh ? wh.name : `Kho #${item.warehouse}`}</Text>
+                                      <Text strong>{item.quantity}</Text>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </List.Item>
                         )
-                      },
-                      rowExpandable: (record) => record.items && record.items.length > 1,
-                    }}
-                  />
+                      }}
+                    />
+                  ) : (
+                    <Table
+                      columns={stockColumns}
+                      dataSource={groupedFilteredStockLevels}
+                      rowKey="id"
+                      loading={loading}
+                      pagination={{ pageSize: 10 }}
+                      scroll={{ x: 'max-content' }}
+                      expandable={{
+                        expandedRowRender: (record) => {
+                          if (!record.items || record.items.length <= 1) return null;
+                          return (
+                            <Table
+                              dataSource={record.items}
+                              pagination={false}
+                              rowKey="id"
+                              size="small"
+                              columns={[
+                                { 
+                                  title: 'Kho hàng', 
+                                  dataIndex: 'warehouse',
+                                  render: (whId) => {
+                                    const wh = warehouses.find((w) => w.id === whId)
+                                    return <Text strong>{wh ? wh.name : `Kho #${whId}`}</Text>
+                                  } 
+                                },
+                                { 
+                                  title: 'Số lượng tồn', 
+                                  dataIndex: 'quantity', 
+                                  render: (qty) => <Text strong>{qty}</Text> 
+                                },
+                                { 
+                                  title: 'Ngưỡng cảnh báo (Min)', 
+                                  dataIndex: 'min_quantity', 
+                                  render: (min, record) => (
+                                    <Text 
+                                      type="secondary"
+                                      editable={{
+                                        onChange: (val) => handleUpdateMinQty(record.id, val),
+                                        tooltip: 'Click để sửa ngưỡng'
+                                      }}
+                                    >
+                                      {min || 0}
+                                    </Text>
+                                  )
+                                }
+                              ]}
+                            />
+                          )
+                        },
+                        rowExpandable: (record) => record.items && record.items.length > 1,
+                      }}
+                    />
+                  )}
                 </div>
               ),
             },
@@ -1548,29 +1680,26 @@ export default function Inventory() {
                       </Button>
                     </Row>
                   )}
-                  <Table scroll={{ x: 'max-content' }}
-                    dataSource={warehouses}
-                    rowKey="id"
-                    columns={[
-                      { title: 'Tên kho hàng', dataIndex: 'name', key: 'name', render: (v) => <Text strong style={{ fontSize: 15 }}>{v}</Text> },
-                      { title: 'Vị trí / Địa chỉ', dataIndex: 'location', key: 'location', render: (v) => <Text type="secondary">{v || '—'}</Text> },
-                      {
-                        title: 'Trạng thái',
-                        dataIndex: 'is_active',
-                        key: 'is_active',
-                        render: (v) => (v !== false ? <Tag color="success">Hoạt động</Tag> : <Tag color="default">Ngừng hoạt động</Tag>),
-                      },
-                      {
-                        title: 'Hành động',
-                        key: 'action',
-                        align: 'right',
-                        render: (_, r) => (
-                          <Space>
+                  {isMobile ? (
+                    <List
+                      dataSource={warehouses}
+                      pagination={{ pageSize: 10, size: "small" }}
+                      renderItem={(w) => (
+                        <List.Item style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block', background: '#fff' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                            <Text strong style={{ fontSize: 15, color: '#4f46e5' }}>{w.name}</Text>
+                            {w.is_active !== false ? <Tag color="success" style={{ margin: 0 }}>Hoạt động</Tag> : <Tag color="default" style={{ margin: 0 }}>Ngừng hoạt động</Tag>}
+                          </div>
+                          <div style={{ marginBottom: 12 }}>
+                            <Text type="secondary" style={{ fontSize: 13 }}>Vị trí: </Text>
+                            <Text>{w.location || '—'}</Text>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                             {canEdit && (
                               <Button
                                 type="text"
                                 icon={<EditOutlined style={{ color: '#d97706' }} />}
-                                onClick={() => openWarehouseModal(r)}
+                                onClick={() => openWarehouseModal(w)}
                                 title="Sửa kho hàng"
                               />
                             )}
@@ -1578,7 +1707,7 @@ export default function Inventory() {
                               <Popconfirm
                                 title="Xoá kho hàng?"
                                 description="Bạn có chắc chắn muốn xoá kho hàng này không?"
-                                onConfirm={() => handleWarehouseDelete(r.id)}
+                                onConfirm={() => handleWarehouseDelete(w.id)}
                                 okText="Xoá"
                                 cancelText="Hủy"
                                 okButtonProps={{ danger: true }}
@@ -1586,17 +1715,77 @@ export default function Inventory() {
                                 <Button type="text" danger icon={<DeleteOutlined />} title="Xoá kho hàng" />
                               </Popconfirm>
                             )}
-                          </Space>
-                        ),
-                      },
-                    ]}
-                    pagination={{ pageSize: 10 }}
-                  />
+                          </div>
+                        </List.Item>
+                      )}
+                    />
+                  ) : (
+                    <Table scroll={{ x: 'max-content' }}
+                      dataSource={warehouses}
+                      rowKey="id"
+                      columns={[
+                        { title: 'Tên kho hàng', dataIndex: 'name', key: 'name', render: (v) => <Text strong style={{ fontSize: 15 }}>{v}</Text> },
+                        { title: 'Vị trí / Địa chỉ', dataIndex: 'location', key: 'location', render: (v) => <Text type="secondary">{v || '—'}</Text> },
+                        {
+                          title: 'Trạng thái',
+                          dataIndex: 'is_active',
+                          key: 'is_active',
+                          render: (v) => (v !== false ? <Tag color="success">Hoạt động</Tag> : <Tag color="default">Ngừng hoạt động</Tag>),
+                        },
+                        {
+                          title: 'Hành động',
+                          key: 'action',
+                          align: 'right',
+                          render: (_, r) => (
+                            <Space>
+                              {canEdit && (
+                                <Button
+                                  type="text"
+                                  icon={<EditOutlined style={{ color: '#d97706' }} />}
+                                  onClick={() => openWarehouseModal(r)}
+                                  title="Sửa kho hàng"
+                                />
+                              )}
+                              {canDelete && (
+                                <Popconfirm
+                                  title="Xoá kho hàng?"
+                                  description="Bạn có chắc chắn muốn xoá kho hàng này không?"
+                                  onConfirm={() => handleWarehouseDelete(r.id)}
+                                  okText="Xoá"
+                                  cancelText="Hủy"
+                                  okButtonProps={{ danger: true }}
+                                >
+                                  <Button type="text" danger icon={<DeleteOutlined />} title="Xoá kho hàng" />
+                                </Popconfirm>
+                              )}
+                            </Space>
+                          ),
+                        },
+                      ]}
+                      pagination={{ pageSize: 10 }}
+                    />
+                  )}
                 </div>
               ),
             },
-          ]}
-        />
+          ];
+          return isMobile ? (
+            <Collapse
+              accordion
+              activeKey={activeTab}
+              onChange={(key) => setActiveTab(key || 'transactions')}
+              items={tabItems}
+              style={{ background: 'transparent' }}
+              bordered={false}
+            />
+          ) : (
+            <Tabs
+              activeKey={activeTab}
+              onChange={setActiveTab}
+              items={tabItems}
+            />
+          );
+        })()}
       </Card>
 
       {/* ── Modal Product Add / Edit ───────────────────────────────────── */}
@@ -2241,6 +2430,6 @@ export default function Inventory() {
         </div>
       )}
 
-    </div>
+    </section>
   )
 }

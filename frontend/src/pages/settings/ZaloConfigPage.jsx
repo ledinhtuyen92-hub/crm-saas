@@ -277,39 +277,39 @@ export default function ZaloConfigPage() {
             >
               <Row align="middle" gutter={[16, 16]}>
                 <Col xs={24} md={12} lg={14}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                     <div style={{
-                      width: 52, height: 52, borderRadius: 12,
+                      width: 48, height: 48, borderRadius: 12,
                       background: item.is_active ? '#dcfce7' : '#fef3c7',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                     }}>
                       {item.is_active
-                        ? <CheckCircleOutlined style={{ fontSize: 26, color: '#16a34a' }} />
-                        : <CloseCircleOutlined style={{ fontSize: 26, color: '#d97706' }} />
+                        ? <CheckCircleOutlined style={{ fontSize: 24, color: '#16a34a' }} />
+                        : <CloseCircleOutlined style={{ fontSize: 24, color: '#d97706' }} />
                       }
                     </div>
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <Text strong style={{ fontSize: 16 }}>{item.oa_name}</Text>
                       <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                        <Tag color={item.is_active ? 'success' : 'warning'}>
-                          {item.is_active ? '✅ Đang hoạt động' : '⚠️ Tạm ngắt kết nối'}
+                        <Tag color={item.is_active ? 'success' : 'warning'} style={{ margin: 0 }}>
+                          {item.is_active ? '✅ Đang chạy' : '⚠️ Đã ngắt'}
                         </Tag>
                         {item.is_token_near_expiry && (
-                          <Tag color="error" icon={<WarningOutlined />}>Token sắp hết hạn!</Tag>
+                          <Tag color="error" icon={<WarningOutlined />} style={{ margin: 0 }}>Sắp hết hạn!</Tag>
                         )}
-                        {item.oa_id && <Tag color="blue">OA ID: {item.oa_id}</Tag>}
+                        {item.oa_id && <Tag color="blue" style={{ margin: 0 }}>ID: {item.oa_id}</Tag>}
                         {item.use_system_config
-                          ? <Tag color="purple">🔧 Dùng App hệ thống</Tag>
-                          : <Tag color="orange">⚙️ App riêng</Tag>}
+                          ? <Tag color="purple" style={{ margin: 0 }}>🔧 App chung</Tag>
+                          : <Tag color="orange" style={{ margin: 0 }}>⚙️ App riêng</Tag>}
                       </div>
-                      <Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: 'block' }}>
-                        {item.token_expires_at_display ? `⏳ Token hết hạn: ${item.token_expires_at_display}` : 'Chưa có Token'}
-                      </Text>
+                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 8, background: '#f1f5f9', padding: '4px 10px', borderRadius: 6, width: 'fit-content' }}>
+                        {item.token_expires_at_display ? `⏳ Hạn token: ${item.token_expires_at_display}` : 'Chưa có Token'}
+                      </div>
                     </div>
                   </div>
                 </Col>
                 <Col xs={24} md={12} lg={10}>
-                  <Space wrap style={{ rowGap: 8 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: isMobile ? 'flex-start' : 'flex-end', borderTop: isMobile ? '1px dashed #e2e8f0' : 'none', paddingTop: isMobile ? 12 : 0 }}>
                     {item.is_active ? (
                       <>
                         <Tooltip title="Đăng nhập Zalo và tự động lấy Access Token cho OA này">
@@ -318,7 +318,7 @@ export default function ZaloConfigPage() {
                             onClick={() => handleZaloOAuthLogin(item)}
                             style={{ background: '#0068ff', borderColor: '#0068ff' }}
                           >
-                            Đăng nhập & Lấy Token
+                            Lấy Token
                           </Button>
                         </Tooltip>
                         <Button
@@ -326,24 +326,24 @@ export default function ZaloConfigPage() {
                           loading={verifying}
                           icon={<InfoCircleOutlined />}
                         >
-                          Kiểm tra chuẩn OA
+                          Kiểm tra OA
                         </Button>
                         <Button
                           icon={<ReloadOutlined />}
                           loading={refreshing}
                           onClick={() => handleRefreshToken(item)}
                         >
-                          Làm mới Token
+                          Làm mới
                         </Button>
                         <Button icon={<SettingOutlined />} onClick={() => handleOpenModal(item, false)}>
-                          Chỉnh sửa
+                          Sửa
                         </Button>
                         <Popconfirm
                           title={
                             <div style={{ maxWidth: 280 }}>
                               <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠️ Xác nhận ngắt kết nối?</div>
                               <div style={{ fontSize: 13, color: '#555' }}>
-                                Zalo OA sẽ bị <b>tạm dừng nhận tin nhắn mới</b>, nhưng <b style={{ color: '#10b981' }}>toàn bộ lịch sử hội thoại và tin nhắn được giữ nguyên hoàn toàn</b>. Bạn có thể khôi phục lại bất cứ lúc nào.
+                                Zalo OA sẽ bị <b>tạm dừng nhận tin nhắn mới</b>, nhưng <b style={{ color: '#10b981' }}>toàn bộ lịch sử hội thoại được giữ nguyên</b>. Có thể khôi phục lại.
                               </div>
                             </div>
                           }
@@ -351,7 +351,7 @@ export default function ZaloConfigPage() {
                           okText="Ngắt kết nối" cancelText="Hủy" okType="warning"
                           icon={null}
                         >
-                          <Tooltip title="Tạm ngắt kết nối — lịch sử tin nhắn được bảo toàn, khôi phục được">
+                          <Tooltip title="Tạm ngắt kết nối — lịch sử tin nhắn được bảo toàn">
                             <Button danger icon={<DisconnectOutlined />}>Ngắt kết nối</Button>
                           </Tooltip>
                         </Popconfirm>
@@ -364,17 +364,17 @@ export default function ZaloConfigPage() {
                           onClick={() => handleReconnect(item.id)}
                           style={{ background: '#10b981', borderColor: '#10b981' }}
                         >
-                          🔄 Khôi phục kết nối
+                          Khôi phục
                         </Button>
                         <Button
                           type="primary"
                           onClick={() => handleZaloOAuthLogin(item)}
                           style={{ background: '#0068ff', borderColor: '#0068ff' }}
                         >
-                          Đăng nhập & Lấy Token
+                          Lấy Token
                         </Button>
                         <Button icon={<SettingOutlined />} onClick={() => handleOpenModal(item, false)}>
-                          Chỉnh sửa
+                          Sửa
                         </Button>
                         <Tooltip title="Xóa vĩnh viễn — mất toàn bộ lịch sử hội thoại, KHÔNG khôi phục được">
                           <Button danger icon={<DeleteOutlined />} onClick={() => openDeleteModal(item)}>
@@ -383,7 +383,7 @@ export default function ZaloConfigPage() {
                         </Tooltip>
                       </>
                     )}
-                  </Space>
+                  </div>
                 </Col>
               </Row>
             </Card>

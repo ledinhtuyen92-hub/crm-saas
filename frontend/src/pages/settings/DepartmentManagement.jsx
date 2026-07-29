@@ -22,6 +22,7 @@ import {
   Typography,
   message,
   theme,
+  List,
 } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../utils/api'
@@ -232,14 +233,51 @@ export default function DepartmentManagement() {
       </div>
 
       <Card style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(15,23,42,0.08)' }}>
-        <Table scroll={{ x: 'max-content' }}
-          id="department-table"
-          columns={columns}
-          dataSource={departments}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-        />
+        {isMobile ? (
+          <List
+            dataSource={departments}
+            loading={loading}
+            pagination={{ pageSize: 10, size: 'small' }}
+            renderItem={(record) => (
+              <List.Item style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block', background: '#fff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: token.colorText }}>{record.name}</div>
+                    {record.description && <Text type="secondary" style={{ fontSize: 13 }}>{record.description}</Text>}
+                  </div>
+                  <Tag color="purple" icon={<TeamOutlined />}>{record.user_count ?? 0} người</Tag>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12, background: '#f8fafc', padding: 12, borderRadius: 8 }}>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 13 }}>Trưởng phòng:</Text>{' '}
+                    <Text strong style={{ color: record.manager_name ? token.colorPrimary : token.colorTextDisabled, fontSize: 13 }}>
+                      {record.manager_name || 'Chưa phân công'}
+                    </Text>
+                  </div>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 13 }}>Thống kê Doanh số:</Text>{' '}
+                    {record.is_sales_department ? <Tag color="green" style={{ margin: 0 }}>Có</Tag> : <Text type="secondary" style={{ fontSize: 13 }}>Không</Text>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px dashed #f0f0f0', paddingTop: 12 }}>
+                  <Space size="small">
+                    <Button type="text" icon={<EditOutlined style={{ color: '#1677ff' }}/>} onClick={() => openModal(record)} />
+                    <Button type="text" danger icon={<DeleteOutlined />} onClick={() => { if (!checkMaintenance()) { setDeletingDepartment(record); setDeleteConfirmText(''); } }} />
+                  </Space>
+                </div>
+              </List.Item>
+            )}
+          />
+        ) : (
+          <Table scroll={{ x: 'max-content' }}
+            id="department-table"
+            columns={columns}
+            dataSource={departments}
+            rowKey="id"
+            loading={loading}
+            pagination={{ pageSize: 10 }}
+          />
+        )}
       </Card>
 
       {/* ── Modal Tạo / Sửa ────────────────────────────────────── */}

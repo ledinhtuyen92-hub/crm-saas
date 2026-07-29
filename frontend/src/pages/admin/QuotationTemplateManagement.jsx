@@ -455,7 +455,7 @@ export default function QuotationTemplateManagement() {
   }
 
   return (
-    <div style={{ padding: '24px 32px' }}>
+    <section>
       {contextHolder}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -764,6 +764,6 @@ export default function QuotationTemplateManagement() {
           </div>
         )}
       </Modal>
-    </div>
+    </section>
   )
 }

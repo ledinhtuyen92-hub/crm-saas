@@ -60,20 +60,33 @@ class ProductTemplateViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def generate_variants(self, request, pk=None):
         template = self.get_object()
-        attributes_data = request.data.get("attributes", [])
-        # attributes_data format: [{"name": "Màu sắc", "values": ["Đỏ", "Xanh"]}, {"name": "Size", "values": ["M", "L"]}]
+        
+        # Handle FormData attributes
+        if 'attributes' in request.data:
+            attr_val = request.data.get("attributes")
+            if isinstance(attr_val, str):
+                import json
+                attributes_data = json.loads(attr_val)
+            else:
+                attributes_data = attr_val
+        else:
+            attributes_data = []
+            
+        uploaded_image = request.FILES.get('image')
         
         if not attributes_data:
             # Generate 1 default variant
+            base_sku = template.sku or str(template.id)
             Product.objects.get_or_create(
                 company=template.company,
                 template=template,
-                sku=f"{template.id}-DEFAULT",
+                sku=f"{base_sku}-DEFAULT",
                 defaults={
                     "name": template.name,
                     "category": template.category,
                     "price": 0,
                     "cost_price": 0,
+                    "image": uploaded_image or template.image,
                 }
             )
             return Response({"detail": "Đã tạo 1 biến thể mặc định."})
@@ -93,9 +106,10 @@ class ProductTemplateViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         for combo in combinations:
             attr_dict = dict(zip(keys, combo))
             
-            # sku like TEMPLATEID-DO-M
+            # sku like TEMPLATESKU-DO-M
             sku_suffix = "-".join([str(v).upper() for v in combo])
-            sku = f"{template.id}-{sku_suffix}"
+            base_sku = template.sku or str(template.id)
+            sku = f"{base_sku}-{sku_suffix}"
             variant_name = f"{template.name} ({', '.join(combo)})"
             
             # Check if variant exists
@@ -109,6 +123,7 @@ class ProductTemplateViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                     attributes=attr_dict,
                     price=0,
                     cost_price=0,
+                    image=uploaded_image or template.image,
                 )
                 created_count += 1
                 

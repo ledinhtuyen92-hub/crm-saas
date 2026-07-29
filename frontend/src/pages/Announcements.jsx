@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
     Card, Table, Button, Space, Tag, Modal, Form, Row, Col,
-    Input, Upload, Switch, message, Popconfirm, Typography, Select, Drawer, Badge, Divider
+    Input, Upload, Switch, message, Popconfirm, Typography, Select, Drawer, Badge, Divider, List
 } from 'antd';
 import { 
     NotificationOutlined, PlusOutlined, DeleteOutlined, 
@@ -193,9 +193,12 @@ const Announcements = () => {
             render: (text, record) => {
                 const isRead = record.is_read;
                 return (
-                    <Space>
+                    <Space 
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => handleViewDetail(record)}
+                    >
                         {record.is_pinned ? <PushpinFilled style={{ color: '#f5222d' }} /> : null}
-                        <Text strong={!isRead}>{text}</Text>
+                        <Text strong={!isRead} style={{ color: !isRead ? '#1677ff' : 'inherit' }}>{text}</Text>
                         {!isRead && <Badge dot color="blue" />}
                     </Space>
                 );
@@ -293,43 +296,104 @@ const Announcements = () => {
     };
 
     return (
-        <div style={{ padding }}>
-            <Card 
-                title={
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-                        <Space><NotificationOutlined /> Thông báo nội bộ</Space>
-                        {canCreate && (
-                            <Button 
-                                type="primary" 
-                                icon={<PlusOutlined />} 
-                                onClick={() => {
-                                    if (checkMaintenance()) return;
-                                    setCreateModalVisible(true);
-                                }}
+        <div style={{ padding, width: '100%', minWidth: 0 }}>
+            <Row justify="space-between" align="top" gutter={[16, 16]} style={{ marginBottom: 16 }}>
+                <Col xs={24} md={12}>
+                    <Space direction="vertical" size={2}>
+                        <Title level={2} style={{ margin: 0, fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>
+                            Thông báo nội bộ
+                        </Title>
+                        <Text type="secondary" style={{ fontFamily: "'Inter', sans-serif" }}>
+                            Xem và quản lý các thông báo, quy định nội bộ của công ty
+                        </Text>
+                    </Space>
+                </Col>
+                <Col xs={24} md={12} style={{ textAlign: isMobile ? 'left' : 'right' }}>
+                    {canCreate && (
+                        <Button 
+                            type="primary" 
+                            icon={<PlusOutlined />} 
+                            onClick={() => {
+                                if (checkMaintenance()) return;
+                                setCreateModalVisible(true);
+                            }}
+                        >
+                            Đăng thông báo
+                        </Button>
+                    )}
+                </Col>
+            </Row>
+
+            <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                {isMobile ? (
+                    <List
+                        itemLayout="horizontal"
+                        dataSource={announcements}
+                        loading={loading}
+                        pagination={{
+                            current: page,
+                            pageSize: pageSize,
+                            total: total,
+                            onChange: (p, s) => {
+                                setPage(p);
+                                setPageSize(s);
+                            },
+                            showSizeChanger: true,
+                            size: "small"
+                        }}
+                        renderItem={(record) => (
+                            <List.Item
+                                actions={[
+                                    canCreate ? <Button type="text" size="small" icon={<EditOutlined style={{ color: '#faad14' }} />} onClick={() => handleEdit(record)} key="edit" /> : null,
+                                    canDelete ? (
+                                        <Popconfirm title="Xóa?" onConfirm={() => handleDelete(record.id)} key="delete">
+                                            <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+                                        </Popconfirm>
+                                    ) : null
+                                ].filter(Boolean)}
                             >
-                                Đăng thông báo
-                            </Button>
+                                <List.Item.Meta
+                                    title={
+                                        <div 
+                                            onClick={() => handleViewDetail(record)}
+                                            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                                        >
+                                            {record.is_pinned && <PushpinFilled style={{ color: '#f5222d' }} />}
+                                            <Text strong={!record.is_read} style={{ color: !record.is_read ? '#1677ff' : 'inherit' }}>
+                                                {record.title}
+                                            </Text>
+                                            {!record.is_read && <Badge dot color="blue" />}
+                                        </div>
+                                    }
+                                    description={
+                                        <Space size="small" wrap style={{ fontSize: 12, marginTop: 4 }}>
+                                            {record.category && <Tag color="cyan" style={{ margin: 0 }}>{record.category}</Tag>}
+                                            <Text type="secondary">{dayjs(record.created_at).format('DD/MM HH:mm')}</Text>
+                                        </Space>
+                                    }
+                                />
+                            </List.Item>
                         )}
-                    </div>
-                }
-            >
-                <Table 
-                    columns={columns} 
-                    dataSource={announcements} 
-                    rowKey="id"
-                    loading={loading}
-                    pagination={{
-                        current: page,
-                        pageSize: pageSize,
-                        total: total,
-                        onChange: (p, s) => {
-                            setPage(p);
-                            setPageSize(s);
-                        },
-                        showSizeChanger: true
-                    }}
-                    scroll={{ x: 'max-content' }}
-                />
+                    />
+                ) : (
+                    <Table 
+                        columns={columns} 
+                        dataSource={announcements} 
+                        rowKey="id"
+                        loading={loading}
+                        pagination={{
+                            current: page,
+                            pageSize: pageSize,
+                            total: total,
+                            onChange: (p, s) => {
+                                setPage(p);
+                                setPageSize(s);
+                            },
+                            showSizeChanger: true
+                        }}
+                        scroll={{ x: 'max-content' }}
+                    />
+                )}
             </Card>
 
             {/* Modal Create Announcement */}

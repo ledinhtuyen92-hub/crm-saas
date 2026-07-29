@@ -47,6 +47,7 @@ class ProductTemplate(models.Model):
         verbose_name="Loại sản phẩm",
     )
     name = models.CharField(max_length=255, verbose_name="Tên mẫu sản phẩm")
+    sku = models.CharField(max_length=50, blank=True, null=True, verbose_name="Mã mẫu (SKU prefix)")
     description = models.TextField(blank=True, verbose_name="Mô tả")
     
     TYPE_PRODUCT = "product"

@@ -1,6 +1,6 @@
 :root {
   font-family:
-    'Outfit', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
     sans-serif;
   color-scheme: light;
   font-synthesis: none;
@@ -50,8 +50,53 @@ body {
 }
 
 a {
-  color: inherit;
-  text-decoration: none;
+  font-weight: 500;
+  text-decoration: inherit;
+}
+
+/* ==========================================================================
+   GLOBAL UI STANDARDIZATION (Applied to all modules)
+   ========================================================================== */
+
+/* Standardize Card shadow and border radius globally */
+.ant-card {
+  border-radius: 12px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  border: none !important;
+}
+
+.ant-card-bordered {
+  border: none !important;
+}
+
+/* Standardize all main headings across the app */
+h2.ant-typography {
+  font-size: 24px !important;
+}
+
+h2.ant-typography,
+h3.ant-typography,
+h4.ant-typography,
+.ant-card-head-title {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+}
+
+/* Standardize subtitle texts */
+.ant-typography.ant-typography-secondary {
+  font-family: 'Inter', sans-serif !important;
+  color: #6b7280 !important;
+}
+
+/* Đảm bảo khoảng cách tiêu đề và table chuyên nghiệp */
+.ant-card-head {
+  border-bottom: 1px solid #f0f0f0 !important;
+  padding: 16px 24px !important;
+}
+
+.ant-card-body {
+  padding: 24px !important;
 }
 
 /* ── Compact Table Styles for Print Views (On-screen & Printed) ────────────── */

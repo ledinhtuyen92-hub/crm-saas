@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  Avatar, Badge, Button, Col, Divider, Empty, Input, Modal,
+  Avatar, Badge, Button, Col, Divider, Empty, Input, Modal, Drawer,
   Row, Select, Space, Spin, Switch, Tag, Tooltip, Typography, Form, message, Upload,
   Tabs, Radio, Popover, theme
 } from 'antd'
@@ -228,6 +228,7 @@ export default function ZaloInboxPage() {
   const [selectedLead, setSelectedLead] = useState(null)
   const [selectedLeadDetail, setSelectedLeadDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [infoDrawerVisible, setInfoDrawerVisible] = useState(false)
   
   // Filter states
   const [search, setSearch] = useState('')
@@ -737,6 +738,184 @@ export default function ZaloInboxPage() {
   }
   const currentOa = oaConfigs.find(oa => oa.id === selectedOaFilter) || (oaConfigs.length === 1 ? oaConfigs[0] : null)
 
+  const renderCustomerInfo = () => {
+    return selectedLeadDetail ? (
+      <div style={{ padding: 16 }}>
+        <div style={{ textAlign: 'center', marginBottom: 16 }}>
+          <Avatar size={64} src={selectedLeadDetail.avatar_url} icon={<UserOutlined />} style={{ background: '#dbeafe', color: '#2563eb' }} />
+          <div style={{ fontWeight: 700, fontSize: 16, marginTop: 8 }}>{selectedLeadDetail.display_name || `Khách Zalo (${selectedLeadDetail.social_id?.slice(-4)})`}</div>
+          <div style={{ fontSize: 12, color: '#64748b' }}>Zalo ID: {selectedLeadDetail.social_id}</div>
+        </div>
+
+        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
+          <Button
+            type={selectedLeadDetail.is_starred ? "primary" : "default"}
+            block
+            icon={<StarFilled style={{ color: selectedLeadDetail.is_starred ? '#fff' : '#f59e0b' }} />}
+            onClick={handleToggleStar}
+            style={{ background: selectedLeadDetail.is_starred ? '#f59e0b' : '#fff', borderColor: '#f59e0b', color: selectedLeadDetail.is_starred ? '#fff' : '#d97706', marginBottom: 14, borderRadius: 20, fontWeight: 600 }}
+          >
+            {selectedLeadDetail.is_starred ? '★ Đang là Khách VIP' : '☆ Đánh dấu Khách VIP'}
+          </Button>
+
+          <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text type="secondary" style={{ fontSize: 11 }}>NHÃN HỘI THOẠI (TAGS)</Text>
+            <Button size="small" type="link" onClick={() => setManageTagsModal(true)} style={{ padding: 0, fontSize: 11 }}>+ Quản lý</Button>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <Select
+              mode="multiple"
+              placeholder="Gắn nhãn cho khách hàng..."
+              style={{ width: '100%' }}
+              value={(selectedLeadDetail.tags || []).map(t => t.id)}
+              onChange={handleUpdateLeadTags}
+              tagRender={(props) => {
+                const t = tagsList.find(item => item.id === props.value)
+                return <Tag color={t?.color || '#3b82f6'} closable={props.closable} onClose={props.onClose} style={{ marginRight: 3, fontWeight: 600 }}>{props.label}</Tag>
+              }}
+              options={tagsList.map(t => ({ value: t.id, label: t.name }))}
+            />
+          </div>
+
+          <Tabs
+            defaultActiveKey="info"
+            items={[
+              {
+                key: 'info',
+                label: 'ℹ️ Thông tin',
+                children: (
+                  <div style={{ paddingTop: 6 }}>
+                    <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>ZALO OA CỦA CÔNG TY</Text></div>
+                    <div style={{ fontSize: 13, marginBottom: 12 }}>🏢 {selectedLeadDetail.oa_name || 'Zalo OA'}</div>
+                    
+                    {selectedLeadDetail.ai_summary && (
+                      <div style={{ marginBottom: 16, background: '#f6ffed', border: '1px solid #b7eb8f', padding: '8px 12px', borderRadius: 8 }}>
+                        <div style={{ marginBottom: 4 }}><Text strong style={{ fontSize: 12, color: '#389e0d' }}>✨ AI Tóm tắt Hội thoại</Text></div>
+                        <div style={{ fontSize: 13, color: '#595959', whiteSpace: 'pre-wrap' }}>
+                          {selectedLeadDetail.ai_summary}
+                        </div>
+                        {selectedLeadDetail.ai_tags && selectedLeadDetail.ai_tags.length > 0 && (
+                          <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {selectedLeadDetail.ai_tags.map((t, idx) => (
+                              <span key={idx} style={{ fontSize: 11, padding: '2px 10px', borderRadius: 12, background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)', color: '#fff', fontWeight: 600, boxShadow: '0 2px 4px rgba(99, 102, 241, 0.2)' }}>
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {selectedLeadDetail.detected_phone && (
+                      <>
+                        <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>SỐ ĐIỆN THOẠI</Text></div>
+                        <div style={{ fontSize: 13, marginBottom: 12, color: '#0068ff', fontWeight: 600 }}>📞 {selectedLeadDetail.detected_phone}</div>
+                      </>
+                    )}
+                    {selectedLeadDetail.detected_email && (
+                      <>
+                        <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>EMAIL PHÁT HIỆN</Text></div>
+                        <div style={{ fontSize: 13, marginBottom: 12, color: '#059669', fontWeight: 600 }}>📧 {selectedLeadDetail.detected_email}</div>
+                      </>
+                    )}
+                    {selectedLeadDetail.detected_address && (
+                      <>
+                        <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>ĐỊA CHỈ PHÁT HIỆN</Text></div>
+                        <div style={{ fontSize: 13, marginBottom: 12, color: '#d97706' }}>📍 {selectedLeadDetail.detected_address}</div>
+                      </>
+                    )}
+                    {selectedLeadDetail.customer_name && (
+                      <>
+                        <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>KHÁCH HÀNG CRM</Text></div>
+                        <div style={{ fontSize: 13, marginBottom: 12 }}>👤 {selectedLeadDetail.customer_name}</div>
+                      </>
+                    )}
+                    <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>NHÂN VIÊN PHỤ TRÁCH</Text></div>
+                    <div style={{ marginBottom: 16 }}>
+                      <Select
+                        placeholder="Chọn nhân viên"
+                        style={{ width: '100%' }}
+                        value={selectedLeadDetail.assigned_to || ''}
+                        allowClear
+                        disabled={!isCompanyAdmin && !hasPermission('zalo.assign')}
+                        onChange={val => handleAssign(val || null)}
+                        options={[{ value: '', label: '-- Chưa phân công --' }, ...employees.map(e => ({ value: e.id, label: e.full_name || e.username }))]}
+                      />
+                    </div>
+                    {!selectedLeadDetail.is_customer_converted && canCreateCustomer && (
+                      <Button
+                        type="primary"
+                        block
+                        icon={<UserAddOutlined />}
+                        onClick={() => {
+                          if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì dữ liệu. Chức năng này tạm thời bị khóa!'); return }
+                          convertForm.setFieldsValue({
+                            customer_name: selectedLeadDetail.display_name || '',
+                            phone_number: selectedLeadDetail.detected_phone || '',
+                            email: selectedLeadDetail.detected_email || '',
+                            address: selectedLeadDetail.detected_address || ''
+                          })
+                          setConvertModalVisible(true)
+                        }}
+                        style={{ background: '#8b5cf6', marginTop: 8, borderRadius: 20 }}
+                      >
+                        Tạo Khách hàng CRM
+                      </Button>
+                    )}
+                  </div>
+                )
+              },
+              {
+                key: 'notes',
+                label: `📝 Ghi chú (${selectedLeadDetail.internal_notes?.length || 0})`,
+                children: (
+                  <div style={{ paddingTop: 6 }}>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                      <Input.TextArea
+                        value={noteText}
+                        onChange={e => setNoteText(e.target.value)}
+                        placeholder="Ghi chú nội bộ (chỉ Sale thấy)..."
+                        autoSize={{ minRows: 2, maxRows: 4 }}
+                        style={{ borderRadius: 8, fontSize: 12 }}
+                      />
+                      <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        loading={noteSaving}
+                        onClick={() => handleAddNote(noteText)}
+                        disabled={!noteText.trim()}
+                        style={{ background: '#10b981', borderRadius: 8 }}
+                      />
+                    </div>
+                    <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {(selectedLeadDetail.internal_notes || []).length === 0 ? (
+                        <Text type="secondary" style={{ fontSize: 12, textAlign: 'center', display: 'block', margin: '20px 0' }}>Chưa có ghi chú nào</Text>
+                      ) : (
+                        (selectedLeadDetail.internal_notes || []).map((note, idx) => (
+                          <div key={note.id || idx} style={{ background: '#fff', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, alignItems: 'center' }}>
+                              <Text strong style={{ fontSize: 11, color: '#334155' }}>👤 {note.created_by_name || 'Sale'}</Text>
+                              <Text type="secondary" style={{ fontSize: 10 }}>{formatTime(note.created_at)}</Text>
+                            </div>
+                            <div style={{ color: '#1e293b', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{note.content}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )
+              }
+            ]}
+          />
+        </div>
+      </div>
+    ) : (
+      <div style={{ textAlign: 'center', color: '#9ca3af', marginTop: 40 }}>
+        <UserOutlined style={{ fontSize: 32, marginBottom: 8, display: 'block' }} />
+        <span style={{ fontSize: 13 }}>Chọn hội thoại để xem thông tin</span>
+      </div>
+    )
+  }
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
       {/* Header */}
@@ -777,52 +956,58 @@ export default function ZaloInboxPage() {
               </Tag>
             </Tooltip>
           )}
-          <Button
-            size="small"
-            type={replyFilter === 'read_unanswered' ? 'primary' : 'default'}
-            danger={replyFilter === 'read_unanswered'}
-            onClick={() => setReplyFilter(replyFilter === 'read_unanswered' ? '' : 'read_unanswered')}
-          >
-            {replyFilter === 'read_unanswered' ? '🔴 Chưa đọc' : 'Chưa đọc'}
-          </Button>
-          <Button
-            size="small"
-            type={phoneFilterMode === 'has_phone' ? 'primary' : 'default'}
-            icon={<PhoneOutlined />}
-            onClick={() => setPhoneFilterMode(phoneFilterMode === 'has_phone' ? 'all' : 'has_phone')}
-          >
-            {phoneFilterMode === 'has_phone' ? 'Có SĐT' : 'Lọc SĐT'}
-          </Button>
-          <Select
-            value={statusFilter}
-            onChange={setStatusFilter}
-            size="small"
-            style={{ width: 130 }}
-            placeholder="Lọc trạng thái"
-          >
-            <Select.Option value="">Tất cả trạng thái</Select.Option>
-            <Select.Option value="not_added">Chưa thêm KH</Select.Option>
-            <Select.Option value="converted">Đã có trong KH</Select.Option>
-          </Select>
+          {!isMobile && (
+            <>
+              <Button
+                size="small"
+                type={replyFilter === 'read_unanswered' ? 'primary' : 'default'}
+                danger={replyFilter === 'read_unanswered'}
+                onClick={() => setReplyFilter(replyFilter === 'read_unanswered' ? '' : 'read_unanswered')}
+              >
+                {replyFilter === 'read_unanswered' ? '🔴 Chưa đọc' : 'Chưa đọc'}
+              </Button>
+              <Button
+                size="small"
+                type={phoneFilterMode === 'has_phone' ? 'primary' : 'default'}
+                icon={<PhoneOutlined />}
+                onClick={() => setPhoneFilterMode(phoneFilterMode === 'has_phone' ? 'all' : 'has_phone')}
+              >
+                {phoneFilterMode === 'has_phone' ? 'Có SĐT' : 'Lọc SĐT'}
+              </Button>
+              <Select
+                value={statusFilter}
+                onChange={setStatusFilter}
+                size="small"
+                style={{ width: 130 }}
+                placeholder="Lọc trạng thái"
+              >
+                <Select.Option value="">Tất cả trạng thái</Select.Option>
+                <Select.Option value="not_added">Chưa thêm KH</Select.Option>
+                <Select.Option value="converted">Đã có trong KH</Select.Option>
+              </Select>
+            </>
+          )}
           <Button size="small" icon={<ReloadOutlined />} onClick={handleRefresh} title="Làm mới" />
         </div>
       </div>
 
       {/* Main 4-column layout */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', flexDirection: isMobile ? 'column' : 'row' }}>
         {/* Cột 1: Pancake-style Vertical Filter Sidebar */}
-        {(!isMobile || !selectedLead) && (
-        <div style={{
-          width: 52,
+        <div className="hide-scrollbar" style={{
+          width: isMobile ? '100%' : 52,
+          height: isMobile ? 52 : 'auto',
           background: '#0f172a',
-          display: 'flex',
-          flexDirection: 'column',
+          display: isMobile && selectedLead ? 'none' : 'flex',
+          flexDirection: isMobile ? 'row' : 'column',
           alignItems: 'center',
-          paddingTop: 12,
-          paddingBottom: 12,
+          padding: isMobile ? '0 12px' : '12px 0',
           gap: 16,
           flexShrink: 0,
-          borderRight: '1px solid #1e293b',
+          borderRight: isMobile ? 'none' : '1px solid #1e293b',
+          borderBottom: isMobile ? '1px solid #1e293b' : 'none',
+          overflowX: isMobile ? 'auto' : 'hidden',
+          overflowY: isMobile ? 'hidden' : 'auto',
           zIndex: 10,
         }}>
           {/* 1. Tất cả tin nhắn (Reset/Mặc định) */}
@@ -1027,14 +1212,15 @@ export default function ZaloInboxPage() {
           </Popover>
 
           {/* 6. Quét tất cả liên hệ Zalo */}
-          <Tooltip title="Quét lại tin nhắn tìm SĐT/Email/Địa chỉ" placement="right">
+          <Tooltip title="Quét lại tin nhắn tìm SĐT/Email/Địa chỉ" placement={isMobile ? "bottom" : "right"}>
             <div
               onClick={handleScanPhones}
               style={{
                 width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: scanning ? '#38bdf8' : '#94a3b8',
-                marginTop: 'auto',
+                marginTop: isMobile ? 0 : 'auto',
+                marginLeft: isMobile ? 'auto' : 0,
                 transition: 'all 0.2s',
               }}
             >
@@ -1042,11 +1228,10 @@ export default function ZaloInboxPage() {
             </div>
           </Tooltip>
         </div>
-        )}
 
         {/* Cột 2: Danh sách hội thoại */}
         {(!isMobile || !selectedLead) && (
-        <div style={{ width: isMobile ? 'calc(100% - 52px)' : leftColWidth, borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', background: '#fff', flexShrink: 0 }}>
+        <div style={{ width: isMobile ? '100%' : leftColWidth, borderRight: isMobile ? 'none' : '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', background: '#fff', flexShrink: 0 }}>
           <div style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>
             <Search
               placeholder="Tìm tên, tin nhắn..."
@@ -1109,98 +1294,104 @@ export default function ZaloInboxPage() {
           {selectedLead ? (
             <>
               {/* Chat Header */}
-              <div style={{ padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: isMobile ? 12 : 0, flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: isMobile ? '100%' : 'auto' }}>
                   {isMobile && (
-                    <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => setSelectedLead(null)} style={{ padding: 4, marginRight: 4 }} />
+                    <Space size={0}>
+                      <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => setSelectedLead(null)} style={{ padding: 4 }} />
+                      <Button type="text" icon={<InfoCircleOutlined />} onClick={() => setInfoDrawerVisible(true)} style={{ padding: 4, marginRight: 4, color: '#0068ff' }} />
+                    </Space>
                   )}
                   <Avatar size={40} src={selectedLead.avatar_url} icon={<UserOutlined />} style={{ background: '#dbeafe', color: '#2563eb' }} />
-                  <div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Text strong style={{ fontSize: 15 }}>{selectedLead.display_name || `Khách Zalo (${selectedLead.social_id?.slice(-4)})`}</Text>
-                      {selectedLead.is_starred && <StarFilled style={{ color: '#f59e0b', fontSize: 14 }} />}
+                      <Text strong ellipsis style={{ fontSize: 15, maxWidth: isMobile ? 180 : 'none' }}>{selectedLead.display_name || `Khách Zalo (${selectedLead.social_id?.slice(-4)})`}</Text>
+                      {selectedLead.is_starred && <StarFilled style={{ color: '#f59e0b', fontSize: 14, flexShrink: 0 }} />}
                     </div>
-                    <Space size={6}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
                       <Tag style={{ fontSize: 11, margin: 0, color: STATUS_CONFIG[selectedLead.status]?.color, background: STATUS_CONFIG[selectedLead.status]?.bg }}>
                         {STATUS_CONFIG[selectedLead.status]?.label || 'Mới'}
                       </Tag>
-                      <Text type="secondary" style={{ fontSize: 11 }}>🏢 {selectedLead.oa_name || 'Zalo OA'}</Text>
-                    </Space>
+                      <Text type="secondary" ellipsis style={{ fontSize: 11, maxWidth: isMobile ? 160 : 250 }}>🏢 {selectedLead.oa_name || 'Zalo OA'}</Text>
+                    </div>
                   </div>
                 </div>
 
-                <Space>
-                  <div style={{ marginRight: 12, display: 'flex', alignItems: 'center', gap: 6, background: (currentOa?.is_ai_active && selectedLead.is_ai_active) ? '#f6ffed' : '#fff1f0', padding: '4px 12px', borderRadius: 20, border: `1px solid ${(currentOa?.is_ai_active && selectedLead.is_ai_active) ? '#b7eb8f' : '#ffa39e'}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', width: isMobile ? '100%' : 'auto', overflowX: 'auto', paddingBottom: isMobile ? 4 : 0, gap: 8 }}>
+                  <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, background: (currentOa?.is_ai_active && selectedLead.is_ai_active) ? '#f6ffed' : '#fff1f0', padding: '4px 12px', borderRadius: 20, border: `1px solid ${(currentOa?.is_ai_active && selectedLead.is_ai_active) ? '#b7eb8f' : '#ffa39e'}` }}>
                     <Switch size="small" disabled={!currentOa?.is_ai_active} checked={currentOa?.is_ai_active && selectedLead.is_ai_active} onChange={handleToggleAi} />
                     <span style={{ fontSize: 12, fontWeight: 600, color: (currentOa?.is_ai_active && selectedLead.is_ai_active) ? '#389e0d' : '#cf1322', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      {(currentOa?.is_ai_active && selectedLead.is_ai_active) ? <><RobotOutlined /> AI Đang Trực</> : <><UserOutlined /> Sale Tiếp Quản</>}
+                      {(currentOa?.is_ai_active && selectedLead.is_ai_active) ? <><RobotOutlined /> {isMobile ? 'AI Trực' : 'AI Đang Trực'}</> : <><UserOutlined /> {isMobile ? 'Sale' : 'Sale Tiếp Quản'}</>}
                     </span>
                   </div>
-                  {companySettings?.enable_chat_extraction && (
-                    <Tooltip title="Trích xuất các đoạn chat hay thành kiến thức cho AI học">
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    {companySettings?.enable_chat_extraction && (
+                      <Tooltip title="Trích xuất các đoạn chat hay thành kiến thức cho AI học">
+                        <Button
+                          size="small"
+                          type="dashed"
+                          style={{ color: '#d48806', borderColor: '#ffe58f', background: '#fffbe6' }}
+                          icon={<span style={{fontSize: '12px'}}>⚡</span>}
+                          onClick={handleExtractConversation}
+                          loading={extracting}
+                        >
+                          {isMobile ? 'Lưu' : 'Đóng gói vào RAG'}
+                        </Button>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Quét lại liên hệ cho hội thoại này">
                       <Button
                         size="small"
-                        type="dashed"
-                        style={{ color: '#d48806', borderColor: '#ffe58f', background: '#fffbe6' }}
-                        icon={<span style={{fontSize: '12px'}}>⚡</span>}
-                        onClick={handleExtractConversation}
-                        loading={extracting}
+                        icon={<ReloadOutlined />}
+                        onClick={async () => {
+                          try {
+                            const res = await api.post(`/zalo/social-leads/${selectedLead.id}/rescan-phone/`)
+                            message.success(res.data.detail)
+                            fetchDetail(selectedLead.id)
+                            fetchLeads(true)
+                          } catch (err) {
+                            message.error(err.response?.data?.error || 'Không tìm thấy liên hệ.')
+                          }
+                        }}
                       >
-                        Đóng gói vào RAG
+                        Quét LH
                       </Button>
                     </Tooltip>
-                  )}
-                  <Tooltip title="Quét lại liên hệ cho hội thoại này">
-                    <Button
-                      size="small"
-                      icon={<ReloadOutlined />}
-                      onClick={async () => {
-                        try {
-                          const res = await api.post(`/zalo/social-leads/${selectedLead.id}/rescan-phone/`)
-                          message.success(res.data.detail)
-                          fetchDetail(selectedLead.id)
-                          fetchLeads(true)
-                        } catch (err) {
-                          message.error(err.response?.data?.error || 'Không tìm thấy liên hệ.')
-                        }
-                      }}
-                    >
-                      Quét liên hệ
-                    </Button>
-                  </Tooltip>
-                  {canDeleteConversation && (
-                    <Tooltip title="Xóa hội thoại">
-                      <Button
-                        danger
-                        size="small"
-                        icon={<DeleteOutlined />}
-                        onClick={() => {
-                          Modal.confirm({
-                            title: 'Xóa hội thoại này?',
-                            content: 'Toàn bộ tin nhắn với khách hàng này sẽ bị xóa vĩnh viễn.',
-                            okText: 'Xóa',
-                            okType: 'danger',
-                            cancelText: 'Hủy',
-                            onOk: async () => {
-                              if (maintenanceMode) { message.warning('Hệ thống bảo trì!'); return }
-                              try {
-                                await api.delete(`/zalo/social-leads/${selectedLead.id}/`)
-                                message.success('Đã xóa hội thoại')
-                                setSelectedLead(null)
-                                setSelectedLeadDetail(null)
-                                fetchLeads()
-                              } catch { message.error('Lỗi khi xóa hội thoại') }
-                            }
-                          })
-                        }}
-                      />
-                    </Tooltip>
-                  )}
-                </Space>
+                    {canDeleteConversation && (
+                      <Tooltip title="Xóa hội thoại">
+                        <Button
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          onClick={() => {
+                            Modal.confirm({
+                              title: 'Xóa hội thoại này?',
+                              content: 'Toàn bộ tin nhắn với khách hàng này sẽ bị xóa vĩnh viễn.',
+                              okText: 'Xóa',
+                              okType: 'danger',
+                              cancelText: 'Hủy',
+                              onOk: async () => {
+                                if (maintenanceMode) { message.warning('Hệ thống bảo trì!'); return }
+                                try {
+                                  await api.delete(`/zalo/social-leads/${selectedLead.id}/`)
+                                  message.success('Đã xóa hội thoại')
+                                  setSelectedLead(null)
+                                  setSelectedLeadDetail(null)
+                                  fetchLeads()
+                                } catch { message.error('Lỗi khi xóa hội thoại') }
+                              }
+                            })
+                          }}
+                        />
+                      </Tooltip>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Chat Messages */}
-              <div ref={chatContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', background: '#eef2f5' }}>
+              <div ref={chatContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', background: '#eef2f5', minHeight: 0 }}>
                 {loadingMessages ? (
                   <div style={{ textAlign: 'center', marginTop: 40 }}><Spin /></div>
                 ) : messages.length === 0 ? (
@@ -1263,7 +1454,7 @@ export default function ZaloInboxPage() {
 
               {/* Chat Input & Horizontal Toolbar Chuẩn Pancake */}
               {selectedLead.status !== 'archived' && canChat && (
-                <div style={{ padding: '10px 14px', borderTop: '1px solid #e5e7eb', background: '#fff' }}>
+                <div style={{ padding: '10px 14px', borderTop: '1px solid #e5e7eb', background: '#fff', flexShrink: 0 }}>
                   {/* Hàng ngang phía trên khung nhập chat (3 nút biểu tượng icon: Yêu cầu SĐT, Yêu cầu Email, Văn bản mẫu) */}
                   <div style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
                     <Tooltip title="Yêu cầu khách chia sẻ số điện thoại" placement="top">
@@ -1350,184 +1541,22 @@ export default function ZaloInboxPage() {
         {/* Cột 4: CRM Right Profile & Notes Panel */}
         {!isMobile && selectedLead && (
         <div style={{ width: rightColWidth, background: '#fff', borderLeft: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto' }}>
-          {selectedLeadDetail ? (
-            <div style={{ padding: 16 }}>
-              <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <Avatar size={64} src={selectedLeadDetail.avatar_url} icon={<UserOutlined />} style={{ background: '#dbeafe', color: '#2563eb' }} />
-                <div style={{ fontWeight: 700, fontSize: 16, marginTop: 8 }}>{selectedLeadDetail.display_name || `Khách Zalo (${selectedLeadDetail.social_id?.slice(-4)})`}</div>
-                <div style={{ fontSize: 12, color: '#64748b' }}>Zalo ID: {selectedLeadDetail.social_id}</div>
-              </div>
-
-              <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
-                <Button
-                  type={selectedLeadDetail.is_starred ? "primary" : "default"}
-                  block
-                  icon={<StarFilled style={{ color: selectedLeadDetail.is_starred ? '#fff' : '#f59e0b' }} />}
-                  onClick={handleToggleStar}
-                  style={{ background: selectedLeadDetail.is_starred ? '#f59e0b' : '#fff', borderColor: '#f59e0b', color: selectedLeadDetail.is_starred ? '#fff' : '#d97706', marginBottom: 14, borderRadius: 20, fontWeight: 600 }}
-                >
-                  {selectedLeadDetail.is_starred ? '★ Đang là Khách VIP' : '☆ Đánh dấu Khách VIP'}
-                </Button>
-
-                <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text type="secondary" style={{ fontSize: 11 }}>NHÃN HỘI THOẠI (TAGS)</Text>
-                  <Button size="small" type="link" onClick={() => setManageTagsModal(true)} style={{ padding: 0, fontSize: 11 }}>+ Quản lý</Button>
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <Select
-                    mode="multiple"
-                    placeholder="Gắn nhãn cho khách hàng..."
-                    style={{ width: '100%' }}
-                    value={(selectedLeadDetail.tags || []).map(t => t.id)}
-                    onChange={handleUpdateLeadTags}
-                    tagRender={(props) => {
-                      const t = tagsList.find(item => item.id === props.value)
-                      return <Tag color={t?.color || '#3b82f6'} closable={props.closable} onClose={props.onClose} style={{ marginRight: 3, fontWeight: 600 }}>{props.label}</Tag>
-                    }}
-                    options={tagsList.map(t => ({ value: t.id, label: t.name }))}
-                  />
-                </div>
-
-                <Tabs
-                  defaultActiveKey="info"
-                  items={[
-                    {
-                      key: 'info',
-                      label: 'ℹ️ Thông tin',
-                      children: (
-                        <div style={{ paddingTop: 6 }}>
-                          <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>ZALO OA CỦA CÔNG TY</Text></div>
-                          <div style={{ fontSize: 13, marginBottom: 12 }}>🏢 {selectedLeadDetail.oa_name || 'Zalo OA'}</div>
-                          
-                          {selectedLeadDetail.ai_summary && (
-                            <div style={{ marginBottom: 16, background: '#f6ffed', border: '1px solid #b7eb8f', padding: '8px 12px', borderRadius: 8 }}>
-                              <div style={{ marginBottom: 4 }}><Text strong style={{ fontSize: 12, color: '#389e0d' }}>✨ AI Tóm tắt Hội thoại</Text></div>
-                              <div style={{ fontSize: 13, color: '#595959', whiteSpace: 'pre-wrap' }}>
-                                {selectedLeadDetail.ai_summary}
-                              </div>
-                              {selectedLeadDetail.ai_tags && selectedLeadDetail.ai_tags.length > 0 && (
-                                <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                  {selectedLeadDetail.ai_tags.map((t, idx) => (
-                                    <span key={idx} style={{ fontSize: 11, padding: '2px 10px', borderRadius: 12, background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)', color: '#fff', fontWeight: 600, boxShadow: '0 2px 4px rgba(99, 102, 241, 0.2)' }}>
-                                      {t}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          {selectedLeadDetail.detected_phone && (
-                            <>
-                              <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>SỐ ĐIỆN THOẠI</Text></div>
-                              <div style={{ fontSize: 13, marginBottom: 12, color: '#0068ff', fontWeight: 600 }}>📞 {selectedLeadDetail.detected_phone}</div>
-                            </>
-                          )}
-                          {selectedLeadDetail.detected_email && (
-                            <>
-                              <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>EMAIL PHÁT HIỆN</Text></div>
-                              <div style={{ fontSize: 13, marginBottom: 12, color: '#059669', fontWeight: 600 }}>📧 {selectedLeadDetail.detected_email}</div>
-                            </>
-                          )}
-                          {selectedLeadDetail.detected_address && (
-                            <>
-                              <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>ĐỊA CHỈ PHÁT HIỆN</Text></div>
-                              <div style={{ fontSize: 13, marginBottom: 12, color: '#d97706' }}>📍 {selectedLeadDetail.detected_address}</div>
-                            </>
-                          )}
-                          {selectedLeadDetail.customer_name && (
-                            <>
-                              <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>KHÁCH HÀNG CRM</Text></div>
-                              <div style={{ fontSize: 13, marginBottom: 12 }}>👤 {selectedLeadDetail.customer_name}</div>
-                            </>
-                          )}
-                          <div style={{ marginBottom: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>NHÂN VIÊN PHỤ TRÁCH</Text></div>
-                          <div style={{ marginBottom: 16 }}>
-                            <Select
-                              placeholder="Chọn nhân viên"
-                              style={{ width: '100%' }}
-                              value={selectedLeadDetail.assigned_to || ''}
-                              allowClear
-                              disabled={!isCompanyAdmin && !hasPermission('zalo.assign')}
-                              onChange={val => handleAssign(val || null)}
-                              options={[{ value: '', label: '-- Chưa phân công --' }, ...employees.map(e => ({ value: e.id, label: e.full_name || e.username }))]}
-                            />
-                          </div>
-                          {!selectedLeadDetail.is_customer_converted && canCreateCustomer && (
-                            <Button
-                              type="primary"
-                              block
-                              icon={<UserAddOutlined />}
-                              onClick={() => {
-                                if (maintenanceMode) { message.warning('⚠️ Hệ thống đang bảo trì dữ liệu. Chức năng này tạm thời bị khóa!'); return }
-                                convertForm.setFieldsValue({
-                                  customer_name: selectedLeadDetail.display_name || '',
-                                  phone_number: selectedLeadDetail.detected_phone || '',
-                                  email: selectedLeadDetail.detected_email || '',
-                                  address: selectedLeadDetail.detected_address || ''
-                                })
-                                setConvertModalVisible(true)
-                              }}
-                              style={{ background: '#8b5cf6', marginTop: 8, borderRadius: 20 }}
-                            >
-                              Tạo Khách hàng CRM
-                            </Button>
-                          )}
-                        </div>
-                      )
-                    },
-                    {
-                      key: 'notes',
-                      label: `📝 Ghi chú (${selectedLeadDetail.internal_notes?.length || 0})`,
-                      children: (
-                        <div style={{ paddingTop: 6 }}>
-                          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                            <Input.TextArea
-                              value={noteText}
-                              onChange={e => setNoteText(e.target.value)}
-                              placeholder="Ghi chú nội bộ (chỉ Sale thấy)..."
-                              autoSize={{ minRows: 2, maxRows: 4 }}
-                              style={{ borderRadius: 8, fontSize: 12 }}
-                            />
-                            <Button
-                              type="primary"
-                              icon={<PlusOutlined />}
-                              loading={noteSaving}
-                              onClick={() => handleAddNote(noteText)}
-                              disabled={!noteText.trim()}
-                              style={{ background: '#10b981', borderRadius: 8 }}
-                            />
-                          </div>
-                          <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {(selectedLeadDetail.internal_notes || []).length === 0 ? (
-                              <Text type="secondary" style={{ fontSize: 12, textAlign: 'center', display: 'block', margin: '20px 0' }}>Chưa có ghi chú nào</Text>
-                            ) : (
-                              (selectedLeadDetail.internal_notes || []).map((note, idx) => (
-                                <div key={note.id || idx} style={{ background: '#fff', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, alignItems: 'center' }}>
-                                    <Text strong style={{ fontSize: 11, color: '#334155' }}>👤 {note.created_by_name || 'Sale'}</Text>
-                                    <Text type="secondary" style={{ fontSize: 10 }}>{formatTime(note.created_at)}</Text>
-                                  </div>
-                                  <div style={{ color: '#1e293b', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{note.content}</div>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      )
-                    }
-                  ]}
-                />
-              </div>
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', color: '#9ca3af', marginTop: 40 }}>
-              <UserOutlined style={{ fontSize: 32, marginBottom: 8, display: 'block' }} />
-              <span style={{ fontSize: 13 }}>Chọn hội thoại để xem thông tin</span>
-            </div>
-          )}
+          {renderCustomerInfo()}
         </div>
         )}
       </div>
+
+      {/* Mobile Drawer for Customer Info */}
+      <Drawer
+        title={<Space><InfoCircleOutlined style={{ color: '#0068ff' }} /> Thông tin khách hàng</Space>}
+        placement="right"
+        onClose={() => setInfoDrawerVisible(false)}
+        open={infoDrawerVisible}
+        width={320}
+        styles={{ body: { padding: 0 } }}
+      >
+        {selectedLead && renderCustomerInfo()}
+      </Drawer>
 
       {/* Modal Convert Khách Hàng CRM */}
       <Modal

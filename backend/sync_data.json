@@ -1386,7 +1386,7 @@
   "pk": 2,
   "fields": {
     "password": "pbkdf2_sha256$1000000$gogv5if640Ve4r5k5DvYiY$Co2C/05RkNJOSvpBH4uiONSzdeTJAZ/vJysA2SrgpDY=",
-    "last_login": "2026-07-28T15:54:45.232Z",
+    "last_login": "2026-07-29T06:13:54.711Z",
     "is_superuser": false,
     "username": "giamdoc",
     "first_name": "",
@@ -1917,6 +1917,16 @@
   }
 },
 {
+  "model": "users.companysequence",
+  "pk": 21,
+  "fields": {
+    "company": 15,
+    "prefix": "FUJI-PT",
+    "date_str": "29072026",
+    "last_seq": 1
+  }
+},
+{
   "model": "crm.customertag",
   "pk": 2,
   "fields": {
@@ -1937,7 +1947,7 @@
     "city": "Hải Phòng",
     "birthday": "1992-09-14",
     "source": "other",
-    "status": "has_order",
+    "status": "active",
     "is_inactive": false,
     "assigned_to": 5,
     "created_by": 5,
@@ -1962,7 +1972,7 @@
     "city": "Hà Nội",
     "birthday": "1997-04-06",
     "source": "other",
-    "status": "repeat_order",
+    "status": "active",
     "is_inactive": false,
     "assigned_to": 5,
     "created_by": 5,
@@ -1985,7 +1995,7 @@
     "city": "Hải Dương",
     "birthday": null,
     "source": "other",
-    "status": "has_order",
+    "status": "active",
     "is_inactive": false,
     "assigned_to": 6,
     "created_by": 6,
@@ -2007,7 +2017,7 @@
     "address": "",
     "city": "",
     "birthday": null,
-    "source": "Website moclegia.vn",
+    "source": "website",
     "status": "new",
     "is_inactive": false,
     "assigned_to": 3,
@@ -2015,7 +2025,7 @@
     "notes": "",
     "social_lead": null,
     "created_at": "2026-07-24T07:20:10.561Z",
-    "updated_at": "2026-07-24T08:07:04.445Z",
+    "updated_at": "2026-07-29T03:28:28.540Z",
     "tags": []
   }
 },
@@ -2039,6 +2049,29 @@
     "social_lead": null,
     "created_at": "2026-07-24T07:55:33.808Z",
     "updated_at": "2026-07-24T08:07:04.354Z",
+    "tags": []
+  }
+},
+{
+  "model": "crm.customer",
+  "pk": 37,
+  "fields": {
+    "company": 15,
+    "name": "Khách Zalo (0463)",
+    "phone": "0967234517",
+    "email": "",
+    "address": "",
+    "city": "",
+    "birthday": null,
+    "source": "zalo",
+    "status": "new",
+    "is_inactive": false,
+    "assigned_to": null,
+    "created_by": null,
+    "notes": "",
+    "social_lead": 11,
+    "created_at": "2026-07-29T07:16:37.352Z",
+    "updated_at": "2026-07-29T07:16:37.352Z",
     "tags": []
   }
 },
@@ -2090,218 +2123,6 @@
     "result": "",
     "next_follow_up": null,
     "created_at": "2026-07-24T07:55:33.817Z"
-  }
-},
-{
-  "model": "sales.quotation",
-  "pk": 1,
-  "fields": {
-    "company": 15,
-    "quotation_number": "FUJI-BG-22072026-001",
-    "customer": 28,
-    "created_by": 5,
-    "status": "approved",
-    "installation_date": "2026-07-28",
-    "notes": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao.",
-    "discount_total": "0.00",
-    "public_token": "57227c11-a01b-4e7a-8e55-a0f7dced29db",
-    "public_link_expires_at": null,
-    "signature_image": null,
-    "signed_at": null,
-    "customer_name_signed": null,
-    "subtotal": "17300000.00",
-    "vat_rate": "0.00",
-    "vat_amount": "0.00",
-    "total_amount": "17300000.00",
-    "order": null,
-    "template": null,
-    "shipping_fee": "0.00",
-    "installation_fee": "0.00",
-    "delivery_time": "3-5 ngày làm việc",
-    "warranty_months": 12,
-    "payment_terms": "",
-    "payment_terms_schedule": [
-      {
-        "type": "deposit",
-        "title": "Thanh toán đợt 1",
-        "percentage": 100
-      }
-    ],
-    "validity_days": 15,
-    "custom_data": {
-      "template_snapshot": {
-        "id": 2,
-        "code": "default",
-        "name": "Báo giá FUJITECH",
-        "layout_style": "modern_navy",
-        "layout_config": {
-          "sections": [
-            {
-              "id": "header",
-              "name": "🏢 Khối Header & Logo Công ty",
-              "order": 1,
-              "visible": true
-            },
-            {
-              "id": "title",
-              "name": "📌 Khối Tiêu đề & Lời chào",
-              "order": 2,
-              "visible": true
-            },
-            {
-              "id": "customer_info",
-              "name": "👤 Khối Thông tin Khách hàng / Đối tác",
-              "order": 3,
-              "visible": true
-            },
-            {
-              "id": "items_table",
-              "name": "📦 Khối Bảng Hạng mục Sản phẩm & Dịch vụ",
-              "order": 4,
-              "visible": true
-            },
-            {
-              "id": "summary",
-              "name": "💰 Khối Tổng kết Thanh toán & Chiết khấu",
-              "order": 5,
-              "visible": true
-            },
-            {
-              "id": "terms",
-              "name": "📜 Khối Ghi chú & Điều khoản (Từ Admin Công ty)",
-              "order": 6,
-              "visible": true
-            },
-            {
-              "id": "signatures",
-              "name": "✍️ Khối Chữ ký Xác nhận",
-              "order": 7,
-              "columns": 2,
-              "visible": true
-            }
-          ],
-          "table_style": "classic_border",
-          "theme_color": "#d97706",
-          "custom_title": "BÁO GIÁ SẢN XUẤT CỬA COMPOSITE",
-          "paper_orientation": "landscape"
-        },
-        "footer_content": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao."
-      }
-    },
-    "created_at": "2026-07-22T03:36:57.390Z",
-    "updated_at": "2026-07-22T03:36:57.390Z"
-  }
-},
-{
-  "model": "sales.quotationitem",
-  "pk": 1,
-  "fields": {
-    "quotation": 1,
-    "product": 7,
-    "item_type": "product",
-    "product_name": "Cửa composite CCP01 - Mẫu mới",
-    "unit_price": "3900000.00",
-    "width": "600.00",
-    "height": "2000.00",
-    "quantity": 1,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "Không bản lề",
-    "length": "0.00",
-    "area": "1200000.00",
-    "spec": "",
-    "warranty": "12 tháng",
-    "thickness": "300.00",
-    "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
-    "custom_data": {
-      "unit": "bộ",
-      "symbol": "D11",
-      "thickness": 300
-    }
-  }
-},
-{
-  "model": "sales.quotationitem",
-  "pk": 2,
-  "fields": {
-    "quotation": 1,
-    "product": 7,
-    "item_type": "product",
-    "product_name": "Cửa composite CCP01 - Mẫu mới",
-    "unit_price": "3900000.00",
-    "width": "300.00",
-    "height": "2011.00",
-    "quantity": 1,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "Màu óc chó",
-    "length": "0.00",
-    "area": "603300.00",
-    "spec": "",
-    "warranty": "12 tháng",
-    "thickness": "200.00",
-    "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
-    "custom_data": {
-      "unit": "bộ",
-      "symbol": "D12",
-      "thickness": 200
-    }
-  }
-},
-{
-  "model": "sales.quotationitem",
-  "pk": 3,
-  "fields": {
-    "quotation": 1,
-    "product": 7,
-    "item_type": "product",
-    "product_name": "Cửa composite CCP01 - Mẫu mới",
-    "unit_price": "3900000.00",
-    "width": "300.00",
-    "height": "2500.00",
-    "quantity": 1,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "Không có",
-    "length": "0.00",
-    "area": "750000.00",
-    "spec": "",
-    "warranty": "12 tháng",
-    "thickness": "800.00",
-    "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
-    "custom_data": {
-      "unit": "bộ",
-      "symbol": "",
-      "thickness": 800
-    }
-  }
-},
-{
-  "model": "sales.quotationitem",
-  "pk": 4,
-  "fields": {
-    "quotation": 1,
-    "product": 10,
-    "item_type": "product",
-    "product_name": "Khoá thông minh KTM01",
-    "unit_price": "5600000.00",
-    "width": "0.00",
-    "height": "0.00",
-    "quantity": 1,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "Thông minh",
-    "length": "0.00",
-    "area": "0.00",
-    "spec": "",
-    "warranty": "12 tháng",
-    "thickness": "0.00",
-    "product_image": "http://localhost:8000/media/products/khoa.jpg",
-    "custom_data": {
-      "unit": "cái",
-      "symbol": "K1",
-      "thickness": 0
-    }
   }
 },
 {
@@ -2439,635 +2260,6 @@
   }
 },
 {
-  "model": "orders.order",
-  "pk": 11,
-  "fields": {
-    "company": 15,
-    "order_number": "FUJI-DH-22072026-001",
-    "customer": 28,
-    "quotation": 1,
-    "created_by": 5,
-    "approved_by": 2,
-    "status": "completed",
-    "financial_status": "fully_paid",
-    "payment_term": "Cọc 30% - Giao hàng 70%",
-    "payment_terms_schedule": [
-      {
-        "type": "deposit",
-        "title": "Thanh toán đợt 1",
-        "percentage": 100
-      }
-    ],
-    "installation_date": "2026-07-28",
-    "notes": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao.",
-    "subtotal": "17300000.00",
-    "vat_rate": "0.00",
-    "vat_amount": "0.00",
-    "shipping_fee": "0.00",
-    "installation_fee": "0.00",
-    "delivery_time": "3-5 ngày làm việc",
-    "warranty_months": 12,
-    "validity_days": 15,
-    "discount_total": "0.00",
-    "total_amount": "17300000.00",
-    "approved_at": "2026-07-22T03:53:50.524Z",
-    "custom_data": {
-      "template_snapshot": {
-        "id": 2,
-        "code": "default",
-        "name": "Báo giá FUJITECH",
-        "layout_style": "modern_navy",
-        "layout_config": {
-          "sections": [
-            {
-              "id": "header",
-              "name": "🏢 Khối Header & Logo Công ty",
-              "order": 1,
-              "visible": true
-            },
-            {
-              "id": "title",
-              "name": "📌 Khối Tiêu đề & Lời chào",
-              "order": 2,
-              "visible": true
-            },
-            {
-              "id": "customer_info",
-              "name": "👤 Khối Thông tin Khách hàng / Đối tác",
-              "order": 3,
-              "visible": true
-            },
-            {
-              "id": "items_table",
-              "name": "📦 Khối Bảng Hạng mục Sản phẩm & Dịch vụ",
-              "order": 4,
-              "visible": true
-            },
-            {
-              "id": "summary",
-              "name": "💰 Khối Tổng kết Thanh toán & Chiết khấu",
-              "order": 5,
-              "visible": true
-            },
-            {
-              "id": "terms",
-              "name": "📜 Khối Ghi chú & Điều khoản (Từ Admin Công ty)",
-              "order": 6,
-              "visible": true
-            },
-            {
-              "id": "signatures",
-              "name": "✍️ Khối Chữ ký Xác nhận",
-              "order": 7,
-              "columns": 2,
-              "visible": true
-            }
-          ],
-          "table_style": "classic_border",
-          "theme_color": "#d97706",
-          "custom_title": "BÁO GIÁ SẢN XUẤT CỬA COMPOSITE",
-          "paper_orientation": "landscape"
-        },
-        "footer_content": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao."
-      }
-    },
-    "created_at": "2026-07-22T03:53:36.809Z",
-    "updated_at": "2026-07-24T02:11:47.891Z"
-  }
-},
-{
-  "model": "orders.order",
-  "pk": 12,
-  "fields": {
-    "company": 15,
-    "order_number": "FUJI-DH-24072026-001",
-    "customer": 27,
-    "quotation": null,
-    "created_by": 2,
-    "approved_by": 2,
-    "status": "approved",
-    "financial_status": "unpaid",
-    "payment_term": "Cọc 30% - Giao hàng 70%",
-    "payment_terms_schedule": [
-      {
-        "type": "deposit",
-        "title": "Thanh toán đợt 1",
-        "percentage": 100
-      }
-    ],
-    "installation_date": "2026-07-29",
-    "notes": "",
-    "subtotal": "23400000.00",
-    "vat_rate": "0.00",
-    "vat_amount": "0.00",
-    "shipping_fee": "0.00",
-    "installation_fee": "0.00",
-    "delivery_time": "3-5 ngày làm việc",
-    "warranty_months": 12,
-    "validity_days": 30,
-    "discount_total": "0.00",
-    "total_amount": "23400000.00",
-    "approved_at": "2026-07-24T02:17:29.302Z",
-    "custom_data": {
-      "template_snapshot": {
-        "id": 2,
-        "code": "default",
-        "name": "Báo giá FUJITECH",
-        "layout_style": "modern_navy",
-        "layout_config": {
-          "sections": [
-            {
-              "id": "header",
-              "name": "🏢 Khối Header & Logo Công ty",
-              "order": 1,
-              "visible": true
-            },
-            {
-              "id": "title",
-              "name": "📌 Khối Tiêu đề & Lời chào",
-              "order": 2,
-              "visible": true
-            },
-            {
-              "id": "customer_info",
-              "name": "👤 Khối Thông tin Khách hàng / Đối tác",
-              "order": 3,
-              "visible": true
-            },
-            {
-              "id": "items_table",
-              "name": "📦 Khối Bảng Hạng mục Sản phẩm & Dịch vụ",
-              "order": 4,
-              "visible": true
-            },
-            {
-              "id": "summary",
-              "name": "💰 Khối Tổng kết Thanh toán & Chiết khấu",
-              "order": 5,
-              "visible": true
-            },
-            {
-              "id": "terms",
-              "name": "📜 Khối Ghi chú & Điều khoản (Từ Admin Công ty)",
-              "order": 6,
-              "visible": true
-            },
-            {
-              "id": "signatures",
-              "name": "✍️ Khối Chữ ký Xác nhận",
-              "order": 7,
-              "columns": 2,
-              "visible": true
-            }
-          ],
-          "table_style": "classic_border",
-          "theme_color": "#d97706",
-          "custom_title": "BÁO GIÁ SẢN XUẤT CỬA COMPOSITE",
-          "paper_orientation": "landscape"
-        },
-        "footer_content": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao."
-      }
-    },
-    "created_at": "2026-07-24T02:13:40.425Z",
-    "updated_at": "2026-07-24T02:17:29.303Z"
-  }
-},
-{
-  "model": "orders.order",
-  "pk": 13,
-  "fields": {
-    "company": 15,
-    "order_number": "FUJI-DH-24072026-002",
-    "customer": 28,
-    "quotation": null,
-    "created_by": 2,
-    "approved_by": 2,
-    "status": "completed",
-    "financial_status": "deposit_paid",
-    "payment_term": "Cọc 30% - Giao hàng 70%",
-    "payment_terms_schedule": [
-      {
-        "type": "deposit",
-        "title": "Thanh toán đợt 1",
-        "percentage": 50
-      },
-      {
-        "type": "after_delivery",
-        "title": "Thanh toán đợt 1",
-        "percentage": 50
-      }
-    ],
-    "installation_date": null,
-    "notes": "",
-    "subtotal": "35000000.00",
-    "vat_rate": "0.00",
-    "vat_amount": "0.00",
-    "shipping_fee": "0.00",
-    "installation_fee": "0.00",
-    "delivery_time": "3-5 ngày làm việc",
-    "warranty_months": 12,
-    "validity_days": 30,
-    "discount_total": "0.00",
-    "total_amount": "35000000.00",
-    "approved_at": "2026-07-24T02:19:44.153Z",
-    "custom_data": {
-      "template_snapshot": {
-        "id": 2,
-        "code": "default",
-        "name": "Báo giá FUJITECH",
-        "layout_style": "modern_navy",
-        "layout_config": {
-          "sections": [
-            {
-              "id": "header",
-              "name": "🏢 Khối Header & Logo Công ty",
-              "order": 1,
-              "visible": true
-            },
-            {
-              "id": "title",
-              "name": "📌 Khối Tiêu đề & Lời chào",
-              "order": 2,
-              "visible": true
-            },
-            {
-              "id": "customer_info",
-              "name": "👤 Khối Thông tin Khách hàng / Đối tác",
-              "order": 3,
-              "visible": true
-            },
-            {
-              "id": "items_table",
-              "name": "📦 Khối Bảng Hạng mục Sản phẩm & Dịch vụ",
-              "order": 4,
-              "visible": true
-            },
-            {
-              "id": "summary",
-              "name": "💰 Khối Tổng kết Thanh toán & Chiết khấu",
-              "order": 5,
-              "visible": true
-            },
-            {
-              "id": "terms",
-              "name": "📜 Khối Ghi chú & Điều khoản (Từ Admin Công ty)",
-              "order": 6,
-              "visible": true
-            },
-            {
-              "id": "signatures",
-              "name": "✍️ Khối Chữ ký Xác nhận",
-              "order": 7,
-              "columns": 2,
-              "visible": true
-            }
-          ],
-          "table_style": "classic_border",
-          "theme_color": "#d97706",
-          "custom_title": "BÁO GIÁ SẢN XUẤT CỬA COMPOSITE",
-          "paper_orientation": "landscape"
-        },
-        "footer_content": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao."
-      }
-    },
-    "created_at": "2026-07-24T02:19:28.286Z",
-    "updated_at": "2026-07-25T09:49:34.002Z"
-  }
-},
-{
-  "model": "orders.order",
-  "pk": 14,
-  "fields": {
-    "company": 15,
-    "order_number": "FUJI-DH-24072026-003",
-    "customer": 29,
-    "quotation": null,
-    "created_by": 6,
-    "approved_by": 2,
-    "status": "completed",
-    "financial_status": "fully_paid",
-    "payment_term": "Cọc 30% - Giao hàng 70%",
-    "payment_terms_schedule": [
-      {
-        "type": "deposit",
-        "title": "Thanh toán đợt 1",
-        "percentage": 100
-      }
-    ],
-    "installation_date": "2026-07-30",
-    "notes": "",
-    "subtotal": "39060000.00",
-    "vat_rate": "0.00",
-    "vat_amount": "0.00",
-    "shipping_fee": "0.00",
-    "installation_fee": "0.00",
-    "delivery_time": "3-5 ngày làm việc",
-    "warranty_months": 12,
-    "validity_days": 30,
-    "discount_total": "0.00",
-    "total_amount": "39060000.00",
-    "approved_at": "2026-07-24T02:59:10.469Z",
-    "custom_data": {
-      "template_snapshot": {
-        "id": 2,
-        "code": "default",
-        "name": "Báo giá FUJITECH",
-        "layout_style": "modern_navy",
-        "layout_config": {
-          "sections": [
-            {
-              "id": "header",
-              "name": "🏢 Khối Header & Logo Công ty",
-              "order": 1,
-              "visible": true
-            },
-            {
-              "id": "title",
-              "name": "📌 Khối Tiêu đề & Lời chào",
-              "order": 2,
-              "visible": true
-            },
-            {
-              "id": "customer_info",
-              "name": "👤 Khối Thông tin Khách hàng / Đối tác",
-              "order": 3,
-              "visible": true
-            },
-            {
-              "id": "items_table",
-              "name": "📦 Khối Bảng Hạng mục Sản phẩm & Dịch vụ",
-              "order": 4,
-              "visible": true
-            },
-            {
-              "id": "summary",
-              "name": "💰 Khối Tổng kết Thanh toán & Chiết khấu",
-              "order": 5,
-              "visible": true
-            },
-            {
-              "id": "terms",
-              "name": "📜 Khối Ghi chú & Điều khoản (Từ Admin Công ty)",
-              "order": 6,
-              "visible": true
-            },
-            {
-              "id": "signatures",
-              "name": "✍️ Khối Chữ ký Xác nhận",
-              "order": 7,
-              "columns": 2,
-              "visible": true
-            }
-          ],
-          "table_style": "classic_border",
-          "theme_color": "#d97706",
-          "custom_title": "BÁO GIÁ SẢN XUẤT CỬA COMPOSITE",
-          "paper_orientation": "landscape"
-        },
-        "footer_content": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao."
-      }
-    },
-    "created_at": "2026-07-24T02:58:18.765Z",
-    "updated_at": "2026-07-24T04:13:28.004Z"
-  }
-},
-{
-  "model": "orders.orderitem",
-  "pk": 23,
-  "fields": {
-    "order": 11,
-    "product": 7,
-    "item_type": "product",
-    "product_name": "Cửa composite CCP01 - Mẫu mới",
-    "unit_price": "3900000.00",
-    "width": "600.00",
-    "height": "2000.00",
-    "quantity": 1,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "Không bản lề",
-    "length": "0.00",
-    "area": "1200000.00",
-    "spec": "",
-    "warranty": "12 tháng",
-    "thickness": "300.00",
-    "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
-    "custom_data": {
-      "unit": "bộ",
-      "symbol": "D11",
-      "thickness": 300
-    }
-  }
-},
-{
-  "model": "orders.orderitem",
-  "pk": 24,
-  "fields": {
-    "order": 11,
-    "product": 7,
-    "item_type": "product",
-    "product_name": "Cửa composite CCP01 - Mẫu mới",
-    "unit_price": "3900000.00",
-    "width": "300.00",
-    "height": "2011.00",
-    "quantity": 1,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "Màu óc chó",
-    "length": "0.00",
-    "area": "603300.00",
-    "spec": "",
-    "warranty": "12 tháng",
-    "thickness": "200.00",
-    "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
-    "custom_data": {
-      "unit": "bộ",
-      "symbol": "D12",
-      "thickness": 200
-    }
-  }
-},
-{
-  "model": "orders.orderitem",
-  "pk": 25,
-  "fields": {
-    "order": 11,
-    "product": 7,
-    "item_type": "product",
-    "product_name": "Cửa composite CCP01 - Mẫu mới",
-    "unit_price": "3900000.00",
-    "width": "300.00",
-    "height": "2500.00",
-    "quantity": 1,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "Không có",
-    "length": "0.00",
-    "area": "750000.00",
-    "spec": "",
-    "warranty": "12 tháng",
-    "thickness": "800.00",
-    "product_image": "http://localhost:8000/media/products/anh_cua.jpg",
-    "custom_data": {
-      "unit": "bộ",
-      "symbol": "",
-      "thickness": 800
-    }
-  }
-},
-{
-  "model": "orders.orderitem",
-  "pk": 26,
-  "fields": {
-    "order": 11,
-    "product": 10,
-    "item_type": "product",
-    "product_name": "Khoá thông minh KTM01",
-    "unit_price": "5600000.00",
-    "width": "0.00",
-    "height": "0.00",
-    "quantity": 1,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "Thông minh",
-    "length": "0.00",
-    "area": "0.00",
-    "spec": "",
-    "warranty": "12 tháng",
-    "thickness": "0.00",
-    "product_image": "http://localhost:8000/media/products/khoa.jpg",
-    "custom_data": {
-      "unit": "cái",
-      "symbol": "K1",
-      "thickness": 0
-    }
-  }
-},
-{
-  "model": "orders.orderitem",
-  "pk": 27,
-  "fields": {
-    "order": 12,
-    "product": 7,
-    "item_type": "product",
-    "product_name": "Cửa composite CCP01 - Mẫu mới",
-    "unit_price": "3900000.00",
-    "width": "600.00",
-    "height": "200.00",
-    "quantity": 5,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "Không cần",
-    "length": "0.00",
-    "area": "0.00",
-    "spec": "",
-    "warranty": "",
-    "thickness": "3000.00",
-    "product_image": null,
-    "custom_data": {
-      "symbol": ""
-    }
-  }
-},
-{
-  "model": "orders.orderitem",
-  "pk": 28,
-  "fields": {
-    "order": 12,
-    "product": 7,
-    "item_type": "product",
-    "product_name": "Cửa composite CCP01 - Mẫu mới",
-    "unit_price": "3900000.00",
-    "width": "600.00",
-    "height": "300.00",
-    "quantity": 1,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "Không",
-    "length": "0.00",
-    "area": "0.00",
-    "spec": "",
-    "warranty": "12 tháng",
-    "thickness": "800.00",
-    "product_image": null,
-    "custom_data": {}
-  }
-},
-{
-  "model": "orders.orderitem",
-  "pk": 29,
-  "fields": {
-    "order": 13,
-    "product": 7,
-    "item_type": "product",
-    "product_name": "Cửa composite CCP01 - Mẫu mới",
-    "unit_price": "35000000.00",
-    "width": "300.00",
-    "height": "600.00",
-    "quantity": 1,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "",
-    "length": "0.00",
-    "area": "0.00",
-    "spec": "",
-    "warranty": "12 tháng",
-    "thickness": "300.00",
-    "product_image": null,
-    "custom_data": {}
-  }
-},
-{
-  "model": "orders.orderitem",
-  "pk": 30,
-  "fields": {
-    "order": 14,
-    "product": 7,
-    "item_type": "product",
-    "product_name": "Cửa composite CCP01 - Mẫu mới",
-    "unit_price": "3900000.00",
-    "width": "200.00",
-    "height": "300.00",
-    "quantity": 10,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "",
-    "length": "0.00",
-    "area": "0.00",
-    "spec": "",
-    "warranty": "12 tháng",
-    "thickness": "3000.00",
-    "product_image": null,
-    "custom_data": {}
-  }
-},
-{
-  "model": "orders.orderitem",
-  "pk": 31,
-  "fields": {
-    "order": 14,
-    "product": null,
-    "item_type": "service",
-    "product_name": "Cửa khuôn kép",
-    "unit_price": "60000.00",
-    "width": "0.00",
-    "height": "0.00",
-    "quantity": 1,
-    "discount_percent": "0.00",
-    "line_total": "0.00",
-    "note": "",
-    "length": "0.00",
-    "area": "0.00",
-    "spec": "",
-    "warranty": "",
-    "thickness": "0.00",
-    "product_image": "",
-    "custom_data": {
-      "unit": "lần"
-    }
-  }
-},
-{
   "model": "inventory.productcategory",
   "pk": 7,
   "fields": {
@@ -3083,6 +2275,24 @@
     "company": 15,
     "name": "Cửa Fujitech Grand Door",
     "description": "Cửa cao cấp hơn"
+  }
+},
+{
+  "model": "inventory.producttemplate",
+  "pk": 1,
+  "fields": {
+    "company": 15,
+    "category": 7,
+    "name": "Lê Đình Tuyền",
+    "sku": "POLO",
+    "description": "hih",
+    "product_type": "product",
+    "unit": "cái",
+    "image": "",
+    "image_description": "",
+    "is_active": true,
+    "created_at": "2026-07-29T03:58:31.706Z",
+    "updated_at": "2026-07-29T04:07:06.029Z"
   }
 },
 {
@@ -3104,7 +2314,7 @@
     "image": "products/anh_cua.jpg",
     "is_active": true,
     "created_at": "2026-07-09T02:39:31.816Z",
-    "updated_at": "2026-07-17T07:19:59.550Z"
+    "updated_at": "2026-07-29T03:44:25.466Z"
   }
 },
 {
@@ -3126,7 +2336,29 @@
     "image": "products/khoa.jpg",
     "is_active": true,
     "created_at": "2026-07-09T10:16:42.346Z",
-    "updated_at": "2026-07-17T07:20:25.153Z"
+    "updated_at": "2026-07-29T03:44:28.960Z"
+  }
+},
+{
+  "model": "inventory.product",
+  "pk": 11,
+  "fields": {
+    "company": 15,
+    "template": null,
+    "category": 7,
+    "sku": null,
+    "name": "Giao hàng",
+    "product_type": "service",
+    "description": "",
+    "ai_knowledge": "",
+    "attributes": {},
+    "unit": "lần",
+    "price": "500.00",
+    "cost_price": "0.00",
+    "image": "",
+    "is_active": true,
+    "created_at": "2026-07-29T03:55:51.846Z",
+    "updated_at": "2026-07-29T03:55:51.846Z"
   }
 },
 {
@@ -3165,7 +2397,7 @@
   "fields": {
     "product": 7,
     "warehouse": 10,
-    "quantity": 91,
+    "quantity": 85,
     "min_quantity": 0
   }
 },
@@ -3190,153 +2422,6 @@
   }
 },
 {
-  "model": "inventory.inventorytransaction",
-  "pk": 1,
-  "fields": {
-    "company": 15,
-    "transaction_code": "FUJI-EXP-22072026-001",
-    "type": "export",
-    "product": 7,
-    "custom_product_name": "Cửa composite CCP01 - Mẫu mới (2000 x 600 x 300)",
-    "warehouse": 6,
-    "target_warehouse": null,
-    "status": "completed",
-    "quantity": 1,
-    "unit_cost": "0.00",
-    "reference_order": 11,
-    "factory": null,
-    "note": "Lệnh xuất kho chờ duyệt cho đơn hàng FUJI-DH-22072026-001",
-    "created_by": 2,
-    "created_at": "2026-07-24T02:11:07.278Z"
-  }
-},
-{
-  "model": "inventory.inventorytransaction",
-  "pk": 2,
-  "fields": {
-    "company": 15,
-    "transaction_code": "FUJI-EXP-22072026-001",
-    "type": "export",
-    "product": 7,
-    "custom_product_name": "Cửa composite CCP01 - Mẫu mới (2011 x 300 x 200)",
-    "warehouse": 6,
-    "target_warehouse": null,
-    "status": "completed",
-    "quantity": 1,
-    "unit_cost": "0.00",
-    "reference_order": 11,
-    "factory": null,
-    "note": "Lệnh xuất kho chờ duyệt cho đơn hàng FUJI-DH-22072026-001",
-    "created_by": 2,
-    "created_at": "2026-07-24T02:11:07.319Z"
-  }
-},
-{
-  "model": "inventory.inventorytransaction",
-  "pk": 3,
-  "fields": {
-    "company": 15,
-    "transaction_code": "FUJI-EXP-22072026-001",
-    "type": "export",
-    "product": 7,
-    "custom_product_name": "Cửa composite CCP01 - Mẫu mới (2500 x 300 x 800)",
-    "warehouse": 6,
-    "target_warehouse": null,
-    "status": "completed",
-    "quantity": 1,
-    "unit_cost": "0.00",
-    "reference_order": 11,
-    "factory": null,
-    "note": "Lệnh xuất kho chờ duyệt cho đơn hàng FUJI-DH-22072026-001",
-    "created_by": 2,
-    "created_at": "2026-07-24T02:11:07.332Z"
-  }
-},
-{
-  "model": "inventory.inventorytransaction",
-  "pk": 4,
-  "fields": {
-    "company": 15,
-    "transaction_code": "FUJI-EXP-22072026-001",
-    "type": "export",
-    "product": 10,
-    "custom_product_name": "Khoá thông minh KTM01",
-    "warehouse": 6,
-    "target_warehouse": null,
-    "status": "completed",
-    "quantity": 1,
-    "unit_cost": "0.00",
-    "reference_order": 11,
-    "factory": null,
-    "note": "Lệnh xuất kho chờ duyệt cho đơn hàng FUJI-DH-22072026-001",
-    "created_by": 2,
-    "created_at": "2026-07-24T02:11:07.336Z"
-  }
-},
-{
-  "model": "inventory.inventorytransaction",
-  "pk": 5,
-  "fields": {
-    "company": 15,
-    "transaction_code": "FUJI-EXP-24072026-003",
-    "type": "export",
-    "product": 7,
-    "custom_product_name": "Cửa composite CCP01 - Mẫu mới (300 x 200 x 3000)",
-    "warehouse": 10,
-    "target_warehouse": null,
-    "status": "completed",
-    "quantity": 10,
-    "unit_cost": "0.00",
-    "reference_order": 14,
-    "factory": 2,
-    "note": "Lệnh xuất kho chờ duyệt cho đơn hàng FUJI-DH-24072026-003",
-    "created_by": 2,
-    "created_at": "2026-07-24T02:59:10.509Z"
-  }
-},
-{
-  "model": "inventory.inventorytransaction",
-  "pk": 6,
-  "fields": {
-    "company": 15,
-    "transaction_code": "FUJI-IMP-24072026-001",
-    "type": "import",
-    "product": 7,
-    "custom_product_name": null,
-    "warehouse": 10,
-    "target_warehouse": null,
-    "status": "completed",
-    "quantity": 100,
-    "unit_cost": "0.00",
-    "reference_order": null,
-    "factory": null,
-    "note": "",
-    "created_by": 2,
-    "created_at": "2026-07-24T04:11:58.072Z"
-  }
-},
-{
-  "model": "inventory.inventorytransaction",
-  "pk": 7,
-  "fields": {
-    "company": 15,
-    "transaction_code": "FUJI-EXP-24072026-002",
-    "type": "export",
-    "product": 7,
-    "custom_product_name": "Cửa composite CCP01 - Mẫu mới (600 x 300 x 300)",
-    "warehouse": 10,
-    "target_warehouse": null,
-    "status": "completed",
-    "quantity": 1,
-    "unit_cost": "0.00",
-    "reference_order": 13,
-    "factory": 2,
-    "note": "Lệnh xuất kho chờ duyệt cho đơn hàng FUJI-DH-24072026-002",
-    "created_by": 2,
-    "created_at": "2026-07-25T09:48:52.612Z"
-  }
-},
-{
   "model": "production.factory",
   "pk": 2,
   "fields": {
@@ -3345,54 +2430,6 @@
     "location": "Đông Anh, Hà Nội",
     "linked_warehouse": 10,
     "is_active": true
-  }
-},
-{
-  "model": "production.productionorder",
-  "pk": 1,
-  "fields": {
-    "company": 15,
-    "production_order_code": "FUJI-LSX-22072026-001",
-    "order": 11,
-    "factory": null,
-    "status": "completed",
-    "start_date": null,
-    "end_date": null,
-    "notes": "",
-    "created_at": "2026-07-24T02:11:35.533Z",
-    "updated_at": "2026-07-24T02:11:43.581Z"
-  }
-},
-{
-  "model": "production.productionorder",
-  "pk": 2,
-  "fields": {
-    "company": 15,
-    "production_order_code": "FUJI-LSX-24072026-003",
-    "order": 14,
-    "factory": 2,
-    "status": "completed",
-    "start_date": null,
-    "end_date": null,
-    "notes": "",
-    "created_at": "2026-07-24T04:12:32.168Z",
-    "updated_at": "2026-07-24T04:13:24.592Z"
-  }
-},
-{
-  "model": "production.productionorder",
-  "pk": 3,
-  "fields": {
-    "company": 15,
-    "production_order_code": "FUJI-LSX-24072026-002",
-    "order": 13,
-    "factory": 2,
-    "status": "completed",
-    "start_date": null,
-    "end_date": null,
-    "notes": "",
-    "created_at": "2026-07-25T09:49:23.456Z",
-    "updated_at": "2026-07-25T09:49:30.192Z"
   }
 },
 {
@@ -8370,66 +7407,6 @@
   }
 },
 {
-  "model": "approvals.approvalrequest",
-  "pk": 119,
-  "fields": {
-    "company": 15,
-    "content_type": 23,
-    "object_id": 11,
-    "requester": 5,
-    "title": "Phê duyệt Đơn hàng FUJI-DH-22072026-001",
-    "description": "Đơn hàng FUJI-DH-22072026-001 — Khách hàng: Chị Huế",
-    "status": "approved",
-    "created_at": "2026-07-22T03:53:36.854Z",
-    "updated_at": "2026-07-22T03:53:50.503Z"
-  }
-},
-{
-  "model": "approvals.approvalrequest",
-  "pk": 120,
-  "fields": {
-    "company": 15,
-    "content_type": 23,
-    "object_id": 12,
-    "requester": 2,
-    "title": "Phê duyệt Đơn hàng FUJI-DH-24072026-001",
-    "description": "Đơn hàng FUJI-DH-24072026-001 — Khách hàng: Anh Tuyền",
-    "status": "approved",
-    "created_at": "2026-07-24T02:13:40.669Z",
-    "updated_at": "2026-07-24T02:13:40.669Z"
-  }
-},
-{
-  "model": "approvals.approvalrequest",
-  "pk": 121,
-  "fields": {
-    "company": 15,
-    "content_type": 23,
-    "object_id": 13,
-    "requester": 2,
-    "title": "Phê duyệt Đơn hàng FUJI-DH-24072026-002",
-    "description": "Đơn hàng FUJI-DH-24072026-002 — Khách hàng: Chị Huế",
-    "status": "approved",
-    "created_at": "2026-07-24T02:19:28.459Z",
-    "updated_at": "2026-07-24T02:19:28.459Z"
-  }
-},
-{
-  "model": "approvals.approvalrequest",
-  "pk": 122,
-  "fields": {
-    "company": 15,
-    "content_type": 23,
-    "object_id": 14,
-    "requester": 6,
-    "title": "Phê duyệt Đơn hàng FUJI-DH-24072026-003",
-    "description": "Đơn hàng FUJI-DH-24072026-003 — Khách hàng: Lê Đình Khánh",
-    "status": "approved",
-    "created_at": "2026-07-24T02:58:18.955Z",
-    "updated_at": "2026-07-24T02:59:10.443Z"
-  }
-},
-{
   "model": "approvals.approvalstep",
   "pk": 96,
   "fields": {
@@ -8565,323 +7542,6 @@
   }
 },
 {
-  "model": "approvals.approvalstep",
-  "pk": 118,
-  "fields": {
-    "request": 119,
-    "step_order": 1,
-    "approver_user": null,
-    "approver_role": null,
-    "acted_by": 2,
-    "status": "approved",
-    "comment": "",
-    "comments": "",
-    "acted_at": "2026-07-22T03:53:50.492Z"
-  }
-},
-{
-  "model": "approvals.approvalstep",
-  "pk": 119,
-  "fields": {
-    "request": 120,
-    "step_order": 1,
-    "approver_user": null,
-    "approver_role": null,
-    "acted_by": 2,
-    "status": "approved",
-    "comment": "",
-    "comments": "",
-    "acted_at": null
-  }
-},
-{
-  "model": "approvals.approvalstep",
-  "pk": 120,
-  "fields": {
-    "request": 121,
-    "step_order": 1,
-    "approver_user": null,
-    "approver_role": null,
-    "acted_by": 2,
-    "status": "approved",
-    "comment": "",
-    "comments": "",
-    "acted_at": null
-  }
-},
-{
-  "model": "approvals.approvalstep",
-  "pk": 121,
-  "fields": {
-    "request": 122,
-    "step_order": 1,
-    "approver_user": null,
-    "approver_role": null,
-    "acted_by": 2,
-    "status": "approved",
-    "comment": "",
-    "comments": "",
-    "acted_at": "2026-07-24T02:59:10.415Z"
-  }
-},
-{
-  "model": "finance.orderpaymentmilestone",
-  "pk": 28,
-  "fields": {
-    "company": 15,
-    "order": 11,
-    "milestone_type": "deposit",
-    "title": "Thanh toán đợt 1",
-    "percentage": "100.00",
-    "amount": "17300000.00",
-    "paid_amount": "17300000.00",
-    "status": "paid",
-    "due_date": null,
-    "note": "",
-    "created_at": "2026-07-22T03:53:50.678Z",
-    "updated_at": "2026-07-27T06:06:56.688Z"
-  }
-},
-{
-  "model": "finance.orderpaymentmilestone",
-  "pk": 30,
-  "fields": {
-    "company": 15,
-    "order": 12,
-    "milestone_type": "deposit",
-    "title": "Thanh toán đợt 1",
-    "percentage": "100.00",
-    "amount": "23400000.00",
-    "paid_amount": "0.00",
-    "status": "pending",
-    "due_date": null,
-    "note": "",
-    "created_at": "2026-07-24T02:17:29.392Z",
-    "updated_at": "2026-07-24T02:17:29.392Z"
-  }
-},
-{
-  "model": "finance.orderpaymentmilestone",
-  "pk": 33,
-  "fields": {
-    "company": 15,
-    "order": 13,
-    "milestone_type": "deposit",
-    "title": "Thanh toán đợt 1",
-    "percentage": "50.00",
-    "amount": "17500000.00",
-    "paid_amount": "17500000.00",
-    "status": "paid",
-    "due_date": null,
-    "note": "",
-    "created_at": "2026-07-24T02:19:44.272Z",
-    "updated_at": "2026-07-27T06:06:56.652Z"
-  }
-},
-{
-  "model": "finance.orderpaymentmilestone",
-  "pk": 34,
-  "fields": {
-    "company": 15,
-    "order": 13,
-    "milestone_type": "after_delivery",
-    "title": "Thanh toán đợt 1",
-    "percentage": "50.00",
-    "amount": "17500000.00",
-    "paid_amount": "0.00",
-    "status": "pending",
-    "due_date": null,
-    "note": "",
-    "created_at": "2026-07-24T02:19:44.278Z",
-    "updated_at": "2026-07-24T02:19:44.278Z"
-  }
-},
-{
-  "model": "finance.orderpaymentmilestone",
-  "pk": 35,
-  "fields": {
-    "company": 15,
-    "order": 14,
-    "milestone_type": "deposit",
-    "title": "Thanh toán đợt 1",
-    "percentage": "100.00",
-    "amount": "39060000.00",
-    "paid_amount": "39060000.00",
-    "status": "paid",
-    "due_date": null,
-    "note": "",
-    "created_at": "2026-07-24T02:58:18.904Z",
-    "updated_at": "2026-07-27T06:06:56.671Z"
-  }
-},
-{
-  "model": "finance.paymentreceipt",
-  "pk": 1,
-  "fields": {
-    "company": 15,
-    "receipt_code": "FUJI-PT-24072026-001",
-    "order": 11,
-    "milestone": 28,
-    "amount": "17300000.00",
-    "payment_method": "transfer",
-    "payment_date": "2026-07-24",
-    "reference_code": "",
-    "note": "Thanh toán Thanh toán đợt 1 - Đơn hàng FUJI-DH-22072026-001",
-    "created_by": 2,
-    "attachments": [],
-    "created_at": "2026-07-24T02:11:06.451Z"
-  }
-},
-{
-  "model": "finance.paymentreceipt",
-  "pk": 3,
-  "fields": {
-    "company": 15,
-    "receipt_code": "FUJI-PT-24072026-003",
-    "order": 14,
-    "milestone": 35,
-    "amount": "39060000.00",
-    "payment_method": "transfer",
-    "payment_date": "2026-07-24",
-    "reference_code": "",
-    "note": "Thanh toán Thanh toán đợt 1 - Đơn hàng FUJI-DH-24072026-003",
-    "created_by": 6,
-    "attachments": [
-      "http://localhost:8000/media/uploads/36f1f84b4917459790ab1a035730d8ae.jpg"
-    ],
-    "created_at": "2026-07-24T02:59:42.717Z"
-  }
-},
-{
-  "model": "finance.paymentreceipt",
-  "pk": 4,
-  "fields": {
-    "company": 15,
-    "receipt_code": "FUJI-PT-25072026-001",
-    "order": 13,
-    "milestone": 33,
-    "amount": "17500000.00",
-    "payment_method": "transfer",
-    "payment_date": "2026-07-25",
-    "reference_code": "",
-    "note": "Thanh toán Thanh toán đợt 1 - Đơn hàng FUJI-DH-24072026-002",
-    "created_by": 2,
-    "attachments": [],
-    "created_at": "2026-07-25T09:48:52.027Z"
-  }
-},
-{
-  "model": "delivery.deliveryorder",
-  "pk": 1,
-  "fields": {
-    "company": 15,
-    "order": 11,
-    "delivery_code": "FUJI-GH-22072026-001",
-    "status": "delivered",
-    "shipper_name": "",
-    "shipper_phone": "",
-    "shipper_user": null,
-    "shipping_address": "220 Định Công Thượng, Phường Định Công",
-    "expected_date": null,
-    "actual_date": "2026-07-24",
-    "notes": "",
-    "created_at": "2026-07-24T02:11:43.602Z",
-    "updated_at": "2026-07-24T02:11:47.818Z"
-  }
-},
-{
-  "model": "delivery.deliveryorder",
-  "pk": 2,
-  "fields": {
-    "company": 15,
-    "order": 14,
-    "delivery_code": "FUJI-GH-24072026-003",
-    "status": "delivered",
-    "shipper_name": "",
-    "shipper_phone": "",
-    "shipper_user": null,
-    "shipping_address": "Xóm 4",
-    "expected_date": null,
-    "actual_date": "2026-07-24",
-    "notes": "",
-    "created_at": "2026-07-24T04:13:24.611Z",
-    "updated_at": "2026-07-24T04:13:27.909Z"
-  }
-},
-{
-  "model": "delivery.deliveryorder",
-  "pk": 3,
-  "fields": {
-    "company": 15,
-    "order": 13,
-    "delivery_code": "FUJI-GH-24072026-002",
-    "status": "delivered",
-    "shipper_name": "",
-    "shipper_phone": "",
-    "shipper_user": null,
-    "shipping_address": "220 Định Công Thượng, Phường Định Công",
-    "expected_date": null,
-    "actual_date": "2026-07-25",
-    "notes": "",
-    "created_at": "2026-07-25T09:49:30.217Z",
-    "updated_at": "2026-07-25T09:49:33.934Z"
-  }
-},
-{
-  "model": "delivery.warrantycard",
-  "pk": 1,
-  "fields": {
-    "company": 15,
-    "order": 11,
-    "customer": 28,
-    "warranty_code": "FUJI-BH-22072026-001",
-    "status": "active",
-    "start_date": "2026-07-24",
-    "end_date": "2027-07-24",
-    "terms": "Bảo hành 12 tháng kể từ ngày giao hàng.",
-    "warranty_content": "Thực hiện bảo hành công trình khi sử dụng sản phẩm Cửa Composite Fujitech Group\n\nChính sách bảo hành \n Bộ cửa Composite (khung, cánh, phào, gioăng): Bảo hành 36 tháng. \nPhụ kiện Fujitech Look (khóa, bản lề...): Bảo hành 12 tháng. \nLưu ý: \nThời gian bảo hành được tính bắt đầu từ ngày hàng hóa được giao đến khách hàng căn cứ vào phiếu xuất kho của nhà máy\nThời gian xem xét nguyên nhân và gửi thông báo cách xử lý, khắc phục tới khách hàng từ 3-7 ngày kể từ ngày nhận được yêu cầu bảo hành.\nĐối với những sản phẩm hư hỏng do nguyên nhân từ phía nhà máy sản xuất, khách hàng sẽ được cung cấp/thay thế sản phẩm mới hoặc sửa chữa miễn phí.\nTrường hợp hư hỏng do lỗi sử dụng của khách hàng, Fujitech Door sẽ sửa chữa bảo hành tính phí với mức chi phí hữu nghị.",
-    "warranty_rules": "1. Trường hợp được bảo hành \n1) Sản phẩm còn trong thời hạn bảo hành. \n2) Có phiếu bảo hành đầy đủ thông tin (mã sản phẩm, ngày mua, thông tin khách hàng). \n3) Sản phẩm được lắp đặt đúng quy chuẩn ban đầu.\n\n2. Các trường hợp không bảo hành:\n1) Lỗi sản phẩm phát sinh do khách hàng lắp đặt và sử dụng không theo chỉ dẫn. \n2) Sản phẩm sử dụng trong môi trường tiếp xúc nhiều với hóa chất tẩy rửa mạnh hoặc quá trình sử dụng không đúng cách \n3) Chịu ảnh hưởng bởi ánh nắng mặt trời trực tiếp.\n4) Sản phẩm bị hỏng do tác động của lực cơ học, bề mặt cửa bị trầy xước, bong tróc do vật sắc nhọn va quệt.\n5) Sản phẩm bị hư hỏng do thiên tai, hỏa hoạn.\n6) Sản phẩm lắp đặt sai quy cách do không phải trực tiếp Fujitech lắp đặt\n7) Màu sắc sản phẩm thay đổi nhẹ theo thời gian do điều kiện môi trường và quá trình sử dụng tự nhiên.\n8) Nguyên nhân khác mà không phải lỗi của nhà sản xuất..",
-    "created_at": "2026-07-24T02:11:47.827Z",
-    "updated_at": "2026-07-24T02:11:47.827Z"
-  }
-},
-{
-  "model": "delivery.warrantycard",
-  "pk": 2,
-  "fields": {
-    "company": 15,
-    "order": 14,
-    "customer": 29,
-    "warranty_code": "FUJI-BH-24072026-003",
-    "status": "active",
-    "start_date": "2026-07-24",
-    "end_date": "2027-07-24",
-    "terms": "Bảo hành 12 tháng kể từ ngày giao hàng.",
-    "warranty_content": "Thực hiện bảo hành công trình khi sử dụng sản phẩm Cửa Composite Fujitech Group\n\nChính sách bảo hành \n Bộ cửa Composite (khung, cánh, phào, gioăng): Bảo hành 36 tháng. \nPhụ kiện Fujitech Look (khóa, bản lề...): Bảo hành 12 tháng. \nLưu ý: \nThời gian bảo hành được tính bắt đầu từ ngày hàng hóa được giao đến khách hàng căn cứ vào phiếu xuất kho của nhà máy\nThời gian xem xét nguyên nhân và gửi thông báo cách xử lý, khắc phục tới khách hàng từ 3-7 ngày kể từ ngày nhận được yêu cầu bảo hành.\nĐối với những sản phẩm hư hỏng do nguyên nhân từ phía nhà máy sản xuất, khách hàng sẽ được cung cấp/thay thế sản phẩm mới hoặc sửa chữa miễn phí.\nTrường hợp hư hỏng do lỗi sử dụng của khách hàng, Fujitech Door sẽ sửa chữa bảo hành tính phí với mức chi phí hữu nghị.",
-    "warranty_rules": "1. Trường hợp được bảo hành \n1) Sản phẩm còn trong thời hạn bảo hành. \n2) Có phiếu bảo hành đầy đủ thông tin (mã sản phẩm, ngày mua, thông tin khách hàng). \n3) Sản phẩm được lắp đặt đúng quy chuẩn ban đầu.\n\n2. Các trường hợp không bảo hành:\n1) Lỗi sản phẩm phát sinh do khách hàng lắp đặt và sử dụng không theo chỉ dẫn. \n2) Sản phẩm sử dụng trong môi trường tiếp xúc nhiều với hóa chất tẩy rửa mạnh hoặc quá trình sử dụng không đúng cách \n3) Chịu ảnh hưởng bởi ánh nắng mặt trời trực tiếp.\n4) Sản phẩm bị hỏng do tác động của lực cơ học, bề mặt cửa bị trầy xước, bong tróc do vật sắc nhọn va quệt.\n5) Sản phẩm bị hư hỏng do thiên tai, hỏa hoạn.\n6) Sản phẩm lắp đặt sai quy cách do không phải trực tiếp Fujitech lắp đặt\n7) Màu sắc sản phẩm thay đổi nhẹ theo thời gian do điều kiện môi trường và quá trình sử dụng tự nhiên.\n8) Nguyên nhân khác mà không phải lỗi của nhà sản xuất..",
-    "created_at": "2026-07-24T04:13:27.925Z",
-    "updated_at": "2026-07-24T04:13:27.925Z"
-  }
-},
-{
-  "model": "delivery.warrantycard",
-  "pk": 3,
-  "fields": {
-    "company": 15,
-    "order": 13,
-    "customer": 28,
-    "warranty_code": "FUJI-BH-24072026-002",
-    "status": "active",
-    "start_date": "2026-07-25",
-    "end_date": "2027-07-25",
-    "terms": "Bảo hành 12 tháng kể từ ngày giao hàng.",
-    "warranty_content": "Thực hiện bảo hành công trình khi sử dụng sản phẩm Cửa Composite Fujitech Group\n\nChính sách bảo hành \n Bộ cửa Composite (khung, cánh, phào, gioăng): Bảo hành 36 tháng. \nPhụ kiện Fujitech Look (khóa, bản lề...): Bảo hành 12 tháng. \nLưu ý: \nThời gian bảo hành được tính bắt đầu từ ngày hàng hóa được giao đến khách hàng căn cứ vào phiếu xuất kho của nhà máy\nThời gian xem xét nguyên nhân và gửi thông báo cách xử lý, khắc phục tới khách hàng từ 3-7 ngày kể từ ngày nhận được yêu cầu bảo hành.\nĐối với những sản phẩm hư hỏng do nguyên nhân từ phía nhà máy sản xuất, khách hàng sẽ được cung cấp/thay thế sản phẩm mới hoặc sửa chữa miễn phí.\nTrường hợp hư hỏng do lỗi sử dụng của khách hàng, Fujitech Door sẽ sửa chữa bảo hành tính phí với mức chi phí hữu nghị.",
-    "warranty_rules": "1. Trường hợp được bảo hành \n1) Sản phẩm còn trong thời hạn bảo hành. \n2) Có phiếu bảo hành đầy đủ thông tin (mã sản phẩm, ngày mua, thông tin khách hàng). \n3) Sản phẩm được lắp đặt đúng quy chuẩn ban đầu.\n\n2. Các trường hợp không bảo hành:\n1) Lỗi sản phẩm phát sinh do khách hàng lắp đặt và sử dụng không theo chỉ dẫn. \n2) Sản phẩm sử dụng trong môi trường tiếp xúc nhiều với hóa chất tẩy rửa mạnh hoặc quá trình sử dụng không đúng cách \n3) Chịu ảnh hưởng bởi ánh nắng mặt trời trực tiếp.\n4) Sản phẩm bị hỏng do tác động của lực cơ học, bề mặt cửa bị trầy xước, bong tróc do vật sắc nhọn va quệt.\n5) Sản phẩm bị hư hỏng do thiên tai, hỏa hoạn.\n6) Sản phẩm lắp đặt sai quy cách do không phải trực tiếp Fujitech lắp đặt\n7) Màu sắc sản phẩm thay đổi nhẹ theo thời gian do điều kiện môi trường và quá trình sử dụng tự nhiên.\n8) Nguyên nhân khác mà không phải lỗi của nhà sản xuất..",
-    "created_at": "2026-07-25T09:49:33.960Z",
-    "updated_at": "2026-07-25T09:49:33.960Z"
-  }
-},
-{
   "model": "zalo_integration.zalooaconfig",
   "pk": 1,
   "fields": {
@@ -8923,20 +7583,20 @@
     "ai_summary": null,
     "ai_tags": null,
     "last_interaction_date": "2026-07-16T07:10:53.665Z",
-    "status": "chatting",
+    "status": "converted",
     "has_unread_message": false,
     "is_ai_active": true,
     "unread_count": 0,
     "detected_phone": "0967234517",
     "detected_email": null,
     "detected_address": null,
-    "is_customer_converted": false,
+    "is_customer_converted": true,
     "has_ai_followed_up": false,
     "is_starred": true,
     "assigned_to": null,
     "notes": "",
     "created_at": "2026-07-16T05:52:17.256Z",
-    "updated_at": "2026-07-25T03:44:40.085Z",
+    "updated_at": "2026-07-29T07:16:37.360Z",
     "tags": [
       1
     ]
@@ -9294,6 +7954,50 @@
   }
 },
 {
+  "model": "zalo_integration.zalomessagelog",
+  "pk": 16,
+  "fields": {
+    "company": 15,
+    "template": 2,
+    "social_lead": null,
+    "customer": 27,
+    "sent_by": null,
+    "recipient_phone": "0988565777",
+    "recipient_zalo_id": "",
+    "params_sent": {
+      "amount": "23400000.00",
+      "receipt_code": "FUJI-PT-29072026-001",
+      "customer_name": "Anh Tuyền"
+    },
+    "status": "sent",
+    "zalo_msg_id": "demo_zns_371b142b",
+    "error_message": "💡 [Chế độ thử nghiệm]: Zalo OA chưa cấu hình App ID thật hoặc Mẫu ZNS đang là ID Demo. Tin nhắn đã được lưu lại để kiểm thử.",
+    "sent_at": "2026-07-29T04:31:31.380Z"
+  }
+},
+{
+  "model": "zalo_integration.zalomessagelog",
+  "pk": 17,
+  "fields": {
+    "company": 15,
+    "template": 2,
+    "social_lead": null,
+    "customer": 27,
+    "sent_by": null,
+    "recipient_phone": "0988565777",
+    "recipient_zalo_id": "",
+    "params_sent": {
+      "order_number": "FUJI-DH-24072026-001",
+      "customer_name": "Anh Tuyền",
+      "warranty_link": "https://system.yourdomain.com/warranty/FUJI-DH-24072026-001"
+    },
+    "status": "sent",
+    "zalo_msg_id": "demo_zns_ad0c4241",
+    "error_message": "💡 [Chế độ thử nghiệm]: Zalo OA chưa cấu hình App ID thật hoặc Mẫu ZNS đang là ID Demo. Tin nhắn đã được lưu lại để kiểm thử.",
+    "sent_at": "2026-07-29T07:12:37.957Z"
+  }
+},
+{
   "model": "zalo_integration.zalomessage",
   "pk": 16,
   "fields": {
@@ -9461,7 +8165,7 @@
     "ai_summary": null,
     "ai_tags": null,
     "created_at": "2026-07-15T13:17:37.756Z",
-    "updated_at": "2026-07-24T17:27:48.910Z",
+    "updated_at": "2026-07-29T05:51:50.881Z",
     "tags": []
   }
 },
@@ -9491,7 +8195,7 @@
     "ai_summary": null,
     "ai_tags": null,
     "created_at": "2026-07-15T13:17:41.269Z",
-    "updated_at": "2026-07-24T17:27:52.228Z",
+    "updated_at": "2026-07-29T05:51:52.919Z",
     "tags": []
   }
 },
@@ -9521,7 +8225,7 @@
     "ai_summary": null,
     "ai_tags": null,
     "created_at": "2026-07-15T13:17:46.619Z",
-    "updated_at": "2026-07-24T17:27:57.823Z",
+    "updated_at": "2026-07-29T05:51:56.995Z",
     "tags": []
   }
 },
@@ -9551,7 +8255,7 @@
     "ai_summary": null,
     "ai_tags": null,
     "created_at": "2026-07-23T16:36:19.207Z",
-    "updated_at": "2026-07-24T17:27:54.120Z",
+    "updated_at": "2026-07-29T05:51:54.154Z",
     "tags": []
   }
 },
@@ -9581,7 +8285,7 @@
     "ai_summary": null,
     "ai_tags": null,
     "created_at": "2026-07-23T16:36:21.733Z",
-    "updated_at": "2026-07-24T17:27:56.328Z",
+    "updated_at": "2026-07-29T05:51:55.750Z",
     "tags": []
   }
 },
@@ -9596,7 +8300,7 @@
     "fb_user_avatar": "https://platform-lookaside.fbsbx.com/platform/profilepic/?eai=Aa1OSv_lnZ1Ir_Cb-19ngvx1Rq4zPmRz6DVRO0iQeGh_HmZmhaZ4HAUxU8OtXkZstb8-OUohUb9VvQ&psid=4748159361949508&width=1024&ext=1787764036&hash=AfsM6EGsarVeip1qGn1CeIY1",
     "detected_phone": null,
     "detected_email": null,
-    "detected_address": null,
+    "detected_address": "Mẫu này được làm hoàn toàn từ gỗ óc chó cao cấp mang lại vẻ sang trọng cho phòng khách",
     "is_customer_converted": false,
     "has_ai_followed_up": false,
     "customer": null,
@@ -9606,16 +8310,18 @@
     "has_unread_message": false,
     "unread_count": 0,
     "is_archived": false,
-    "last_message_at": "2026-07-27T17:23:47.212Z",
-    "last_message_preview": "Khách hỏi độ bền cửa, thời gian bảo hành khóa phụ kiện và yêu cầu gửi ảnh cửa cùng khóa phụ kiện.",
+    "last_message_at": "2026-07-28T07:04:09Z",
+    "last_message_preview": "Dạ bộ sofa gỗ óc chó trong ảnh là mẫu mới nhất bên em, bao gồm 5 món với giá là 340 triệu đồng ạ. Mẫu này được làm hoàn toàn từ gỗ óc chó cao cấp mang lại vẻ sang trọng cho phòng khách. Anh có muốn em gửi thêm chi tiết kích thước từng món của bộ này không",
     "ai_summary": "Khách hỏi độ bền cửa, thời gian bảo hành khóa phụ kiện và yêu cầu gửi ảnh cửa cùng khóa phụ kiện.",
     "ai_tags": [
       "Hỏi mẫu",
       "Tư vấn cửa"
     ],
     "created_at": "2026-07-27T17:07:09.778Z",
-    "updated_at": "2026-07-27T17:23:54.990Z",
-    "tags": []
+    "updated_at": "2026-07-29T06:21:50.314Z",
+    "tags": [
+      1
+    ]
   }
 },
 {
@@ -11971,6 +10677,706 @@
   }
 },
 {
+  "model": "facebook_integration.facebookmessage",
+  "pk": 851,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_uKffEeFs4oMx__hEr_fYAj5XArWXuhqgvcgPG60c2RyycRA3nAKBvLg7D2YGTZ6nPsQBIF7GCK3wLf323zaZvw",
+    "sender_type": "customer",
+    "text": "gửi thêm cho anh mẫu cửa composite",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:28:30Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 852,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_WiwiqDVZfuQ8yxeEkbN5UD5XArWXuhqgvcgPG60c2RzMrt6G9FIzDIGTyLMWGbuXwqYkPDey5Vs8AteNvfmlGA",
+    "sender_type": "page",
+    "text": "",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:28:48Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 853,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_bVajmAoT2YdI2feQBNWF-j5XArWXuhqgvcgPG60c2Rz8CKnCxoC1WL78hCVAVC121BtT4MgCdQxEPe8QNEQehQ",
+    "sender_type": "page",
+    "text": "Dạ em gửi anh Tuyền tham khảo một số mẫu cửa nhựa Composite bên em nhé ạ. Anh đang tìm mẫu cửa theo phong cách hiện đại hay tân cổ điển vậy anh?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:28:48Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 854,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_cb32frf1NUysEM8bAqzN0z5XArWXuhqgvcgPG60c2RzNsGTAop4iJF4a4gqVll4b18fO5ybL7Nr7DOLmbeVOQQ",
+    "sender_type": "customer",
+    "text": "Nhận tư vấn",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:28:54Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 855,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_VQjA2TO81D3nLW0PTPGamT5XArWXuhqgvcgPG60c2RyVZiW9Lbwyk_0JN09flgZoA1KZ_EiEJJaF5zSKNP6CVg",
+    "sender_type": "page",
+    "text": "",
+    "attachment_url": "https://scontent.fhan18-1.fna.fbcdn.net/v/t1.15752-9/756219457_1792144615123622_2156025470895449086_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=fc17b8&_nc_eui2=AeEnIT99r57LF4tSJGgvj7aoNzdbms8Uw3U3N1uazxTDdZCIT5B1iSJYmcXRmgTfv7tOKTmj7xj61ddJstpDK3k6&_nc_ohc=ijCkJ54zrFEQ7kNvwHCYVSK&_nc_oc=AdpeM2gue6WNN_8l8rr8Uv0Sb0qqeL0AbuSMJ20_okgRPLLDFwzfEWUC0Wfeib8Zgsg&_nc_zt=23&_nc_ht=scontent.fhan18-1.fna&edm=AKu_40MEAAAA&_nc_tpa=Q5bMBQGWY-frM6sIpAXdE2a1ws2nkNNOu4bEZJQsWl-rhFQ9X_p6tP0f7QX3S_Il74G5eKps2gOayYlHNA&oh=03_Q7cD6AGDInNrm-uP7ApJ0ogJLogWmPQvD4Zcqswjy0-cvc2WGg&oe=6A91082C",
+    "attachment_type": "image",
+    "payload": null,
+    "created_at": "2026-07-28T06:29:13Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 856,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_fVDrEfuWbkZVgdJUU5lJ0T5XArWXuhqgvcgPG60c2Rxb6bT5Z_DieYHxbiQapQc9tZoTGNhR-DFmqoKPUdcAug",
+    "sender_type": "page",
+    "text": "Dạ mẫu cửa Composite CCP01 bên em có giá 3.900.000 VNĐ/bộ, dòng này độ dày cao, đa dạng màu sắc và chống nước tuyệt đối ạ. Anh Tuyền đang cần lắp cửa cho phòng ngủ hay nhà vệ sinh vậy anh?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:29:14Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 857,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_vvAQqV1pAWeiYlTdBsIRmD5XArWXuhqgvcgPG60c2Rx_-KyDnoZ8doJ61OEzBLfB63sDzfst0L1QpLdrdDQ7ig",
+    "sender_type": "customer",
+    "text": "mẫu này thì có các màu nào em",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:29:17Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 858,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_pesAuTFYH0sVcnQshCw1Oj5XArWXuhqgvcgPG60c2RwqNUf5ekax1dhLM1h6uGXWPsgv-TScf6uCe9Z6ZOK0JA",
+    "sender_type": "page",
+    "text": "Dạ mẫu CCP01 bên em có tới 25 bảng mã màu khác nhau, từ các tông màu vân gỗ tự nhiên trầm ấm đến các màu xám, trắng hiện đại ạ. Anh Tuyền thích tông màu sáng hay màu trầm gỗ hơn để em gửi mẫu màu cho anh tham khảo ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:29:35Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 859,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_8rBPhrlvUW9kSBfNYPXV3D5XArWXuhqgvcgPG60c2RyS9f0PPkCWRn-UXzm52NBTTPW4v_fqIzjBZXVw0On4iQ",
+    "sender_type": "customer",
+    "text": "màu của riêng mẫu e vừa gửi thôi",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:30:07Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 860,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_eh6qFzlUgkIRrmV8056spD5XArWXuhqgvcgPG60c2RzqI7tLNbg5RmSQGEsjdH6Z55UX8UFoQIYfRoXefSSnPg",
+    "sender_type": "page",
+    "text": "",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:30:21Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 861,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_aswViMLEK-RPMwG8mb-sBj5XArWXuhqgvcgPG60c2RxG9LE3g2fCCtFBveWA9-Bs2orIGc6nGdP8aCIDM3Rf8A",
+    "sender_type": "page",
+    "text": "Dạ em gửi anh Tuyền xem thêm các tông màu phổ biến của mẫu CCP01 này nhé ạ. Anh xem qua xem có ưng ý tông màu nào không ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:30:22Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 862,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_2LndnQoaPAcgjoD_nFfR6j5XArWXuhqgvcgPG60c2RwrG_nD9OnONDP660DNoo3PnUyvLxljP60CY8jwb4d-uw",
+    "sender_type": "customer",
+    "text": "Nhận tư vấn",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:34:27Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 863,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_bozE3Q1ddPJevnM-8O8fWj5XArWXuhqgvcgPG60c2Rzu9I2DdkwwrKym-WqtER2CXs7tXImLLFB_3x8P9IrHvg",
+    "sender_type": "page",
+    "text": "Dạ mẫu CCP01 này chất liệu nhựa gỗ chống nước, chống mối mọt tuyệt đối và không lo cong vênh ạ. Để em gửi báo giá chi tiết và bảng mã màu đầy đủ qua Zalo, anh Tuyền cho em xin số điện thoại nhé ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:34:44Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 864,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_iJBvQmM7kyeWcsyzhUkQcz5XArWXuhqgvcgPG60c2Rw0UjQQElcwSJpD7SxPMLo5VnzKlbn7HZ1vrgrDZKQo8w",
+    "sender_type": "customer",
+    "text": "mẫu ccp01 kia có những màu nào",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:34:53Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 865,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_OPEFXuwcY0emop8wdq1qBD5XArWXuhqgvcgPG60c2RxefZy3nP8XwjTQjCNfe9TH2Q1UDDBtOKfCb39IjPg1hA",
+    "sender_type": "page",
+    "text": "",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:35:10Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 866,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_9ymYxrndr2ED-vit7rUMEj5XArWXuhqgvcgPG60c2Rymf2jB4TJX7exgM4zWK7LmwmfJYPTthgksb6K5za6Vug",
+    "sender_type": "page",
+    "text": "Dạ mẫu CCP01 bên em phủ phim PVC cao cấp nên làm được trọn bộ 25 mã màu, gồm các màu vân gỗ óc chó, gỗ sồi, màu xám ghi và trắng sứ ạ. Để em gửi ảnh bảng mã màu thực tế của mẫu này cho anh Tuyền chọn nhé. Anh đang hướng tới màu gỗ hay màu hiện đại ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:35:10Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 867,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_tPonWUQ8zQUnHEwCRYBybD5XArWXuhqgvcgPG60c2Rx4kKGGBzpijJoGN-HbChmiqLzNZUnc-_1UFjdjiJwEBw",
+    "sender_type": "customer",
+    "text": "mẫu ccp01 có những màu nào",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:40:48Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 868,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_5FFRUnsYdm3MtVC1SozzOz5XArWXuhqgvcgPG60c2Rzt23G3Tc4s4iSAJTQPABPliRdDtC6BqWvKPmTbF3FuVw",
+    "sender_type": "page",
+    "text": "",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:41:05Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 869,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_T34W3BvbHNzERq2OpMBiYT5XArWXuhqgvcgPG60c2Ryhm1k4aRUMNLf5WL9IZ0q9IO_0FyUexgqiGpZF0jatow",
+    "sender_type": "page",
+    "text": "Dạ mẫu CCP01 có các nhóm màu chính như vân gỗ Óc chó (trầm), vân gỗ Sồi (sáng), màu xám hiện đại và màu trắng sứ ạ. Anh Tuyền đang làm cửa cho phòng ngủ hay nhà vệ sinh để em tư vấn màu phối hợp hài hòa nhất ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:41:06Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 870,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_8XT5JnUe5JWW7Ps8KqEUdD5XArWXuhqgvcgPG60c2Rzjavqqm1qLiHzg1j-NcQXVTbwXNZrle-GKSUBpT9FLQQ",
+    "sender_type": "customer",
+    "text": "Nhận tư vấn",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:41:20Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 871,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_8qpWXLtkQpyHulnTAbdyeT5XArWXuhqgvcgPG60c2Rwz9KRQ_OSg3ErO3B8RghTjKKDa5bU02hljTsH77VKAHQ",
+    "sender_type": "page",
+    "text": "Dạ mẫu CCP01 có giá là 3.900.000 VNĐ/bộ, dòng này cánh dày dặn, chống nước và mối mọt tuyệt đối ạ. Để em gửi catalog màu chi tiết và báo giá trọn gói, anh Tuyền cho em xin số điện thoại có Zalo nhé ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:41:37Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 872,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_rV44DvisXD9JB4vjutMdbT5XArWXuhqgvcgPG60c2RwxLVLBwp-3cy6fbBlh95_tbJkTGE7pfVaccSLr_l3hJQ",
+    "sender_type": "customer",
+    "text": "mã này có những màu nào",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:41:56Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 873,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_-L9O7S1o4dru-JV2NbxyKT5XArWXuhqgvcgPG60c2Rw7mE6D9iCCsMgqQgoDhYA2MOG2-JZ4K4B0t0YknMCQ-g",
+    "sender_type": "page",
+    "text": "",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:42:12Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 874,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_8STvLvzdn_fJKv0bcztJZD5XArWXuhqgvcgPG60c2RyGdeURkF8ynRyidt15cx_6XXspJS_fRx6xWrxyMwUGLA",
+    "sender_type": "page",
+    "text": "Dạ mẫu CCP01 có đến 25 mã màu thực tế, từ các tông vân gỗ tự nhiên đến trắng sứ, xám ghi hiện đại ạ. Em gửi bảng mã màu qua Zalo cho anh Tuyền xem rõ hơn nhé, anh cho em xin số điện thoại ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:42:13Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 875,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_creo016X1-QzTptNKJd2JT5XArWXuhqgvcgPG60c2RxZpXS3-VZPcHZTP4ixyFKA8IDiJl51mSovZ17BTZiYzA",
+    "sender_type": "customer",
+    "text": "mã này có những màu nào",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:47:45Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 876,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_GJuQDRk2fvcGV2WRt1Gl9j5XArWXuhqgvcgPG60c2Rx6q5l36aXRVki4dsuaU-YISoP_I0P0_bYEtKIu4CEnLg",
+    "sender_type": "page",
+    "text": "Dạ mã CCP01 này có 2 màu đặc trưng và đẹp nhất là màu Óc chó (trầm sang trọng) và màu Lông chuột (xám hiện đại) ạ. Anh Tuyền thích tông màu gỗ ấm hay tông xám hiện đại hơn ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:48:03Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 877,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_JIpXGxeHFnSKV7VU3wEewT5XArWXuhqgvcgPG60c2RwxlvWeNy5Ts-Q5Mm8s5IwAY53AawkAG_J6Mc6me8tQ-Q",
+    "sender_type": "customer",
+    "text": "màu óc chó",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:48:17Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 878,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_k_FQMyn2J3SJofz_XvWUzT5XArWXuhqgvcgPG60c2Rylz1jLXiaiAqt9wqUSynv3XM1l8YNAtWJG626meoloGg",
+    "sender_type": "page",
+    "text": "",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:48:34Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 879,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_wjb2CcS9QeP-m7o00GmmJz5XArWXuhqgvcgPG60c2RzB_Q5_S1g8spfSAiDrze1lPHDr8o8CE37nRNdknRDuhQ",
+    "sender_type": "page",
+    "text": "Dạ màu Óc chó lên cửa nhìn rất sang trọng, ấm cúng và giống hệt gỗ tự nhiên anh Tuyền ạ. Để em gửi thêm hình ảnh công trình thực tế lắp màu này qua Zalo, anh cho em xin số điện thoại nhé ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:48:36Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 880,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_mJexgY2LJy-gP_5HJXFeLD5XArWXuhqgvcgPG60c2RwhCiZnvfMsxfnKgTvVq5qJJOTrGq4PS3TmvLxEiTyi7A",
+    "sender_type": "customer",
+    "text": "Giá",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:49:12Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 881,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_pzYuzMRNrGu5uqYpc4lfhT5XArWXuhqgvcgPG60c2Rw534LoIOYmTqS6IVXnInvDK6Opj4fFGz1LxZJ_3JRHMg",
+    "sender_type": "customer",
+    "text": "",
+    "attachment_url": "https://scontent.fhan18-1.fna.fbcdn.net/v/t1.15752-9/751070950_1596388631819837_6660731681286671693_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=fc17b8&_nc_eui2=AeGTK7MkX3jKCL0YPNzre2V06HsRPwigWwzoexE_CKBbDO9_K-l0jNUwN4C4HrbzGxidtkULksxlECbK-UMnjcsK&_nc_ohc=AC3gLDjN9g8Q7kNvwHMrU0R&_nc_oc=Adplrp_3kRbUd9S5x4VQ_tsCDdey9-9atqMZRYb9XML4qQGa8QHRXfmGSsbW1aAzorI&_nc_zt=23&_nc_ht=scontent.fhan18-1.fna&edm=AKu_40MEAAAA&_nc_tpa=Q5bMBQFsqdnsNw6JCX-QcP5_IsGEf6tRts2T9TMdVGE6m1iH6EcC_815MnreMErTNaCcZK-s_2oSoH_QPg&oh=03_Q7cD6AFnMTN7XoI3idjuJxhjEMiJOfsukD3zrieQpkQe79s5Xg&oe=6A90ECCD",
+    "attachment_type": "image",
+    "payload": null,
+    "created_at": "2026-07-28T06:49:13Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 882,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_kHeI7oHMbzVyQNKBZlr9zT5XArWXuhqgvcgPG60c2Rz0MCO1LJk9y-RWgEOJm0AhqVFIBcuInzSXosUjdH69VQ",
+    "sender_type": "page",
+    "text": "Dạ mẫu cửa nhựa Composite CCP01 màu Óc chó rất hợp với không gian nội thất này của anh Tuyền ạ. Giá bộ cửa hoàn thiện phụ thuộc vào kích thước và số lượng anh cần, anh cho em xin số điện thoại để em gửi bảng báo giá chi tiết qua Zalo nhé ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:49:34Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 883,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_TPV9jzclSR9zfo70m7HP7j5XArWXuhqgvcgPG60c2Ryt0b7PxG19X1exdpNTH-zlMrZOTUD6xLFIBn1C8wGZKw",
+    "sender_type": "customer",
+    "text": "",
+    "attachment_url": "https://scontent.fhan18-1.fna.fbcdn.net/v/t1.15752-9/758730460_994892473612614_3429337287407217373_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=fc17b8&_nc_eui2=AeFknW2vR1J0VZlUazPWCIev1hFg3WoS2pTWEWDdahLalA3CndFUJ4x1DFsdUMKNLzX9sHECA5h3K_pKrBPXn4If&_nc_ohc=IoImK1r4vnEQ7kNvwFsT_lt&_nc_oc=Adp0FL0qhJsUh0nzLeWxdzeRJ74vfisJ00B0OjMxB64dm9DDX4IfVemJNAcTJWdvUqs&_nc_zt=23&_nc_ht=scontent.fhan18-1.fna&edm=AKu_40MEAAAA&_nc_tpa=Q5bMBQE4Op2PUpbF9hPP-N2ILWj7oKdU028L28Ri1fYGtsVhcjyW_4v5H7fefthY2e7rbq7n1GHVd2yZ-w&oh=03_Q7cD6AEL9vqHkPoP1CtLMKDjnDEQJAUPx0KI1fNcXyHOrsdXXQ&oe=6A910069",
+    "attachment_type": "image",
+    "payload": null,
+    "created_at": "2026-07-28T06:50:53Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 884,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_bvDhgJmS8i0pa1JNxmw5KD5XArWXuhqgvcgPG60c2RwQeMkoKEqPGdP8NgOhgzFV6IvEOo0OR4IqvXj5Tje3Wg",
+    "sender_type": "customer",
+    "text": "xin giá",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:51:00Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 885,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_FTPpga7NM0eig2wQbMMZXz5XArWXuhqgvcgPG60c2RyCY5mEArw4RBYuqO_R_lPv4zEjz0KpVgg4CMszK8yPXg",
+    "sender_type": "page",
+    "text": "Dạ giá cửa nhựa Composite bên em dao động khoảng từ 3.200.000 đến 3.800.000 VNĐ/bộ đã gồm cánh, khung và bản lề ạ. Để em tính báo giá trọn gói chính xác nhất, anh/chị cho em xin số điện thoại (có Zalo) nhé ạ. Mình đang cần làm cửa cho mấy phòng vậy anh/chị?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:51:18Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 886,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_ef0lnBOKdwfwUMqRg0Cdlz5XArWXuhqgvcgPG60c2RzKW5pxdyLl8m5laKRjOHs6HZ_LwOGHi6E9lefw8Zhp8g",
+    "sender_type": "page",
+    "text": "Dạ mẫu cửa Composite CCP01 mã màu Óc chó có giá niêm yết là 3.900.000 VNĐ/bộ ạ. Anh/chị đang cần làm cửa cho phòng ngủ hay nhà vệ sinh, và số lượng khoảng mấy bộ vậy ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:51:20Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 887,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_OZJp-JccrZ8tMOiGdLsn0z5XArWXuhqgvcgPG60c2Ry8X7dd2ro79O0PSN8y8ups5v3JbKmPTI6mOdvJZbhEwA",
+    "sender_type": "customer",
+    "text": "",
+    "attachment_url": "https://scontent.fhan18-1.fna.fbcdn.net/v/t1.15752-9/758730460_994892473612614_3429337287407217373_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=fc17b8&_nc_eui2=AeFknW2vR1J0VZlUazPWCIev1hFg3WoS2pTWEWDdahLalA3CndFUJ4x1DFsdUMKNLzX9sHECA5h3K_pKrBPXn4If&_nc_ohc=IoImK1r4vnEQ7kNvwFsT_lt&_nc_oc=Adp0FL0qhJsUh0nzLeWxdzeRJ74vfisJ00B0OjMxB64dm9DDX4IfVemJNAcTJWdvUqs&_nc_zt=23&_nc_ht=scontent.fhan18-1.fna&edm=AKu_40MEAAAA&_nc_tpa=Q5bMBQEB2bAHBdvZd1_mtRUKVT4xry4_UrWxc37ZeS930GwId8bZg06gtExXXMVUash0_-ZrqP7XEOWI0w&oh=03_Q7cD6AEzjv5ARd5g9tHUcMiHe9xeWyubioHOcncX8gkcwpo08Q&oe=6A910069",
+    "attachment_type": "image",
+    "payload": null,
+    "created_at": "2026-07-28T06:51:57Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 888,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_z7xj67jzByeBatyOonLsIT5XArWXuhqgvcgPG60c2RxgFY6kD1-sEWJb_MGalzmkopocFbbJlbJ0JZ8SVlORIQ",
+    "sender_type": "page",
+    "text": "Dạ không gian nội thất tông gỗ nhà mình đẹp và sang trọng quá ạ! Anh/chị đang muốn chọn cửa nhựa Composite màu vân gỗ óc chó hay gỗ tự nhiên để phối hợp đồng bộ cho căn nhà ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T06:52:20Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 889,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_rSNwS4jkVC-1vx9RdaGjuz5XArWXuhqgvcgPG60c2RzxRpKyKgU9ye7x6iKZTH3WvWpq8vy9BqgyiEbst2i8Eg",
+    "sender_type": "customer",
+    "text": "tư vấn cho anh",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T07:00:26Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 890,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_j2tfZPeUXvlOGkM99A2Dnj5XArWXuhqgvcgPG60c2RzRAZQg3LjBcPJAjeVjZTBOmTbRrxauGO2OEdyex4eNiA",
+    "sender_type": "page",
+    "text": "Dạ em chào anh. Bên em chuyên cung cấp các dòng cửa nhựa Composite cao cấp chống nước, mối mọt với độ bền cao và đa dạng mẫu mã. Anh đang tìm cửa cho vị trí nào như cửa phòng ngủ hay cửa nhà vệ sinh ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T07:00:43Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 891,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_2jcOmOeVubFwlgxaCRX9WT5XArWXuhqgvcgPG60c2RyRHcgUy4Owr4KxVB_kRCz2JMvQcdRa5qvv4QDWgq_Bww",
+    "sender_type": "customer",
+    "text": "cửa phòng ngủ, gửi anh một số mẫu",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T07:01:03Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 892,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_YZ71F8RR_hPT6vtRTexVhz5XArWXuhqgvcgPG60c2Rwg2HHosGvNHBY5LHQO_02oidPM_P1M11Te9ij14FrXng",
+    "sender_type": "page",
+    "text": "",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T07:01:19Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 893,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_twyb7BgzV72flTnqpZg6kz5XArWXuhqgvcgPG60c2RyWNgZ9RvYADopMkCLC3YB3duuVjd2M9sFlrlvZNChQdw",
+    "sender_type": "page",
+    "text": "Dạ em gửi anh tham khảo một số mẫu cửa nhựa Composite rất hợp làm cửa phòng ngủ bên em nhé ạ. Anh đang ưu tiên tông màu vân gỗ hay các màu hiện đại như trắng, ghi ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T07:01:20Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 894,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_5URfSK4Y-YS-l0HLpB4daD5XArWXuhqgvcgPG60c2RyoU8XDH_MI-IM0DdM8L-jXQCDN18K2epaC7_YnUJzvEg",
+    "sender_type": "customer",
+    "text": "Nhận tư vấn",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T07:01:25Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 895,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_XtyBJzCsRYo2rXHXb3rdnj5XArWXuhqgvcgPG60c2RwQ0xh8-cMqDerxKx5mb17NkkgJTePljZTEmqcCC-c1kw",
+    "sender_type": "page",
+    "text": "",
+    "attachment_url": "https://scontent.fhan18-1.fna.fbcdn.net/v/t1.15752-9/756219457_1792144615123622_2156025470895449086_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=fc17b8&_nc_eui2=AeEnIT99r57LF4tSJGgvj7aoNzdbms8Uw3U3N1uazxTDdZCIT5B1iSJYmcXRmgTfv7tOKTmj7xj61ddJstpDK3k6&_nc_ohc=ijCkJ54zrFEQ7kNvwHCYVSK&_nc_oc=AdpeM2gue6WNN_8l8rr8Uv0Sb0qqeL0AbuSMJ20_okgRPLLDFwzfEWUC0Wfeib8Zgsg&_nc_zt=23&_nc_ht=scontent.fhan18-1.fna&edm=AKu_40MEAAAA&_nc_tpa=Q5bMBQHCOklZI0O8qvzff9Qqprp9GiPe9qd76-qt-obQDQxvOBZh8C7D-ClMDNLscxUeBbtQk0JKMSoiPg&oh=03_Q7cD6AGIZ-sgwNP4lcP4s-jC16JE5jMIGedLlrUs2v6BUkOvGQ&oe=6A91082C",
+    "attachment_type": "image",
+    "payload": null,
+    "created_at": "2026-07-28T07:01:45Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 896,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_cEdEOJCMVwXq5aB-UUt70T5XArWXuhqgvcgPG60c2RxzrHkPXU8CkUmE2wyE-Mcjm9c_tbVu4f-iBMJ1B9kTCA",
+    "sender_type": "page",
+    "text": "Dạ mẫu CCP01 này có giá 3.900.000 VNĐ/bộ, sở hữu độ dày cao, chống nước và mối mọt tuyệt đối ạ. Mẫu này hiện có 2 màu rất sang là màu óc chó và màu lông chuột. Anh đang muốn làm cửa kích thước bao nhiêu để em hỗ trợ tư vấn chi tiết hơn ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T07:01:45Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 897,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_KWDaveVOFjWOb7zaUl4G3T5XArWXuhqgvcgPG60c2Ryr3gC5dxZrjya7FtnqXGqh4mVuj3Jy6dI1VQ0WgfCpxQ",
+    "sender_type": "customer",
+    "text": "màu óc chó đi",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T07:02:30Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 898,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_uZp_cHKCu_vlIoDYAs-JMD5XArWXuhqgvcgPG60c2RzEyk_26OlpVYGej14oQqf4DGHCvDw7ct6RkgT4aIYWeg",
+    "sender_type": "page",
+    "text": "Dạ mã CCP01 màu óc chó lên cửa nhìn rất sang trọng và ấm cúng cho phòng ngủ ạ. Để em gửi báo giá chi tiết và tư vấn kỹ hơn, anh cho em xin số điện thoại (có Zalo) để em hỗ trợ anh nhé ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T07:02:46Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 899,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_qVCk1juC01kQj4wfURhFJD5XArWXuhqgvcgPG60c2RzZlO1jUx_v7AFDduAPLfC5hQZxbr_qPIivBQD3Y5POsQ",
+    "sender_type": "customer",
+    "text": "",
+    "attachment_url": "https://scontent.fhan18-1.fna.fbcdn.net/v/t1.15752-9/758730460_994892473612614_3429337287407217373_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=fc17b8&_nc_eui2=AeFknW2vR1J0VZlUazPWCIev1hFg3WoS2pTWEWDdahLalA3CndFUJ4x1DFsdUMKNLzX9sHECA5h3K_pKrBPXn4If&_nc_ohc=IoImK1r4vnEQ7kNvwFsT_lt&_nc_oc=Adp0FL0qhJsUh0nzLeWxdzeRJ74vfisJ00B0OjMxB64dm9DDX4IfVemJNAcTJWdvUqs&_nc_zt=23&_nc_ht=scontent.fhan18-1.fna&edm=AKu_40MEAAAA&_nc_tpa=Q5bMBQESzXyJE4USB3jdIe6BHZRKdXbaEyniRZ2RRaHDRVQGd5ZmRpGT-zlaHrq9OqHfZ2Sqwmb_pe212g&oh=03_Q7cD6AElNVyXr4TbvXLn_Cy808KUXOfXMdK3Te63F7909Jz2Pg&oe=6A910069",
+    "attachment_type": "image",
+    "payload": null,
+    "created_at": "2026-07-28T07:03:44Z"
+  }
+},
+{
+  "model": "facebook_integration.facebookmessage",
+  "pk": 900,
+  "fields": {
+    "lead": 23,
+    "fb_message_id": "m_yb5XwihMPedr_iw6PrBZ1T5XArWXuhqgvcgPG60c2Rzm0hl3B36FUk3oQDmBgbjnaDvWl4v4Cw_1Mqc8Mnl1wQ",
+    "sender_type": "page",
+    "text": "Dạ bộ sofa gỗ óc chó trong ảnh là mẫu mới nhất bên em, bao gồm 5 món với giá là 340 triệu đồng ạ. Mẫu này được làm hoàn toàn từ gỗ óc chó cao cấp mang lại vẻ sang trọng cho phòng khách. Anh có muốn em gửi thêm chi tiết kích thước từng món của bộ này không ạ?",
+    "attachment_url": null,
+    "attachment_type": "",
+    "payload": null,
+    "created_at": "2026-07-28T07:04:09Z"
+  }
+},
+{
   "model": "facebook_integration.quickmediaasset",
   "pk": 1,
   "fields": {
@@ -12030,9 +11436,9 @@
     "use_system_keys": false,
     "default_embedding_provider": "gemini",
     "auto_sync_products": false,
-    "enable_chat_extraction": false,
+    "enable_chat_extraction": true,
     "created_at": "2026-07-24T17:26:46.558Z",
-    "updated_at": "2026-07-27T15:20:27.248Z"
+    "updated_at": "2026-07-29T06:15:46.377Z"
   }
 },
 {

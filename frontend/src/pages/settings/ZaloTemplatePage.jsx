@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   Alert, Button, Card, Col, Form, Input,
-  message, Modal, Row, Select, Space, Switch, Table, Tag, Typography, Tooltip
+  message, Modal, Row, Select, Space, Switch, Table, Tag, Typography, Tooltip, List
 } from 'antd'
 import {
   FileTextOutlined, PlusOutlined, EditOutlined, DeleteOutlined, InfoCircleOutlined
@@ -9,12 +9,14 @@ import {
 import dayjs from 'dayjs'
 import api from '../../utils/api'
 import { useAuth } from '../../contexts/AuthContext'
+import { useResponsive } from '../../hooks/useResponsive'
 
 const { Title, Text } = Typography
 const { Option } = Select
 
 export default function ZaloTemplatePage() {
   const { maintenanceMode, hasPermission } = useAuth()
+  const { isMobile } = useResponsive()
   const canManageTemplates = hasPermission('zalo.manage_templates') || hasPermission('zalo.config')
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(false)
@@ -195,7 +197,7 @@ export default function ZaloTemplatePage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ marginBottom: 24, display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-start', gap: 16 }}>
         <div>
           <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
             <FileTextOutlined style={{ color: '#0068ff' }} />
@@ -216,13 +218,73 @@ export default function ZaloTemplatePage() {
       </div>
 
       <Card style={{ borderRadius: 12 }} bodyStyle={{ padding: 0 }}>
-        <Table scroll={{ x: 'max-content' }}
-          columns={columns}
-          dataSource={templates}
-          rowKey="id"
-          loading={loading}
-          pagination={false}
-        />
+        {isMobile ? (
+          <List
+            dataSource={templates}
+            loading={loading}
+            renderItem={(record) => {
+              const types = {
+                order_confirm: { color: 'green', label: 'Xác nhận Đơn hàng' },
+                appointment: { color: 'cyan', label: 'Nhắc lịch hẹn' },
+                promotion: { color: 'magenta', label: 'Khuyến mãi' },
+                birthday: { color: 'purple', label: 'Chúc mừng sinh nhật' },
+                care: { color: 'orange', label: 'Thu tiền / Chăm sóc' },
+                delivery_warranty: { color: 'blue', label: 'Giao hàng / Bảo hành' },
+                custom: { color: 'default', label: 'Tùy chỉnh' },
+              }
+              const t = types[record.template_type] || types.custom
+              return (
+                <List.Item style={{ padding: '16px', display: 'block', borderBottom: '1px solid #f0f0f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                    <Text strong style={{ fontSize: 15 }}>{record.name}</Text>
+                    <Tag color={record.is_active ? 'success' : 'default'} style={{ margin: 0 }}>
+                      {record.is_active ? 'Hoạt động' : 'Tạm dừng'}
+                    </Tag>
+                  </div>
+                  
+                  <div style={{ marginBottom: 12 }}>
+                    <Text type="secondary" style={{ fontSize: 13, marginRight: 8 }}>Template ID:</Text>
+                    <Tag color="blue" style={{ margin: 0 }}>{record.zalo_template_id}</Tag>
+                  </div>
+
+                  <div style={{ marginBottom: 12, background: '#f8fafc', padding: '8px 12px', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>Loại mẫu:</Text>
+                    <Tag color={t.color} style={{ margin: 0 }}>{t.label}</Tag>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #f0f0f0', paddingTop: 12 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>Ngày tạo: {dayjs(record.created_at).format('DD/MM/YYYY')}</Text>
+                    <Space size="small">
+                      {canManageTemplates && (
+                        <Button type="text" icon={<EditOutlined style={{ color: '#1677ff' }} />} onClick={() => handleOpenModal(record)} />
+                      )}
+                      {canManageTemplates && (
+                        <Button type="text" danger icon={<DeleteOutlined />} onClick={() => {
+                          Modal.confirm({
+                            title: 'Xác nhận xóa',
+                            content: `Bạn có chắc chắn muốn xóa mẫu ZNS "${record.name}"?`,
+                            okText: 'Xóa',
+                            okType: 'danger',
+                            cancelText: 'Hủy',
+                            onOk: () => handleDelete(record.id),
+                          })
+                        }} />
+                      )}
+                    </Space>
+                  </div>
+                </List.Item>
+              )
+            }}
+          />
+        ) : (
+          <Table scroll={{ x: 'max-content' }}
+            columns={columns}
+            dataSource={templates}
+            rowKey="id"
+            loading={loading}
+            pagination={false}
+          />
+        )}
       </Card>
 
       <Modal

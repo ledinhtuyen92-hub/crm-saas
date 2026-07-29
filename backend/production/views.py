@@ -123,11 +123,19 @@ class ProductionOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     def perform_update(self, serializer):
         instance = self.get_object()
         new_status = serializer.validated_data.get("status", instance.status)
+
+        # Kiểm tra nếu có Lệnh giao hàng đang được xử lý → chặn lùi trạng thái
         if new_status != instance.status and hasattr(instance.order, 'delivery_order'):
             delivery = instance.order.delivery_order
-            if delivery.status == "delivered":
+            BLOCKING_STATUSES = {
+                "in_transit": "Lệnh giao hàng đang trên đường giao (Đang giao). Vui lòng hủy hoặc hoàn tất lệnh giao hàng trước.",
+                "failed":     "Lệnh giao hàng đã bị ghi nhận Giao thất bại. Vui lòng xử lý lệnh giao hàng trước.",
+                "delivered":  "Đơn hàng đã được giao thành công. Không thể lùi trạng thái lệnh sản xuất.",
+            }
+            if delivery.status in BLOCKING_STATUSES:
                 from rest_framework.exceptions import ValidationError
-                raise ValidationError({"status": "Không thể thay đổi trạng thái khi Đơn giao hàng đã giao thành công."})
+                raise ValidationError({"status": BLOCKING_STATUSES[delivery.status]})
+
         serializer.save()
 
 

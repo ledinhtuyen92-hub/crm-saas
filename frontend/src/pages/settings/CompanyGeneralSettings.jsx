@@ -35,6 +35,7 @@ import {
 } from 'antd'
 import api from '../../utils/api'
 import { useAuth } from '../../contexts/AuthContext'
+import { useResponsive } from '../../hooks/useResponsive'
 
 const { Title, Text, Paragraph } = Typography
 const { Option } = Select
@@ -42,6 +43,7 @@ const { Option } = Select
 export default function CompanyGeneralSettings() {
   const { token } = theme.useToken()
   const { checkMaintenance, hasPermission, isCompanyAdmin } = useAuth()
+  const { isMobile } = useResponsive()
   const canEditSettings = isCompanyAdmin || hasPermission('settings.company')
   const [messageApi, contextHolder] = message.useMessage()
   const [loading, setLoading] = useState(false)
@@ -189,7 +191,7 @@ export default function CompanyGeneralSettings() {
     null
 
   return (
-    <div style={{ padding: '24px 32px' }}>
+    <div style={{ padding: isMobile ? '16px 12px' : '24px 32px' }}>
       {contextHolder}
 
       <div style={{ marginBottom: 28 }}>
@@ -391,7 +393,7 @@ export default function CompanyGeneralSettings() {
           <Form.Item
             name="default_quotation_terms"
             label={
-              <Space>
+              <Space wrap>
                 <Text strong style={{ color: '#1e293b' }}>📜 Ghi Chú & Điều Khoản Báo Giá Mặc Định Của Công Ty</Text>
                 <Button
                   type="link"
@@ -688,7 +690,7 @@ export default function CompanyGeneralSettings() {
                     }
                     onClick={() => handleApplyTemplate(tmpl.id)}
                   >
-                    {isCurrent ? 'Đang áp dụng' : 'Áp dụng mẫu này'}
+                    {isCurrent ? 'Đang áp dụng' : 'Áp dụng'}
                   </Button>
                 </div>
               </Card>

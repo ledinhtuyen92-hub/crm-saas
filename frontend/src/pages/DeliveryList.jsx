@@ -13,8 +13,9 @@ import {
   Modal,
   Form,
   DatePicker,
-  message,
   Drawer,
+  List,
+  message,
 } from 'antd'
 import { CarOutlined, SearchOutlined, EditOutlined, EyeOutlined, PlusOutlined, DeleteOutlined, UserAddOutlined, FileTextOutlined, PrinterOutlined, CheckCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -192,16 +193,27 @@ export default function DeliveryList() {
 
   const handleUpdateStatus = async (record, newStatus) => {
     if (checkMaintenance()) return
-    setSubmitting(true)
+    
+    // Lưu lại trạng thái cũ để revert nếu lỗi
+    const previousStatus = record.status
+    
+    // TRUE Optimistic UI: Cập nhật giao diện NGAY LẬP TỨC
+    setDeliveries(prev => prev.map(item => String(item.id) === String(record.id) ? { ...item, status: newStatus } : item))
+
     try {
       const payload = { status: newStatus }
       if (newStatus === 'delivered' && !record.actual_date) {
         payload.actual_date = dayjs().format('YYYY-MM-DD')
       }
-      await api.patch(`/delivery/deliveries/${record.id}/`, payload)
+      
+      const res = await api.patch(`/delivery/deliveries/${record.id}/`, payload)
       message.success('Cập nhật trạng thái thành công!')
-      fetchDeliveries()
+      // Đồng bộ lại dữ liệu chuẩn từ server (vd: actual_date)
+      setDeliveries(prev => prev.map(item => String(item.id) === String(record.id) ? { ...item, ...res.data } : item))
     } catch (error) {
+      // Nếu lỗi thì hoàn tác giao diện về trạng thái cũ
+      setDeliveries(prev => prev.map(item => String(item.id) === String(record.id) ? { ...item, status: previousStatus } : item))
+      
       const data = error.response?.data
       let errorMsg = 'Có lỗi xảy ra khi cập nhật.'
       if (data) {
@@ -211,8 +223,6 @@ export default function DeliveryList() {
         else if (Array.isArray(data.non_field_errors)) errorMsg = data.non_field_errors[0]
       }
       message.error(errorMsg)
-    } finally {
-      setSubmitting(false)
     }
   }
 
@@ -261,12 +271,12 @@ export default function DeliveryList() {
     }
     setSubmitting(true)
     try {
-      await api.post(`/delivery/deliveries/${assigningDelivery.id}/assign_shipper/`, {
+      const res = await api.post(`/delivery/deliveries/${assigningDelivery.id}/assign_shipper/`, {
         shipper_user_id: selectedShipperId
       })
       message.success('Gán nhân viên giao hàng thành công!')
       setAssignModalVisible(false)
-      fetchDeliveries()
+      setDeliveries(prev => prev.map(item => String(item.id) === String(assigningDelivery.id) ? { ...item, ...res.data } : item))
     } catch (error) {
       const data = error.response?.data
       let errorMsg = 'Lỗi khi gán nhân viên giao hàng.'
@@ -277,6 +287,85 @@ export default function DeliveryList() {
       setSubmitting(false)
     }
   }
+
+  const renderDeliveryActions = (r) => (
+    <Space wrap size={8}>
+      {canEdit && r.status === 'pending' && (
+        <Button
+          size="small"
+          type="primary"
+          ghost
+          icon={<CarOutlined />}
+          onClick={() => handleUpdateStatus(r, 'in_transit')}
+        >
+          Giao hàng
+        </Button>
+      )}
+      {canEdit && r.status === 'in_transit' && (
+        <>
+          <Button
+            size="small"
+            style={{ color: '#16a34a', borderColor: '#16a34a' }}
+            icon={<CheckCircleOutlined />}
+            onClick={() => handleUpdateStatus(r, 'delivered')}
+          >
+            Thành công
+          </Button>
+          <Button
+            size="small"
+            danger
+            icon={<CloseCircleOutlined />}
+            onClick={() => handleUpdateStatus(r, 'failed')}
+          >
+            Thất bại
+          </Button>
+        </>
+      )}
+      {canEdit && r.status === 'failed' && (
+        <Button
+          size="small"
+          type="primary"
+          icon={<SyncOutlined />}
+          onClick={() => handleUpdateStatus(r, 'pending')}
+        >
+          Giao lại
+        </Button>
+      )}
+      {hasPermission('delivery.assign') && (
+        <Button
+          type="text"
+          style={{ color: '#10b981' }}
+          icon={<UserAddOutlined />}
+          title="Gán nhân viên giao hàng"
+          onClick={() => {
+            setAssigningDelivery(r)
+            setSelectedShipperId(r.shipper_user)
+            setAssignModalVisible(true)
+          }}
+        />
+      )}
+      <Button
+        type="text"
+        style={{ color: '#0284c7' }}
+        icon={<FileTextOutlined />}
+        title="Xem chi tiết đơn hàng"
+        onClick={() => handleViewOrder(r)}
+      />
+      <Button
+        type="text"
+        icon={canEdit ? <EditOutlined /> : <EyeOutlined />}
+        onClick={() => openModal(r)}
+      />
+      {canDelete && (
+        <Button
+          type="text"
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() => handleDelete(r)}
+        />
+      )}
+    </Space>
+  )
 
   const columns = [
     {
@@ -369,91 +458,14 @@ export default function DeliveryList() {
       title: '',
       key: 'actions',
       align: 'right',
-      render: (_, r) => (
-        <Space>
-          {canEdit && r.status === 'pending' && (
-            <Button
-              size="small"
-              type="primary"
-              ghost
-              icon={<CarOutlined />}
-              onClick={() => handleUpdateStatus(r, 'in_transit')}
-            >
-              Giao hàng
-            </Button>
-          )}
-          {canEdit && r.status === 'in_transit' && (
-            <>
-              <Button
-                size="small"
-                style={{ color: '#16a34a', borderColor: '#16a34a' }}
-                icon={<CheckCircleOutlined />}
-                onClick={() => handleUpdateStatus(r, 'delivered')}
-              >
-                Thành công
-              </Button>
-              <Button
-                size="small"
-                danger
-                icon={<CloseCircleOutlined />}
-                onClick={() => handleUpdateStatus(r, 'failed')}
-              >
-                Thất bại
-              </Button>
-            </>
-          )}
-          {canEdit && r.status === 'failed' && (
-            <Button
-              size="small"
-              type="primary"
-              icon={<SyncOutlined />}
-              onClick={() => handleUpdateStatus(r, 'pending')}
-            >
-              Giao lại
-            </Button>
-          )}
-          {hasPermission('delivery.assign') && (
-            <Button
-              type="text"
-              style={{ color: '#10b981' }}
-              icon={<UserAddOutlined />}
-              title="Gán nhân viên giao hàng"
-              onClick={() => {
-                setAssigningDelivery(r)
-                setSelectedShipperId(r.shipper_user)
-                setAssignModalVisible(true)
-              }}
-            />
-          )}
-          <Button
-            type="text"
-            style={{ color: '#0284c7' }}
-            icon={<FileTextOutlined />}
-            title="Xem chi tiết đơn hàng"
-            onClick={() => handleViewOrder(r)}
-          />
-          <Button
-            type="text"
-            icon={canEdit ? <EditOutlined /> : <EyeOutlined />}
-            onClick={() => openModal(r)}
-          />
-          {canDelete && (
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleDelete(r)}
-            />
-          )}
-        </Space>
-      ),
+      render: (_, r) => renderDeliveryActions(r),
     },
   ]
 
   const { isMobile, padding } = useResponsive()
 
   return (
-    <div style={{ padding }}>
+    <section>
       <Row justify="space-between" align="middle" style={{ marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>
           <CarOutlined style={{ marginRight: 8, color: '#f59e0b' }} />
@@ -493,13 +505,52 @@ export default function DeliveryList() {
         </Row>
       </Card>
 
-      <Table scroll={{ x: 'max-content' }}
-        dataSource={deliveries}
-        columns={columns}
-        rowKey="id"
-        loading={loading}
-        pagination={{ pageSize: 20 }}
-      />
+      {isMobile ? (
+        <List
+          rowKey="id"
+          dataSource={deliveries}
+          loading={loading}
+          pagination={{ pageSize: 20, size: 'small' }}
+          renderItem={(r) => {
+            const cfg = statusConfig[r.status] || { label: r.status, color: 'default' }
+            return (
+              <List.Item style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block', background: '#fff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                  <Text strong style={{ color: '#2563eb' }}>{r.delivery_code}</Text>
+                  <Tag color={cfg.color} style={{ margin: 0 }}>{cfg.label}</Tag>
+                </div>
+                <div style={{ marginBottom: 4 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>Đơn hàng: </Text>
+                  <Text strong>{r.order_number}</Text>
+                </div>
+                <div style={{ marginBottom: 4 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>Khách hàng: </Text>
+                  <Text>{r.customer_name}</Text>
+                </div>
+                <div style={{ marginBottom: 4 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>Người giao: </Text>
+                  {r.shipper_name ? <Text>{r.shipper_name} ({r.shipper_phone})</Text> : <Text type="secondary">Chưa gán</Text>}
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>Dự kiến giao: </Text>
+                  {r.expected_date ? <Text>{dayjs(r.expected_date).format('DD/MM/YYYY')}</Text> : <Text>—</Text>}
+                </div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                  {renderDeliveryActions(r)}
+                </div>
+              </List.Item>
+            )
+          }}
+        />
+      ) : (
+        <Table scroll={{ x: 'max-content' }}
+          dataSource={deliveries}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          pagination={{ pageSize: 20 }}
+        />
+      )}
 
       <Modal
         title={editingDelivery ? (canEdit ? "Cập nhật Lệnh Giao hàng" : "Chi tiết Lệnh Giao hàng") : "Tạo Lệnh Giao Hàng Mới"}
@@ -651,6 +702,6 @@ export default function DeliveryList() {
           ))}
         </Select>
       </Modal>
-    </div>
+    </section>
   )
 }

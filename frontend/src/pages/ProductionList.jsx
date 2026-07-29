@@ -34,6 +34,7 @@ import {
   Typography,
   Descriptions,
   message,
+  List,
 } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
@@ -559,6 +560,66 @@ export default function ProductionList() {
   }
 
   // ── Table Columns ─────────────────────────────────────────────────────
+  const renderProductionActions = (record) => (
+    <Space wrap size={8}>
+      <Tooltip title="Xem đơn hàng">
+        <Button
+          type="text"
+          shape="circle"
+          icon={<EyeOutlined style={{ color: '#2563eb' }} />}
+          onClick={() => handleViewOrder(record)}
+        />
+      </Tooltip>
+
+      {record.export_transaction_code && (
+        <Tooltip title="Xem phiếu xuất kho">
+          <Button
+            type="text"
+            shape="circle"
+            icon={<ExportOutlined style={{ color: '#8b5cf6' }} />}
+            onClick={() => handleViewExport(record)}
+          />
+        </Tooltip>
+      )}
+
+      <Button
+        type="primary"
+        size="small"
+        icon={<SettingOutlined />}
+        onClick={() => {
+          setSelectedPO(record)
+          setDrawerVisible(true)
+        }}
+        style={{ background: '#0284c7' }}
+      >
+        Công đoạn
+      </Button>
+
+      {canEdit && (
+        <Tooltip title="Sửa lệnh SX">
+          <Button
+            type="text"
+            shape="circle"
+            icon={<EditOutlined style={{ color: '#d97706' }} />}
+            onClick={() => openModal(record)}
+          />
+        </Tooltip>
+      )}
+
+      {canDelete && (
+        <Popconfirm
+          title="Xoá lệnh sản xuất?"
+          onConfirm={() => handleDeletePO(record.id)}
+          okText="Xoá"
+          cancelText="Hủy"
+          okButtonProps={{ danger: true }}
+        >
+          <Button type="text" danger shape="circle" icon={<DeleteOutlined />} />
+        </Popconfirm>
+      )}
+    </Space>
+  )
+
   const columns = [
     {
       title: 'Mã Lệnh SX',
@@ -677,67 +738,12 @@ export default function ProductionList() {
       title: 'Hành động',
       key: 'action',
       align: 'right',
-      render: (_, record) => (
-        <Space>
-          <Tooltip title="Xem đơn hàng">
-            <Button
-              type="text"
-              icon={<EyeOutlined style={{ color: '#2563eb' }} />}
-              onClick={() => handleViewOrder(record)}
-            />
-          </Tooltip>
-
-          {record.export_transaction_code && (
-            <Tooltip title="Xem phiếu xuất kho">
-              <Button
-                type="text"
-                icon={<ExportOutlined style={{ color: '#8b5cf6' }} />}
-                onClick={() => handleViewExport(record)}
-              />
-            </Tooltip>
-          )}
-
-          <Button
-            type="primary"
-            size="small"
-            icon={<SettingOutlined />}
-            onClick={() => {
-              setSelectedPO(record)
-              setDrawerVisible(true)
-            }}
-            style={{ background: '#0284c7' }}
-          >
-            Công đoạn
-          </Button>
-
-          {canEdit && (
-            <Tooltip title="Sửa lệnh SX">
-              <Button
-                type="text"
-                icon={<EditOutlined style={{ color: '#d97706' }} />}
-                onClick={() => openModal(record)}
-              />
-            </Tooltip>
-          )}
-
-          {canDelete && (
-            <Popconfirm
-              title="Xoá lệnh sản xuất?"
-              onConfirm={() => handleDeletePO(record.id)}
-              okText="Xoá"
-              cancelText="Hủy"
-              okButtonProps={{ danger: true }}
-            >
-              <Button type="text" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+      render: (_, record) => renderProductionActions(record),
     },
   ]
 
   return (
-    <div style={{ padding: '24px 32px' }}>
+    <section>
       {contextHolder}
 
       {/* ── Page Header ────────────────────────────────────────────────── */}
@@ -816,13 +822,53 @@ export default function ProductionList() {
 
       {/* ── Table ──────────────────────────────────────────────────────── */}
       <Card style={{ borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }} bodyStyle={{ padding: 0 }}>
-        <Table scroll={{ x: 'max-content' }}
-          columns={columns}
-          dataSource={filteredPOs}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-        />
+        {isMobile ? (
+          <List
+            dataSource={filteredPOs}
+            loading={loading}
+            pagination={{ pageSize: 10, size: 'small' }}
+            renderItem={(record) => {
+              const cfg = statusConfig[record.status] || { label: record.status, color: 'default' }
+              const total = record.steps?.length || 0
+              const done = record.steps ? record.steps.filter((s) => s.status === 'done').length : 0
+              const percent = total > 0 ? Math.round((done / total) * 100) : 0
+              
+              return (
+                <List.Item
+                  style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                    <Text strong style={{ color: '#2563eb' }}>ĐH: {record.order_number}</Text>
+                    <Tag color={cfg.color} icon={cfg.icon} style={{ margin: 0 }}>{cfg.label}</Tag>
+                  </div>
+                  <div style={{ marginBottom: 4 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>Khách hàng: </Text>
+                    <Text strong>{record.customer_name || 'Khách lẻ'}</Text>
+                  </div>
+                  <div style={{ marginBottom: 4 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>Ngày dự kiến: </Text>
+                    <Text strong style={{ color: '#dc2626' }}>{record.end_date ? dayjs(record.end_date).format('DD/MM/YYYY') : '—'}</Text>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <Progress percent={percent} size="small" strokeColor={percent === 100 ? '#10b981' : '#0284c7'} style={{ width: '80%' }} />
+                    <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>{done}/{total} bước</Text>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                    {renderProductionActions(record)}
+                  </div>
+                </List.Item>
+              )
+            }}
+          />
+        ) : (
+          <Table scroll={{ x: 'max-content' }}
+            columns={columns}
+            dataSource={filteredPOs}
+            rowKey="id"
+            loading={loading}
+            pagination={{ pageSize: 10 }}
+          />
+        )}
       </Card>
 
       {/* ── Modal Add / Edit PO ────────────────────────────────────────── */}
@@ -1113,6 +1159,6 @@ export default function ProductionList() {
           <TransactionPrintView transaction={viewExportData} company={user?.company} />
         </div>
       </Modal>
-    </div>
+    </section>
   )
 }

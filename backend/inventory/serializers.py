@@ -32,7 +32,7 @@ class ProductAttributeSerializer(serializers.ModelSerializer):
 class ProductTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductTemplate
-        fields = ["id", "company", "name", "description", "product_type", "category", "created_at", "updated_at"]
+        fields = ["id", "company", "name", "sku", "description", "product_type", "category", "image", "created_at", "updated_at"]
         read_only_fields = ["id", "company", "created_at", "updated_at"]
 
 

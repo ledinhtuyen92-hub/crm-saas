@@ -23,10 +23,12 @@ import {
   Typography,
   message,
   theme,
+  List,
 } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../../utils/api'
 import { useAuth } from '../../contexts/AuthContext'
+import { useResponsive } from '../../hooks/useResponsive'
 
 const { Title, Text } = Typography
 
@@ -51,6 +53,7 @@ const MODULE_ORDER = [
 export default function RoleManagement() {
   const { token } = theme.useToken()
   const { checkMaintenance, hasPermission, isCompanyAdmin } = useAuth()
+  const { isMobile } = useResponsive()
   const canManageRoles = isCompanyAdmin || hasPermission('settings.roles')
   const [messageApi, contextHolder] = message.useMessage()
 
@@ -272,14 +275,61 @@ export default function RoleManagement() {
       </div>
 
       <Card style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(15,23,42,0.08)' }}>
-        <Table scroll={{ x: 'max-content' }}
-          id="role-table"
-          columns={columns}
-          dataSource={roles}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-        />
+        {isMobile ? (
+          <List
+            dataSource={roles}
+            loading={loading}
+            pagination={{ pageSize: 10, size: 'small' }}
+            renderItem={(record) => {
+              const mods = [...new Set((record.permission_details || []).map((p) => p.module))]
+              return (
+                <List.Item style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block', background: '#fff' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 16, color: token.colorText }}>{record.name}</div>
+                      {record.description && <Text type="secondary" style={{ fontSize: 13 }}>{record.description}</Text>}
+                    </div>
+                    <Tag color="purple" icon={<TeamOutlined />}>{record.user_count ?? 0} người</Tag>
+                  </div>
+                  
+                  <div style={{ marginBottom: 12 }}>
+                    <Tag color="blue" icon={<KeyOutlined />}>{record.permission_details?.length ?? 0} quyền</Tag>
+                  </div>
+
+                  <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, marginBottom: 12 }}>
+                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>Modules được truy cập:</Text>
+                    <Space size={4} wrap>
+                      {mods.map((m) => (
+                        <Tag key={m} color="geekblue" style={{ fontSize: 11, margin: 0 }}>
+                          {moduleLabels[m] || m}
+                        </Tag>
+                      ))}
+                      {mods.length === 0 && <Text type="secondary" style={{ fontSize: 12 }}>Chưa có quyền nào</Text>}
+                    </Space>
+                  </div>
+
+                  {canManageRoles && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px dashed #f0f0f0', paddingTop: 12 }}>
+                      <Space size="small">
+                        <Button type="text" icon={<EditOutlined style={{ color: '#1677ff' }}/>} onClick={() => openModal(record)} />
+                        <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
+                      </Space>
+                    </div>
+                  )}
+                </List.Item>
+              )
+            }}
+          />
+        ) : (
+          <Table scroll={{ x: 'max-content' }}
+            id="role-table"
+            columns={columns}
+            dataSource={roles}
+            rowKey="id"
+            loading={loading}
+            pagination={{ pageSize: 10 }}
+          />
+        )}
       </Card>
 
       {/* ── Modal Tạo / Sửa ────────────────────────────────────── */}

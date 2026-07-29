@@ -13,8 +13,9 @@ import {
   Modal,
   Form,
   DatePicker,
-  message,
   Drawer,
+  List,
+  message,
 } from 'antd'
 import { SafetyCertificateOutlined, SearchOutlined, EditOutlined, EyeOutlined, PlusOutlined, DeleteOutlined, PrinterOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -174,8 +175,8 @@ export default function WarrantyList() {
       message.success('Đã xóa phiếu bảo hành!')
       setDeleteModalVisible(false)
       fetchWarranties()
-    } catch {
-      message.error('Lỗi khi xóa phiếu bảo hành.')
+    } catch (err) {
+      message.error(err.response?.data?.detail || err.message || 'Lỗi khi xóa phiếu bảo hành.')
     } finally {
       setSubmitting(false)
     }
@@ -278,6 +279,33 @@ export default function WarrantyList() {
     }, 500)
   }
 
+  const renderWarrantyActions = (r) => (
+    <Space wrap size={8}>
+      <Button
+        type="text"
+        shape="circle"
+        icon={<PrinterOutlined />}
+        onClick={() => { setPrintingWarranty(r); setPrintDrawerVisible(true); }}
+        title="In Phiếu Bảo Hành"
+      />
+      <Button
+        type="text"
+        shape="circle"
+        icon={canEdit ? <EditOutlined /> : <EyeOutlined />}
+        onClick={() => openModal(r)}
+      />
+      {canDelete && (
+        <Button
+          type="text"
+          danger
+          shape="circle"
+          icon={<DeleteOutlined />}
+          onClick={() => handleDelete(r)}
+        />
+      )}
+    </Space>
+  )
+
   const columns = [
     {
       title: 'Mã BH',
@@ -325,36 +353,14 @@ export default function WarrantyList() {
       title: '',
       key: 'actions',
       align: 'right',
-      render: (_, r) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<PrinterOutlined />}
-            onClick={() => { setPrintingWarranty(r); setPrintDrawerVisible(true); }}
-            title="In Phiếu Bảo Hành"
-          />
-          <Button
-            type="text"
-            icon={canEdit ? <EditOutlined /> : <EyeOutlined />}
-            onClick={() => openModal(r)}
-          />
-          {canDelete && (
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleDelete(r)}
-            />
-          )}
-        </Space>
-      ),
+      render: (_, r) => renderWarrantyActions(r),
     },
   ]
 
   const { isMobile, padding } = useResponsive()
 
   return (
-    <div style={{ padding, width: '100%', minWidth: 0 }}>
+    <section style={{ width: '100%', minWidth: 0 }}>
       <Row justify="space-between" align="middle" style={{ marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>
           <SafetyCertificateOutlined style={{ marginRight: 8, color: '#059669' }} />
@@ -394,13 +400,48 @@ export default function WarrantyList() {
         </Row>
       </Card>
 
-      <Table scroll={{ x: 'max-content' }}
-        dataSource={warranties}
-        columns={columns}
-        rowKey="id"
-        loading={loading}
-        pagination={{ pageSize: 20 }}
-      />
+      {isMobile ? (
+        <List
+          dataSource={warranties}
+          loading={loading}
+          pagination={{ pageSize: 20, size: 'small' }}
+          renderItem={(r) => {
+            const c = statusConfig[r.status] || { label: r.status, color: 'default' }
+            return (
+              <List.Item style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'block', background: '#fff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                  <Text strong style={{ color: '#2563eb' }}>{r.warranty_code}</Text>
+                  <Tag color={c.color} style={{ margin: 0 }}>{c.label}</Tag>
+                </div>
+                <div style={{ marginBottom: 4 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>Khách hàng: </Text>
+                  <Text strong>{r.customer_name}</Text>
+                </div>
+                <div style={{ marginBottom: 4 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>Đơn hàng: </Text>
+                  <Text>{r.order_number}</Text>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>Thời hạn: </Text>
+                  <Text>{r.start_date ? dayjs(r.start_date).format('DD/MM/YY') : '—'} ➔ </Text>
+                  <Text style={{ color: '#dc2626' }}>{r.end_date ? dayjs(r.end_date).format('DD/MM/YY') : '—'}</Text>
+                </div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                  {renderWarrantyActions(r)}
+                </div>
+              </List.Item>
+            )
+          }}
+        />
+      ) : (
+        <Table scroll={{ x: 'max-content' }}
+          dataSource={warranties}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          pagination={{ pageSize: 20 }}
+        />
+      )}
 
       <Modal
         title={editingWarranty ? (canEdit ? "Cập nhật Phiếu Bảo hành" : "Chi tiết Phiếu Bảo hành") : "Tạo Phiếu Bảo Hành Mới"}
@@ -493,6 +534,6 @@ export default function WarrantyList() {
             onOrientationChange={setPrintOrientation}
           />
       </Drawer>
-    </div>
+    </section>
   )
 }

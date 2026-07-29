@@ -271,10 +271,10 @@ function Dashboard() {
       <Row justify="space-between" align="top" gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} md={12}>
           <Space direction="vertical" size={2}>
-            <Title level={2} style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 700 }}>
+            <Title level={2} style={{ margin: 0, fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>
               Dashboard
             </Title>
-              <Text type="secondary" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              <Text type="secondary" style={{ fontFamily: "'Inter', sans-serif" }}>
                 Tổng quan hiệu quả kinh doanh và tình hình hoạt động của công ty
               </Text>
           </Space>
