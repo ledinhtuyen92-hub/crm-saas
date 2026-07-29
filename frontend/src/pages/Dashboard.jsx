@@ -274,9 +274,9 @@ function Dashboard() {
             <Title level={2} style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 700 }}>
               Dashboard
             </Title>
-            <Text type="secondary" style={{ fontFamily: "'Outfit', sans-serif" }}>
-              Tổng quan hiệu quả kinh doanh và tiến độ thi công nội thất
-            </Text>
+              <Text type="secondary" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                Tổng quan hiệu quả kinh doanh và tình hình hoạt động của công ty
+              </Text>
           </Space>
         </Col>
         <Col xs={24} md={12} style={{ textAlign: isMobile ? 'left' : 'right' }}>
