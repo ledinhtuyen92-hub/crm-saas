@@ -424,8 +424,17 @@ function MessageBubble({ msg, lead, showAvatar = true }) {
           textAlign: isPage ? 'right' : 'left',
           textShadow: hasOnlyMedia ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
           color: hasOnlyMedia ? '#6b7280' : 'inherit',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: isPage ? 'flex-end' : 'flex-start',
+          gap: 4
         }}>
-          {formatTime(msg.created_at)}
+          {msg.payload?.error && (
+            <Tooltip title={msg.payload.error_code ? `Meta từ chối gửi tin nhắn (Mã lỗi ${msg.payload.error_code}: ${msg.payload.error_message})` : `Lỗi hệ thống: ${msg.payload.error_message}`}>
+              <InfoCircleOutlined style={{ color: '#dc2626', fontSize: 12, cursor: 'pointer', opacity: 1 }} />
+            </Tooltip>
+          )}
+          <span>{formatTime(msg.created_at)}</span>
         </div>
       </div>
     </div>

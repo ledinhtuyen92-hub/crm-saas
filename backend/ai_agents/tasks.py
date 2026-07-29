@@ -213,7 +213,8 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
                     company=lead.company,
                     social_lead=lead,
                     direction=ZaloMessage.DIRECTION_OUTBOUND,
-                    content=result.get('reply')
+                    content="[Lỗi phản hồi tự động]",
+                    payload={"error": True, "error_message": result.get('reply')}
                 )
             return
             
@@ -387,7 +388,8 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
                 FacebookMessage.objects.create(
                     lead=lead,
                     sender_type='page',
-                    text=result.get('reply')
+                    text="[Lỗi phản hồi tự động]",
+                    payload={"error": True, "error_message": result.get('reply')}
                 )
             return
 

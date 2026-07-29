@@ -1445,7 +1445,7 @@ export default function ZaloInboxPage() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, marginRight: isOutbound ? 8 : 0, marginLeft: isOutbound ? 0 : 36 }}>
                           {msg.payload?.error && (
-                            <Tooltip title={`Zalo từ chối gửi tin nhắn (Mã lỗi ${msg.payload.error_code}: ${msg.payload.error_message})`}>
+                            <Tooltip title={msg.payload.error_code ? `Zalo từ chối gửi tin nhắn (Mã lỗi ${msg.payload.error_code}: ${msg.payload.error_message})` : `Lỗi hệ thống: ${msg.payload.error_message}`}>
                               <InfoCircleOutlined style={{ color: '#dc2626', fontSize: 12, cursor: 'pointer' }} />
                             </Tooltip>
                           )}
