@@ -204,18 +204,10 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
 
         result = generate_ai_reply(lead.oa_config.ai_agent, history, lead.display_name + rag_search_text)
         if result.get('error'):
+            logger.error(f"[AI Zalo Internal Error] {result.get('reply')}")
             lead.is_ai_active = False
             lead.has_unread_message = True  # Đánh dấu để Sale thấy và vào xử lý
             lead.save(update_fields=['is_ai_active', 'has_unread_message'])
-            if result.get('reply'):
-                from zalo_integration.models import ZaloMessage
-                ZaloMessage.objects.create(
-                    company=lead.company,
-                    social_lead=lead,
-                    direction=ZaloMessage.DIRECTION_OUTBOUND,
-                    content="[Lỗi phản hồi tự động]",
-                    payload={"error": True, "error_message": result.get('reply')}
-                )
             return
             
         ai_agent = lead.oa_config.ai_agent
@@ -283,26 +275,23 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
             resp = send_zalo_chat_message(lead.oa_config, lead.social_id, text=reply_text, image_url=image_url)
             
             error_code = resp.get("error", 0)
-            payload_data = None
-            if error_code != 0:
-                err_msg = resp.get("message", "")
-                payload_data = {"error": True, "error_code": error_code, "error_message": err_msg}
-                logger.error(f"[AI Zalo Error] Zalo API Error {error_code}: {err_msg}")
-            
-            ZaloMessage.objects.create(
-                company=lead.company,
-                social_lead=lead,
-                direction=ZaloMessage.DIRECTION_OUTBOUND,
-                content=reply_text or "[Hình ảnh]",
-                payload=payload_data
-            )
             
             update_fields = []
             if error_code != 0:
+                err_msg = resp.get("message", "")
+                logger.error(f"[AI Zalo Error] Zalo API Error {error_code}: {err_msg}")
                 lead.is_ai_active = False
                 lead.has_unread_message = True
                 update_fields.extend(['is_ai_active', 'has_unread_message'])
-            elif lead.is_ai_active:
+            else:
+                ZaloMessage.objects.create(
+                    company=lead.company,
+                    social_lead=lead,
+                    direction=ZaloMessage.DIRECTION_OUTBOUND,
+                    content=reply_text or "[Hình ảnh]"
+                )
+                
+                if lead.is_ai_active:
                 lead.has_unread_message = False
                 lead.unread_count = 0
                 update_fields.extend(['has_unread_message', 'unread_count'])
@@ -380,17 +369,10 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
 
         result = generate_ai_reply(lead.page_config.ai_agent, history, lead.fb_user_name + rag_search_text)
         if result.get('error'):
+            logger.error(f"[AI Facebook Internal Error] {result.get('reply')}")
             lead.is_ai_active = False
             lead.has_unread_message = True  # Đánh dấu để Sale thấy và vào xử lý
             lead.save(update_fields=['is_ai_active', 'has_unread_message'])
-            if result.get('reply'):
-                from facebook_integration.models import FacebookMessage
-                FacebookMessage.objects.create(
-                    lead=lead,
-                    sender_type='page',
-                    text="[Lỗi phản hồi tự động]",
-                    payload={"error": True, "error_message": result.get('reply')}
-                )
             return
 
         ai_agent = lead.page_config.ai_agent
@@ -463,18 +445,26 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
                 )
 
         if reply_text or image_url:
-            send_facebook_message(lead.page_config.page_access_token, lead.fb_user_id, message_text=reply_text, attachment_url=image_url)
-            FacebookMessage.objects.create(
-                lead=lead,
-                sender_type='page',
-                text=reply_text or "[Hình ảnh]"
-            )
+            resp = send_facebook_message(lead.page_config.page_access_token, lead.fb_user_id, message_text=reply_text, attachment_url=image_url)
             
             update_fields = []
-            if lead.is_ai_active:
-                lead.has_unread_message = False
-                lead.unread_count = 0
-                update_fields.extend(['has_unread_message', 'unread_count'])
+            if not resp.get("success"):
+                err_msg = resp.get("error", "Unknown error")
+                logger.error(f"[AI Facebook Error] Facebook API Error: {err_msg}")
+                lead.is_ai_active = False
+                lead.has_unread_message = True
+                update_fields.extend(['is_ai_active', 'has_unread_message'])
+            else:
+                FacebookMessage.objects.create(
+                    lead=lead,
+                    sender_type='page',
+                    text=reply_text or "[Hình ảnh]"
+                )
+                
+                if lead.is_ai_active:
+                    lead.has_unread_message = False
+                    lead.unread_count = 0
+                    update_fields.extend(['has_unread_message', 'unread_count'])
             if is_followup:
                 lead.has_ai_followed_up = True
                 update_fields.append('has_ai_followed_up')
