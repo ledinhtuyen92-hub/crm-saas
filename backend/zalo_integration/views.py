@@ -91,7 +91,8 @@ class ZaloWebhookView(APIView):
             )
         except ZaloOaConfig.DoesNotExist:
             logger.warning(f"[Webhook] Không tìm thấy OA config cho oa_id={oa_id}")
-            return Response({"error": "Unknown oa_id"}, status=status.HTTP_404_NOT_FOUND)
+            # Phải trả về 200 OK để Zalo chấp nhận cấu hình Webhook (Zalo test webhook gửi dummy oa_id)
+            return Response({"error": "Unknown oa_id"}, status=status.HTTP_200_OK)
 
         # Xác thực chữ ký
         webhook_secret = oa_config.get_webhook_secret()
@@ -108,7 +109,7 @@ class ZaloWebhookView(APIView):
         active_modules = company.settings.active_modules if hasattr(company, "settings") else []
         if not active_modules or "zalo" not in active_modules:
             logger.warning(f"[Webhook Zalo] Module zalo bị tắt/thu hồi cho công ty {company.id}")
-            return Response({"error": "Module zalo disabled"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": "Module zalo disabled"}, status=status.HTTP_200_OK)
 
         if event_name == "user_send_text":
             self._handle_message(company, oa_config, data)
