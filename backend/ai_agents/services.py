@@ -246,7 +246,7 @@ def generate_ai_reply(agent: AiAgent, conversation_history: list, lead_name: str
     
     if not api_keys:
         logger.warning(f"No API Key configured for provider {provider}")
-        return {'reply': 'Hệ thống AI chưa được cấu hình API Key.', 'sentiment': 'neutral', 'summary': ''}
+        return {'error': True, 'reply': 'Hệ thống AI chưa được cấu hình API Key.', 'sentiment': 'handoff', 'summary': ''}
 
     json_template = agent.core_prompt_template.strip() if agent.core_prompt_template else DEFAULT_JSON_TEMPLATE
 
