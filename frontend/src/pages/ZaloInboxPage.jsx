@@ -1443,9 +1443,16 @@ export default function ZaloInboxPage() {
                             {msg.content && msg.attachment_type !== 'carousel' && <Text style={{ color: 'inherit', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{msg.content}</Text>}
                           </div>
                         </div>
-                        <Text type="secondary" style={{ fontSize: 10, marginTop: 4, marginRight: isOutbound ? 8 : 0, marginLeft: isOutbound ? 0 : 36 }}>
-                          {dayjs(msg.created_at).format('HH:mm DD/MM/YYYY')}
-                        </Text>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, marginRight: isOutbound ? 8 : 0, marginLeft: isOutbound ? 0 : 36 }}>
+                          {msg.payload?.error && (
+                            <Tooltip title={`Zalo từ chối gửi tin nhắn (Mã lỗi ${msg.payload.error_code}: ${msg.payload.error_message})`}>
+                              <InfoCircleOutlined style={{ color: '#dc2626', fontSize: 12, cursor: 'pointer' }} />
+                            </Tooltip>
+                          )}
+                          <Text type="secondary" style={{ fontSize: 10 }}>
+                            {dayjs(msg.created_at).format('HH:mm DD/MM/YYYY')}
+                          </Text>
+                        </div>
                       </div>
                     )
                   })

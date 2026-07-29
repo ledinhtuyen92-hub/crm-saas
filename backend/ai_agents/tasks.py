@@ -279,16 +279,29 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
                 delay = min(len(reply_text or '') * 0.03, 5.0) # max 5s delay
                 time.sleep(delay)
                 
-            send_zalo_chat_message(lead.oa_config, lead.social_id, text=reply_text, image_url=image_url)
+            resp = send_zalo_chat_message(lead.oa_config, lead.social_id, text=reply_text, image_url=image_url)
+            
+            error_code = resp.get("error", 0)
+            payload_data = None
+            if error_code != 0:
+                err_msg = resp.get("message", "")
+                payload_data = {"error": True, "error_code": error_code, "error_message": err_msg}
+                logger.error(f"[AI Zalo Error] Zalo API Error {error_code}: {err_msg}")
+            
             ZaloMessage.objects.create(
                 company=lead.company,
                 social_lead=lead,
                 direction=ZaloMessage.DIRECTION_OUTBOUND,
-                content=reply_text or "[Hình ảnh]"
+                content=reply_text or "[Hình ảnh]",
+                payload=payload_data
             )
             
             update_fields = []
-            if lead.is_ai_active:
+            if error_code != 0:
+                lead.is_ai_active = False
+                lead.has_unread_message = True
+                update_fields.extend(['is_ai_active', 'has_unread_message'])
+            elif lead.is_ai_active:
                 lead.has_unread_message = False
                 lead.unread_count = 0
                 update_fields.extend(['has_unread_message', 'unread_count'])
