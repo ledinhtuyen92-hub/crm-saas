@@ -7,6 +7,7 @@ import logging
 import uuid
 from django.core.files.storage import default_storage
 
+from django.http import HttpResponse
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
