@@ -26,8 +26,11 @@ echo "=> Dang trich xuat Database ra file sync_data.json..."
 # Chay dumpdata trong container
 docker exec -i crm_web python manage.py dumpdata -e contenttypes -e auth.Permission -e sessions -e admin.logentry --indent 2 -o sync_data.json
 
-# Cau hinh an toan cho Git (truong hop chay qua cron)
+# Cau hinh an toan cho Git (truong hop chay qua cron hoac vps moi)
 git config --global --add safe.directory $PROJECT_DIR
+git config --global user.name "VPS Auto Backup"
+git config --global user.email "backup@vps.local"
+git config --global credential.helper store
 
 echo "=> Dang day Code va Database len nhanh Github: $BACKUP_BRANCH ..."
 # Tam thoi chuyen sang nhanh backup, commit, push, roi quay lai main
