@@ -637,7 +637,28 @@ const Announcements = () => {
                                 <ul>
                                     {selectedAnnouncement.attachments.map(att => (
                                         <li key={att.id} style={{ marginBottom: 8 }}>
-                                            <a href={att.file} target="_blank" rel="noreferrer">
+                                            <a 
+                                                href={(() => {
+                                                    if (!att.file) return '#';
+                                                    let urlStr = att.file;
+                                                    // Nếu backend trả về URL có http/https
+                                                    if (urlStr.startsWith('http')) {
+                                                        try {
+                                                            const urlObj = new URL(urlStr);
+                                                            const apiOrigin = new URL(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/').origin;
+                                                            // Ghi đè protocol và host bằng origin của API để đảm bảo luôn đúng (tránh lỗi localhost trên VPS hoặc mixed content)
+                                                            return `${apiOrigin}${urlObj.pathname}${urlObj.search}`;
+                                                        } catch (e) {
+                                                            return urlStr;
+                                                        }
+                                                    }
+                                                    // Nếu là relative URL
+                                                    const apiOrigin = new URL(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/').origin;
+                                                    return `${apiOrigin}${urlStr.startsWith('/') ? '' : '/'}${urlStr}`;
+                                                })()}
+                                                target="_blank" 
+                                                rel="noreferrer"
+                                            >
                                                 {att.file_name || 'Tải xuống'}
                                             </a>
                                             <Text type="secondary" style={{ marginLeft: 8 }}>
