@@ -18,6 +18,21 @@ import announcementApi from '../api/announcementApi';
 
 const { Title, Text } = Typography;
 
+const getSafeUrl = (urlStr) => {
+    if (!urlStr) return '#';
+    if (urlStr.startsWith('http')) {
+        try {
+            const urlObj = new URL(urlStr);
+            const apiOrigin = new URL(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/').origin;
+            return `${apiOrigin}${urlObj.pathname}${urlObj.search}`;
+        } catch (e) {
+            return urlStr;
+        }
+    }
+    const apiOrigin = new URL(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/').origin;
+    return `${apiOrigin}${urlStr.startsWith('/') ? '' : '/'}${urlStr}`;
+};
+
 const Announcements = () => {
     const { hasPermission, isSuperAdmin, isCompanyAdmin, checkMaintenance } = useAuth();
     const { isMobile, padding } = useResponsive();
@@ -114,10 +129,21 @@ const Announcements = () => {
             
             // Append files
             fileList.forEach(file => {
-                formData.append('attachments', file.originFileObj || file);
+                if (!file.isExisting) {
+                    formData.append('attachments', file.originFileObj || file);
+                }
             });
 
             if (editingId) {
+                // Determine deleted files
+                if (selectedAnnouncement && selectedAnnouncement.attachments) {
+                    const currentExistingIds = fileList.filter(f => f.isExisting).map(f => f.uid);
+                    const originalExistingIds = selectedAnnouncement.attachments.map(a => a.id);
+                    const deletedIds = originalExistingIds.filter(id => !currentExistingIds.includes(id));
+                    if (deletedIds.length > 0) {
+                        deletedIds.forEach(id => formData.append('deleted_attachments', id));
+                    }
+                }
                 await announcementApi.update(editingId, formData);
                 message.success('Cập nhật thông báo thành công');
             } else {
@@ -150,6 +176,7 @@ const Announcements = () => {
     const handleEdit = (record) => {
         setEditingId(record.id);
         setIsAllCompany(record.is_all_company);
+        setSelectedAnnouncement(record); // Store to track original attachments
         form.setFieldsValue({
             title: record.title,
             content: record.content,
@@ -159,7 +186,20 @@ const Announcements = () => {
             target_users: record.target_users || [],
             departments: record.departments || []
         });
-        setFileList([]);
+        
+        if (record.attachments && record.attachments.length > 0) {
+            const existingFiles = record.attachments.map(att => ({
+                uid: att.id,
+                name: att.file_name || 'File đính kèm',
+                status: 'done',
+                url: getSafeUrl(att.file),
+                isExisting: true
+            }));
+            setFileList(existingFiles);
+        } else {
+            setFileList([]);
+        }
+        
         setCreateModalVisible(true);
     };
 
@@ -638,24 +678,7 @@ const Announcements = () => {
                                     {selectedAnnouncement.attachments.map(att => (
                                         <li key={att.id} style={{ marginBottom: 8 }}>
                                             <a 
-                                                href={(() => {
-                                                    if (!att.file) return '#';
-                                                    let urlStr = att.file;
-                                                    // Nếu backend trả về URL có http/https
-                                                    if (urlStr.startsWith('http')) {
-                                                        try {
-                                                            const urlObj = new URL(urlStr);
-                                                            const apiOrigin = new URL(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/').origin;
-                                                            // Ghi đè protocol và host bằng origin của API để đảm bảo luôn đúng (tránh lỗi localhost trên VPS hoặc mixed content)
-                                                            return `${apiOrigin}${urlObj.pathname}${urlObj.search}`;
-                                                        } catch (e) {
-                                                            return urlStr;
-                                                        }
-                                                    }
-                                                    // Nếu là relative URL
-                                                    const apiOrigin = new URL(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/').origin;
-                                                    return `${apiOrigin}${urlStr.startsWith('/') ? '' : '/'}${urlStr}`;
-                                                })()}
+                                                href={getSafeUrl(att.file)}
                                                 target="_blank" 
                                                 rel="noreferrer"
                                             >
