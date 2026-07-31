@@ -60,6 +60,7 @@ else
 fi
 
 echo "VITE_API_URL=$PROTOCOL://$DOMAIN/api/" > frontend/.env.production
+echo "SITE_URL=$PROTOCOL://$DOMAIN" > .env
 
 # Cấp quyền cho Nginx đọc thư mục root
 chmod 711 /root

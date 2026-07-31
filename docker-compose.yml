@@ -25,6 +25,8 @@ services:
     restart: always
     # Lệnh thông minh giải quyết bài toán con gà quả trứng
     command: sh -c "if [ ! -f manage.py ]; then django-admin startproject core .; fi && python manage.py runserver 0.0.0.0:8000"
+    environment:
+      - SITE_URL=${SITE_URL:-http://localhost:8000}
     volumes:
       # Đồng bộ code từ ngoài VS Code vào thư mục /app trong Docker
       - ./backend:/app
@@ -42,12 +44,12 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@db:5432/crm_db
+      - DATABASE_URL=postgres://postgres:123@db:5432/crm_db
       - REDIS_URL=redis://redis:6379/0
+      - SITE_URL=${SITE_URL:-http://localhost:8000}
     depends_on:
       - db
       - redis
 
 volumes:
-  postgres_data:
       
