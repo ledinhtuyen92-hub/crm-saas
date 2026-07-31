@@ -1,2 +1,11 @@
 User-agent: *
 Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Facebot
+Allow: /
+
+User-agent: facebookcatalog
+Allow: /
