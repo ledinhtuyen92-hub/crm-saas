@@ -8,7 +8,7 @@
 
 # ================= CAU HINH =================
 BACKUP_BRANCH="fujitech"          # Ten nhanh GitHub chua du lieu backup
-DRIVE_REMOTE_NAME="gdrive"        # Ten remote Rclone (mac dinh: gdrive)
+DRIVE_REMOTE_NAME="Fujitech"      # Ten remote Rclone (mac dinh: gdrive)
 DRIVE_BACKUP_FOLDER="CRM_Backups" # Ten thu muc tren Google Drive
 PROJECT_DIR="/root/crm-saas"
 TEMP_MEDIA_DIR="/tmp/crm_media_backup"
