@@ -1358,7 +1358,7 @@
   "model": "users.user",
   "pk": 1,
   "fields": {
-    "password": "pbkdf2_sha256$1000000$ECQhi9BHkIsVTlsjgPiIMe$sVQIe5Cfq9ZU7nACy/evbQj0IfRFVVhgCQ1NbKN4NE8=",
+    "password": "pbkdf2_sha256$1000000$rD3RZvbOkb8XpiLWLuFjwW$o+CTubLIySYsbL7Q0lE4jww9bNfD/psKxbkq9lcVtOY=",
     "last_login": "2026-07-25T07:29:38.088Z",
     "is_superuser": true,
     "username": "admin",
@@ -1385,8 +1385,8 @@
   "model": "users.user",
   "pk": 2,
   "fields": {
-    "password": "pbkdf2_sha256$1000000$gogv5if640Ve4r5k5DvYiY$Co2C/05RkNJOSvpBH4uiONSzdeTJAZ/vJysA2SrgpDY=",
-    "last_login": "2026-07-29T07:51:54.184Z",
+    "password": "pbkdf2_sha256$1000000$R8HxfCxtq4GFdn3x4G477L$ZshXKBi0dplg0UFXY0kmgw6TSiS8G5RaVpl8umV2z14=",
+    "last_login": "2026-07-31T14:06:21.235Z",
     "is_superuser": false,
     "username": "giamdoc",
     "first_name": "",
@@ -1412,7 +1412,7 @@
   "model": "users.user",
   "pk": 3,
   "fields": {
-    "password": "pbkdf2_sha256$1000000$j4yC8eHVXgqOwTINBbGkf0$44aDim0lZRdHMPF2o5xec/Y/2IfYDgQf8D4QWuO5MI4=",
+    "password": "pbkdf2_sha256$1000000$HxSXZ0m2Pn4SGYskPyqtzy$y+s2x5iXPoM+CrtPcEFc85s4B0A6DcVHBmO7SfYMXWs=",
     "last_login": "2026-07-17T09:23:29.472Z",
     "is_superuser": false,
     "username": "kinhdoanh1",
@@ -1439,7 +1439,7 @@
   "model": "users.user",
   "pk": 4,
   "fields": {
-    "password": "pbkdf2_sha256$1000000$CpEPXE0UhBUlAxMFWX77JD$B2kbWHt99dT2h79vLX+xgDasqblHeB58dSKKvWQI2bg=",
+    "password": "pbkdf2_sha256$1000000$IW5pQPETtvhP88qmDuUPTs$m0+Pb1+DYuOHXasUg6BDIFO+AwLStmBW8DtcgC44Uz0=",
     "last_login": "2026-07-17T09:13:13.223Z",
     "is_superuser": false,
     "username": "kinhdoanh2",
@@ -1466,7 +1466,7 @@
   "model": "users.user",
   "pk": 5,
   "fields": {
-    "password": "pbkdf2_sha256$1000000$zGI3raZm9E8dPpanLUOhR3$66e+R9q5PbqIrxfRL936um0S8glLIWQJO9doV+Isw5o=",
+    "password": "pbkdf2_sha256$1000000$GYc4MndowNdtgctSGHJOQS$kZpSapH5h77dEzsqYE/Eo0OrHFTAnrV+SGT9Hky73O4=",
     "last_login": "2026-07-27T16:52:16.286Z",
     "is_superuser": false,
     "username": "nvkinhdoanh1",
@@ -1493,7 +1493,7 @@
   "model": "users.user",
   "pk": 6,
   "fields": {
-    "password": "pbkdf2_sha256$1000000$3F9C08AcCODlGVhwXNS03V$JrfWLQGys/+hvGotKRSb9ZxE8keKyoOQc3WpI1D7B/4=",
+    "password": "pbkdf2_sha256$1000000$38rDkXBS32kqKYweQ2Q9p3$uYQtuPCG19z6lglsZwFLvdCmySvQI3knGfowOdPDTPc=",
     "last_login": "2026-07-24T02:35:43.254Z",
     "is_superuser": false,
     "username": "nvkinhdoanh2",
@@ -1520,7 +1520,7 @@
   "model": "users.user",
   "pk": 7,
   "fields": {
-    "password": "pbkdf2_sha256$1000000$H1TOCIWybkAIbe766vy0sq$F7IYiH70I+xRh2rHHZRgPyLtdLM4qsNcDBfr7mN4TpU=",
+    "password": "pbkdf2_sha256$1000000$OoInIDGXfaneuPK1aE6SrW$LLXvjLklOHevz0md9ufWIxDPPcMrpKOeznrTz8nYX/g=",
     "last_login": "2026-07-20T16:54:59.813Z",
     "is_superuser": false,
     "username": "ketoan",
@@ -1547,7 +1547,7 @@
   "model": "users.user",
   "pk": 8,
   "fields": {
-    "password": "pbkdf2_sha256$1000000$OMnq00wh9ETi5RXnbBgV7p$cKXUpqytAM/jKQTVFRhTlSHPhP5AVRQQlf0QVnDYqCs=",
+    "password": "pbkdf2_sha256$1000000$3cHh18BGHoyL7PnRCkn9tv$S0ohMh6fifZj9Ew7PW2z1BlTpAxNQFVd1LmLzRhGxs4=",
     "last_login": null,
     "is_superuser": false,
     "username": "thukho",
@@ -1574,7 +1574,7 @@
   "model": "users.user",
   "pk": 9,
   "fields": {
-    "password": "pbkdf2_sha256$1000000$aJFNuF0ncdKQ1SFzwi7Ysx$2sush6cEMYIIVtw2tl3bsqHHAwjSMg+NxznawFbtF9w=",
+    "password": "pbkdf2_sha256$1000000$lN7uZHFgwhwpuUlmmtxlZC$FeBTfALHKgarpuj4czCmJJQqLXkUOjZ1rF3YGcFG6qU=",
     "last_login": "2026-07-11T05:12:59.020Z",
     "is_superuser": false,
     "username": "sanxuat",
@@ -7334,17 +7334,122 @@
   }
 },
 {
+  "model": "notifications.notification",
+  "pk": 391,
+  "fields": {
+    "company": 15,
+    "recipient": 3,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Updated Title",
+    "message": "<p>Chào</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-31T14:32:35.758Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 392,
+  "fields": {
+    "company": 15,
+    "recipient": 4,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Updated Title",
+    "message": "<p>Chào</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-31T14:32:35.758Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 393,
+  "fields": {
+    "company": 15,
+    "recipient": 5,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Updated Title",
+    "message": "<p>Chào</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-31T14:32:35.758Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 394,
+  "fields": {
+    "company": 15,
+    "recipient": 6,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Updated Title",
+    "message": "<p>Chào</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-31T14:32:35.758Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 395,
+  "fields": {
+    "company": 15,
+    "recipient": 7,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Updated Title",
+    "message": "<p>Chào</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-31T14:32:35.758Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 396,
+  "fields": {
+    "company": 15,
+    "recipient": 8,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Updated Title",
+    "message": "<p>Chào</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-31T14:32:35.758Z"
+  }
+},
+{
+  "model": "notifications.notification",
+  "pk": 397,
+  "fields": {
+    "company": 15,
+    "recipient": 9,
+    "sender": 2,
+    "type": "system_update",
+    "title": "Có thông báo nội bộ mới: Updated Title",
+    "message": "<p>Chào</p>",
+    "link": "/announcements",
+    "is_read": false,
+    "created_at": "2026-07-31T14:32:35.758Z"
+  }
+},
+{
   "model": "notifications.internalannouncement",
   "pk": 4,
   "fields": {
     "company": 15,
-    "title": "Xin chào các bạn",
+    "title": "Updated Title",
     "content": "<p>Chào</p>",
     "created_by": 2,
     "is_all_company": true,
-    "priority": "high",
+    "priority": "normal",
     "category": null,
-    "is_pinned": true,
+    "is_pinned": false,
     "created_at": "2026-07-22T15:46:34.114Z",
     "departments": [],
     "target_users": []
@@ -7376,6 +7481,17 @@
     "file_name": "Sửa.docx",
     "file_size": 18522,
     "created_at": "2026-07-22T15:46:34.209Z"
+  }
+},
+{
+  "model": "notifications.announcementattachment",
+  "pk": 4,
+  "fields": {
+    "announcement": 4,
+    "file": "announcements/test.txt",
+    "file_name": "test.txt",
+    "file_size": 12,
+    "created_at": "2026-07-31T14:32:35.741Z"
   }
 },
 {
