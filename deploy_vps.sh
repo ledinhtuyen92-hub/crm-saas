@@ -99,6 +99,9 @@ server {
     listen 80;
     server_name $DOMAIN;
 
+    # Cho phép tải lên file tối đa 50MB
+    client_max_body_size 50M;
+
     # Phục vụ file tĩnh của React
     location / {
         root $(pwd)/frontend/dist;
