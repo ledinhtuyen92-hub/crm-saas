@@ -157,7 +157,9 @@ const Announcements = () => {
             setIsAllCompany(true);
             fetchData(); // reload
         } catch (error) {
-            message.error('Có lỗi xảy ra khi lưu thông báo');
+            console.error(error);
+            const errorMsg = error.response?.data?.detail || JSON.stringify(error.response?.data) || error.message;
+            message.error(`Có lỗi xảy ra: ${errorMsg}`);
         } finally {
             setSubmitting(false);
         }

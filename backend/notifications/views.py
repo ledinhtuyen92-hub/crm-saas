@@ -347,6 +347,31 @@ class InternalAnnouncementViewSet(viewsets.ModelViewSet):
                 name=announcement.category
             )
             
+        # Xử lý up file (thêm mới)
+        files = self.request.FILES.getlist("attachments")
+        if not files:
+            files = self.request.FILES.getlist("files") # fallback
+            
+        for f in files:
+            AnnouncementAttachment.objects.create(
+                announcement=announcement,
+                file=f,
+                file_name=f.name,
+                file_size=f.size
+            )
+            
+        # Xử lý xóa file đính kèm cũ
+        deleted_attachments = self.request.data.getlist("deleted_attachments") if hasattr(self.request.data, "getlist") else self.request.data.get("deleted_attachments", [])
+        if deleted_attachments:
+            deleted_ids = []
+            for d in deleted_attachments:
+                if isinstance(d, str):
+                    deleted_ids.extend([int(x.strip()) for x in d.split(",") if x.strip().isdigit()])
+                else:
+                    deleted_ids.append(int(d))
+            if deleted_ids:
+                AnnouncementAttachment.objects.filter(announcement=announcement, id__in=deleted_ids).delete()
+
         # Xử lý departments
         departments_data = self.request.data.getlist("departments") if hasattr(self.request.data, "getlist") else self.request.data.get("departments", [])
         if not announcement.is_all_company and departments_data:
@@ -364,11 +389,19 @@ class InternalAnnouncementViewSet(viewsets.ModelViewSet):
         target_users_data = self.request.data.getlist("target_users") if hasattr(self.request.data, "getlist") else self.request.data.get("target_users", [])
         if not announcement.is_all_company and target_users_data:
             user_ids = []
-            for u in target_users_data:
-                if isinstance(u, str):
-                    user_ids.extend([int(x.strip()) for x in u.split(",") if x.strip().isdigit()])
-                else:
-                    user_ids.append(int(u))
+            for d in target_users_data:
+                import json
+                try:
+                    parsed = json.loads(d)
+                    if isinstance(parsed, list):
+                        user_ids.extend([int(x) for x in parsed])
+                    else:
+                        user_ids.append(int(parsed))
+                except (ValueError, TypeError, json.JSONDecodeError):
+                    if isinstance(d, str):
+                        user_ids.extend([int(x.strip()) for x in d.split(",") if x.strip().isdigit()])
+                    else:
+                        user_ids.append(int(d))
             announcement.target_users.set(user_ids)
         elif announcement.is_all_company:
             announcement.target_users.clear()
