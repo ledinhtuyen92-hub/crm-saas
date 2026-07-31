@@ -1,80 +1,80 @@
 #!/bin/bash
 # CRM SaaS - Auto Backup to GitHub & Google Drive
 # 
-# Cách cài đặt tự động chạy hàng ngày:
-# 1. Gõ lệnh: crontab -e
-# 2. Thêm dòng sau vào cuối file (để chạy lúc 2h sáng):
+# Cach cai dat tu dong chay hang ngay:
+# 1. Go lenh: crontab -e
+# 2. Them dong sau vao cuoi file (de chay luc 2h sang):
 #    0 2 * * * /bin/bash /root/crm-saas/auto_backup.sh >> /root/crm_backup.log 2>&1
 
-# ================= CẤU HÌNH =================
-BACKUP_BRANCH="fujitech"          # Tên nhánh GitHub chứa dữ liệu backup
-DRIVE_REMOTE_NAME="gdrive"        # Tên remote Rclone (mặc định: gdrive)
-DRIVE_BACKUP_FOLDER="CRM_Backups" # Tên thư mục trên Google Drive
+# ================= CAU HINH =================
+BACKUP_BRANCH="fujitech"          # Ten nhanh GitHub chua du lieu backup
+DRIVE_REMOTE_NAME="gdrive"        # Ten remote Rclone (mac dinh: gdrive)
+DRIVE_BACKUP_FOLDER="CRM_Backups" # Ten thu muc tren Google Drive
 PROJECT_DIR="/root/crm-saas"
 TEMP_MEDIA_DIR="/tmp/crm_media_backup"
 DATE=$(date +"%Y%m%d_%H%M%S")
 # ============================================
 
 echo "==================================================="
-echo "🚀 BẮT ĐẦU SAO LƯU TỰ ĐỘNG - $DATE"
+echo "🚀 BAT DAU SAO LUU TU DONG - $DATE"
 echo "==================================================="
 
 cd $PROJECT_DIR || exit 1
 
-# 1. Đồng bộ Dữ liệu (Database -> JSON) và đẩy lên GitHub
-echo "=> Đang trích xuất Database ra file sync_data.json..."
-# Chạy dumpdata trong container
+# 1. Dong bo Du lieu (Database -> JSON) va day len GitHub
+echo "=> Dang trich xuat Database ra file sync_data.json..."
+# Chay dumpdata trong container
 docker exec -i crm_web python manage.py dumpdata -e contenttypes -e auth.Permission -e sessions -e admin.logentry --indent 2 -o sync_data.json
 
-# Cấu hình an toàn cho Git (trường hợp chạy qua cron)
+# Cau hinh an toan cho Git (truong hop chay qua cron)
 git config --global --add safe.directory $PROJECT_DIR
 
-echo "=> Đang đẩy Code và Database lên nhánh Github: $BACKUP_BRANCH ..."
-# Tạm thời chuyển sang nhánh backup, commit, push, rồi quay lại main
+echo "=> Dang day Code va Database len nhanh Github: $BACKUP_BRANCH ..."
+# Tam thoi chuyen sang nhanh backup, commit, push, roi quay lai main
 CURRENT_BRANCH=$(git branch --show-current)
 
-# Chuyển sang nhánh backup (tạo nếu chưa có)
+# Chuyen sang nhanh backup (tao neu chua co)
 git checkout -B $BACKUP_BRANCH
 
-# Commit sự thay đổi của sync_data.json và code (nếu có)
+# Commit su thay doi cua sync_data.json va code (neu co)
 git add .
-git commit -m "Auto Backup: Dữ liệu ngày $DATE"
+git commit -m "Auto Backup: Du lieu ngay $DATE"
 
-# Push lên Github
+# Push len Github
 git push origin $BACKUP_BRANCH
 
-# Trở lại nhánh cũ để hệ thống tiếp tục chạy bình thường
+# Tro lai nhanh cu de he thong tiep tuc chay binh thuong
 git checkout $CURRENT_BRANCH
 
-echo "✅ Đã sao lưu Code & Database lên GitHub ($BACKUP_BRANCH) thành công!"
+echo "✅ Da sao luu Code & Database len GitHub ($BACKUP_BRANCH) thanh cong!"
 
 
-# 2. Đóng gói Hình ảnh & Tài liệu (Media)
-echo "=> Đang nén thư mục Media..."
+# 2. Dong goi Hinh anh & Tai lieu (Media)
+echo "=> Dang nen thu muc Media..."
 mkdir -p $TEMP_MEDIA_DIR
 MEDIA_TAR_FILE="$TEMP_MEDIA_DIR/media_$DATE.tar.gz"
 tar -czf "$MEDIA_TAR_FILE" backend/media/
 
-# 3. Đẩy file Media lên Google Drive bằng Rclone
-echo "=> Đang tải file lên Google Drive ($DRIVE_REMOTE_NAME)..."
+# 3. Day file Media len Google Drive bang Rclone
+echo "=> Dang tai file len Google Drive ($DRIVE_REMOTE_NAME)..."
 if command -v rclone &> /dev/null; then
     rclone copy "$MEDIA_TAR_FILE" "$DRIVE_REMOTE_NAME:$DRIVE_BACKUP_FOLDER/"
     if [ $? -eq 0 ]; then
-        echo "✅ Tải lên Google Drive thành công!"
+        echo "✅ Tai len Google Drive thanh cong!"
         
-        # Tùy chọn: Xóa các file backup cũ trên Google Drive (quá 30 ngày)
+        # Tuy chon: Xoa cac file backup cu tren Google Drive (qua 30 ngay)
         # rclone delete "$DRIVE_REMOTE_NAME:$DRIVE_BACKUP_FOLDER/" --min-age 30d
         
-        # Xóa file nén tạm ở VPS cho nhẹ máy
+        # Xoa file nen tam o VPS cho nhe may
         rm "$MEDIA_TAR_FILE"
     else
-        echo "❌ Lỗi: Không thể tải lên Google Drive. Hãy kiểm tra lại cấu hình rclone."
+        echo "❌ Loi: Khong the tai len Google Drive. Hay kiem tra lai cau hinh rclone."
     fi
 else
-    echo "⚠️ Rclone chưa được cài đặt, bỏ qua bước tải lên Google Drive."
-    echo "File nén vẫn được giữ lại tại: $MEDIA_TAR_FILE"
+    echo "⚠ Rclone chua duoc cai dat, bo qua buoc tai len Google Drive."
+    echo "File nen van duoc giu lai tai: $MEDIA_TAR_FILE"
 fi
 
 echo "==================================================="
-echo "🎉 HOÀN TẤT SAO LƯU TỰ ĐỘNG - $(date +"%Y%m%d_%H%M%S")"
+echo "🎉 HOAN TAT SAO LUU TU DONG - $(date +"%Y%m%d_%H%M%S")"
 echo "==================================================="
