@@ -23,7 +23,8 @@ def get_public_domain():
     
     # Fallback for production or if ngrok not found
     from django.conf import settings
-    return getattr(settings, 'SITE_URL', 'http://localhost:8000').rstrip('/')
+    import os
+    return getattr(settings, 'SITE_URL', os.environ.get('SITE_URL', 'https://crm.mlgautobot.click')).rstrip('/')
 
 
 
