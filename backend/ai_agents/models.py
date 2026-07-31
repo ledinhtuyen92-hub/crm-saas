@@ -151,20 +151,6 @@ class AiKnowledgeDocument(models.Model):
     def __str__(self):
         return f"{self.title} ({self.get_status_display()})"
 
-    def delete(self, *args, **kwargs):
-        # Lưu lại tham chiếu tới file trước khi xóa record khỏi DB
-        file_storage, file_path = None, None
-        if self.file_attachment:
-            file_storage = self.file_attachment.storage
-            file_path = self.file_attachment.name
-        
-        # Xóa các chunk (đã cascade trong db, nhưng gọi super().delete() sẽ kích hoạt an toàn)
-        super().delete(*args, **kwargs)
-        
-        # Xóa file vật lý khỏi ổ cứng nếu tồn tại
-        if file_path and file_storage.exists(file_path):
-            file_storage.delete(file_path)
-
 class AiKnowledgeChunk(models.Model):
     """
     Lưu trữ các đoạn văn bản (chunks) đã được băm nhỏ từ AiKnowledgeDocument

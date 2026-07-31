@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'zalo_integration',
     'facebook_integration',
     'ai_agents',
+    'django_cleanup.apps.CleanupConfig',
 ]
 
 MIDDLEWARE = [
