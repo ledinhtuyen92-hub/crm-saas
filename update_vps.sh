@@ -30,7 +30,7 @@ echo "✅ Code da duoc cap nhat thanh cong!"
 # 2.5 Khoi dong cac dich vu moi (neu co)
 echo ""
 echo "🐳 Dang khoi dong / cap nhat Docker containers..."
-docker-compose up -d
+docker compose up -d
 
 # 3. Chay migrate neu co thay doi DB schema
 echo ""
