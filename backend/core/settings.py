@@ -216,7 +216,7 @@ try:
         # Refresh tất cả Zalo token mỗi 12 giờ
         "zalo-refresh-all-tokens": {
             "task": "zalo.refresh_all_tokens",
-            "schedule": crontab(minute=0, hour="*/12"),
+            "schedule": crontab(minute=0),  # Chạy mỗi giờ 1 lần
         },
         # Dọn rác Social Lead mỗi ngày lúc 3h sáng
         "zalo-cleanup-stale-leads": {

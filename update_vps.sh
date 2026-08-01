@@ -27,6 +27,11 @@ echo "📥 [1/5] Dang keo code moi nhat tu GitHub (nhanh main)..."
 git pull origin main
 echo "✅ Code da duoc cap nhat thanh cong!"
 
+# 2.5 Khoi dong cac dich vu moi (neu co)
+echo ""
+echo "🐳 Dang khoi dong / cap nhat Docker containers..."
+docker-compose up -d
+
 # 3. Chay migrate neu co thay doi DB schema
 echo ""
 echo "🗄  [2/5] Kiem tra va cap nhat cau truc Database..."
@@ -60,5 +65,4 @@ echo "🎉 CAP NHAT HOAN TAT! He thong da chay phien ban moi."
 echo ""
 echo "   📝 Luu y: Backend Django tu dong nhan code moi"
 echo "      do volume mount ./backend:/app trong docker-compose."
-echo "      KHONG can restart Docker container."
 echo "=========================================================="

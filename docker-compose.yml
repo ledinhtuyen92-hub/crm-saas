@@ -51,5 +51,20 @@ services:
       - db
       - redis
 
+  celery-beat:
+    build: ./backend
+    container_name: crm_celery_beat
+    restart: always
+    command: celery -A core beat -l info
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgres://postgres:123@db:5432/crm_db
+      - REDIS_URL=redis://redis:6379/1
+      - SITE_URL=${SITE_URL:-http://localhost:8000}
+    depends_on:
+      - db
+      - redis
+
 volumes:
   postgres_data:
