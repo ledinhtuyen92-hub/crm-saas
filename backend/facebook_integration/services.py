@@ -435,14 +435,25 @@ def process_fb_webhook_message(entry: dict):
 
     for messaging in messaging_list:
         sender_psid = messaging.get("sender", {}).get("id")
+        recipient_psid = messaging.get("recipient", {}).get("id")
         message_data = messaging.get("message")
         postback_data = messaging.get("postback")
         
         if not sender_psid or (not message_data and not postback_data):
             continue
 
-        # Bỏ qua tin nhắn do chính page gửi đi (echo)
-        if str(sender_psid) == str(page_id):
+        is_echo = message_data.get("is_echo", False) if message_data else False
+        
+        if is_echo or str(sender_psid) == str(page_id):
+            # Nếu là echo (Trang gửi tin nhắn qua Meta Business Suite)
+            customer_psid = recipient_psid
+            sender_type = "page"
+        else:
+            # Khách hàng gửi tin nhắn cho Trang
+            customer_psid = sender_psid
+            sender_type = "customer"
+
+        if not customer_psid or str(customer_psid) == str(page_id):
             continue
 
         msg_id = ""
@@ -471,12 +482,12 @@ def process_fb_webhook_message(entry: dict):
                 msg_text = title
 
         # Lấy thông tin profile khách
-        profile = get_fb_user_profile(page_config.page_access_token, sender_psid)
+        profile = get_fb_user_profile(page_config.page_access_token, customer_psid)
 
         # Tạo hoặc cập nhật FacebookLead
         lead, created = FacebookLead.objects.get_or_create(
             page_config=page_config,
-            fb_user_id=sender_psid,
+            fb_user_id=customer_psid,
             defaults={
                 "company": page_config.company,
                 "fb_user_name": profile.get("name", ""),
@@ -517,7 +528,7 @@ def process_fb_webhook_message(entry: dict):
                 fb_message_id=msg_id,
                 defaults={
                     "lead": lead,
-                    "sender_type": "customer",
+                    "sender_type": sender_type,
                     "text": msg_text,
                     "attachment_url": att_url,
                     "attachment_type": att_type,
@@ -529,7 +540,7 @@ def process_fb_webhook_message(entry: dict):
             extract_and_process_phone_fb(lead, msg_text)
 
         # Trigger AI
-        if lead.is_ai_active and lead.page_config and lead.page_config.is_ai_active and lead.page_config.ai_agent_id:
+        if sender_type == "customer" and lead.is_ai_active and lead.page_config and lead.page_config.is_ai_active and lead.page_config.ai_agent_id:
             from ai_agents.tasks import trigger_facebook_ai
             trigger_facebook_ai(lead.id)
 
