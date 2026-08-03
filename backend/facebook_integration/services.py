@@ -395,7 +395,7 @@ def subscribe_app_to_page(page_id: str, page_access_token: str) -> dict:
     url = f"{FB_GRAPH_API_BASE}/{page_id}/subscribed_apps"
     params = {
         "access_token": page_access_token,
-        "subscribed_fields": "messages,messaging_postbacks",
+        "subscribed_fields": "messages,messaging_postbacks,message_echoes",
     }
     try:
         resp = requests.post(url, params=params, timeout=10)
@@ -407,7 +407,6 @@ def subscribe_app_to_page(page_id: str, page_access_token: str) -> dict:
     except Exception as e:
         logger.error(f"[Facebook] subscribe_app_to_page exception: {e}")
         return {"success": False, "error": str(e)}
-
 
 
 # ── Xử lý Webhook Message từ Meta ────────────────────────────────────────────
