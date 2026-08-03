@@ -764,7 +764,7 @@ export default function AiKnowledgeBase() {
                 multiple={true}
                 beforeUpload={() => false}
                 onChange={(info) => {
-                  setFileList(info.fileList)
+                  setFileList([...info.fileList])
                 }}
                 fileList={fileList}
                 accept=".pdf,.doc,.docx,.txt"
@@ -790,7 +790,7 @@ export default function AiKnowledgeBase() {
                   beforeUpload={() => false}
                   showUploadList={false}
                   onChange={(info) => {
-                    setFileList(info.fileList)
+                    setFileList([...info.fileList])
                     const newDetails = { ...imageDetails }
                     info.fileList.forEach(file => {
                       if (!newDetails[file.uid]) {
