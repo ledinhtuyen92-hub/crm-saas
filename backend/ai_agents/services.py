@@ -182,62 +182,55 @@ def call_anthropic(api_key, agent, system_prompt, conversation_history):
     }
     return json.loads(text_content.strip()), usage
 
-def generate_image_description(image_url: str, api_key: str, provider: str = 'gemini', model_name: str = None) -> str:
+def generate_image_description(image_url: str, api_keys, provider: str = 'gemini', model_name: str = None) -> str:
     """
     Sử dụng Gemini/OpenAI Vision API để mô tả hình ảnh thành văn bản.
+    api_keys: một key đơn (str) hoặc danh sách keys (list) để xoay vòng.
     """
+    if isinstance(api_keys, str):
+        api_keys = [api_keys]
+    
     system_prompt = "Hãy mô tả thật chi tiết bức ảnh này (đây là sản phẩm gì, màu sắc, kiểu dáng, chất liệu, tính năng, hoặc nội dung chữ nếu có). Chỉ mô tả những gì thấy được trong ảnh bằng 1-2 câu ngắn gọn, không giải thích thêm."
-    conversation_history = [
-        {"role": "user", "image_url": image_url}
-    ]
     
     if not model_name:
         model_name = 'gemini-2.0-flash' if provider == 'gemini' else 'gpt-4o-mini'
     if model_name.startswith('models/'):
         model_name = model_name[7:]
-        
-    # Tạo một mock agent để tái sử dụng các hàm call_ (vì call_ cần đối tượng agent)
-    from types import SimpleNamespace
-    mock_agent = SimpleNamespace(
-        temperature=0.1, 
-        model_name=model_name
-    )
     
-    try:
-        if provider == 'gemini':
-            # Phải sửa call_gemini để trả về text thường, hoặc mock JSON template
-            # Nhưng call_gemini hiện tại mặc định trả về JSON.
-            # Do đó ta gọi thẳng API Gemini ở đây cho an toàn:
-            client = google_genai.Client(api_key=api_key)
-            import requests
-            resp = requests.get(image_url, timeout=10)
-            if resp.status_code == 200:
-                mime_type = resp.headers.get('content-type', 'image/jpeg')
-                if not mime_type.startswith('image/'):
-                    mime_type = 'image/jpeg'
-                part = genai_types.Part.from_bytes(data=resp.content, mime_type=mime_type)
-                
-                response = client.models.generate_content(
+    for api_key in api_keys:
+        try:
+            if provider == 'gemini':
+                client = google_genai.Client(api_key=api_key)
+                import requests
+                resp = requests.get(image_url, timeout=10)
+                if resp.status_code == 200:
+                    mime_type = resp.headers.get('content-type', 'image/jpeg')
+                    if not mime_type.startswith('image/'):
+                        mime_type = 'image/jpeg'
+                    part = genai_types.Part.from_bytes(data=resp.content, mime_type=mime_type)
+                    
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=[part, system_prompt],
+                    )
+                    return response.text.strip()
+                return ""
+            elif provider == 'openai':
+                client = OpenAI(api_key=api_key)
+                response = client.chat.completions.create(
                     model=model_name,
-                    contents=[part, system_prompt],
+                    messages=[
+                        {'role': 'system', 'content': system_prompt},
+                        {'role': 'user', 'content': [
+                            {"type": "image_url", "image_url": {"url": image_url}}
+                        ]}
+                    ],
+                    max_tokens=200
                 )
-                return response.text.strip()
-            return ""
-        elif provider == 'openai':
-            client = OpenAI(api_key=api_key)
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {'role': 'system', 'content': system_prompt},
-                    {'role': 'user', 'content': [
-                        {"type": "image_url", "image_url": {"url": image_url}}
-                    ]}
-                ],
-                max_tokens=200
-            )
-            return response.choices[0].message.content.strip()
-    except Exception as e:
-        logger.error(f"Error generating image description ({provider}): {e}")
+                return response.choices[0].message.content.strip()
+        except Exception as e:
+            logger.warning(f"[Image Description] Key thất bại ({provider}), thử key tiếp... Lỗi: {e}")
+            continue
     return ""
 
 def generate_ai_reply(agent: AiAgent, conversation_history: list, lead_name: str):

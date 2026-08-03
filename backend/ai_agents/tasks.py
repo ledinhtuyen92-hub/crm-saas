@@ -181,11 +181,10 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
                     from ai_agents.services import generate_image_description, get_api_keys
                     provider = getattr(lead.oa_config.ai_agent.company.ai_settings, 'default_embedding_provider', 'openai')
                     keys = get_api_keys(lead.oa_config.ai_agent.company, provider)
-                    api_key = keys[0] if keys else None
-                    if api_key:
+                    if keys:
                         img_desc = generate_image_description(
                             latest_user_msg.attachment_url, 
-                            api_key, 
+                            keys, 
                             provider,
                             lead.oa_config.ai_agent.model_name
                         )
@@ -378,11 +377,10 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
                     from ai_agents.services import generate_image_description, get_api_keys
                     provider = getattr(lead.page_config.ai_agent.company.ai_settings, 'default_embedding_provider', 'openai')
                     keys = get_api_keys(lead.page_config.ai_agent.company, provider)
-                    api_key = keys[0] if keys else None
-                    if api_key:
+                    if keys:
                         img_desc = generate_image_description(
                             latest_user_msg.attachment_url, 
-                            api_key, 
+                            keys, 
                             provider,
                             lead.page_config.ai_agent.model_name
                         )
@@ -724,7 +722,7 @@ def process_document_rag(doc_id):
             if image_url.startswith('/'):
                 image_url = f"{get_public_domain()}{image_url}"
                 
-            description = generate_image_description(image_url, keys[0], provider, doc.agent.model_name)
+            description = generate_image_description(image_url, keys, provider, doc.agent.model_name)
             if description:
                 doc.image_description = description
                 # Gộp mô tả vào content để RAG nhúng vector
@@ -834,9 +832,7 @@ def sync_product_image_description(template_id):
             
         provider = getattr(template.company.ai_settings, 'default_embedding_provider', 'openai')
         keys = get_api_keys(template.company, provider)
-        api_key = keys[0] if keys else None
-        
-        if not api_key:
+        if not keys:
             return
             
         image_url = template.image.url
@@ -845,7 +841,7 @@ def sync_product_image_description(template_id):
             
         agent = template.company.ai_agents.first()
         model_name = agent.model_name if agent else None
-        desc = generate_image_description(image_url, api_key, provider, model_name)
+        desc = generate_image_description(image_url, keys, provider, model_name)
         if desc:
             template.image_description = desc
             template.save(update_fields=['image_description'])

@@ -226,27 +226,41 @@ class AiKnowledgeDocumentViewSet(viewsets.ModelViewSet):
         company = request.user.company
         provider = getattr(company.ai_settings, 'default_embedding_provider', 'openai')
         keys = get_api_keys(company, provider)
-        api_key = keys[0] if keys else None
         
-        if not api_key:
+        if not keys:
             return Response({'error': f'Không có {provider.upper()} API Key hợp lệ để tìm kiếm'}, status=400)
             
         try:
-            # Lấy API Key để embed câu hỏi
+            # Xoay vòng API Key để embed câu hỏi
+            query_embedding = None
+            last_error = None
+            for api_key in keys:
+                try:
+                    if provider == 'gemini':
+                        genai.configure(api_key=api_key)
+                        response = genai.embed_content(
+                            model="models/gemini-embedding-001",
+                            content=query,
+                            task_type="retrieval_query",
+                            output_dimensionality=768
+                        )
+                        query_embedding = response['embedding']
+                    else:
+                        client = OpenAI(api_key=api_key)
+                        res = client.embeddings.create(input=[query], model="text-embedding-3-small")
+                        query_embedding = res.data[0].embedding
+                    break
+                except Exception as e:
+                    last_error = e
+                    logger.warning(f"[Knowledge Search] Key thất bại ({provider}), thử key tiếp... Lỗi: {e}")
+                    continue
+            
+            if query_embedding is None:
+                return Response({'error': f'Tất cả API Key {provider.upper()} đều thất bại: {str(last_error)[:200]}'}, status=500)
+            
             if provider == 'gemini':
-                genai.configure(api_key=api_key)
-                response = genai.embed_content(
-                    model="models/gemini-embedding-001",
-                    content=query,
-                    task_type="retrieval_query",
-                    output_dimensionality=768
-                )
-                query_embedding = response['embedding']
                 distance_expr = L2Distance('embedding_gemini', query_embedding)
             else:
-                client = OpenAI(api_key=api_key)
-                res = client.embeddings.create(input=[query], model="text-embedding-3-small")
-                query_embedding = res.data[0].embedding
                 distance_expr = L2Distance('embedding', query_embedding)
             
             # Tìm kiếm vector bằng pgvector
