@@ -161,10 +161,8 @@ export default function AiKnowledgeBase() {
       const handleDownload = async () => {
         try {
           message.loading({ content: 'Đang chuẩn bị tải file...', key: 'dl' })
-          const token = localStorage.getItem('access_token')
-          const response = await fetch(absoluteUrl, {
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-          })
+          // Bỏ header Authorization vì Nginx có thể chặn khi request file tĩnh (/media/)
+          const response = await fetch(absoluteUrl)
           if (!response.ok) throw new Error('Network error')
           const blob = await response.blob()
           const blobUrl = window.URL.createObjectURL(blob)
@@ -177,12 +175,14 @@ export default function AiKnowledgeBase() {
           window.URL.revokeObjectURL(blobUrl)
           message.success({ content: 'Tải file thành công!', key: 'dl' })
         } catch (e) {
-          message.error({ content: 'Không thể tải file. Vui lòng thử lại.', key: 'dl' })
+          message.destroy('dl')
+          // Nếu fetch thất bại (CORS/Network), fallback mở URL trực tiếp để tải
+          window.open(absoluteUrl, '_blank')
         }
       }
 
-      const isOfficeFile = ['doc', 'docx', 'xlsx', 'xls', 'ppt', 'pptx'].includes(ext)
-      const isPdf = ext === 'pdf'
+      // Dùng Google Docs Viewer cho cả PDF vì nó ổn định hơn native <object> (đặc biệt trên mobile)
+      const isGoogleViewerSupported = ['doc', 'docx', 'xlsx', 'xls', 'ppt', 'pptx', 'pdf'].includes(ext)
 
       Modal.info({
         title: `📄 ${record.title}`,
@@ -198,7 +198,7 @@ export default function AiKnowledgeBase() {
               </Button>
             </div>
             
-            {isOfficeFile && (
+            {isGoogleViewerSupported && (
               <iframe
                 src={`https://docs.google.com/viewer?url=${encodeURIComponent(absoluteUrl)}&embedded=true`}
                 style={{ width: '100%', height: '70vh', border: 'none', marginTop: 8, borderRadius: 8 }}
@@ -206,17 +206,7 @@ export default function AiKnowledgeBase() {
               />
             )}
 
-            {isPdf && (
-              <object
-                data={absoluteUrl}
-                type="application/pdf"
-                style={{ width: '100%', height: '70vh', border: 'none', marginTop: 8, borderRadius: 8 }}
-              >
-                <p>Trình duyệt không hỗ trợ xem PDF. Vui lòng tải file xuống.</p>
-              </object>
-            )}
-
-            {!isOfficeFile && !isPdf && (
+            {!isGoogleViewerSupported && (
               <div
                 style={{
                   whiteSpace: 'pre-wrap',
