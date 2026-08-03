@@ -115,7 +115,7 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
         ready_for_delivery = self.request.query_params.get("ready_for_delivery")
         if ready_for_delivery == "true":
-            qs = qs.filter(production_order__status="completed", delivery_order__isnull=True)
+            qs = qs.filter(production_orders__status="completed", delivery_order__isnull=True)
             
         return qs
 
