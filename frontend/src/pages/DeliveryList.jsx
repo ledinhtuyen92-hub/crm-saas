@@ -67,7 +67,7 @@ export default function DeliveryList() {
       const resOrders = await api.get('/orders/orders/', { params: { limit: 100, ready_for_delivery: 'true' } })
       setAvailableOrders(Array.isArray(resOrders.data) ? resOrders.data : resOrders.data?.results ?? [])
       
-      const resShippers = await api.get('/users/users/', { params: { role: 'shipper', limit: 100 } })
+      const resShippers = await api.get('/users/users/', { params: { limit: 100 } })
       setShippers(Array.isArray(resShippers.data) ? resShippers.data : resShippers.data?.results ?? [])
 
       const resTmpl = await api.get('/sales/quotation-templates/active/')
