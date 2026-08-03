@@ -196,6 +196,17 @@ def send_facebook_message(
 
     url = f"{FB_GRAPH_API_BASE}/me/messages"
     params = {"access_token": page_access_token}
+    
+    # 0. Đánh dấu đã đọc trên Facebook (mark_seen)
+    try:
+        mark_seen_payload = {
+            "recipient": {"id": recipient_psid},
+            "sender_action": "mark_seen"
+        }
+        requests.post(url, params=params, json=mark_seen_payload, timeout=5)
+    except Exception as e:
+        logger.warning(f"[Facebook] Không thể mark_seen: {e}")
+
     last_message_id = None
 
     # 1. Gửi đính kèm (nếu có file binary hoặc URL)
@@ -509,8 +520,12 @@ def process_fb_webhook_message(entry: dict):
 
         lead.last_message_at = timezone.now()
         lead.last_message_preview = (msg_text or "[Đính kèm]")[:255]
-        lead.has_unread_message = True
-        lead.unread_count = (lead.unread_count or 0) + 1
+        if sender_type == "customer":
+            lead.has_unread_message = True
+            lead.unread_count = (lead.unread_count or 0) + 1
+        else:
+            lead.has_unread_message = False
+            lead.unread_count = 0
         lead.save()
 
         # Lưu tin nhắn
@@ -932,6 +947,16 @@ def send_facebook_carousel(page_access_token: str, recipient_psid: str, elements
     url = f"{FB_GRAPH_API_BASE}/me/messages"
     params = {"access_token": page_access_token}
     
+    # 0. Đánh dấu đã đọc trên Facebook (mark_seen)
+    try:
+        mark_seen_payload = {
+            "recipient": {"id": recipient_psid},
+            "sender_action": "mark_seen"
+        }
+        requests.post(url, params=params, json=mark_seen_payload, timeout=5)
+    except Exception as e:
+        pass
+
     # Format elements for Facebook Generic Template
     fb_elements = []
     for item in elements:

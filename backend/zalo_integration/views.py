@@ -231,7 +231,9 @@ class ZaloWebhookView(APIView):
         from django.utils import timezone
         social_lead.last_message = message_text[:500] or "[Đính kèm]"
         social_lead.last_interaction_date = timezone.now()
-        social_lead.save(update_fields=["last_message", "last_interaction_date"])
+        social_lead.has_unread_message = False
+        social_lead.unread_count = 0
+        social_lead.save(update_fields=["last_message", "last_interaction_date", "has_unread_message", "unread_count"])
 
         from .models import ZaloMessage
         
