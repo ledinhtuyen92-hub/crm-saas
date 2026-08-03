@@ -201,7 +201,8 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
                 rag_search_text += get_product_context(lead.company, search_query.strip(), history)
 
         if is_followup:
-            history.append({'role': 'system', 'content': 'Khách hàng đã không phản hồi hơn 24 giờ. Hãy viết một câu chào hỏi, gợi mở hoặc hỏi thăm khéo léo để tiếp tục câu chuyện một cách tự nhiên nhất.'})
+            drip_hours = lead.oa_config.ai_agent.drip_followup_hours or 24
+            history.append({'role': 'system', 'content': f'Khách hàng đã không phản hồi hơn {drip_hours} giờ. Hãy viết một câu chào hỏi, gợi mở hoặc hỏi thăm khéo léo để tiếp tục câu chuyện một cách tự nhiên nhất.'})
 
         result = generate_ai_reply(lead.oa_config.ai_agent, history, lead.display_name + rag_search_text)
         if result.get('error'):
@@ -384,7 +385,8 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
                 rag_search_text = search_knowledge(lead.page_config.ai_agent, search_query.strip(), limit=4)
                 rag_search_text += get_product_context(lead.company, search_query.strip(), history)
         if is_followup:
-            history.append({'role': 'system', 'content': 'Khách hàng đã không phản hồi hơn 24 giờ. Hãy viết một câu chào hỏi, gợi mở hoặc hỏi thăm khéo léo để tiếp tục câu chuyện một cách tự nhiên nhất.'})
+            drip_hours = lead.page_config.ai_agent.drip_followup_hours or 24
+            history.append({'role': 'system', 'content': f'Khách hàng đã không phản hồi hơn {drip_hours} giờ. Hãy viết một câu chào hỏi, gợi mở hoặc hỏi thăm khéo léo để tiếp tục câu chuyện một cách tự nhiên nhất.'})
 
         result = generate_ai_reply(lead.page_config.ai_agent, history, lead.fb_user_name + rag_search_text)
         if result.get('error'):
