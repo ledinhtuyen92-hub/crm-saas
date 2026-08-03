@@ -116,18 +116,27 @@ export default function AiKnowledgeBase() {
     return () => clearInterval(interval)
   }, [documents])
 
-  const handleDelete = async (id) => {
+  const handleDelete = (record) => {
     if (maintenanceMode) {
       message.warning('⚠️ Hệ thống đang bảo trì dữ liệu. Chức năng này tạm thời bị khóa!')
       return
     }
-    try {
-      await api.delete(`/ai_agents/knowledge/${id}/`)
-      message.success('Đã xóa tài liệu')
-      fetchData()
-    } catch (err) {
-      message.error('Lỗi khi xóa tài liệu')
-    }
+    Modal.confirm({
+      title: 'Xác nhận xóa tài liệu?',
+      content: `Bạn có chắc chắn muốn xóa tài liệu "${record.title || 'này'}"? Trợ lý AI sẽ mất đi kiến thức này vĩnh viễn.`,
+      okText: 'Xóa ngay',
+      okType: 'danger',
+      cancelText: 'Hủy bỏ',
+      onOk: async () => {
+        try {
+          await api.delete(`/ai_agents/knowledge/${record.id}/`)
+          message.success('Đã xóa tài liệu')
+          fetchData()
+        } catch (err) {
+          message.error('Lỗi khi xóa tài liệu')
+        }
+      }
+    })
   }
 
   const handleRetry = async (id) => {
@@ -498,7 +507,7 @@ export default function AiKnowledgeBase() {
             <Button type="text" icon={<EyeOutlined />} onClick={() => handleView(record)} />
             <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
             <Button type="text" style={{ color: '#faad14' }} icon={<SyncOutlined />} onClick={() => handleRetry(record.id)} />
-            <Button danger type="text" icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
+            <Button danger type="text" icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
           </Space>
         )
       }
