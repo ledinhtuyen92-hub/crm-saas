@@ -266,14 +266,16 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
             from zalo_integration.services import send_zalo_carousel
             products_for_carousel = search_products_for_carousel(lead.company, product_search_keyword, limit=5)
             if products_for_carousel:
-                send_zalo_carousel(lead.oa_config, lead.social_id, products_for_carousel)
+                car_resp = send_zalo_carousel(lead.oa_config, lead.social_id, products_for_carousel)
+                car_msg_id = car_resp.get("data", {}).get("message_id", "") if car_resp else ""
                 ZaloMessage.objects.create(
                     company=lead.company,
                     social_lead=lead,
                     direction=ZaloMessage.DIRECTION_OUTBOUND,
                     content=f"[Đã gửi Danh sách tìm kiếm: {product_search_keyword}]",
                     attachment_type="carousel",
-                    payload=products_for_carousel
+                    payload=products_for_carousel,
+                    zalo_msg_id=car_msg_id
                 )
 
         if reply_text or image_url:
@@ -306,7 +308,8 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
                     company=lead.company,
                     social_lead=lead,
                     direction=ZaloMessage.DIRECTION_OUTBOUND,
-                    content=reply_text or "[Hình ảnh]"
+                    content=reply_text or "[Hình ảnh]",
+                    zalo_msg_id=resp.get("data", {}).get("message_id", "") if resp and "data" in resp else ""
                 )
                 
                 if lead.is_ai_active:

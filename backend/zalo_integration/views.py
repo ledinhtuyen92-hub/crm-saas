@@ -111,8 +111,10 @@ class ZaloWebhookView(APIView):
             logger.warning(f"[Webhook Zalo] Module zalo bị tắt/thu hồi cho công ty {company.id}")
             return Response({"error": "Module zalo disabled"}, status=status.HTTP_200_OK)
 
-        if event_name == "user_send_text":
+        if event_name.startswith("user_send_"):
             self._handle_message(company, oa_config, data)
+        elif event_name.startswith("oa_send_"):
+            self._handle_oa_send_message(company, oa_config, data)
         elif event_name == "follow":
             self._handle_follow(company, oa_config, data)
         elif event_name == "unfollow":
@@ -204,6 +206,57 @@ class ZaloWebhookView(APIView):
         if social_lead.is_ai_active and social_lead.oa_config and social_lead.oa_config.is_ai_active and social_lead.oa_config.ai_agent_id:
             from ai_agents.tasks import trigger_zalo_ai
             trigger_zalo_ai(social_lead.id)
+
+    def _handle_oa_send_message(self, company, oa_config, data):
+        """Xử lý khi OA (nhân viên hoặc AI) nhắn tin cho user (webhook echo)."""
+        recipient = data.get("recipient", {})
+        zalo_uid = recipient.get("id")
+        if not zalo_uid:
+            return
+
+        message_text = data.get("message", {}).get("text", "")
+        message_id = data.get("message", {}).get("msg_id", "")
+
+        # Tìm kiếm hoặc tạo SocialLead
+        social_lead, created = SocialLead.objects.get_or_create(
+            company=company,
+            platform=SocialLead.PLATFORM_ZALO,
+            social_id=zalo_uid,
+            defaults={
+                "oa_config": oa_config,
+                "status": SocialLead.STATUS_CHATTING,
+            },
+        )
+
+        from django.utils import timezone
+        social_lead.last_message = message_text[:500] or "[Đính kèm]"
+        social_lead.last_interaction_date = timezone.now()
+        social_lead.save(update_fields=["last_message", "last_interaction_date"])
+
+        from .models import ZaloMessage
+        
+        attachments = data.get("message", {}).get("attachments", [])
+        attachment_url = ""
+        attachment_type = ""
+        
+        if attachments and len(attachments) > 0:
+            att = attachments[0]
+            attachment_type = att.get("type", "")
+            if attachment_type in ["image", "file", "audio"]:
+                attachment_url = att.get("payload", {}).get("url", "")
+
+        if message_id:
+            ZaloMessage.objects.get_or_create(
+                zalo_msg_id=message_id,
+                defaults={
+                    "company": company,
+                    "social_lead": social_lead,
+                    "direction": ZaloMessage.DIRECTION_OUTBOUND,
+                    "content": message_text,
+                    "attachment_url": attachment_url,
+                    "attachment_type": attachment_type,
+                }
+            )
 
     def _handle_follow(self, company, oa_config, data):
         """Xử lý khi user follow OA."""
