@@ -142,34 +142,47 @@ export default function AiKnowledgeBase() {
 
   const handleView = (record) => {
     if (record.doc_type === 'file' && record.file_attachment) {
-      // Đảm bảo URL là tuyệt đối (Google Viewer cần URL công khai đầy đủ)
+      // Đảm bảo URL tải file là tuyệt đối
       const rawUrl = record.file_attachment
       const absoluteUrl = rawUrl.startsWith('http') ? rawUrl : `${window.location.origin}${rawUrl}`
-      
-      // Lấy phần mở rộng từ pathname (bỏ qua query string)
-      const pathname = new URL(absoluteUrl).pathname
-      const ext = pathname.split('.').pop().toLowerCase()
 
-      if (['doc', 'docx', 'xlsx', 'xls', 'ppt', 'pptx'].includes(ext)) {
-        // Trình duyệt không render được Office files → dùng Google Docs Viewer
-        const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(absoluteUrl)}&embedded=true`
-        Modal.info({
-          title: `📄 ${record.title}`,
-          content: (
-            <iframe
-              src={googleViewerUrl}
-              style={{ width: '100%', height: '70vh', border: 'none', marginTop: 8 }}
-              title={record.title}
-            />
-          ),
-          width: '80vw',
-          okText: 'Đóng',
-          icon: null,
-        })
-      } else {
-        // PDF và TXT trình duyệt tự render được → mở tab mới
-        window.open(absoluteUrl, '_blank')
-      }
+      // Hiện nội dung text đã extract sẵn trong Modal — đáng tin cậy 100%
+      Modal.info({
+        title: `📄 ${record.title}`,
+        content: (
+          <div>
+            <div style={{ marginBottom: 12 }}>
+              <a href={absoluteUrl} target="_blank" rel="noreferrer" download>
+                <Button size="small" icon={<UploadOutlined />}>Tải file gốc xuống</Button>
+              </a>
+            </div>
+            <div
+              style={{
+                whiteSpace: 'pre-wrap',
+                maxHeight: '65vh',
+                overflowY: 'auto',
+                background: '#f9f9f9',
+                padding: '12px 16px',
+                borderRadius: 8,
+                border: '1px solid #e0e0e0',
+                fontSize: 13,
+                lineHeight: 1.7,
+                fontFamily: 'monospace',
+              }}
+            >
+              {record.content
+                ? record.content
+                : <span style={{ color: '#aaa', fontStyle: 'italic' }}>
+                    Nội dung chưa được trích xuất. Vui lòng thử tải file gốc xuống.
+                  </span>
+              }
+            </div>
+          </div>
+        ),
+        width: '75vw',
+        okText: 'Đóng',
+        icon: null,
+      })
     } else {
       setCurrentDoc(record)
       setIsViewModalVisible(true)
