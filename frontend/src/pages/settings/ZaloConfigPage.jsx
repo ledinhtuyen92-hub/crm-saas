@@ -430,7 +430,7 @@ export default function ZaloConfigPage() {
             style={{ marginTop: 16 }}
             items={[{
               key: 'token-logs',
-              label: <span><HistoryOutlined style={{ marginRight: 6 }} />Lịch sử Refresh Token {config ? `— ${config.oa_name}` : ''} (50 lần gần nhất)</span>,
+              label: <span><HistoryOutlined style={{ marginRight: 6 }} />Lịch sử Refresh Token {config ? `— ${config.oa_name}` : ''} (30 lần gần nhất)</span>,
               children: (
                 <div>
                   <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>

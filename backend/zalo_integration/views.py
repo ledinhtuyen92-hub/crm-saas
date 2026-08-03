@@ -297,7 +297,7 @@ class ZaloOaConfigViewSet(viewsets.ModelViewSet):
     def token_logs(self, request, pk=None):
         """Trả về 50 lần refresh token gần nhất của OA này."""
         config = self.get_object()
-        logs = config.token_refresh_logs.all()[:50]
+        logs = config.token_refresh_logs.all()[:30]
         data = [{
             "id": log.id,
             "status": log.status,
