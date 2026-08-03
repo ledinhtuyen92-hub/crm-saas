@@ -372,8 +372,11 @@ def generate_raw_text(agent: AiAgent, prompt: str) -> str:
         elif provider == 'gemini':
             from google import genai as google_genai
             client = google_genai.Client(api_key=api_key)
+            model_name = agent.model_name or 'gemini-2.0-flash'
+            if model_name.startswith('models/'):
+                model_name = model_name[7:]
             res = client.models.generate_content(
-                model=agent.model_name or 'gemini-2.5-flash',
+                model=model_name,
                 contents=prompt
             )
             return res.text
