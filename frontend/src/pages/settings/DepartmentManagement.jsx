@@ -92,11 +92,17 @@ export default function DepartmentManagement() {
 
   const handleSubmit = async (values) => {
     try {
+      const payload = {
+        ...values,
+        manager: values.manager === undefined ? null : values.manager,
+        factory: values.factory === undefined ? null : values.factory,
+      }
+      
       if (editingDepartment) {
-        await api.patch(`users/departments/${editingDepartment.id}/`, values)
+        await api.patch(`users/departments/${editingDepartment.id}/`, payload)
         messageApi.success('Cập nhật phòng ban thành công.')
       } else {
-        await api.post('users/departments/', values)
+        await api.post('users/departments/', payload)
         messageApi.success('Tạo phòng ban thành công.')
       }
       setModalOpen(false)
