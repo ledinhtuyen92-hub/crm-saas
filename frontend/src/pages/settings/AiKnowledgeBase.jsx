@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Card, Table, Button, Space, Typography, Tag, Modal, Form, Input, Upload, message, Radio, Divider, Spin, Collapse, Alert, Checkbox, Segmented, Row, Col, List } from 'antd'
-import { PlusOutlined, UploadOutlined, RobotOutlined, BookOutlined, EyeOutlined, EditOutlined, SyncOutlined, DeleteOutlined, BulbOutlined, MinusCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons'
+import { PlusOutlined, UploadOutlined, RobotOutlined, BookOutlined, EyeOutlined, EditOutlined, SyncOutlined, DeleteOutlined, BulbOutlined, MinusCircleOutlined, QuestionCircleOutlined, DownloadOutlined } from '@ant-design/icons'
+import mammoth from 'mammoth'
 import api from '../../utils/api'
 import { useAuth } from '../../contexts/AuthContext'
 import { useResponsive } from '../../hooks/useResponsive'
@@ -144,17 +145,60 @@ export default function AiKnowledgeBase() {
     if (record.doc_type === 'file' && record.file_attachment) {
       const rawUrl = record.file_attachment
       const absoluteUrl = rawUrl.startsWith('http') ? rawUrl : `${window.location.origin}${rawUrl}`
+      const ext = absoluteUrl.split('.').pop().toLowerCase()
+      const fileName = record.title + '.' + ext
 
-      let displayContent = record.content
+      // Hàm tải file dùng fetch+blob → vượt qua giới hạn cross-origin download
+      const handleDownload = async () => {
+        try {
+          message.loading({ content: 'Đang chuẩn bị tải file...', key: 'dl' })
+          const token = localStorage.getItem('access_token')
+          const response = await fetch(absoluteUrl, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          })
+          if (!response.ok) throw new Error('Network error')
+          const blob = await response.blob()
+          const blobUrl = window.URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = blobUrl
+          link.download = fileName
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(blobUrl)
+          message.success({ content: 'Tải file thành công!', key: 'dl' })
+        } catch (e) {
+          message.error({ content: 'Không thể tải file. Vui lòng thử lại.', key: 'dl' })
+        }
+      }
 
-      // Nếu content rỗng (file cũ trước khi có fix backend), gọi API lấy từ chunks
-      if (!displayContent) {
+      let htmlContent = null
+      let plainContent = record.content || ''
+
+      if (['docx', 'doc'].includes(ext)) {
+        // Dùng mammoth.js convert DOCX → HTML để hiển thị giống file gốc
+        try {
+          message.loading({ content: 'Đang đọc file...', key: 'view' })
+          const token = localStorage.getItem('access_token')
+          const response = await fetch(absoluteUrl, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          })
+          const arrayBuffer = await response.arrayBuffer()
+          const result = await mammoth.convertToHtml({ arrayBuffer })
+          htmlContent = result.value
+          message.destroy('view')
+        } catch (e) {
+          message.destroy('view')
+          // Fallback sang plain text nếu mammoth thất bại
+        }
+      }
+
+      // Fallback: lấy text từ API nếu chưa có HTML và content rỗng
+      if (!htmlContent && !plainContent) {
         try {
           const res = await api.get(`/ai_agents/knowledge/${record.id}/get_content/`)
-          displayContent = res.data?.content || ''
-        } catch (e) {
-          // Nếu lỗi thì để trống, vẫn hiện nút tải xuống
-        }
+          plainContent = res.data?.content || ''
+        } catch (e) {}
       }
 
       Modal.info({
@@ -162,34 +206,41 @@ export default function AiKnowledgeBase() {
         content: (
           <div>
             <div style={{ marginBottom: 12 }}>
-              <a href={absoluteUrl} target="_blank" rel="noreferrer" download>
-                <Button size="small" icon={<UploadOutlined />}>Tải file gốc xuống</Button>
-              </a>
+              <Button
+                size="small"
+                icon={<DownloadOutlined />}
+                onClick={handleDownload}
+              >
+                Tải file gốc xuống
+              </Button>
             </div>
             <div
               style={{
-                whiteSpace: 'pre-wrap',
-                maxHeight: '65vh',
+                maxHeight: '68vh',
                 overflowY: 'auto',
-                background: '#f9f9f9',
-                padding: '12px 16px',
+                background: '#fff',
+                padding: '16px 20px',
                 borderRadius: 8,
                 border: '1px solid #e0e0e0',
-                fontSize: 13,
-                lineHeight: 1.7,
-                fontFamily: 'monospace',
+                fontSize: 14,
+                lineHeight: 1.8,
               }}
             >
-              {displayContent
-                ? displayContent
-                : <span style={{ color: '#aaa', fontStyle: 'italic' }}>
-                    Nội dung chưa được trích xuất. Vui lòng bấm nút "Học lại" để hệ thống xử lý lại file, sau đó Xem lại.
-                  </span>
+              {htmlContent
+                ? <div
+                    style={{ fontFamily: 'inherit' }}
+                    dangerouslySetInnerHTML={{ __html: htmlContent }}
+                  />
+                : plainContent
+                  ? <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: 0 }}>{plainContent}</pre>
+                  : <span style={{ color: '#aaa', fontStyle: 'italic' }}>
+                      Nội dung chưa được trích xuất. Vui lòng bấm nút "Học lại" rồi Xem lại.
+                    </span>
               }
             </div>
           </div>
         ),
-        width: '75vw',
+        width: '78vw',
         okText: 'Đóng',
         icon: null,
       })
