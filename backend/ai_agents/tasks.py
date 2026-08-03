@@ -714,8 +714,8 @@ def process_document_rag(doc_id):
         
         # Lấy API key dựa trên provider đã chọn
         keys = get_api_keys(doc.agent.company, provider)
-        api_key = keys[0] if keys else None
-        
+        if not keys:
+            raise ValueError(f"Chưa cấu hình API Key cho {provider.upper()}")
 
         # Nếu là tài liệu dạng ảnh, dùng AI để dịch ảnh ra text trước
         if doc.doc_type == 'image' and doc.file_attachment:
@@ -724,7 +724,7 @@ def process_document_rag(doc_id):
             if image_url.startswith('/'):
                 image_url = f"{get_public_domain()}{image_url}"
                 
-            description = generate_image_description(image_url, api_key, provider, doc.agent.model_name)
+            description = generate_image_description(image_url, keys[0], provider, doc.agent.model_name)
             if description:
                 doc.image_description = description
                 # Gộp mô tả vào content để RAG nhúng vector
@@ -739,8 +739,8 @@ def process_document_rag(doc_id):
                     doc.content = f"[Mô tả ảnh]: {description}"
                 doc.save(update_fields=['image_description', 'content'])
             
-        # Thực hiện xử lý RAG (Text)
-        process_and_save_document(doc.id, api_key, provider)
+        # Thực hiện xử lý RAG (Text) - truyền toàn bộ danh sách keys để xoay vòng
+        process_and_save_document(doc.id, keys, provider)
     except Exception as e:
         # Catch any unexpected errors
         try:

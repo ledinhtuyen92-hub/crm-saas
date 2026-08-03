@@ -71,7 +71,7 @@ def get_embeddings(texts, api_key):
 
 def get_gemini_embeddings(texts, api_key):
     """
-    Gọi Gemini API để lấy embeddings (models/text-embedding-004)
+    Gọi Gemini API để lấy embeddings (models/gemini-embedding-001)
     """
     genai.configure(api_key=api_key)
     embeddings = []
@@ -91,10 +91,17 @@ def get_gemini_embeddings(texts, api_key):
             
     return embeddings
 
-def process_and_save_document(doc_id, api_key, provider='openai'):
+def process_and_save_document(doc_id, api_keys, provider='openai'):
     """
     Hàm chính xử lý document (gọi từ Celery task).
+    api_keys: danh sách API keys để xoay vòng khi key bị hết quota.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    if isinstance(api_keys, str):
+        api_keys = [api_keys]
+    
     doc = AiKnowledgeDocument.objects.get(id=doc_id)
     doc.status = 'processing'
     doc.save()
@@ -113,11 +120,23 @@ def process_and_save_document(doc_id, api_key, provider='openai'):
             
         chunks = chunk_text(text)
         
-        # Get embeddings
-        if provider == 'gemini':
-            embeddings = get_gemini_embeddings(chunks, api_key)
-        else:
-            embeddings = get_embeddings(chunks, api_key)
+        # Get embeddings - xoay vòng API key
+        embeddings = None
+        last_error = None
+        for api_key in api_keys:
+            try:
+                if provider == 'gemini':
+                    embeddings = get_gemini_embeddings(chunks, api_key)
+                else:
+                    embeddings = get_embeddings(chunks, api_key)
+                break  # Thành công, thoát vòng lặp
+            except Exception as e:
+                last_error = e
+                logger.warning(f"[RAG] Embedding key thất bại ({provider}), thử key tiếp theo... Lỗi: {e}")
+                continue
+        
+        if embeddings is None:
+            raise RuntimeError(f"Tất cả {len(api_keys)} API Key {provider.upper()} đều thất bại khi tạo embedding. Lỗi cuối: {str(last_error)[:200]}")
         
         # Xóa các chunk cũ nếu có (trường hợp xử lý lại)
         doc.chunks.all().delete()
@@ -156,6 +175,7 @@ def process_and_save_document(doc_id, api_key, provider='openai'):
 def search_knowledge(agent, query: str, limit: int = 4):
     """
     Tìm kiếm chunk có semantic tương đồng với câu hỏi (query).
+    Tự động xoay vòng API key khi key hiện tại bị hết quota.
     """
     from .models import AiKnowledgeChunk
     from .services import get_api_keys
@@ -169,20 +189,33 @@ def search_knowledge(agent, query: str, limit: int = 4):
         # Determine provider
         provider = getattr(agent.company.ai_settings, 'default_embedding_provider', 'openai')
         keys = get_api_keys(agent.company, provider)
-        api_key = keys[0] if keys else None
         
-        if not api_key:
+        if not keys:
+            return ""
+        
+        # Xoay vòng API key để lấy embedding cho query
+        query_vector = None
+        for api_key in keys:
+            try:
+                if provider == 'gemini':
+                    query_vector = get_gemini_embeddings([query], api_key)[0]
+                else:
+                    query_vector = get_embeddings([query], api_key)[0]
+                break  # Thành công
+            except Exception as e:
+                logging.getLogger(__name__).warning(f"[RAG Search] Key thất bại ({provider}), thử key tiếp... Lỗi: {e}")
+                continue
+        
+        if query_vector is None:
             return ""
             
         if provider == 'gemini':
-            query_vector = get_gemini_embeddings([query], api_key)[0]
             chunks = AiKnowledgeChunk.objects.filter(
                 document__agent=agent,
                 document__status='completed',
                 embedding_gemini__isnull=False
             ).annotate(distance=CosineDistance('embedding_gemini', query_vector)).order_by('distance')[:limit]
         else:
-            query_vector = get_embeddings([query], api_key)[0]
             chunks = AiKnowledgeChunk.objects.filter(
                 document__agent=agent,
                 document__status='completed',
@@ -190,8 +223,6 @@ def search_knowledge(agent, query: str, limit: int = 4):
             ).annotate(distance=CosineDistance('embedding', query_vector)).order_by('distance')[:limit]
             
         if chunks:
-            # We can filter out chunks with distance > 0.6 if needed to reduce noise
-            # but for now, just return top matches
             knowledge_texts = []
             for c in chunks:
                 if getattr(c, 'distance', 1) < 0.7:  # Threshold
@@ -203,4 +234,4 @@ def search_knowledge(agent, query: str, limit: int = 4):
     except Exception as e:
         logging.getLogger(__name__).error(f"RAG Search Error: {e}")
         
-    return ""
+    return ""
