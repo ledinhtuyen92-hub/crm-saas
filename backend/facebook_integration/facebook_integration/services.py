@@ -396,24 +396,37 @@ def process_fb_webhook_message(entry: dict):
 
     for messaging in messaging_list:
         sender_psid = messaging.get("sender", {}).get("id")
+        recipient_psid = messaging.get("recipient", {}).get("id")
         message_data = messaging.get("message", {})
+        
         if not sender_psid or not message_data:
             continue
 
-        # Bỏ qua tin nhắn do chính page gửi đi (echo)
-        if str(sender_psid) == str(page_id):
+        is_echo = message_data.get("is_echo", False)
+        
+        # Xác định ai là người nhắn và ai là khách hàng
+        if str(sender_psid) == str(page_id) or is_echo:
+            # Tin nhắn do Trang gửi đi (echo từ Meta Business Suite)
+            customer_psid = recipient_psid
+            sender_type = "page"
+        else:
+            # Tin nhắn do Khách hàng gửi tới Trang
+            customer_psid = sender_psid
+            sender_type = "customer"
+
+        if not customer_psid:
             continue
 
         msg_id = message_data.get("mid")
         msg_text = message_data.get("text", "")
 
-        # Lấy thông tin profile khách
-        profile = get_fb_user_profile(page_config.page_access_token, sender_psid)
+        # Lấy thông tin profile khách (nếu tạo mới)
+        profile = get_fb_user_profile(page_config.page_access_token, customer_psid)
 
         # Tạo hoặc cập nhật FacebookLead
         lead, created = FacebookLead.objects.get_or_create(
             page_config=page_config,
-            fb_user_id=sender_psid,
+            fb_user_id=customer_psid,
             defaults={
                 "company": page_config.company,
                 "fb_user_name": profile.get("name", ""),
@@ -434,14 +447,18 @@ def process_fb_webhook_message(entry: dict):
                 lead.is_customer_converted = False
                 lead.customer = None
 
+        # Cập nhật thông tin Last Message của hội thoại
         lead.last_message_at = timezone.now()
         lead.last_message_preview = (msg_text or "[Đính kèm]")[:255]
-        lead.has_unread_message = True
-        lead.unread_count = (lead.unread_count or 0) + 1
-        lead.has_ai_followed_up = False
+        
+        if sender_type == "customer":
+            lead.has_unread_message = True
+            lead.unread_count = (lead.unread_count or 0) + 1
+            lead.has_ai_followed_up = False
+        
         lead.save()
 
-        # Lưu tin nhắn
+        # Lưu tin nhắn vào Database
         attachments = message_data.get("attachments", [])
         att_url = None
         att_type = ""
@@ -455,15 +472,15 @@ def process_fb_webhook_message(entry: dict):
                 fb_message_id=msg_id,
                 defaults={
                     "lead": lead,
-                    "sender_type": "customer",
+                    "sender_type": sender_type,
                     "text": msg_text,
                     "attachment_url": att_url,
                     "attachment_type": att_type,
                 }
             )
 
-        # Quét SĐT trong tin nhắn
-        if msg_text:
+        # Nếu là khách hàng nhắn thì quét SĐT
+        if sender_type == "customer" and msg_text:
             extract_and_process_phone_fb(lead, msg_text)
 
 
