@@ -353,30 +353,36 @@ TRẢ LỜI BẮT BUỘC THEO ĐỊNH DẠNG JSON SAU (không trả về Markdow
     }
 
 def generate_raw_text(agent: AiAgent, prompt: str) -> str:
+    """
+    Gọi LLM để sinh văn bản thô (không phải JSON).
+    Raise Exception nếu gặp lỗi để caller có thể hiển thị chi tiết cho user.
+    """
     provider = get_provider_for_model(agent.model_name)
     api_keys = get_api_keys(agent.company, provider)
     
     if not api_keys:
-        return ""
+        raise ValueError(f"Chưa cấu hình API Key cho nhà cung cấp {provider.upper()}. Vào Cài đặt AI > API Keys để thêm.")
         
     api_key = api_keys[0]
+    model_name = agent.model_name
+    
     try:
         if provider == 'openai':
             from openai import OpenAI
             client = OpenAI(api_key=api_key)
             res = client.chat.completions.create(
-                model=agent.model_name or 'gpt-4o-mini',
+                model=model_name or 'gpt-4o-mini',
                 messages=[{"role": "user", "content": prompt}]
             )
             return res.choices[0].message.content
         elif provider == 'gemini':
             from google import genai as google_genai
             client = google_genai.Client(api_key=api_key)
-            model_name = agent.model_name or 'gemini-2.0-flash'
-            if model_name.startswith('models/'):
-                model_name = model_name[7:]
+            gm_name = model_name or 'gemini-2.0-flash'
+            if gm_name.startswith('models/'):
+                gm_name = gm_name[7:]
             res = client.models.generate_content(
-                model=model_name,
+                model=gm_name,
                 contents=prompt
             )
             return res.text
@@ -384,11 +390,13 @@ def generate_raw_text(agent: AiAgent, prompt: str) -> str:
             import anthropic
             client = anthropic.Anthropic(api_key=api_key)
             res = client.messages.create(
-                model=agent.model_name or 'claude-3-5-sonnet-20241022',
+                model=model_name or 'claude-3-5-sonnet-20241022',
                 max_tokens=2048,
                 messages=[{"role": "user", "content": prompt}]
             )
             return res.content[0].text
+        else:
+            raise ValueError(f"Nhà cung cấp AI '{provider}' không được hỗ trợ.")
     except Exception as e:
-        logger.error(f"Error in generate_raw_text: {e}")
-        return ""
+        logger.error(f"Error in generate_raw_text ({provider}/{model_name}): {e}")
+        raise

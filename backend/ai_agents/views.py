@@ -303,9 +303,14 @@ class AiKnowledgeDocumentViewSet(viewsets.ModelViewSet):
             from ai_agents.services import generate_raw_text
             prompt = f"Bạn là chuyên gia huấn luyện AI. Hãy đọc đoạn hội thoại sau và bóc tách ra các thắc mắc khó của khách và cách Sale trả lời. Trình bày dưới dạng các cặp Hỏi - Đáp (Q&A) cực kỳ ngắn gọn, chuẩn mực. Không chứa tên riêng, số điện thoại hay khuyến mãi cá biệt.\nHội thoại:\n{transcript}"
             
-            extracted_text = generate_raw_text(agent, prompt)
+            try:
+                extracted_text = generate_raw_text(agent, prompt)
+            except Exception as llm_err:
+                logger.error(f"[RAG Extract] LLM Error: {llm_err}")
+                return Response({'error': f'Lỗi khi trích xuất qua LLM: {str(llm_err)[:300]}'}, status=500)
+                
             if not extracted_text:
-                return Response({'error': 'Lỗi khi trích xuất qua LLM'}, status=500)
+                return Response({'error': 'LLM trả về kết quả rỗng. Vui lòng thử lại.'}, status=500)
                 
             return Response({
                 'status': 'success',
