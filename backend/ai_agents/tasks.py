@@ -461,9 +461,10 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
             from facebook_integration.services import send_facebook_carousel
             products_for_carousel = search_products_for_carousel(lead.company, product_search_keyword, limit=5)
             if products_for_carousel:
-                send_facebook_carousel(lead.page_config.page_access_token, lead.fb_user_id, products_for_carousel)
+                car_resp = send_facebook_carousel(lead.page_config.page_access_token, lead.fb_user_id, products_for_carousel)
                 FacebookMessage.objects.create(
                     lead=lead,
+                    fb_message_id=car_resp.get("message_id", "") if car_resp else "",
                     sender_type='page',
                     text=f"[Đã gửi Carousel tìm kiếm: {product_search_keyword}]",
                     attachment_type="carousel",
@@ -490,6 +491,7 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
             else:
                 FacebookMessage.objects.create(
                     lead=lead,
+                    fb_message_id=resp.get("message_id", ""),
                     sender_type='page',
                     text=reply_text or "[Hình ảnh]"
                 )
