@@ -99,7 +99,8 @@ class AiAgentViewSet(viewsets.ModelViewSet):
                 except Exception as e:
                     err = str(e).lower()
                     if '429' in err or 'quota' in err or 'resource_exhausted' in err:
-                        raise serializers.ValidationError({"model_name": f"API Key của bạn đã hết Quota hoặc Rate Limit. Vui lòng thử lại sau."})
+                        # Bỏ qua lỗi Rate Limit để không chặn người dùng lưu cấu hình Agent
+                        pass
                     elif 'not found' in err or '404' in err or '403' in err or 'permission' in err:
                         raise serializers.ValidationError({"model_name": f"Mô hình '{model_name}' bị chặn hoặc tài khoản của bạn chưa được cấp quyền dùng nó. Vui lòng chọn mô hình khác."})
 
