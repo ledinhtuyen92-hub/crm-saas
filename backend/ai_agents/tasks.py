@@ -550,6 +550,7 @@ def ai_drip_followup():
         zalo_leads = ZaloLead.objects.filter(
             is_customer_converted=False,
             has_ai_followed_up=False,
+            has_unread_message=False,
             oa_config__ai_agent=agent,
             last_interaction_date__gte=cutoff_start,
             last_interaction_date__lte=cutoff_end
@@ -563,6 +564,7 @@ def ai_drip_followup():
         fb_leads = FacebookLead.objects.filter(
             is_customer_converted=False,
             has_ai_followed_up=False,
+            has_unread_message=False,
             page_config__ai_agent=agent,
             last_message_at__gte=cutoff_start,
             last_message_at__lte=cutoff_end
