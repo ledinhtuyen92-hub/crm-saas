@@ -278,6 +278,17 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
                     zalo_msg_id=car_msg_id
                 )
 
+        if not reply_text and not image_url and not product_search_keyword:
+            # AI did not return anything to send!
+            logger.error(f"[AI Zalo Internal Error] AI returned empty reply for lead {lead.id}")
+            ZaloMessage.objects.create(
+                company=lead.company,
+                social_lead=lead,
+                direction=ZaloMessage.DIRECTION_OUTBOUND,
+                content="Lỗi phản hồi tự động",
+                payload={"is_system_alert": True, "error_message": "AI không tạo ra câu trả lời hợp lệ."}
+            )
+
         if reply_text or image_url:
             if ai_agent.enable_human_typing:
                 import time
@@ -465,19 +476,22 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
             products_for_carousel = search_products_for_carousel(lead.company, product_search_keyword, limit=5)
             if products_for_carousel:
                 car_resp = send_facebook_carousel(lead.page_config.page_access_token, lead.fb_user_id, products_for_carousel)
-                FacebookMessage.objects.create(
-                    lead=lead,
-                    fb_message_id=car_resp.get("message_id", "") if car_resp else "",
-                    sender_type='page',
-                    text=f"[Đã gửi Carousel tìm kiếm: {product_search_keyword}]",
-                    attachment_type="carousel",
-                    payload=products_for_carousel
-                )
+                # KHÔNG tạo FacebookMessage ở đây nữa vì webhook message_echoes sẽ tự động tạo tin nhắn này trên hệ thống
+                pass
 
+        if not reply_text and not image_url and not products_for_carousel:
+            # AI did not return anything to send!
+            logger.error(f"[AI Facebook Internal Error] AI returned empty reply for lead {lead.id}")
+            FacebookMessage.objects.create(
+                lead=lead,
+                sender_type='page',
+                text="Lỗi phản hồi tự động",
+                payload={"is_system_alert": True, "error_message": "AI không tạo ra câu trả lời hợp lệ."}
+            )
+
+        update_fields = []
         if reply_text or image_url:
             resp = send_facebook_message(lead.page_config.page_access_token, lead.fb_user_id, message_text=reply_text, attachment_url=image_url)
-            
-            update_fields = []
             if not resp.get("success"):
                 err_msg = resp.get("error", "Unknown error")
                 logger.error(f"[AI Facebook Error] Facebook API Error: {err_msg}")
@@ -492,12 +506,9 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
                     payload={"is_system_alert": True, "error_message": err_msg}
                 )
             else:
-                FacebookMessage.objects.create(
-                    lead=lead,
-                    fb_message_id=resp.get("message_id", ""),
-                    sender_type='page',
-                    text=reply_text or "[Hình ảnh]"
-                )
+                # KHÔNG tạo FacebookMessage cục bộ nữa vì webhook message_echoes sẽ chịu trách nhiệm tạo.
+                # Tránh tình trạng lưu trùng 2 tin nhắn trên giao diện.
+                pass
                 
                 if lead.is_ai_active:
                     lead.has_unread_message = False
