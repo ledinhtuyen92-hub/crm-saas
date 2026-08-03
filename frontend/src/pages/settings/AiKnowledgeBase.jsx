@@ -142,11 +142,17 @@ export default function AiKnowledgeBase() {
 
   const handleView = (record) => {
     if (record.doc_type === 'file' && record.file_attachment) {
-      const url = record.file_attachment
-      const ext = url.split('.').pop().toLowerCase()
-      // Trình duyệt không render được .docx/.doc → dùng Google Docs Viewer
+      // Đảm bảo URL là tuyệt đối (Google Viewer cần URL công khai đầy đủ)
+      const rawUrl = record.file_attachment
+      const absoluteUrl = rawUrl.startsWith('http') ? rawUrl : `${window.location.origin}${rawUrl}`
+      
+      // Lấy phần mở rộng từ pathname (bỏ qua query string)
+      const pathname = new URL(absoluteUrl).pathname
+      const ext = pathname.split('.').pop().toLowerCase()
+
       if (['doc', 'docx', 'xlsx', 'xls', 'ppt', 'pptx'].includes(ext)) {
-        const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
+        // Trình duyệt không render được Office files → dùng Google Docs Viewer
+        const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(absoluteUrl)}&embedded=true`
         Modal.info({
           title: `📄 ${record.title}`,
           content: (
@@ -161,8 +167,8 @@ export default function AiKnowledgeBase() {
           icon: null,
         })
       } else {
-        // PDF và các loại khác trình duyệt tự render được
-        window.open(url, '_blank')
+        // PDF và TXT trình duyệt tự render được → mở tab mới
+        window.open(absoluteUrl, '_blank')
       }
     } else {
       setCurrentDoc(record)
