@@ -430,20 +430,39 @@ export default function ZaloConfigPage() {
             style={{ marginTop: 16 }}
             items={[{
               key: 'token-logs',
-              label: <span><HistoryOutlined style={{ marginRight: 6 }} />Lịch sử Refresh Token (50 lần gần nhất)</span>,
+              label: <span><HistoryOutlined style={{ marginRight: 6 }} />Lịch sử Refresh Token {config ? `— ${config.oa_name}` : ''} (50 lần gần nhất)</span>,
               children: (
                 <div>
-                  {config && (
-                    <Button
-                      size="small"
-                      icon={<ReloadOutlined />}
-                      onClick={() => fetchTokenLogs(config.id)}
-                      loading={tokenLogsLoading}
-                      style={{ marginBottom: 12 }}
-                    >
-                      Tải lại
-                    </Button>
-                  )}
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                    {configs.length > 1 && (
+                      <Select
+                        size="small"
+                        value={config?.id}
+                        onChange={(id) => {
+                          const selected = configs.find(c => c.id === id)
+                          if (selected) {
+                            setConfig(selected)
+                            fetchTokenLogs(id)
+                          }
+                        }}
+                        style={{ minWidth: 200 }}
+                      >
+                        {configs.map(c => (
+                          <Select.Option key={c.id} value={c.id}>{c.oa_name}</Select.Option>
+                        ))}
+                      </Select>
+                    )}
+                    {config && (
+                      <Button
+                        size="small"
+                        icon={<ReloadOutlined />}
+                        onClick={() => fetchTokenLogs(config.id)}
+                        loading={tokenLogsLoading}
+                      >
+                        Tải lại
+                      </Button>
+                    )}
+                  </div>
                   <Table
                     dataSource={tokenLogs}
                     rowKey="id"
