@@ -336,7 +336,6 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
             time.sleep(delay)
             
         if not is_followup and trigger_msg_id:
-            from facebook_integration.models import FacebookMessage
             latest_msg = FacebookMessage.objects.filter(lead=lead, sender_type='customer').order_by('-created_at').first()
             if latest_msg and latest_msg.id != trigger_msg_id:
                 logger.info(f"Facebook AI debounce: Bỏ qua tin nhắn cũ {trigger_msg_id} do đã có tin mới {latest_msg.id}")
