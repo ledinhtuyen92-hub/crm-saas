@@ -104,7 +104,7 @@ export default function WebsiteIntegration() {
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', paddingBottom: 40, padding: isMobile ? '0 8px 40px' : '0 0 40px', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', paddingBottom: 40, padding: isMobile ? '0 8px 40px' : '0 0 40px', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-start', marginBottom: 24, gap: 16 }}>
         <div style={{ minWidth: 0 }}>
           <Title level={isMobile ? 4 : 2} style={{ margin: 0, wordBreak: 'break-word', whiteSpace: 'normal' }}>
