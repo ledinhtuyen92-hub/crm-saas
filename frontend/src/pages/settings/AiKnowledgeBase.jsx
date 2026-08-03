@@ -143,7 +143,17 @@ export default function AiKnowledgeBase() {
   const handleView = async (record) => {
     if (record.doc_type === 'file' && record.file_attachment) {
       const rawUrl = record.file_attachment
-      const absoluteUrl = rawUrl.startsWith('http') ? rawUrl : `${window.location.origin}${rawUrl}`
+      
+      // Sửa lỗi tải xuống: Đảm bảo URL luôn cùng domain với Frontend 
+      // (để tránh lỗi Mixed Content hoặc Cross-Origin block fetch)
+      let safePath = rawUrl
+      if (rawUrl.startsWith('http')) {
+        try {
+          safePath = new URL(rawUrl).pathname
+        } catch (e) {}
+      }
+      const absoluteUrl = `${window.location.origin}${safePath}`
+      
       const ext = absoluteUrl.split('.').pop().toLowerCase()
       const fileName = record.title + '.' + ext
 
