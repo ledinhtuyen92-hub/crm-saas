@@ -25,7 +25,7 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
     
     action_permissions = {
         "list": "orders.view",
-        "retrieve": "orders.view",
+        "retrieve": ["orders.view", "delivery.shipper"],
         "create": "orders.create",
         "update": ["orders.create", "orders.edit"],
         "partial_update": ["orders.create", "orders.edit"],
@@ -40,15 +40,17 @@ class OrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         user = self.request.user
         # Phân quyền xem dữ liệu
         if not user.is_company_admin and not user.is_superuser and not user.has_perm_code("orders.view_all"):
+            from django.db.models import Q
             managed_deps = user.managed_departments.all()
+            
+            base_q = Q(created_by=user)
             if managed_deps.exists():
-                from django.db.models import Q
-                qs = qs.filter(
-                    Q(created_by=user) | 
-                    Q(created_by__department__in=managed_deps)
-                )
-            else:
-                qs = qs.filter(created_by=user)
+                base_q |= Q(created_by__department__in=managed_deps)
+                
+            if user.has_perm_code("delivery.shipper"):
+                base_q |= Q(delivery_order__shipper_user=user)
+                
+            qs = qs.filter(base_q)
         # Filter theo trạng thái
         order_status = self.request.query_params.get("status")
         if order_status:
