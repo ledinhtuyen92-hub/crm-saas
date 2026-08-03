@@ -443,7 +443,7 @@ function MainLayout({ children, isDarkMode, toggleTheme }) {
             level={4}
             style={{ margin: 0, color: '#ffffff', fontWeight: 800, letterSpacing: 0, whiteSpace: 'nowrap' }}
           >
-            CRM SaaS
+            Fujitech Care
           </Title>
         )}
       </div>
