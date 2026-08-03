@@ -140,13 +140,23 @@ export default function AiKnowledgeBase() {
     }
   }
 
-  const handleView = (record) => {
+  const handleView = async (record) => {
     if (record.doc_type === 'file' && record.file_attachment) {
-      // Đảm bảo URL tải file là tuyệt đối
       const rawUrl = record.file_attachment
       const absoluteUrl = rawUrl.startsWith('http') ? rawUrl : `${window.location.origin}${rawUrl}`
 
-      // Hiện nội dung text đã extract sẵn trong Modal — đáng tin cậy 100%
+      let displayContent = record.content
+
+      // Nếu content rỗng (file cũ trước khi có fix backend), gọi API lấy từ chunks
+      if (!displayContent) {
+        try {
+          const res = await api.get(`/ai_agents/knowledge/${record.id}/get_content/`)
+          displayContent = res.data?.content || ''
+        } catch (e) {
+          // Nếu lỗi thì để trống, vẫn hiện nút tải xuống
+        }
+      }
+
       Modal.info({
         title: `📄 ${record.title}`,
         content: (
@@ -170,10 +180,10 @@ export default function AiKnowledgeBase() {
                 fontFamily: 'monospace',
               }}
             >
-              {record.content
-                ? record.content
+              {displayContent
+                ? displayContent
                 : <span style={{ color: '#aaa', fontStyle: 'italic' }}>
-                    Nội dung chưa được trích xuất. Vui lòng thử tải file gốc xuống.
+                    Nội dung chưa được trích xuất. Vui lòng bấm nút "Học lại" để hệ thống xử lý lại file, sau đó Xem lại.
                   </span>
               }
             </div>

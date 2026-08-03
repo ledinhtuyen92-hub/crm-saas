@@ -139,6 +139,10 @@ def process_and_save_document(doc_id, api_key, provider='openai'):
             
         AiKnowledgeChunk.objects.bulk_create(chunk_objects)
         
+        # Lưu text extract được vào content để Frontend có thể hiển thị
+        if doc.doc_type == 'file' and not doc.content:
+            doc.content = text.strip()
+        
         doc.status = 'completed'
         doc.error_message = ''
         doc.save()

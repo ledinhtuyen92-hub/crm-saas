@@ -167,6 +167,7 @@ class AiKnowledgeDocumentViewSet(viewsets.ModelViewSet):
         'destroy': 'ai_agent.manage_knowledge',
         'retry': 'ai_agent.manage_knowledge',
         'test_retrieval': 'ai_agent.manage_knowledge',
+        'get_content': 'ai_agent.manage_knowledge',
     }
     
     def get_queryset(self):
@@ -184,6 +185,17 @@ class AiKnowledgeDocumentViewSet(viewsets.ModelViewSet):
             doc.error_message = ''
             doc.save(update_fields=['status', 'error_message'])
             transaction.on_commit(lambda: process_document_rag.delay(doc.id))
+
+    @action(detail=True, methods=['GET'])
+    def get_content(self, request, pk=None):
+        """Trả về nội dung text của tài liệu (từ content field hoặc ghép từ chunks)."""
+        doc = self.get_object()
+        if doc.content:
+            return Response({'content': doc.content})
+        # Fallback: ghép từ chunks đã lưu trong DB
+        chunks = doc.chunks.order_by('id').values_list('content', flat=True)
+        text = '\n\n'.join(chunks)
+        return Response({'content': text})
 
     @action(detail=True, methods=['POST'])
     def retry(self, request, pk=None):
