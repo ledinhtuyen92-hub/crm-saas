@@ -8,6 +8,7 @@ import hashlib
 import hmac
 import logging
 import re
+from datetime import timedelta
 
 import requests
 from django.db import transaction
