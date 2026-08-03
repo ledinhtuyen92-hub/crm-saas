@@ -245,7 +245,7 @@ export default function ZaloConfigPage() {
   }
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', overflowX: 'hidden', padding: isMobile ? '0 8px' : 0 }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', overflowX: 'hidden', padding: isMobile ? '0 8px' : 0 }}>
       <Row justify="space-between" align="middle" gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={14}>
           <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>

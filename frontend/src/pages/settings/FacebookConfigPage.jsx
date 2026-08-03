@@ -296,7 +296,7 @@ export default function FacebookConfigPage() {
   }
 
   return (
-    <div style={{ maxWidth: 880, margin: '0 auto', overflowX: 'hidden', padding: isMobile ? '0 8px' : 0 }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', overflowX: 'hidden', padding: isMobile ? '0 8px' : 0 }}>
       {/* Header */}
       <Row justify="space-between" align="middle" gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={14}>
