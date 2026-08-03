@@ -212,7 +212,6 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
             lead.save(update_fields=['is_ai_active', 'has_unread_message'])
             
             if result.get('reply'):
-                from zalo_integration.models import ZaloMessage
                 ZaloMessage.objects.create(
                     company=lead.company,
                     social_lead=lead,
@@ -396,7 +395,6 @@ def process_ai_reply_facebook(lead_id, is_followup=False, trigger_msg_id=None):
             lead.save(update_fields=['is_ai_active', 'has_unread_message'])
             
             if result.get('reply'):
-                from facebook_integration.models import FacebookMessage
                 FacebookMessage.objects.create(
                     lead=lead,
                     sender_type='page',
