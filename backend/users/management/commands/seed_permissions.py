@@ -80,6 +80,7 @@ PERMISSIONS = [
     {"code": "delivery.edit", "name": "Cập nhật lệnh giao hàng", "module": "delivery"},
     {"code": "delivery.delete", "name": "Xoá lệnh giao hàng", "module": "delivery"},
     {"code": "delivery.assign", "name": "Gán nhân viên giao hàng", "module": "delivery"},
+    {"code": "delivery.shipper", "name": "Nhân viên giao hàng", "module": "delivery"},
 
     # ── Warranty (Bảo hành) ───────────────────────────────────────
     {"code": "warranty.view", "name": "Xem phiếu bảo hành", "module": "warranty"},

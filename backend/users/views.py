@@ -363,6 +363,19 @@ class UserViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         if company_id:
             qs = qs.filter(company_id=company_id)
             
+        role_param = self.request.query_params.get("role")
+        factory_id = self.request.query_params.get("factory_id")
+        
+        if role_param == 'shipper':
+            qs = qs.filter(role__permissions__code="delivery.shipper")
+            if factory_id:
+                from django.db.models import Q
+                qs = qs.filter(
+                    Q(department__isnull=True) |
+                    Q(department__factory__isnull=True) |
+                    Q(department__factory_id=factory_id)
+                )
+            
         return qs
 
     def perform_create(self, serializer):

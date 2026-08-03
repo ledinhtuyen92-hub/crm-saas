@@ -11,9 +11,14 @@ class DeliveryOrderSerializer(serializers.ModelSerializer):
     order_total_amount = serializers.FloatField(source="order.total_amount", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     has_warranty = serializers.SerializerMethodField()
+    factory_id = serializers.SerializerMethodField()
 
     def get_has_warranty(self, obj):
         return hasattr(obj.order, 'warranty_card') and obj.order.warranty_card is not None
+
+    def get_factory_id(self, obj):
+        prod = obj.order.production_orders.first()
+        return prod.factory_id if prod else None
 
     class Meta:
         model = DeliveryOrder
@@ -26,6 +31,7 @@ class DeliveryOrderSerializer(serializers.ModelSerializer):
             "customer_phone",
             "order_remaining_debt",
             "order_total_amount",
+            "factory_id",
             "delivery_code",
             "status",
             "status_display",

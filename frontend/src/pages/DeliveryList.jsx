@@ -62,13 +62,22 @@ export default function DeliveryList() {
   const [activeTemplates, setActiveTemplates] = useState([])
   const [isPrinting, setIsPrinting] = useState(false)
 
+  const fetchShippers = async (factoryId) => {
+    try {
+      const params = { role: 'shipper', limit: 100 }
+      if (factoryId) params.factory_id = factoryId
+      const res = await api.get('/users/users/', { params })
+      setShippers(Array.isArray(res.data) ? res.data : res.data?.results ?? [])
+    } catch (err) {
+      console.error(err)
+      setShippers([])
+    }
+  }
+
   const fetchDataForForm = async () => {
     try {
       const resOrders = await api.get('/orders/orders/', { params: { limit: 100, ready_for_delivery: 'true' } })
       setAvailableOrders(Array.isArray(resOrders.data) ? resOrders.data : resOrders.data?.results ?? [])
-      
-      const resShippers = await api.get('/users/users/', { params: { limit: 100 } })
-      setShippers(Array.isArray(resShippers.data) ? resShippers.data : resShippers.data?.results ?? [])
 
       const resTmpl = await api.get('/sales/quotation-templates/active/')
       setActiveTemplates(Array.isArray(resTmpl.data) ? resTmpl.data : resTmpl.data?.results ?? [])
@@ -340,6 +349,7 @@ export default function DeliveryList() {
           onClick={() => {
             setAssigningDelivery(r)
             setSelectedShipperId(r.shipper_user)
+            fetchShippers(r.factory_id)
             setAssignModalVisible(true)
           }}
         />
