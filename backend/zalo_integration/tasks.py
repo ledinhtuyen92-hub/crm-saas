@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 def refresh_all_zalo_tokens(self):
     """
     Quét tất cả ZaloOaConfig còn active.
-    Nếu token sắp hết hạn (< 2 giờ) -> gọi Zalo API để refresh.
-    Chạy mỗi 12 giờ qua Celery Beat.
+    Nếu token sắp hết hạn (< 2 giờ) hoặc đã hết hạn -> gọi Zalo API để refresh.
+    Chạy mỗi giờ qua Celery Beat.
     """
     from zalo_integration.models import ZaloOaConfig
     from zalo_integration.services import refresh_zalo_access_token
@@ -37,22 +37,62 @@ def refresh_all_zalo_tokens(self):
     total = configs.count()
     refreshed = 0
     failed = 0
+    failed_oa_names = []
 
     logger.info(f"[ZaloTask:RefreshTokens] Bắt đầu kiểm tra {total} OA config(s)...")
 
     for config in configs:
+        now = timezone.now()
+        expires_at = config.token_expires_at
+        
+        # Log trạng thái chi tiết của từng OA
+        if expires_at:
+            remaining = (expires_at - now).total_seconds()
+            logger.info(f"[ZaloTask:RefreshTokens] OA '{config.oa_name}': token hết hạn lúc {expires_at}, còn {remaining:.0f}s ({remaining/3600:.1f}h)")
+        else:
+            logger.info(f"[ZaloTask:RefreshTokens] OA '{config.oa_name}': chưa có token_expires_at -> cần refresh")
+
+        # Refresh nếu: chưa có expires_at, hoặc token còn dưới 2 giờ, hoặc đã hết hạn
         if config.is_token_near_expiry:
-            logger.info(f"[ZaloTask:RefreshTokens] Token sắp hết hạn, refresh OA: '{config.oa_name}'...")
+            logger.info(f"[ZaloTask:RefreshTokens] → Token cần refresh, đang gọi Zalo API cho OA: '{config.oa_name}'...")
             success = refresh_zalo_access_token(config)
             if success:
                 refreshed += 1
+                logger.info(f"[ZaloTask:RefreshTokens] ✅ Refresh thành công cho OA: '{config.oa_name}'")
             else:
                 failed += 1
+                failed_oa_names.append(config.oa_name)
+                logger.error(f"[ZaloTask:RefreshTokens] ❌ Refresh THẤT BẠI cho OA: '{config.oa_name}'")
+        else:
+            logger.info(f"[ZaloTask:RefreshTokens] ⏭️ Token OA '{config.oa_name}' vẫn còn hạn, bỏ qua.")
+
+    # Gửi thông báo trong hệ thống nếu có OA refresh thất bại
+    if failed > 0:
+        try:
+            from notifications.models import Notification
+            from users.models import User
+            
+            superadmins = User.objects.filter(is_superuser=True, is_active=True).select_related('company')
+            for admin in superadmins:
+                if not admin.company:
+                    continue
+                Notification.objects.create(
+                    company=admin.company,
+                    recipient=admin,
+                    type=Notification.TYPE_SYSTEM_UPDATE,
+                    title="⚠️ Zalo Token Refresh thất bại",
+                    message=f"Không thể tự động làm mới token cho {failed} Zalo OA: {', '.join(failed_oa_names)}. Vui lòng vào Cấu hình Zalo OA và bấm 'Lấy Token' để cấp lại.",
+                    link="/settings/zalo",
+                )
+            logger.info(f"[ZaloTask:RefreshTokens] Đã gửi thông báo cho {superadmins.count()} SuperAdmin về token refresh thất bại.")
+        except Exception as e:
+            logger.warning(f"[ZaloTask:RefreshTokens] Không thể gửi thông báo: {e}")
 
     result = {
         "total_configs": total,
         "refreshed": refreshed,
         "failed": failed,
+        "failed_oa_names": failed_oa_names,
         "skipped": total - refreshed - failed,
     }
     logger.info(f"[ZaloTask:RefreshTokens] Hoàn tất: {result}")
