@@ -1,3 +1,4 @@
+import logging
 from rest_framework import viewsets, permissions
 from users.permissions import ActionBasedPermission
 from rest_framework.decorators import action
@@ -8,6 +9,8 @@ from .models import AiKnowledgeChunk
 from .models import SystemAiKey, CompanyAiSettings, AiAgent, AiKnowledgeDocument, CompanyAiKey, AiModelPricing
 from .serializers import SystemAiKeySerializer, CompanyAiSettingsSerializer, AiAgentSerializer, AiKnowledgeDocumentSerializer, CompanyAiKeySerializer, AiModelPricingSerializer
 from .services import DEFAULT_JSON_TEMPLATE
+
+logger = logging.getLogger(__name__)
 
 class SystemAiKeyViewSet(viewsets.ModelViewSet):
     queryset = SystemAiKey.objects.all().order_by('-priority', '-created_at')
