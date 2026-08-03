@@ -402,6 +402,13 @@ export default function DeliveryList() {
       ),
     },
     {
+      title: 'Nhà máy',
+      key: 'factory',
+      render: (_, r) => (
+        <Text>{r.factory_name || <Text type="secondary">Chưa rõ</Text>}</Text>
+      ),
+    },
+    {
       title: 'Công nợ',
       key: 'debt',
       render: (_, r) => (
@@ -536,6 +543,10 @@ export default function DeliveryList() {
                 <div style={{ marginBottom: 4 }}>
                   <Text type="secondary" style={{ fontSize: 13 }}>Khách hàng: </Text>
                   <Text>{r.customer_name}</Text>
+                </div>
+                <div style={{ marginBottom: 4 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>Nhà máy: </Text>
+                  <Text>{r.factory_name || 'Chưa rõ'}</Text>
                 </div>
                 <div style={{ marginBottom: 4 }}>
                   <Text type="secondary" style={{ fontSize: 13 }}>Người giao: </Text>
