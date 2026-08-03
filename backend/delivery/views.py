@@ -33,6 +33,15 @@ class DeliveryOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        user = self.request.user
+
+        # Phân quyền phạm vi xem: Nếu là Nhân viên giao hàng (shipper) nhưng KHÔNG có quyền gán (điều phối)
+        # thì chỉ được xem những đơn hàng do chính mình được gán.
+        if not user.is_superuser and not getattr(user, 'is_company_admin', False):
+            if user.role and user.role.permissions.filter(code="delivery.shipper").exists():
+                if not user.role.permissions.filter(code="delivery.assign").exists():
+                    qs = qs.filter(shipper_user=user)
+
         status_filter = self.request.query_params.get("status")
         search_query = self.request.query_params.get("search")
         
