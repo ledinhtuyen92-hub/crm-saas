@@ -164,6 +164,52 @@ class ZaloOaConfig(models.Model):
         return timezone.now() >= (self.token_expires_at - timedelta(hours=2))
 
 
+# ── Model: Lịch sử Refresh Token ─────────────────────────────────────────────
+
+class ZaloTokenRefreshLog(models.Model):
+    """Lưu lại lịch sử mỗi lần hệ thống tự động hoặc thủ công refresh token Zalo OA."""
+
+    STATUS_SUCCESS = "success"
+    STATUS_FAILED = "failed"
+    STATUS_CHOICES = [
+        (STATUS_SUCCESS, "Thành công"),
+        (STATUS_FAILED, "Thất bại"),
+    ]
+
+    TRIGGER_AUTO = "auto"
+    TRIGGER_MANUAL = "manual"
+    TRIGGER_OAUTH = "oauth"
+    TRIGGER_CHOICES = [
+        (TRIGGER_AUTO, "Tự động (Celery)"),
+        (TRIGGER_MANUAL, "Thủ công (Bấm nút)"),
+        (TRIGGER_OAUTH, "Đăng nhập lấy Token mới"),
+    ]
+
+    oa_config = models.ForeignKey(
+        ZaloOaConfig,
+        on_delete=models.CASCADE,
+        related_name="token_refresh_logs",
+        verbose_name="Zalo OA",
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    trigger = models.CharField(max_length=10, choices=TRIGGER_CHOICES, default=TRIGGER_AUTO)
+    error_message = models.TextField(blank=True, default="")
+    old_expires_at = models.DateTimeField(null=True, blank=True, verbose_name="Hạn cũ")
+    new_expires_at = models.DateTimeField(null=True, blank=True, verbose_name="Hạn mới")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Thời điểm")
+
+    class Meta:
+        verbose_name = "Log Refresh Token"
+        verbose_name_plural = "Log Refresh Token"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["oa_config", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"[{self.get_trigger_display()}] {self.oa_config.oa_name} → {self.get_status_display()} ({self.created_at})"
+
+
 # ── Model 2: Social Lead (Tầng 1 của Phễu — Hứng rác) ────────────────────────
 
 class SocialLead(models.Model):

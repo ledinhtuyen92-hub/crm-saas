@@ -413,16 +413,29 @@ def fetch_zalo_oa_info(access_token: str):
 
 # ── Refresh Token Zalo ────────────────────────────────────────────────────────
 
-def refresh_zalo_access_token(oa_config):
+def refresh_zalo_access_token(oa_config, trigger="auto"):
     """
     Gọi Zalo API để đổi refresh_token lấy access_token mới.
     Cập nhật ZaloOaConfig với token mới.
+    Ghi log kết quả vào ZaloTokenRefreshLog.
+
+    Args:
+        oa_config: ZaloOaConfig instance
+        trigger: "auto" | "manual" | "oauth"
 
     Returns:
         True nếu thành công, False nếu thất bại.
     """
+    from zalo_integration.models import ZaloTokenRefreshLog
+
+    old_expires_at = oa_config.token_expires_at
+
     if not oa_config.refresh_token:
         logger.warning(f"[ZaloToken] OA '{oa_config.oa_name}' không có refresh_token.")
+        ZaloTokenRefreshLog.objects.create(
+            oa_config=oa_config, status="failed", trigger=trigger,
+            error_message="Không có refresh_token", old_expires_at=old_expires_at,
+        )
         return False
 
     app_id = oa_config.get_app_id()
@@ -430,6 +443,10 @@ def refresh_zalo_access_token(oa_config):
 
     if not app_id or not secret_key:
         logger.error(f"[ZaloToken] OA '{oa_config.oa_name}' thiếu app_id hoặc secret_key.")
+        ZaloTokenRefreshLog.objects.create(
+            oa_config=oa_config, status="failed", trigger=trigger,
+            error_message="Thiếu app_id hoặc secret_key", old_expires_at=old_expires_at,
+        )
         return False
 
     try:
@@ -459,14 +476,22 @@ def refresh_zalo_access_token(oa_config):
             error_name = data.get("error_name", "")
             error_desc = data.get("error_description", "")
             error_reason = data.get("error_reason", "")
-            full_error = f"error={error_code}, name={error_name}, desc={error_desc}, reason={error_reason}"
+            full_error = f"Zalo error={error_code}: {error_name or error_desc or error_reason}"
             logger.error(f"[ZaloToken] ❌ Zalo từ chối refresh cho '{oa_config.oa_name}': {full_error}")
             oa_config._last_refresh_error = error_name or error_desc or error_reason or f"Lỗi Zalo (code: {error_code})"
+            ZaloTokenRefreshLog.objects.create(
+                oa_config=oa_config, status="failed", trigger=trigger,
+                error_message=full_error, old_expires_at=old_expires_at,
+            )
             return False
 
         if "access_token" not in data:
             logger.error(f"[ZaloToken] Refresh failed - không có access_token trong response: {data}")
             oa_config._last_refresh_error = str(data)
+            ZaloTokenRefreshLog.objects.create(
+                oa_config=oa_config, status="failed", trigger=trigger,
+                error_message=f"Response không chứa access_token: {data}", old_expires_at=old_expires_at,
+            )
             return False
 
         expires_in = int(data.get("expires_in", 86400))
@@ -476,10 +501,18 @@ def refresh_zalo_access_token(oa_config):
         oa_config.save(update_fields=["access_token", "refresh_token", "token_expires_at"])
 
         logger.info(f"[ZaloToken] ✅ Refreshed token cho OA: '{oa_config.oa_name}', hết hạn sau {expires_in}s ({oa_config.token_expires_at})")
+        ZaloTokenRefreshLog.objects.create(
+            oa_config=oa_config, status="success", trigger=trigger,
+            old_expires_at=old_expires_at, new_expires_at=oa_config.token_expires_at,
+        )
         return True
 
     except requests.RequestException as e:
         logger.error(f"[ZaloToken] ❌ Request error cho '{oa_config.oa_name}': {e}")
+        ZaloTokenRefreshLog.objects.create(
+            oa_config=oa_config, status="failed", trigger=trigger,
+            error_message=f"Network error: {str(e)}", old_expires_at=old_expires_at,
+        )
         return False
 
 

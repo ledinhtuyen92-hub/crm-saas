@@ -293,6 +293,23 @@ class ZaloOaConfigViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
 
+    @action(detail=True, methods=["get"], url_path="token-logs")
+    def token_logs(self, request, pk=None):
+        """Trả về 50 lần refresh token gần nhất của OA này."""
+        config = self.get_object()
+        logs = config.token_refresh_logs.all()[:50]
+        data = [{
+            "id": log.id,
+            "status": log.status,
+            "trigger": log.trigger,
+            "trigger_display": log.get_trigger_display(),
+            "error_message": log.error_message,
+            "old_expires_at": log.old_expires_at,
+            "new_expires_at": log.new_expires_at,
+            "created_at": log.created_at,
+        } for log in logs]
+        return Response(data)
+
     def perform_destroy(self, instance):
         """Soft delete: Ngắt kết nối Zalo OA (is_active=False) để giữ an toàn toàn bộ lịch sử hội thoại/tin nhắn."""
         instance.is_active = False
@@ -327,7 +344,7 @@ class ZaloOaConfigViewSet(viewsets.ModelViewSet):
     def refresh_token(self, request, pk=None):
         """Manually refresh access token."""
         config = self.get_object()
-        success = refresh_zalo_access_token(config)
+        success = refresh_zalo_access_token(config, trigger="manual")
         if success:
             config.refresh_from_db()
             serializer = ZaloOaConfigSerializer(config)
@@ -413,11 +430,19 @@ class ZaloOaConfigViewSet(viewsets.ModelViewSet):
                     if oa_info.get("name"):
                         config.oa_name = oa_info["name"]
 
+                old_expires = config.token_expires_at
                 config.access_token = new_token
                 config.refresh_token = res_json.get("refresh_token")
                 expires_in = int(res_json.get("expires_in", 90000))
                 config.token_expires_at = timezone.now() + timedelta(seconds=expires_in)
                 config.save()
+
+                # Ghi log OAuth thành công
+                from zalo_integration.models import ZaloTokenRefreshLog
+                ZaloTokenRefreshLog.objects.create(
+                    oa_config=config, status="success", trigger="oauth",
+                    old_expires_at=old_expires, new_expires_at=config.token_expires_at,
+                )
 
                 serializer = ZaloOaConfigSerializer(config)
                 oa_label = f"{config.oa_name} (ID: {config.oa_id})" if config.oa_id else config.oa_name
@@ -428,6 +453,13 @@ class ZaloOaConfigViewSet(viewsets.ModelViewSet):
             else:
                 err_msg = res_json.get("error_name") or res_json.get("error_description") or str(res_json)
                 logger.error(f"[ZaloOAuth] Lỗi đổi token: {res_json}")
+                # Ghi log OAuth thất bại
+                from zalo_integration.models import ZaloTokenRefreshLog
+                ZaloTokenRefreshLog.objects.create(
+                    oa_config=config, status="failed", trigger="oauth",
+                    error_message=f"OAuth error: {err_msg}",
+                    old_expires_at=config.token_expires_at,
+                )
                 return Response(
                     {"error": f"Zalo từ chối đổi Token: {err_msg}"},
                     status=status.HTTP_400_BAD_REQUEST,

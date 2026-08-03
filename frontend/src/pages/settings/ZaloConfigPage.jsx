@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import {
   Alert, Button, Card, Col, Collapse, Divider, Form, Input, InputNumber,
-  message, Modal, Popconfirm, Row, Select, Space, Switch, Tag, Tooltip, Typography
+  message, Modal, Popconfirm, Row, Select, Space, Switch, Table, Tag, Tooltip, Typography
 } from 'antd'
 import {
   ApiOutlined, CheckCircleOutlined, CloseCircleOutlined,
-  DeleteOutlined, DisconnectOutlined, InfoCircleOutlined, KeyOutlined,
+  DeleteOutlined, DisconnectOutlined, HistoryOutlined, InfoCircleOutlined, KeyOutlined,
   ReloadOutlined, SettingOutlined, WarningOutlined,
 } from '@ant-design/icons'
 import api from '../../utils/api'
@@ -28,6 +28,8 @@ export default function ZaloConfigPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleting, setDeleting] = useState(false)
   const [aiAgents, setAiAgents] = useState([])
+  const [tokenLogs, setTokenLogs] = useState([])
+  const [tokenLogsLoading, setTokenLogsLoading] = useState(false)
   const [form] = Form.useForm()
 
   const fetchConfig = async (preferredId = null) => {
@@ -75,6 +77,20 @@ export default function ZaloConfigPage() {
       .then(res => setAiAgents(Array.isArray(res.data) ? res.data : res.data?.results ?? []))
       .catch(console.error)
   }, [])
+
+  const fetchTokenLogs = async (configId) => {
+    if (!configId) return
+    setTokenLogsLoading(true)
+    try {
+      const res = await api.get(`/zalo/config/${configId}/token-logs/`)
+      setTokenLogs(Array.isArray(res.data) ? res.data : [])
+    } catch (err) {
+      console.error(err)
+      message.error('Không thể tải lịch sử refresh token.')
+    } finally {
+      setTokenLogsLoading(false)
+    }
+  }
 
   const handleZaloOAuthLogin = (targetConfig = null) => {
     const cfg = targetConfig && targetConfig.id ? targetConfig : config
@@ -407,6 +423,86 @@ export default function ZaloConfigPage() {
                 </Text>
               </div>
             }
+          />
+
+          {/* Lịch sử Refresh Token */}
+          <Collapse
+            style={{ marginTop: 16 }}
+            items={[{
+              key: 'token-logs',
+              label: <span><HistoryOutlined style={{ marginRight: 6 }} />Lịch sử Refresh Token (50 lần gần nhất)</span>,
+              children: (
+                <div>
+                  {config && (
+                    <Button
+                      size="small"
+                      icon={<ReloadOutlined />}
+                      onClick={() => fetchTokenLogs(config.id)}
+                      loading={tokenLogsLoading}
+                      style={{ marginBottom: 12 }}
+                    >
+                      Tải lại
+                    </Button>
+                  )}
+                  <Table
+                    dataSource={tokenLogs}
+                    rowKey="id"
+                    size="small"
+                    pagination={false}
+                    scroll={{ x: 'max-content' }}
+                    locale={{ emptyText: 'Chưa có log. Bấm "Tải lại" để xem.' }}
+                    columns={[
+                      {
+                        title: 'Thời gian',
+                        dataIndex: 'created_at',
+                        width: 160,
+                        render: v => v ? new Date(v).toLocaleString('vi-VN') : '-',
+                      },
+                      {
+                        title: 'Kết quả',
+                        dataIndex: 'status',
+                        width: 110,
+                        render: v => v === 'success'
+                          ? <Tag color="success"><CheckCircleOutlined /> Thành công</Tag>
+                          : <Tag color="error"><CloseCircleOutlined /> Thất bại</Tag>,
+                      },
+                      {
+                        title: 'Nguồn',
+                        dataIndex: 'trigger_display',
+                        width: 150,
+                        render: (v, r) => {
+                          const colors = { auto: 'blue', manual: 'green', oauth: 'purple' }
+                          return <Tag color={colors[r.trigger] || 'default'}>{v}</Tag>
+                        },
+                      },
+                      {
+                        title: 'Hạn cũ',
+                        dataIndex: 'old_expires_at',
+                        width: 160,
+                        render: v => v ? new Date(v).toLocaleString('vi-VN') : '',
+                      },
+                      {
+                        title: 'Hạn mới',
+                        dataIndex: 'new_expires_at',
+                        width: 160,
+                        render: v => v ? new Date(v).toLocaleString('vi-VN') : '',
+                      },
+                      {
+                        title: 'Lỗi',
+                        dataIndex: 'error_message',
+                        ellipsis: true,
+                        render: v => v ? <Text type="danger" style={{ fontSize: 12 }}>{v}</Text> : '',
+                      },
+                    ]}
+                  />
+                </div>
+              ),
+            }]}
+            onChange={(keys) => {
+              if (keys.includes('token-logs') && config && tokenLogs.length === 0) {
+                fetchTokenLogs(config.id)
+              }
+            }}
           />
         </div>
       )}
