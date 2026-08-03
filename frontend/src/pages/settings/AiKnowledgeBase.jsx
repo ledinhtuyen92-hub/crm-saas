@@ -142,7 +142,28 @@ export default function AiKnowledgeBase() {
 
   const handleView = (record) => {
     if (record.doc_type === 'file' && record.file_attachment) {
-      window.open(record.file_attachment, '_blank')
+      const url = record.file_attachment
+      const ext = url.split('.').pop().toLowerCase()
+      // Trình duyệt không render được .docx/.doc → dùng Google Docs Viewer
+      if (['doc', 'docx', 'xlsx', 'xls', 'ppt', 'pptx'].includes(ext)) {
+        const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
+        Modal.info({
+          title: `📄 ${record.title}`,
+          content: (
+            <iframe
+              src={googleViewerUrl}
+              style={{ width: '100%', height: '70vh', border: 'none', marginTop: 8 }}
+              title={record.title}
+            />
+          ),
+          width: '80vw',
+          okText: 'Đóng',
+          icon: null,
+        })
+      } else {
+        // PDF và các loại khác trình duyệt tự render được
+        window.open(url, '_blank')
+      }
     } else {
       setCurrentDoc(record)
       setIsViewModalVisible(true)
