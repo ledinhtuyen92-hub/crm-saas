@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Card, Table, Button, Space, Typography, Tag, Modal, Form, Input, Upload, message, Radio, Divider, Spin, Collapse, Alert, Checkbox, Segmented, Row, Col, List } from 'antd'
 import { PlusOutlined, UploadOutlined, RobotOutlined, BookOutlined, EyeOutlined, EditOutlined, SyncOutlined, DeleteOutlined, BulbOutlined, MinusCircleOutlined, QuestionCircleOutlined, DownloadOutlined } from '@ant-design/icons'
-import mammoth from 'mammoth'
 import api from '../../utils/api'
 import { useAuth } from '../../contexts/AuthContext'
 import { useResponsive } from '../../hooks/useResponsive'
@@ -172,34 +171,8 @@ export default function AiKnowledgeBase() {
         }
       }
 
-      let htmlContent = null
-      let plainContent = record.content || ''
-
-      if (['docx', 'doc'].includes(ext)) {
-        // Dùng mammoth.js convert DOCX → HTML để hiển thị giống file gốc
-        try {
-          message.loading({ content: 'Đang đọc file...', key: 'view' })
-          const token = localStorage.getItem('access_token')
-          const response = await fetch(absoluteUrl, {
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-          })
-          const arrayBuffer = await response.arrayBuffer()
-          const result = await mammoth.convertToHtml({ arrayBuffer })
-          htmlContent = result.value
-          message.destroy('view')
-        } catch (e) {
-          message.destroy('view')
-          // Fallback sang plain text nếu mammoth thất bại
-        }
-      }
-
-      // Fallback: lấy text từ API nếu chưa có HTML và content rỗng
-      if (!htmlContent && !plainContent) {
-        try {
-          const res = await api.get(`/ai_agents/knowledge/${record.id}/get_content/`)
-          plainContent = res.data?.content || ''
-        } catch (e) {}
-      }
+      const isOfficeFile = ['doc', 'docx', 'xlsx', 'xls', 'ppt', 'pptx'].includes(ext)
+      const isPdf = ext === 'pdf'
 
       Modal.info({
         title: `📄 ${record.title}`,
@@ -214,33 +187,46 @@ export default function AiKnowledgeBase() {
                 Tải file gốc xuống
               </Button>
             </div>
-            <div
-              style={{
-                maxHeight: '68vh',
-                overflowY: 'auto',
-                background: '#fff',
-                padding: '16px 20px',
-                borderRadius: 8,
-                border: '1px solid #e0e0e0',
-                fontSize: 14,
-                lineHeight: 1.8,
-              }}
-            >
-              {htmlContent
-                ? <div
-                    style={{ fontFamily: 'inherit' }}
-                    dangerouslySetInnerHTML={{ __html: htmlContent }}
-                  />
-                : plainContent
-                  ? <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: 0 }}>{plainContent}</pre>
-                  : <span style={{ color: '#aaa', fontStyle: 'italic' }}>
-                      Nội dung chưa được trích xuất. Vui lòng bấm nút "Học lại" rồi Xem lại.
-                    </span>
-              }
-            </div>
+            
+            {isOfficeFile && (
+              <iframe
+                src={`https://docs.google.com/viewer?url=${encodeURIComponent(absoluteUrl)}&embedded=true`}
+                style={{ width: '100%', height: '70vh', border: 'none', marginTop: 8, borderRadius: 8 }}
+                title={record.title}
+              />
+            )}
+
+            {isPdf && (
+              <object
+                data={absoluteUrl}
+                type="application/pdf"
+                style={{ width: '100%', height: '70vh', border: 'none', marginTop: 8, borderRadius: 8 }}
+              >
+                <p>Trình duyệt không hỗ trợ xem PDF. Vui lòng tải file xuống.</p>
+              </object>
+            )}
+
+            {!isOfficeFile && !isPdf && (
+              <div
+                style={{
+                  whiteSpace: 'pre-wrap',
+                  maxHeight: '65vh',
+                  overflowY: 'auto',
+                  background: '#f9f9f9',
+                  padding: '12px 16px',
+                  borderRadius: 8,
+                  border: '1px solid #e0e0e0',
+                  fontSize: 13,
+                  lineHeight: 1.7,
+                  fontFamily: 'monospace',
+                }}
+              >
+                {record.content || <span style={{ color: '#aaa', fontStyle: 'italic' }}>Không thể hiển thị định dạng này trực tiếp. Vui lòng tải file xuống.</span>}
+              </div>
+            )}
           </div>
         ),
-        width: '78vw',
+        width: '80vw',
         okText: 'Đóng',
         icon: null,
       })

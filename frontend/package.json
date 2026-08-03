@@ -15,7 +15,6 @@
     "axios": "^1.18.1",
     "dayjs": "^1.11.21",
     "jodit-react": "^5.3.21",
-    "mammoth": "^1.12.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1",
