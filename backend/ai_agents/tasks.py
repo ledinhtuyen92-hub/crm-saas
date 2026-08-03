@@ -151,7 +151,6 @@ def process_ai_reply_zalo(lead_id, is_followup=False, trigger_msg_id=None):
             time.sleep(delay)
             
         if not is_followup and trigger_msg_id:
-            from zalo_integration.models import ZaloMessage
             latest_msg = ZaloMessage.objects.filter(social_lead=lead, direction=ZaloMessage.DIRECTION_INBOUND).order_by('-created_at').first()
             if latest_msg and latest_msg.id != trigger_msg_id:
                 logger.info(f"Zalo AI debounce: Bỏ qua tin nhắn cũ {trigger_msg_id} do đã có tin mới {latest_msg.id}")
