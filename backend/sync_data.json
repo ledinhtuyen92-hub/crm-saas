@@ -947,6 +947,15 @@
   }
 },
 {
+  "model": "users.permission",
+  "pk": 148,
+  "fields": {
+    "code": "delivery.shipper",
+    "name": "Nhân viên giao hàng",
+    "module": "delivery"
+  }
+},
+{
   "model": "users.department",
   "pk": 3,
   "fields": {
@@ -1268,7 +1277,7 @@
   "pk": 2,
   "fields": {
     "password": "pbkdf2_sha256$1000000$vIIjZf8hXiPMKTZZF9XL9b$rAHNpABj+Y+kz3IwxL2p4jStPLsifJJ7y5kOArG3kCc=",
-    "last_login": "2026-08-03T06:27:11.387Z",
+    "last_login": "2026-08-04T10:35:15.774Z",
     "is_superuser": false,
     "username": "admin_fuji",
     "first_name": "",

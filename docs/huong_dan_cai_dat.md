@@ -14,7 +14,7 @@ Bạn cần thuê 1 máy chủ ảo (VPS) từ các nhà cung cấp như BizflyC
 Chạy lệnh sau trên VPS để tải mã nguồn dự án về:
 
 ```bash
-git clone https://github.com/ledinhtuyen92-hub/crm-saas.git && cd crm-saas
+git clone https://github.com/ledinhtuyen92-hub/crmfujitech.git && cd crmfujitech
 ```
 *(Nếu kho Github của bạn là private, hệ thống sẽ yêu cầu nhập Username và Password/Token Github).*
 
@@ -55,7 +55,7 @@ git push origin main
 **2. Kéo code và Cập nhật trên Server (Làm trên VPS):**
 Đăng nhập vào VPS bằng MobaXterm, di chuyển vào thư mục dự án và gõ 3 lệnh sau:
 ```bash
-cd ~/crm-saas
+cd ~/crmfujitech
 git pull
 sudo bash deploy_vps.sh
 ```
@@ -99,7 +99,7 @@ Gõ lệnh `rclone config`
 - Mở file backup.sh ra và thêm dòng lệnh rclone copy vào cuối file:
   `rclone copy /root/crm_backups gdrive:CRM_Backups`
 - Gõ lệnh `crontab -e` trên VPS và dán dòng này vào cuối cùng để chạy tự động lúc 2h sáng:
-  `0 2 * * * bash /root/crm-saas/backup.sh`
+  `0 2 * * * bash /root/crmfujitech/backup.sh`
 
 ---
 
@@ -109,7 +109,7 @@ Gõ lệnh `rclone config`
 - **Nguyên nhân:** Máy chủ Ubuntu bảo mật quá chặt, Nginx không có quyền đọc file giao diện cài đặt trong thư mục `/root/...`
 - **Cách sửa:** Copy và dán lệnh sau vào màn hình VPS (để cấp quyền đọc cho Nginx):
   ```bash
-  chmod 711 /root && chmod -R 755 /root/crm-saas/frontend/dist
+  chmod 711 /root && chmod -R 755 /root/crmfujitech/frontend/dist
   ```
 
 **2. Quá trình cài đặt tự động bị lỗi ở bước SSL (DNS problem: NXDOMAIN)**

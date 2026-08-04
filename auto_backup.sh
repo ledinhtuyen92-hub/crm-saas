@@ -4,13 +4,13 @@
 # Cach cai dat tu dong chay hang ngay:
 # 1. Go lenh: crontab -e
 # 2. Them dong sau vao cuoi file (de chay luc 2h sang):
-#    0 2 * * * /bin/bash /root/crm-saas/auto_backup.sh >> /root/crm_backup.log 2>&1
+#    0 2 * * * /bin/bash /root/crmfujitech/auto_backup.sh >> /root/crm_backup.log 2>&1
 
 # ================= CAU HINH =================
 BACKUP_BRANCH="fujitech"          # Ten nhanh GitHub chua du lieu backup
 DRIVE_REMOTE_NAME="Fujitech"      # Ten remote Rclone (mac dinh: gdrive)
 DRIVE_BACKUP_FOLDER="CRM_Backups" # Ten thu muc tren Google Drive
-PROJECT_DIR="/root/crm-saas"
+PROJECT_DIR="/root/crmfujitech"
 TEMP_MEDIA_DIR="/tmp/crm_media_backup"
 DATE=$(date +"%Y%m%d_%H%M%S")
 # ============================================

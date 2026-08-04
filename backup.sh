@@ -11,7 +11,7 @@ echo "==================================================="
 
 # Tao thu muc chua backup neu chua co
 mkdir -p $BACKUP_DIR
-cd /root/crm-saas || cd $(pwd)
+cd /root/crmfujitech || cd $(pwd)
 
 # 1. Backup Database (PostgreSQL) tu Docker container
 echo "=> Dang sao luu Database..."

@@ -59,7 +59,7 @@ Cuối cùng, đặt lịch để VPS tự động chạy script này lúc 2h00 
 
 2. Di chuyển con trỏ xuống dòng cuối cùng và dán lệnh sau vào:
    ```bash
-   0 2 * * * /bin/bash /root/crm-saas/auto_backup.sh >> /root/crm_backup.log 2>&1
+   0 2 * * * /bin/bash /root/crmfujitech/auto_backup.sh >> /root/crm_backup.log 2>&1
    ```
 3. Ấn `Ctrl + O` -> `Enter` để lưu, sau đó ấn `Ctrl + X` để thoát.
 
