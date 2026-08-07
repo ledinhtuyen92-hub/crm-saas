@@ -24,7 +24,9 @@ fi
 # 2. Lay code moi nhat tu GitHub
 echo ""
 echo "📥 [1/5] Dang keo code moi nhat tu GitHub (nhanh main)..."
-git pull origin main
+# Khôi phục mọi thay đổi cục bộ (nếu có) để tránh lỗi kẹt git
+git fetch origin main
+git reset --hard origin/main
 echo "✅ Code da duoc cap nhat thanh cong!"
 
 # 2.5 Khoi dong cac dich vu moi (neu co)
