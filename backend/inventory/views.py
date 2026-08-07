@@ -577,9 +577,15 @@ class InventoryTransactionViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
                 )
 
         # Sinh mã phiếu tự động
-        transaction_code = generate_transaction_code(company, txn_type)
-        if txn_type == "export" and not reference_order:
-            transaction_code += "M"
+        if reference_order:
+            from core.numbering import derive_code_from_order
+            # Nếu có liên kết với đơn hàng, kế thừa hậu tố của đơn hàng
+            prefix = "export" if txn_type == "export" else txn_type
+            transaction_code = derive_code_from_order(reference_order.order_number, company, prefix)
+        else:
+            transaction_code = generate_transaction_code(company, txn_type)
+            if txn_type == "export":
+                transaction_code += "M"
             
         serializer.save(
             company=company,

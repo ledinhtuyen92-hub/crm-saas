@@ -1277,7 +1277,7 @@
   "pk": 2,
   "fields": {
     "password": "pbkdf2_sha256$1000000$vIIjZf8hXiPMKTZZF9XL9b$rAHNpABj+Y+kz3IwxL2p4jStPLsifJJ7y5kOArG3kCc=",
-    "last_login": "2026-08-04T10:35:15.774Z",
+    "last_login": "2026-08-07T04:09:00.554Z",
     "is_superuser": false,
     "username": "admin_fuji",
     "first_name": "",
@@ -1861,6 +1861,16 @@
     "prefix": "FUJI-DH",
     "date_str": "31072026",
     "last_seq": 2
+  }
+},
+{
+  "model": "users.companysequence",
+  "pk": 32,
+  "fields": {
+    "company": 15,
+    "prefix": "FUJI-DH",
+    "date_str": "07082026",
+    "last_seq": 1
   }
 },
 {
@@ -3712,6 +3722,103 @@
   }
 },
 {
+  "model": "orders.order",
+  "pk": 18,
+  "fields": {
+    "company": 15,
+    "order_number": "FUJI-DH-07082026-001",
+    "customer": 38,
+    "quotation": null,
+    "created_by": 2,
+    "approved_by": null,
+    "status": "pending",
+    "financial_status": "unpaid",
+    "payment_term": "Cọc 30% - Giao hàng 70%",
+    "payment_terms_schedule": [
+      {
+        "type": "deposit",
+        "title": "Thanh toán đợt 1",
+        "percentage": 100
+      }
+    ],
+    "installation_date": null,
+    "notes": "",
+    "subtotal": "3900000.00",
+    "vat_rate": "0.00",
+    "vat_amount": "0.00",
+    "shipping_fee": "0.00",
+    "installation_fee": "0.00",
+    "delivery_time": "3-5 ngày làm việc",
+    "warranty_months": 12,
+    "validity_days": 30,
+    "discount_total": "0.00",
+    "total_amount": "3900000.00",
+    "approved_at": null,
+    "custom_data": {
+      "template_snapshot": {
+        "id": 2,
+        "code": "default",
+        "name": "Báo giá FUJITECH",
+        "layout_style": "modern_navy",
+        "layout_config": {
+          "sections": [
+            {
+              "id": "header",
+              "name": "🏢 Khối Header & Logo Công ty",
+              "order": 1,
+              "visible": true
+            },
+            {
+              "id": "title",
+              "name": "📌 Khối Tiêu đề & Lời chào",
+              "order": 2,
+              "visible": true
+            },
+            {
+              "id": "customer_info",
+              "name": "👤 Khối Thông tin Khách hàng / Đối tác",
+              "order": 3,
+              "visible": true
+            },
+            {
+              "id": "items_table",
+              "name": "📦 Khối Bảng Hạng mục Sản phẩm & Dịch vụ",
+              "order": 4,
+              "visible": true
+            },
+            {
+              "id": "summary",
+              "name": "💰 Khối Tổng kết Thanh toán & Chiết khấu",
+              "order": 5,
+              "visible": true
+            },
+            {
+              "id": "terms",
+              "name": "📜 Khối Ghi chú & Điều khoản (Từ Admin Công ty)",
+              "order": 6,
+              "visible": true
+            },
+            {
+              "id": "signatures",
+              "name": "✍️ Khối Chữ ký Xác nhận",
+              "order": 7,
+              "columns": 2,
+              "visible": true
+            }
+          ],
+          "table_style": "classic_border",
+          "theme_color": "#d97706",
+          "custom_title": "BÁO GIÁ SẢN XUẤT CỬA COMPOSITE",
+          "paper_orientation": "landscape"
+        },
+        "footer_content": "1. Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày xuất báo giá.\n2. Thanh toán: Tạm ứng 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán sau khi bàn giao nghiệm thu.\n3. Đơn giá trên chưa bao gồm thuế VAT (nếu xuất hóa đơn).\n4. Bảo hành: Theo tiêu chuẩn từ nhà sản xuất kể từ ngày bàn giao."
+      }
+    },
+    "created_at": "2026-08-07T04:11:05.510Z",
+    "updated_at": "2026-08-07T04:11:05.510Z"
+  }
+},
+{
   "model": "orders.orderitem",
   "pk": 23,
   "fields": {
@@ -4001,6 +4108,30 @@
       "symbol": "",
       "thickness": 0
     }
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": 35,
+  "fields": {
+    "order": 18,
+    "product": 7,
+    "item_type": "product",
+    "product_name": "Cửa composite CCP01 - Mẫu mới",
+    "unit_price": "3900000.00",
+    "width": "0.00",
+    "height": "0.00",
+    "quantity": 1,
+    "discount_percent": "0.00",
+    "line_total": "0.00",
+    "note": "",
+    "length": "0.00",
+    "area": "0.00",
+    "spec": "",
+    "warranty": "12 tháng",
+    "thickness": "0.00",
+    "product_image": null,
+    "custom_data": {}
   }
 },
 {
@@ -4369,6 +4500,22 @@
   }
 },
 {
+  "model": "production.productionorder",
+  "pk": 5,
+  "fields": {
+    "company": 15,
+    "production_order_code": null,
+    "order": 17,
+    "factory": null,
+    "status": "pending",
+    "start_date": "2026-08-04",
+    "end_date": null,
+    "notes": "",
+    "created_at": "2026-08-07T04:09:27.553Z",
+    "updated_at": "2026-08-07T04:09:27.553Z"
+  }
+},
+{
   "model": "notifications.notification",
   "pk": 1,
   "fields": {
@@ -4409,7 +4556,7 @@
     "title": "Bạn có khách hàng mới được phân công",
     "message": "Khách hàng Nhung (0966722222) đã được phân công cho bạn.",
     "link": "/customers/38",
-    "is_read": false,
+    "is_read": true,
     "created_at": "2026-08-01T08:47:15.764Z"
   }
 },
@@ -8625,6 +8772,21 @@
   }
 },
 {
+  "model": "approvals.approvalrequest",
+  "pk": 129,
+  "fields": {
+    "company": 15,
+    "content_type": 23,
+    "object_id": 18,
+    "requester": 2,
+    "title": "Phê duyệt Đơn hàng FUJI-DH-07082026-001",
+    "description": "Đơn hàng FUJI-DH-07082026-001 — Khách hàng: Nhung",
+    "status": "pending",
+    "created_at": "2026-08-07T04:11:05.639Z",
+    "updated_at": "2026-08-07T04:11:05.639Z"
+  }
+},
+{
   "model": "approvals.approvalstep",
   "pk": 96,
   "fields": {
@@ -8880,6 +9042,21 @@
   }
 },
 {
+  "model": "approvals.approvalstep",
+  "pk": 128,
+  "fields": {
+    "request": 129,
+    "step_order": 1,
+    "approver_user": null,
+    "approver_role": null,
+    "acted_by": null,
+    "status": "pending",
+    "comment": "",
+    "comments": "",
+    "acted_at": null
+  }
+},
+{
   "model": "finance.orderpaymentmilestone",
   "pk": 28,
   "fields": {
@@ -9021,6 +9198,24 @@
     "note": "",
     "created_at": "2026-07-31T03:25:35.912Z",
     "updated_at": "2026-07-31T03:25:35.912Z"
+  }
+},
+{
+  "model": "finance.orderpaymentmilestone",
+  "pk": 43,
+  "fields": {
+    "company": 15,
+    "order": 18,
+    "milestone_type": "deposit",
+    "title": "Thanh toán đợt 1",
+    "percentage": "100.00",
+    "amount": "3900000.00",
+    "paid_amount": "0.00",
+    "status": "pending",
+    "due_date": null,
+    "note": "",
+    "created_at": "2026-08-07T04:11:05.545Z",
+    "updated_at": "2026-08-07T04:11:05.545Z"
   }
 },
 {

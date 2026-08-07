@@ -117,8 +117,16 @@ class ProductionOrderViewSet(TenantQuerySetMixin, viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
+        from core.numbering import derive_code_from_order
         company = self.request.user.company
-        serializer.save(company=company)
+        order = serializer.validated_data.get("order")
+        
+        # Nếu tạo thủ công từ màn hình, tự động kế thừa mã Đơn hàng (giống như luồng tự động)
+        production_order_code = None
+        if order:
+            production_order_code = derive_code_from_order(order.order_number, company, "lsx")
+            
+        serializer.save(company=company, production_order_code=production_order_code)
 
     def perform_update(self, serializer):
         instance = self.get_object()
